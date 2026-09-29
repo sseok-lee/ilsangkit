@@ -1,74 +1,80 @@
 <template>
-  <section class="fixed inset-x-0 top-14 lg:top-16 bottom-0">
+  <section class="fixed inset-x-0 top-16 lg:top-20 bottom-0">
     <!--
-      fixed 로 뷰포트에 직접 고정한다 — 더 이상 layouts/map.vue 루트의 height 에 기대지 않는다.
-      이유: 실브라우저에서 AdSense 스크립트가 그 루트 div 에 인라인 `height: auto !important`
-      를 주입해 h-dvh 클래스를 이겨버린다(라이브 실측, 데스크톱 1440x900 에서 611px 스크롤 발생).
-      fixed 포지셔닝은 뷰포트 좌표로만 크기가 정해지므로 그 주입과 무관하게 스크롤 0 을 지킨다.
-      top-14/lg:top-16 은 헤더 h-14/lg:h-16(56px/64px)과 맞춘 값이다.
-      z-index 는 주지 않는다 — 헤더가 sticky z-50 이고, fixed 는 z-index:auto 라도 새
-      스태킹 컨텍스트를 만들어(암묵적으로 z:0급) 헤더보다 항상 아래에 그려진다.
+      fixed 로 뷰포트에 직접 고정한다. top-16/lg:top-20 은 AppHeader h-16/lg:h-20 과
+      맞춘 값이다. 헤더 아래에서 시작해야 데스크톱 사이드바 첫 행과 필터바가 가려지지 않는다.
     -->
-    <!-- lg:min-h-[560px] 를 다시 넣지 말 것: 위 fixed inset 이 이미 높이를 확정하므로
-         min-height 로 덮어쓸 필요가 없고, 덮어쓰면 세로가 짧은 창에서 explorer 가
-         section 보다 커져 사이드바 하단(푸터)에 닿지 못하는 과거 버그가 재발한다. -->
-    <!-- h-full 을 쓰지 않는다: AdSense 스크립트가 광고 슬롯에서 조상을 타고 올라가며
-         모든 조상 엘리먼트에 인라인 `height: auto !important` 를 찍는다(라이브 실측,
-         1280x600). h-full(=height:100%) 은 그 주입에 곧바로 무너진다 — 이 컨테이너도
-         광고의 조상이라 예외가 아니다. `absolute inset-0` 은 height 프로퍼티 자체를
-         쓰지 않고 좌표(top/right/bottom/left)로 크기를 정하므로 주입과 무관하다.
-         section 이 이미 fixed(=positioned)라 이 absolute 의 containing block 이 된다. -->
-    <div class="absolute inset-0 lg:flex">
-      <!-- 좌측: 이 페이지의 유일한 SSR 콘텐츠. ClientOnly 로 감싸지 않는다.
-           고정폭 — 화면 폭에 따라 목록 항목의 줄바꿈 지점이 달라질 이유가 없다.
-           lg:block 이 아니라 lg:flex: MapSidebar 루트도 광고의 조상이라 같은 주입을
-           받는다(h-full 이 무너짐). aside 를 flex 컨테이너로 두면 기본 cross-axis
-           stretch(align-items:stretch)가 MapSidebar 루트의 height 를 채운다 —
-           stretch 는 height 가 auto 일 때 작동하므로 `auto !important` 주입과
-           충돌하지 않고 오히려 그 위에서 동작한다(라이브 검증 완료).
-           단 row 방향 flex 의 메인축(가로)은 자동으로 안 늘어나므로, MapSidebar 에
-           w-full 을 내려 320px 폭을 명시적으로 채운다(MapSidebar.vue 는 건드리지
-           않는다 — Vue 는 컴포넌트에 준 class 를 단일 루트 엘리먼트에 항상 병합한다). -->
-      <aside class="hidden lg:flex lg:w-[320px] lg:shrink-0 border-r border-line">
-        <MapSidebar
-          class="w-full"
-          :items="items as MapItem[]"
-          :granularity="granularity"
-          :total="total"
-          :exact="exact"
-          :pending="pending"
-          :type="type"
-          :show-footer="isDesktop === true"
-          :selected-key="selectedKey"
-          @hover="hoveredKey = $event"
-          @select="onSelect"
-        />
-      </aside>
-
-      <div class="relative flex-1 h-full lg:h-auto">
-        <div class="absolute top-2 left-2 right-2 z-20">
-          <MapFilterBar :type="type" @update:type="onTypeChange" />
+    <div class="absolute inset-0 flex flex-col bg-white">
+      <div class="hidden lg:flex h-[78px] shrink-0 items-center gap-6 border-b border-line bg-white px-6">
+        <div class="min-w-[136px]">
+          <p class="text-xl font-extrabold tracking-[-0.02em] text-ink">부동산 실거래가</p>
         </div>
-        <ClientOnly>
-          <RealEstateMapCanvas
+        <MapFilterBar :type="type" @update:type="onTypeChange" />
+        <div class="ml-auto inline-flex rounded-xl border border-line bg-background-light p-1 text-sm font-semibold text-slate-700">
+          <button type="button" class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-white px-4 text-primary shadow-sm" aria-current="page">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 18 3.8 20.6V6.6L9 4m0 14 6 2.6m-6-2.6V4m6 16.6 5.2-2.6V4L15 6.6m0 14V6.6M15 6.6 9 4" />
+            </svg>
+            지도
+          </button>
+          <a :href="listHref" class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-4 hover:bg-white">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M8 6h12M8 12h12M8 18h12" />
+              <path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3" />
+            </svg>
+            목록
+          </a>
+        </div>
+      </div>
+
+      <div class="relative min-h-0 flex-1 lg:flex">
+        <aside class="hidden lg:flex lg:w-[360px] lg:shrink-0 border-r border-line">
+          <MapSidebar
+            class="w-full"
             :items="items as MapItem[]"
-            :center="center"
-            :level="level"
+            :granularity="granularity"
+            :total="total"
+            :exact="exact"
+            :pending="pending"
             :type="type"
+            :show-footer="isDesktop === true"
             :selected-key="selectedKey"
-            @idle="onIdle"
+            :error="visibleError"
+            :list-href="listHref"
+            :list-label="listLabel"
+            @hover="hoveredKey = $event"
             @select="onSelect"
-            @hover="hoveredKey = $event ? itemKey($event) : null"
+            @retry="retryAll"
           />
-          <template #fallback>
-            <div class="w-full h-full bg-background-light animate-pulse" />
-          </template>
-        </ClientOnly>
+        </aside>
+
+        <div class="map-canvas-panel" :style="mobileCanvasStyle">
+          <div class="absolute top-2 left-2 right-2 z-20 lg:hidden">
+            <MapFilterBar :type="type" @update:type="onTypeChange" />
+          </div>
+          <ClientOnly>
+            <RealEstateMapCanvas
+              ref="canvasRef"
+              :items="items as MapItem[]"
+              :center="center"
+              :level="level"
+              :type="type"
+              :selected-key="selectedKey"
+              @idle="onIdle"
+              @select="onSelect"
+              @hover="hoveredKey = $event ? itemKey($event) : null"
+              @load-error="onCanvasLoadError"
+              @loaded="onCanvasLoaded"
+            />
+            <template #fallback>
+              <div class="w-full h-full bg-background-light animate-pulse" />
+            </template>
+          </ClientOnly>
+        </div>
       </div>
     </div>
 
-    <!-- 모바일: 지도 전체 + 하단 바텀시트 -->
-    <MapBottomSheet>
+    <MapBottomSheet v-model:expanded="bottomSheetExpanded">
       <MapSidebar
         :items="items as MapItem[]"
         :granularity="granularity"
@@ -78,8 +84,12 @@
         :type="type"
         :show-footer="isDesktop === false"
         :selected-key="selectedKey"
+        :error="visibleError"
+        :list-href="listHref"
+        :list-label="listLabel"
         @hover="hoveredKey = $event"
         @select="onSelect"
+        @retry="retryAll"
       />
     </MapBottomSheet>
   </section>
@@ -88,13 +98,15 @@
 <script setup lang="ts">
 // onMounted 를 명시 import 한다 — 이 컴포넌트는 테스트에서 직접 mount 되므로
 // auto-import 에 기대면 로컬은 통과하고 CI 에서만 ReferenceError 가 난다.
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
 import { useRealEstateMap, itemKey, buildMapHash, parseMapHash } from '~/composables/useRealEstateMap'
 import { KOREA_BOUNDS, type Granularity, type MapBounds, type MapItem } from '~/types/realEstateMap'
+import { explorationListHref } from '~/utils/explorationNavigation'
+import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
 const props = defineProps<{
   initialType: string
@@ -103,21 +115,32 @@ const props = defineProps<{
 }>()
 
 const center = ref({ lat: 36.5, lng: 127.8 })
+const canvasRef = ref<{ retry: () => Promise<void> } | null>(null)
+const canvasError = ref<string | null>(null)
+const listRegion = ref<{ city: string; district?: string } | null>(null)
+const bottomSheetExpanded = ref(false)
+const mobileCanvasStyle = computed(() => ({
+  '--sheet-cover': bottomSheetExpanded.value ? '75dvh' : '38dvh',
+}))
 /**
  * 펼쳐진 건물 마커의 키. null 이면 전부 접힌 상태다.
  * 형식은 useRealEstateMap.itemKey 의 건물 분기와 같다 — `buildingName|district`.
  */
 const selectedKey = ref<string | null>(null)
 const {
-  type, level, granularity, items, total, exact, pending,
+  type, level, granularity, items, total, exact, pending, error,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
-  hoveredKey, setType, setLevel, onMapIdle,
+  hoveredKey, setType, setLevel, onMapIdle, retry,
 } = useRealEstateMap({
   type: props.initialType,
   items: props.initialItems,
   granularity: props.initialGranularity,
 })
+
+const visibleError = computed(() => canvasError.value ?? error.value)
+const listHref = computed(() => explorationListHref(type.value as RealEstateUrlType, listRegion.value))
+const listLabel = computed(() => listRegion.value ? '이 지역 목록 보기' : '전국 목록 보기')
 
 // 같은 granularity 안의 팬/줌은 선택을 유지해야 하지만, granularity 자체가 바뀌면
 // (building→dong 등) 목록의 항목 단위가 완전히 달라진다. 이 상태에서 건물 "은마"를
@@ -209,6 +232,21 @@ function onTypeChange(next: string): void {
   syncHash()
 }
 
+function onCanvasLoadError(message: string): void {
+  canvasError.value = message
+}
+
+function onCanvasLoaded(): void {
+  canvasError.value = null
+}
+
+async function retryAll(): Promise<void> {
+  await Promise.all([
+    retry(),
+    canvasError.value ? canvasRef.value?.retry() : Promise.resolve(),
+  ])
+}
+
 /**
  * 좌표가 실제로 대한민국 영역 안인지. `!= null` 만으로는 부족하다 — MapSidebar 의
  * SIDO_CHIPS 폴백 항목처럼 좌표가 없는 아이템이 과거 `lat:0, lng:0`(기니만 앞바다, 유효한
@@ -241,6 +279,14 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
  * 목록/지도는 현재 뷰포트 bounds 기준으로 다시 조회되므로 화면이 깨지지 않는다.
  */
 function onSelect(item: MapItem): void {
+  if ('buildingName' in item) {
+    listRegion.value = { city: item.city, district: item.district }
+  } else if (granularity.value === 'city') {
+    listRegion.value = { city: item.name }
+  } else if (item.district) {
+    listRegion.value = { city: item.name, district: item.district }
+  }
+
   const { lat, lng } = item
   if (lat != null && lng != null && isWithinKoreaBounds(lat, lng)) {
     center.value = { lat, lng }
@@ -259,3 +305,23 @@ function onSelect(item: MapItem): void {
 // 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.
 defineExpose({ selectedKey })
 </script>
+
+
+<style scoped>
+.map-canvas-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: calc(var(--sheet-cover) + 20px);
+  left: 0;
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .map-canvas-panel {
+    position: relative;
+    inset: auto;
+    flex: 1 1 0%;
+  }
+}
+</style>

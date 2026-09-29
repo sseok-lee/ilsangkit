@@ -8,6 +8,7 @@ import { prisma } from '../lib/prisma.js';
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, SHORT_TO_SLUG, FULL_TO_SLUG } from './cityMapping.js';
 import { canUseFulltext, toBooleanPhrase } from './search/fulltextKeyword.js';
+import { containsSqlLikeKeyword } from './search/sqlLike.js';
 import { bufferViewCount } from './viewCountService.js';
 import { isWifiGroupId } from './wifiGroup.js';
 
@@ -186,8 +187,9 @@ export async function wifiGroupSearch(params: {
       conditions.push('MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)');
       values.push(toBooleanPhrase(keyword));
     } else {
-      conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
-      values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+      conditions.push("(name LIKE ? ESCAPE '\\\\' OR address LIKE ? ESCAPE '\\\\' OR roadAddress LIKE ? ESCAPE '\\\\')");
+      const keywordPattern = containsSqlLikeKeyword(keyword);
+      values.push(keywordPattern, keywordPattern, keywordPattern);
     }
   }
   if (city) {
@@ -247,7 +249,7 @@ export async function wifiGroupSearch(params: {
             MIN(ssid) as ssid, MIN(installLocation) as installLocation,
             COUNT(*) as accessPointCount
      FROM Wifi WHERE ${whereClause}
-     GROUP BY ${GROUP_KEY_SQL} ORDER BY name ASC ${isGeoSearch ? 'LIMIT ?' : 'LIMIT ? OFFSET ?'}`,
+     GROUP BY ${GROUP_KEY_SQL} ORDER BY name ASC, groupKey ASC ${isGeoSearch ? 'LIMIT ?' : 'LIMIT ? OFFSET ?'}`,
     ...values, ...(isGeoSearch ? [GEO_SCAN_CAP] : [limit, offset]),
   );
 

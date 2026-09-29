@@ -1,29 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const queryRawUnsafe = vi.fn();
+const { queryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
+  queryRawUnsafe: vi.fn(),
+  mockGetLatestDeals: vi.fn(),
+}));
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: { $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a) },
   default: { $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a) },
 }));
 
+vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/realEstateLatestDeals.js');
+  return {
+    ...actual,
+    getLatestDeals: mockGetLatestDeals,
+  };
+});
+
 import { fetchBuildings, BUILDING_LIMIT, __resetIndexWarningForTest } from '../../src/services/realEstateMapService.js';
+import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
+import type { BuildingKey, LatestDeals } from '../../src/types/realEstateExploration.js';
+
+function emptyLatestDeals(): LatestDeals {
+  return { sale: null, jeonse: null, wolse: null };
+}
 
 const BOUNDS = { swLat: 37.46, swLng: 127.0, neLat: 37.54, neLng: 127.1 };
 
 describe('fetchBuildings', () => {
-  beforeEach(() => queryRawUnsafe.mockReset());
+  beforeEach(() => {
+    queryRawUnsafe.mockReset();
+    mockGetLatestDeals.mockReset();
+    mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
+      const bundles = new Map<string, LatestDeals>();
+      for (const key of keys) bundles.set(latestDealsKey(key), emptyLatestDeals());
+      return Promise.resolve(bundles);
+    });
+  });
 
   it('FORCE INDEX 힌트를 건다 — 없으면 옵티마이저가 21배 느린 경로를 고른다', async () => {
     queryRawUnsafe.mockResolvedValueOnce([{ cnt: 5n }]).mockResolvedValueOnce([]);
     await fetchBuildings('apt-sale', BOUNDS);
     const listSql = queryRawUnsafe.mock.calls[1][0] as string;
-    expect(listSql).toContain('FORCE INDEX (RealEstateBuildingSummary_type_lat_lng_idx)');
+    expect(listSql).toContain('FORCE INDEX (RealEstateBuildingSummaryV2_type_lat_lng_idx)');
   });
 
   it('total 을 items.length 가 아니라 별도 COUNT 로 구한다', async () => {
     queryRawUnsafe
       .mockResolvedValueOnce([{ cnt: 1820n }])
-      .mockResolvedValueOnce([{ buildingName: 'A', latestPrice: 100n, monthlyRent: null, transactionCount: 3, lat: 37.5, lng: 127.05 }]);
+      .mockResolvedValueOnce([{ buildingName: 'A', bjdCode: '11680', latestPrice: 100n, monthlyRent: null, transactionCount: 3, lat: 37.5, lng: 127.05 }]);
     const r = await fetchBuildings('apt-sale', BOUNDS);
     expect(r.total).toBe(1820);
     expect(r.items).toHaveLength(1);
@@ -42,7 +67,7 @@ describe('fetchBuildings', () => {
   it('BigInt 를 Number 로 직렬화한다', async () => {
     queryRawUnsafe
       .mockResolvedValueOnce([{ cnt: 1n }])
-      .mockResolvedValueOnce([{ buildingName: 'A', latestPrice: 168340n, monthlyRent: 0, transactionCount: 3 }]);
+      .mockResolvedValueOnce([{ buildingName: 'A', bjdCode: '11680', latestPrice: 168340n, monthlyRent: 0, transactionCount: 3 }]);
     const r = await fetchBuildings('apt-rent', BOUNDS);
     expect(r.items[0].latestPrice).toBe(168340);
     expect(typeof r.items[0].latestPrice).toBe('number');
@@ -62,14 +87,15 @@ describe('fetchBuildings', () => {
     queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([]);
     await fetchBuildings('apt-rent', BOUNDS);
     const listSql = queryRawUnsafe.mock.calls[1][0] as string;
-    for (const col of ['jeonseDeposit', 'jeonseDealKey', 'wolseDeposit', 'wolseMonthlyRent', 'wolseDealKey']) {
+    for (const col of ['buildingKey', 'bjdCode', 'jibun', 'jeonseDeposit', 'jeonseDealKey', 'wolseDeposit', 'wolseMonthlyRent', 'wolseDealKey']) {
       expect(listSql).toContain(col);
     }
   });
 
   it('분리 컬럼 값을 그대로 항목에 담는다', async () => {
     queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([{
-      buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+      buildingName: '은마', bjdCode: '11680', city: '서울', district: '강남구', dongName: '대치동',
+      buildingKey: 'key-daechi-934-2', jibun: '934-2',
       lat: 37.5, lng: 127.06, latestPrice: 75000n, monthlyRent: 340,
       latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
       jeonseDeposit: 96000, jeonseDealKey: 20260712,
@@ -77,13 +103,15 @@ describe('fetchBuildings', () => {
     }]);
     const r = await fetchBuildings('apt-rent', BOUNDS);
     expect(r.items[0].jeonseDeposit).toBe(96000);
+    expect(r.items[0].buildingKey).toBe('key-daechi-934-2');
+    expect(r.items[0].jibun).toBe('934-2');
     expect(r.items[0].wolseDeposit).toBe(75000);
     expect(r.items[0].wolseMonthlyRent).toBe(340);
   });
 
   it('매매는 분리 컬럼이 null 이다', async () => {
     queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([{
-      buildingName: '도곡렉슬', city: '서울', district: '강남구', dongName: '도곡동',
+      buildingName: '도곡렉슬', bjdCode: '11680', city: '서울', district: '강남구', dongName: '도곡동',
       lat: 37.48, lng: 127.05, latestPrice: 245000n, monthlyRent: null,
       latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 83,
       jeonseDeposit: null, jeonseDealKey: null,
@@ -98,8 +126,81 @@ describe('fetchBuildings', () => {
     queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([]);
     await fetchBuildings('apt-rent', BOUNDS);
     const listSql = queryRawUnsafe.mock.calls[1][0] as string;
-    expect(listSql).toContain('FORCE INDEX (RealEstateBuildingSummary_type_lat_lng_idx)');
+    expect(listSql).toContain('FORCE INDEX (RealEstateBuildingSummaryV2_type_lat_lng_idx)');
     expect(listSql).toContain('ORDER BY transactionCount DESC');
+  });
+
+  it.each([1, 24, BUILDING_LIMIT])('최종 반환 %i개만 한 번에 latestDeals 보완한다', async (rowCount) => {
+    const rows = Array.from({ length: rowCount }, (_, i) => ({
+      buildingName: `단지${i}`,
+      bjdCode: `1168${String(i).padStart(2, '0')}`,
+      city: '서울',
+      district: '강남구',
+      dongName: '역삼동',
+      lat: 37.5,
+      lng: 127.0,
+      latestPrice: 100000n,
+      monthlyRent: null,
+      transactionCount: 3,
+    }));
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: BigInt(rowCount + 10) }]).mockResolvedValueOnce(rows);
+
+    const result = await fetchBuildings('apt-sale', BOUNDS);
+
+    expect(result.items).toHaveLength(rowCount);
+    expect(mockGetLatestDeals).toHaveBeenCalledTimes(1);
+    expect(mockGetLatestDeals.mock.calls[0][0]).toHaveLength(rowCount);
+    expect(mockGetLatestDeals.mock.calls[0][1]).toBe('sale');
+    expect(queryRawUnsafe).toHaveBeenCalledTimes(2);
+    expect(result.items[0]).toHaveProperty('bjdCode');
+    expect(mockGetLatestDeals.mock.calls[0][0][0]).toMatchObject({
+      buildingName: '단지0',
+      bjdCode: '116800',
+      dongName: '역삼동',
+      jibun: null,
+    });
+    expect(result.items[0]).toHaveProperty('latestDeals');
+  });
+
+  it('같은 이름의 다른 지번 지도 항목을 별도 키로 최신거래 보완한다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 2n }]).mockResolvedValueOnce([
+      {
+        buildingKey: 'key-a',
+        buildingName: '스톤빌리지',
+        bjdCode: '11680',
+        city: '서울',
+        district: '강남구',
+        dongName: '대치동',
+        jibun: '934-2',
+        lat: 37.5,
+        lng: 127.06,
+        latestPrice: 81000n,
+        monthlyRent: null,
+        transactionCount: 3,
+      },
+      {
+        buildingKey: 'key-b',
+        buildingName: '스톤빌리지',
+        bjdCode: '11680',
+        city: '서울',
+        district: '강남구',
+        dongName: '역삼동',
+        jibun: '785-10',
+        lat: 37.49,
+        lng: 127.04,
+        latestPrice: 72000n,
+        monthlyRent: null,
+        transactionCount: 2,
+      },
+    ]);
+
+    const result = await fetchBuildings('villa-sale', BOUNDS);
+
+    expect(result.items.map((item) => item.buildingKey)).toEqual(['key-a', 'key-b']);
+    expect(mockGetLatestDeals.mock.calls[0][0]).toEqual([
+      { propertyType: 'villa', buildingName: '스톤빌리지', bjdCode: '11680', dongName: '대치동', jibun: '934-2' },
+      { propertyType: 'villa', buildingName: '스톤빌리지', bjdCode: '11680', dongName: '역삼동', jibun: '785-10' },
+    ]);
   });
 });
 
@@ -121,7 +222,7 @@ describe('좌표 인덱스 부재 시 폴백', () => {
       .mockRejectedValueOnce(missing) // COUNT + 힌트
       .mockResolvedValueOnce([{ cnt: 3n }]) // COUNT 폴백
       .mockRejectedValueOnce(missing) // 목록 + 힌트
-      .mockResolvedValueOnce([{ buildingName: 'A', latestPrice: 100n, monthlyRent: 0, transactionCount: 1 }]);
+      .mockResolvedValueOnce([{ buildingName: 'A', bjdCode: '11680', latestPrice: 100n, monthlyRent: 0, transactionCount: 1 }]);
 
     const r = await fetchBuildings('apt-sale', BOUNDS);
 

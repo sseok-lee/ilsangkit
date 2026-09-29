@@ -33,11 +33,16 @@ describe('시설 상세 광고 밀도', () => {
     expect(count(source.slice(locationIndex, nearbyIndex), /<AdBanner/g)).toBe(0)
     expect(count(source.slice(nearbyIndex, contextLinksIndex), /<AdBanner/g)).toBe(1)
   })
-  it('데스크톱 사이드바는 지도와 액션을 유지하고 광고를 포함하지 않는다', () => {
-    const aside = extractBlock(src(), '<aside class="hidden md:flex', '</aside>')
-    expect(aside).toContain('aria-label="시설 위치 지도"')
-    expect(aside).toContain('길찾기')
-    expect(aside).not.toContain('<AdBanner')
+  it('지도와 로드뷰를 본문에 합치고 길찾기를 위치 섹션 오른쪽에 배치한다', () => {
+    const source = src()
+    const location = extractBlock(source, '<SectionBlock id="facility-location"', '</SectionBlock>')
+    expect(location).toContain('<FacilityMap')
+    expect(location).toContain('<FacilityRoadview')
+    expect(location).not.toContain('<AdBanner')
+    expect(source).not.toContain('<aside')
+    expect(location).toContain('<template #right>')
+    expect(location).toContain('길찾기')
+    expect(source).not.toContain('#address-actions')
   })
   it('로드뷰 직후 광고는 제거됐다', () => {
     expect(src()).not.toContain('Ad: ROADVIEW ↔ NEARBY 사이')

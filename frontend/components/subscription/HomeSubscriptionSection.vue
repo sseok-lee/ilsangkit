@@ -6,99 +6,103 @@
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">calendar_month</span>
           청약 한눈에
         </h2>
+        <p class="mt-1 text-sm text-faint">지역과 무관하게 볼 수 있는 전국 공고입니다.</p>
       </div>
       <HardLink to="/subscription" class="inline-flex items-center min-h-[44px] text-sm text-primary font-bold hover:underline whitespace-nowrap">
-        전체보기 →
+        전체 공고
       </HardLink>
     </div>
 
-    <template v-if="hasAny">
-      <div class="bg-white border border-line rounded-2xl shadow-card p-4 md:p-5">
-        <!-- 요약 한 줄 -->
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 px-4 py-2.5 bg-background-light border border-line rounded-xl text-sm text-ink">
-          <span class="flex items-center gap-1.5">
-            <span class="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden="true"></span>
-            청약중 <strong>{{ ongoingTotal }}건</strong>
-          </span>
-          <span class="flex items-center gap-1.5">
-            <span class="inline-block w-2 h-2 rounded-full bg-primary-500" aria-hidden="true"></span>
-            예정 <strong>{{ upcomingTotal }}건</strong>
-          </span>
+    <div class="grid gap-4 md:grid-cols-2">
+      <article
+        v-for="panel in panels"
+        :key="panel.key"
+        data-testid="subscription-panel"
+        class="min-w-0 bg-white border border-line rounded-lg p-4 md:p-5"
+      >
+        <div class="flex items-start justify-between gap-3 border-b border-line pb-3">
+          <div class="min-w-0">
+            <h3 class="text-lg font-bold text-strong">{{ panel.title }}</h3>
+            <p class="mt-1 text-xs text-faint">{{ panel.description }}</p>
+          </div>
+          <HardLink :to="panel.href" class="shrink-0 text-sm font-bold text-primary hover:underline">
+            더보기
+          </HardLink>
         </div>
 
-        <!-- 타임라인 2그룹 -->
-        <!-- grid 아이템 기본 min-width:auto 는 긴 공고명(truncate=nowrap) 너비로 트랙을 늘려
-             모바일에서 카드를 viewport 밖으로 밀어낸다. 컬럼에 min-w-0 을 줘 트랙을 컨테이너에
-             가두고 내부 truncate 가 동작하도록 한다. -->
-        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4">
-          <div v-if="ongoing.length > 0" class="min-w-0">
-            <h3 class="text-sm font-semibold text-strong mb-1.5"><span aria-hidden="true">🔴</span> 접수 중</h3>
-            <ul>
-              <li
-                v-for="(item, idx) in ongoing"
-                :key="`ongoing-${item.id}`"
-                :class="['border-b border-line', idx === 4 ? 'hidden sm:block' : '']"
-              >
-                <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-background-light">
-                  <span
-                    v-if="dayBadge(item.receptionEndDate)"
-                    class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 min-w-[34px] text-center"
-                  >{{ dayBadge(item.receptionEndDate) }}</span>
-                  <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                  <span class="flex-1 min-w-0 text-sm font-semibold text-strong truncate">{{ item.houseName }}</span>
-                  <span class="hidden sm:inline shrink-0 text-[11px] text-faint">{{ item.regionName }}</span>
-                </HardLink>
-              </li>
-            </ul>
-          </div>
-
-          <div v-if="upcoming.length > 0" class="min-w-0">
-            <h3 class="text-sm font-semibold text-strong mb-1.5"><span aria-hidden="true">🔵</span> 접수 예정</h3>
-            <ul>
-              <li
-                v-for="(item, idx) in upcoming"
-                :key="`upcoming-${item.id}`"
-                :class="['border-b border-line', idx === 4 ? 'hidden sm:block' : '']"
-              >
-                <HardLink :to="`/subscription/${item.id}`" class="flex items-center gap-2 py-2 -mx-1 px-1 rounded hover:bg-background-light">
-                  <span
-                    v-if="dayBadge(item.receptionStartDate)"
-                    class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 min-w-[34px] text-center"
-                  >{{ dayBadge(item.receptionStartDate) }}</span>
-                  <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
-                  <span class="flex-1 min-w-0 text-sm font-semibold text-strong truncate">{{ item.houseName }}</span>
-                  <span class="hidden sm:inline shrink-0 text-[11px] text-faint">{{ item.regionName }}</span>
-                </HardLink>
-              </li>
-            </ul>
-          </div>
+        <div v-if="panel.error" class="py-8 text-center">
+          <span class="material-symbols-outlined text-[30px] text-faint" aria-hidden="true">error</span>
+          <p class="mt-2 text-sm font-semibold text-strong">{{ panel.title }} 정보를 불러오지 못했습니다.</p>
+          <button class="mt-3 text-sm font-bold text-primary hover:underline" type="button" @click="refresh">
+            다시 불러오기
+          </button>
         </div>
-      </div>
-    </template>
 
-    <!-- 빈 상태 -->
-    <div v-else class="bg-white border border-line rounded-2xl px-6 py-8 text-center">
-      <span class="material-symbols-outlined text-faint text-[32px]" aria-hidden="true">event_upcoming</span>
-      <p class="text-sm text-muted mt-2">현재 접수 중이거나 예정된 청약 공고가 없어요.</p>
-      <HardLink to="/subscription" class="inline-flex items-center mt-3 text-sm text-primary font-bold hover:underline">
-        지난 공고 보기 →
-      </HardLink>
+        <ul v-else-if="panel.items.length > 0" class="divide-y divide-line">
+          <li v-for="item in panel.items" :key="`${panel.key}-${item.id}`">
+            <HardLink :to="`/subscription/${item.id}`" class="block -mx-2 rounded px-2 py-3 hover:bg-background-light">
+              <div class="flex min-w-0 items-center gap-2">
+                <span :class="['shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded', badge(item).classes]">{{ badge(item).label }}</span>
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold" :class="statusClass(item.status)">
+                  {{ statusLabel(item.status) }}
+                </span>
+                <span v-if="dayBadge(item)" class="shrink-0 text-[11px] font-extrabold text-primary">
+                  {{ dayBadge(item) }}
+                </span>
+              </div>
+              <p class="mt-2 truncate text-sm font-semibold text-strong">{{ item.houseName }}</p>
+              <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
+                <span>{{ item.regionName || '전국' }}</span>
+                <span>{{ supplyLabel(item.totalSupplyCount) }}</span>
+                <span>{{ dateLabel(item) }}</span>
+              </div>
+            </HardLink>
+          </li>
+        </ul>
+
+        <div v-else class="py-8 text-center">
+          <span class="material-symbols-outlined text-faint text-[30px]" aria-hidden="true">event_upcoming</span>
+          <p class="mt-2 text-sm text-muted">현재 접수 중이거나 예정된 {{ panel.title }} 공고가 없습니다.</p>
+          <HardLink :to="panel.href" class="inline-flex items-center mt-3 text-sm text-primary font-bold hover:underline">
+            지난 공고 보기
+          </HardLink>
+        </div>
+      </article>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import type { HomeSubscriptionItem } from '~/composables/useHomeSubscriptions'
 import { useHomeSubscriptions } from '~/composables/useHomeSubscriptions'
 import { subscriptionTypeBadge } from '~/utils/subscriptionMeta'
 
-const { ongoing, upcoming, hasAny, ongoingTotal, upcomingTotal } = useHomeSubscriptions()
+const { sale, publicRent, saleError, publicRentError, refresh } = useHomeSubscriptions()
 
-// SSR/CSR 동일한 "오늘" 보장 (hydration mismatch 방지)
 const todayIso = useState<string>('home-today-iso', () => new Date().toISOString().split('T')[0])
 
 const MS_PER_DAY = 86_400_000
+
+const panels = computed(() => [
+  {
+    key: 'sale',
+    title: '일반 청약',
+    description: '분양, 오피스텔, 무순위, 임의공급',
+    href: '/subscription/sale',
+    items: sale.value,
+    error: saleError.value,
+  },
+  {
+    key: 'public-rent',
+    title: '공공임대',
+    description: '청약홈·마이홈·LH 공공임대주택',
+    href: '/subscription/rent/public',
+    items: publicRent.value,
+    error: publicRentError.value,
+  },
+])
 
 function diffDaysFromToday(isoDate: string | null): number | null {
   if (!isoDate) return null
@@ -109,13 +113,42 @@ function diffDaysFromToday(isoDate: string | null): number | null {
   return Math.round((target.getTime() - today.getTime()) / MS_PER_DAY)
 }
 
-function dayBadge(isoDate: string | null): string | null {
-  const d = diffDaysFromToday(isoDate)
+function dayBadge(item: HomeSubscriptionItem): string | null {
+  const d = diffDaysFromToday(item.status === 'ongoing' ? item.receptionEndDate : item.receptionStartDate)
   if (d === null || d < 0) return null
   return d === 0 ? 'D-Day' : `D-${d}`
 }
 
 function badge(item: HomeSubscriptionItem) {
   return subscriptionTypeBadge(item.sourceType, item.rentType)
+}
+
+function statusLabel(status: HomeSubscriptionItem['status']): string {
+  if (status === 'ongoing') return '청약중'
+  if (status === 'upcoming') return '접수예정'
+  if (status === 'unknown') return '일정 확인 필요'
+  return '마감'
+}
+
+function statusClass(status: HomeSubscriptionItem['status']): string {
+  if (status === 'ongoing') return 'bg-red-50 text-red-700'
+  if (status === 'upcoming') return 'bg-blue-50 text-blue-700'
+  if (status === 'unknown') return 'bg-amber-50 text-amber-700'
+  return 'bg-slate-100 text-slate-600'
+}
+
+function supplyLabel(count: number | null): string {
+  return count == null ? '공급 미제공' : `${count.toLocaleString()}호`
+}
+
+function dateLabel(item: HomeSubscriptionItem): string {
+  if (item.status === 'ongoing') {
+    return item.receptionEndDate ? `마감 ${item.receptionEndDate}` : '마감일 미제공'
+  }
+  if (item.status === 'upcoming') {
+    return item.receptionStartDate ? `시작 ${item.receptionStartDate}` : '시작일 미제공'
+  }
+  if (item.status === 'unknown') return '일정 확인 필요'
+  return item.receptionEndDate ? `종료 ${item.receptionEndDate}` : '일정 미제공'
 }
 </script>

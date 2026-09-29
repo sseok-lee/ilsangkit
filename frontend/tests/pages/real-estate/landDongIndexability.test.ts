@@ -26,6 +26,8 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
   return e
 }
 
+;(globalThis as any).useRouter = () => ({ push: vi.fn() })
+
 ;(globalThis as any).useRoute = vi.fn(() => ({
   params: { city: 'seoul', district: 'gangnam', dong: '%EC%97%AD%EC%82%BC%EB%8F%99' },
 }))

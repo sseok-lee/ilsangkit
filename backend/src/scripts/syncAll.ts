@@ -18,6 +18,7 @@ import { syncToilets } from '../services/toiletSyncService.js';
 import { geocodeToilets } from './geocodeToilets.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { syncTrashData } from './syncTrash.js';
+import { resolveWasteSyncCliOptions } from './wasteSyncOptions.js';
 import { syncWifiData } from './syncWifi.js';
 import { syncClothesFromApi } from '../services/clothesSyncService.js';
 import { syncParkingFromApi } from '../services/parkingSyncService.js';
@@ -82,6 +83,10 @@ interface SyncResult {
   count?: number;
   error?: string;
   duration: number;
+  status?: 'dry-run' | 'prepared';
+  generationId?: string | null;
+  reportHash?: string;
+  canPublish?: boolean;
 }
 
 /**
@@ -95,7 +100,27 @@ type Category = typeof CATEGORIES[number];
  * @param category - 동기화할 카테고리
  * @returns 동기화 결과
  */
-async function syncCategory(category: Category): Promise<SyncResult> {
+type Logger = Pick<typeof console, 'log' | 'info' | 'warn' | 'error'>;
+type CategoryRunner = (category: Category) => Promise<SyncResult>;
+
+interface RunSyncAllOptions {
+  argv?: string[];
+  env?: Record<string, string | undefined>;
+  logger?: Logger;
+  waitMs?: number;
+  categoryRunner?: CategoryRunner;
+}
+
+interface RunSyncAllResult {
+  results: SyncResult[];
+  exitCode: 0 | 1;
+}
+
+async function syncCategory(
+  category: Category,
+  args: readonly string[] = process.argv.slice(2),
+  env: Record<string, string | undefined> = process.env
+): Promise<SyncResult> {
   const start = Date.now();
 
   try {
@@ -138,17 +163,17 @@ async function syncCategory(category: Category): Promise<SyncResult> {
       }
 
       case 'trash': {
-        const serviceKey = process.env.OPENAPI_SERVICE_KEY;
-        if (!serviceKey) {
-          throw new Error('OPENAPI_SERVICE_KEY가 설정되지 않았습니다.');
-        }
-
-        const result = await syncTrashData({ serviceKey });
+        const trashOptions = resolveWasteSyncCliOptions(args, env);
+        const result = await syncTrashData(trashOptions);
         return {
           category,
           success: true,
-          count: result.newRecords + result.updatedRecords,
+          count: result.totalRecords,
           duration: Date.now() - start,
+          status: result.status,
+          generationId: result.generationId ?? null,
+          reportHash: result.reportHash,
+          canPublish: result.canPublish,
         };
       }
 
@@ -406,10 +431,14 @@ async function syncCategory(category: Category): Promise<SyncResult> {
 /**
  * 메인 함수
  */
-async function main(): Promise<void> {
-  console.log('=== 통합 동기화 시작 ===\n');
+export async function runSyncAll(options: RunSyncAllOptions = {}): Promise<RunSyncAllResult> {
+  const args = options.argv ?? process.argv.slice(2);
+  const env = options.env ?? process.env;
+  const logger = options.logger ?? console;
+  const waitMs = options.waitMs ?? 1000;
 
-  const args = process.argv.slice(2);
+  logger.log('=== 통합 동기화 시작 ===\n');
+
   let categoriesToSync: Category[] = [...CATEGORIES];
 
   // --only 옵션 처리
@@ -427,50 +456,62 @@ async function main(): Promise<void> {
   }
 
   if (categoriesToSync.length === 0) {
-    console.error('동기화할 카테고리가 없습니다.');
-    process.exit(1);
+    throw new Error('동기화할 카테고리가 없습니다.');
   }
 
-  console.log(`동기화 대상: ${categoriesToSync.join(', ')}\n`);
+  if (args.includes('--dry-run') && !isOnlyTrash(categoriesToSync)) {
+    throw new Error('통합 dry-run은 --only trash --dry-run 조합만 지원합니다.');
+  }
+
+  logger.log(`동기화 대상: ${categoriesToSync.join(', ')}\n`);
 
   const results: SyncResult[] = [];
 
   for (const category of categoriesToSync) {
-    console.log(`\n[${category}] 동기화 시작...`);
-    const result = await syncCategory(category);
+    logger.log(`\n[${category}] 동기화 시작...`);
+    const runner = options.categoryRunner && category !== 'trash'
+      ? options.categoryRunner
+      : (selected: Category) => syncCategory(selected, args, env);
+    const result = await runner(category);
     results.push(result);
 
     if (result.success) {
       const countInfo = result.count !== undefined ? ` (${result.count}개)` : '';
-      console.log(`[${category}] ✅ 완료${countInfo} (${result.duration}ms)`);
+      logger.log(`[${category}] ✅ 완료${countInfo} (${result.duration}ms)`);
+      if (category === 'trash' && result.status === 'prepared') {
+        const publishState = result.canPublish
+          ? `발행 가능 generation=${result.generationId} reportHash=${result.reportHash}`
+          : `공개 불가 generation=${result.generationId} reportHash=${result.reportHash}`;
+        logger.warn(`[trash] 후보 준비 완료: ${publishState}`);
+      }
     } else {
-      console.error(`[${category}] ❌ 실패: ${result.error}`);
+      logger.error(`[${category}] ❌ 실패: ${result.error}`);
     }
 
     // 다음 카테고리 전에 약간의 대기 (API rate limit 고려)
     if (category !== categoriesToSync[categoriesToSync.length - 1]) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
   }
 
   // 결과 요약
-  console.log('\n=== 동기화 결과 요약 ===');
+  logger.log('\n=== 동기화 결과 요약 ===');
   const success = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success).length;
-  console.log(`성공: ${success}개, 실패: ${failed}개`);
+  logger.log(`성공: ${success}개, 실패: ${failed}개`);
 
   // 성공한 카테고리 목록
   const successList = results.filter(r => r.success).map(r => r.category);
   if (successList.length > 0) {
-    console.log(`\n✅ 성공: ${successList.join(', ')}`);
+    logger.log(`\n✅ 성공: ${successList.join(', ')}`);
   }
 
   // 실패한 카테고리 상세 (exit는 부동산 요약 갱신 이후로 미룬다 — 아래 참고)
   const failedResults = results.filter(r => !r.success);
   if (failedResults.length > 0) {
-    console.log('\n❌ 실패한 카테고리:');
+    logger.log('\n❌ 실패한 카테고리:');
     failedResults.forEach(r => {
-      console.log(`  - ${r.category}: ${r.error}`);
+      logger.log(`  - ${r.category}: ${r.error}`);
     });
   }
 
@@ -478,21 +519,36 @@ async function main(): Promise<void> {
   const realEstateCategories = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'];
   const syncedRealEstate = results.filter(r => r.success && realEstateCategories.includes(r.category));
   if (syncedRealEstate.length > 0) {
-    console.log('\n[Summary] 부동산 요약 테이블 갱신 중...');
+    logger.log('\n[Summary] 부동산 요약 테이블 갱신 중...');
     const { refreshAllSummaries } = await import('../services/realEstateSummaryService.js');
     await refreshAllSummaries();
   }
 
   if (failedResults.length === 0) {
-    console.log('\n모든 동기화가 성공적으로 완료되었습니다.');
+    logger.log('\n모든 동기화가 성공적으로 완료되었습니다.');
   }
 
   // 실패한 카테고리가 있었으면 요약 갱신을 마친 뒤 이제 exit(1)로 반영한다.
   // (성공한 카테고리의 부동산 요약 갱신을 건너뛰지 않기 위해 위쪽의
   // early exit를 제거하고 여기로 옮김)
   if (failedResults.length > 0) {
-    console.error(`\n일부 카테고리 실패(${failedResults.length}개)로 종료 코드 1을 반환합니다.`);
-    process.exit(1);
+    logger.error(`\n일부 카테고리 실패(${failedResults.length}개)로 종료 코드 1을 반환합니다.`);
+    return { results, exitCode: 1 };
+  }
+  return { results, exitCode: 0 };
+}
+
+function isOnlyTrash(categories: readonly Category[]): boolean {
+  return categories.length === 1 && categories[0] === 'trash';
+}
+
+/**
+ * 메인 함수
+ */
+async function main(): Promise<void> {
+  const result = await runSyncAll();
+  if (result.exitCode !== 0) {
+    process.exit(result.exitCode);
   }
 }
 

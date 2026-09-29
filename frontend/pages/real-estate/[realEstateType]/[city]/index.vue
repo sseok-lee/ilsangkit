@@ -4,14 +4,22 @@
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
-        eyebrow="부동산 지역"
+        class="exploration-page-hero"
         :title="heroTitle"
         :description="heroDescription"
       />
 
-      <section class="bg-white border border-line rounded-xl p-4 md:p-5">
-        <p class="text-sm md:text-[15px] leading-relaxed text-slate-700">{{ introParagraph }}</p>
-      </section>
+      <SectionBlock heading="거래 유형과 지역" :subtext="`${cityName} 구/군을 선택하면 지역별 거래를 확인할 수 있습니다.`">
+        <ExplorationFilters
+          :type="realEstateTypeParam"
+          :city="cityName"
+        />
+        <div class="mt-4 pt-4 border-t border-line flex justify-end">
+          <NuxtLink :to="mapHref" class="map-link">{{ mapLinkLabel }}</NuxtLink>
+        </div>
+      </SectionBlock>
+
+      <AdBanner />
 
       <SectionBlock :subtext="`${cityName} 내 구/군을 선택하면 단지 목록을 확인할 수 있습니다.`">
         <template #heading>
@@ -30,24 +38,37 @@
       </SectionBlock>
 
       <SectionBlock
-        v-if="topComplexes.length > 0"
-        :subtext="`${cityName} ${typeLabel} 거래가 활발한 단지`"
+        v-if="cityListFailed"
+        heading="주요 건물"
       >
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">주요 단지</h2>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ComplexCard
-            v-for="c in topComplexes"
-            :key="`${c.buildingName}-${c.bjdCode}`"
-            :complex="c"
-            :property-type="propertyTypePart"
-            :tab="tabPart"
+        <div class="rounded-lg bg-red-50 px-5 py-8 text-center">
+          <p class="font-semibold text-red-700">주요 건물을 불러오지 못했습니다</p>
+          <p class="mt-1 text-sm text-red-600">잠시 후 다시 시도해 주세요.</p>
+          <button class="retry-button" type="button" @click="refreshTopComplexes()">다시 시도</button>
+        </div>
+      </SectionBlock>
+
+      <SectionBlock
+        v-else-if="topComplexes.length > 0"
+        class="exploration-list-section"
+        heading="주요 건물"
+        :subtext="`${cityName} ${typeLabel} 서버 정렬 기준 최대 6곳`"
+      >
+        <div class="building-list">
+          <ExplorationBuildingRow
+            v-for="building in topComplexes"
+            :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
+            :building="building"
+            :mode="tabPart"
           />
         </div>
       </SectionBlock>
 
-      <AdBanner />
+      <SectionBlock v-else heading="주요 건물">
+        <p class="rounded-lg bg-background-light px-5 py-8 text-center text-sm text-muted">
+          이 지역에는 공개된 주요 건물이 없습니다.
+        </p>
+      </SectionBlock>
 
       <DataSourceSection domain="real-estate" />
     </div>
@@ -55,19 +76,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
-import { isRealEstateUrlType } from '~/utils/realEstateUrl'
+import { computed, watchEffect } from 'vue'
+import { CITY_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
+import { isRealEstateUrlType, toCitySlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, buildReCityDescription } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
+import { KOREA_BOUNDS, type MapRegionItem, type MapResponse } from '~/types/realEstateMap'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useRealEstate } from '~/composables/useRealEstate'
-import ComplexCard from '~/components/realEstate/ComplexCard.vue'
+import { suppressAds } from '~/composables/useAdsPolicy'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { explorationListHref, explorationMapHref } from '~/utils/explorationNavigation'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
+import ExplorationBuildingRow from '~/components/realEstate/ExplorationBuildingRow.vue'
 
 const route = useRoute()
 const realEstateTypeParam = route.params.realEstateType as string
@@ -95,27 +121,58 @@ const typeLabel = tabPart === 'sale'
 
 const heroTitle = `${cityName} ${typeLabel} 실거래가`
 const typeHubPath = `/real-estate/${realEstateTypeParam}`
-const introParagraph = `${cityName} ${typeLabel} 실거래가 정보입니다. ${propertyMeta?.description ?? ''} 아래 구/군을 선택하면 ${cityName} 내 단지별 실거래 내역과 시세 추이를 확인할 수 있습니다. 모든 데이터는 국토교통부 실거래가 공개시스템 기준이며 매일 갱신됩니다.`
-
 const districts = computed(() =>
   (REGIONS[cityName] ?? []).map((name) => ({
     name,
-    url: `/real-estate/${realEstateTypeParam}/${citySlugParam}/${
-      DISTRICT_SLUG_MAP[name] ?? name.toLowerCase().replace(/\s+/g, '-')
-    }`,
+    url: explorationListHref(realEstateTypeParam as RealEstateUrlType, { city: cityName, district: name }),
   })),
 )
 
 const { getComplexList } = useRealEstate()
-const { data: topComplexesData } = await useAsyncData(
+const { data: topComplexesData, error: topComplexesError, refresh: refreshTopComplexes } = await useAsyncData(
   `re-city-complexes-${realEstateTypeParam}-${citySlugParam}`,
-  () =>
-    getComplexList(realEstateTypeParam as RealEstateType, cityName, undefined, undefined, 1, 6)
-      .then((r) => r.items)
-      .catch(() => [] as ComplexInfo[]),
-  { default: () => [] as ComplexInfo[] },
+  () => getComplexList(realEstateTypeParam as RealEstateType, cityName, undefined, undefined, 1, 6),
 )
-const topComplexes = computed(() => topComplexesData.value ?? [])
+if (import.meta.server && topComplexesError.value) markDegradedResponse()
+const topComplexes = computed<ComplexInfo[]>(() => topComplexesData.value?.items ?? [])
+const cityListFailed = computed(() => !!topComplexesError.value)
+
+watchEffect(() => suppressAds(cityListFailed.value || topComplexes.value.length === 0))
+
+// 시/도 지도 링크는 지도 화면이 실제로 사용하는 전국 city 집계의 좌표만 사용한다.
+// 지도 집계 준비 실패는 주요 건물 요청과 분리하고 전국 중심 fallback으로만 처리한다.
+const apiBase = useApiBase()
+const { data: cityMapCenter } = await useAsyncData(
+  `re-city-map-center-${realEstateTypeParam}-${citySlugParam}`,
+  async () => {
+    try {
+      const response = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${realEstateTypeParam}/map`, {
+        params: { level: 13, swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+      })
+      const item = (response.data.items as MapRegionItem[]).find(
+        (region) => toCitySlug(region.name) === citySlugParam,
+      )
+      if (
+        item?.lat == null
+        || item.lng == null
+        || item.lat < KOREA_BOUNDS.LAT_MIN
+        || item.lat > KOREA_BOUNDS.LAT_MAX
+        || item.lng < KOREA_BOUNDS.LNG_MIN
+        || item.lng > KOREA_BOUNDS.LNG_MAX
+      ) return null
+      return { lat: item.lat, lng: item.lng, level: 9 }
+    } catch {
+      return null
+    }
+  },
+  { default: () => null },
+)
+const mapHref = computed(() =>
+  explorationMapHref(realEstateTypeParam as RealEstateUrlType, cityMapCenter.value),
+)
+const mapLinkLabel = computed(() =>
+  cityMapCenter.value ? `${cityName} 지도에서 보기` : '전국 지도에서 보기',
+)
 
 // meta/hero description: 구·군 개수 + 대표 단지를 주입해 시 간 설명문 중복을 없앤다.
 const heroDescription = computed(() =>
@@ -152,3 +209,56 @@ setItemListSchema(
   districts.value.map((d) => ({ name: d.name, url: d.url })),
 )
 </script>
+
+<style scoped>
+.exploration-page-hero,
+.exploration-list-section {
+  border-radius: 0;
+  border-right: 0;
+  border-left: 0;
+  box-shadow: none;
+}
+
+.exploration-page-hero :deep(h1) {
+  font-size: 27px;
+}
+
+@media (min-width: 768px) {
+  .exploration-page-hero :deep(h1) {
+    font-size: 36px;
+  }
+}
+
+.map-link,
+.retry-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.map-link {
+  color: #2450dc;
+  text-decoration: none;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  background: #2450dc;
+  padding: 0.5rem 1rem;
+  color: #fff;
+}
+
+.map-link:focus-visible,
+.retry-button:focus-visible {
+  outline: 2px solid #2450dc;
+  outline-offset: 2px;
+}
+
+.building-list {
+  border-top: 1px solid #e6e9f0;
+}
+</style>

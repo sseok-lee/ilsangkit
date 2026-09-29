@@ -1,16 +1,55 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel, getRentDisplay, useMapOverlays } from '~/composables/useMapOverlays'
 import type { MapBuildingItem, MapRegionItem } from '~/types/realEstateMap'
+import type { DealSnapshot, LatestDeals } from '~/types/realEstateExploration'
+
+function saleDeal(amount: number): DealSnapshot {
+  return {
+    kind: 'sale', amount, deposit: null, monthlyRent: null,
+    exclusiveArea: 84.9, floor: 10, dealYear: 2026, dealMonth: 8, dealDay: 1,
+  }
+}
+
+function jeonseDeal(deposit: number): DealSnapshot {
+  return {
+    kind: 'jeonse', amount: null, deposit, monthlyRent: null,
+    exclusiveArea: 84.9, floor: 10, dealYear: 2026, dealMonth: 8, dealDay: 1,
+  }
+}
+
+function wolseDeal(deposit: number, monthlyRent: number): DealSnapshot {
+  return {
+    kind: 'wolse', amount: null, deposit, monthlyRent,
+    exclusiveArea: 59.4, floor: 8, dealYear: 2026, dealMonth: 8, dealDay: 2,
+  }
+}
+
+function deals(over: Partial<LatestDeals> = {}): LatestDeals {
+  return { sale: null, jeonse: null, wolse: null, ...over }
+}
 
 function building(over: Partial<MapBuildingItem>): MapBuildingItem {
   return {
     buildingName: 'A', city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: '1168010300',
     lat: 37.48, lng: 127.06, latestPrice: null, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 1,
     jeonseDeposit: null, jeonseDealKey: null,
     wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+    latestDeals: deals(),
     ...over,
   }
+}
+
+function saleBuilding(amount: number, over: Partial<MapBuildingItem> = {}): MapBuildingItem {
+  return building({ latestDeals: deals({ sale: saleDeal(amount) }), ...over })
+}
+
+function rentBuilding(
+  snapshots: { jeonse?: DealSnapshot | null; wolse?: DealSnapshot | null },
+  over: Partial<MapBuildingItem> = {},
+): MapBuildingItem {
+  return building({ latestDeals: deals(snapshots), ...over })
 }
 
 function regionItem(over: Partial<MapRegionItem>): MapRegionItem {
@@ -21,100 +60,166 @@ function regionItem(over: Partial<MapRegionItem>): MapRegionItem {
 }
 
 describe('formatPriceLabel', () => {
-  it('매매(monthlyRent=null)는 금액만 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 168340, monthlyRent: null }))).toBe('16억 8,340만')
+  it('매매 마커는 latestDeals.sale 금액을 보여준다', () => {
+    expect(formatPriceLabel(saleBuilding(168340), 'apt-sale')).toBe('16억 8,340만')
   })
 
-  it('전세는 monthlyRent=0 이다 — IS NULL 이 아니다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 30000, monthlyRent: 0 }))).toBe('전세 3억')
+  it('latestDeals.sale 이 있으면 마커 라벨도 같은 거래 금액을 쓴다', () => {
+    expect(formatPriceLabel(building({
+      latestPrice: 168340,
+      monthlyRent: null,
+      latestDeals: {
+        sale: {
+          kind: 'sale',
+          amount: 170000,
+          deposit: null,
+          monthlyRent: null,
+          exclusiveArea: 84.9,
+          floor: 16,
+          dealYear: 2026,
+          dealMonth: 9,
+          dealDay: null,
+        },
+        jeonse: null,
+        wolse: null,
+      },
+    }), 'apt-sale')).toBe('17억')
   })
 
-  it('월세는 보증금과 월세에 각각 라벨을 붙여 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 10000, monthlyRent: 80 }))).toBe('보 1억/월 80만')
+  it('전월세 마커는 최신 전세 snapshot 을 보여준다', () => {
+    expect(formatPriceLabel(rentBuilding({ jeonse: jeonseDeal(30000) }), 'apt-rent')).toBe('전세 3억')
+  })
+
+  it('전월세 마커는 최신 월세 snapshot 의 보증금과 월세를 보여준다', () => {
+    expect(formatPriceLabel(rentBuilding({ wolse: wolseDeal(10000, 80) }), 'apt-rent')).toBe('보 1억/월 80만')
   })
 
   it('억 단위가 딱 떨어지지 않으면 만원 자리를 붙인다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 45500, monthlyRent: null }))).toBe('4억 5,500만')
+    expect(formatPriceLabel(saleBuilding(45500), 'villa-sale')).toBe('4억 5,500만')
   })
 
   it('1억 미만은 만 단위로 보여준다', () => {
-    expect(formatPriceLabel(building({ latestPrice: 8500, monthlyRent: null }))).toBe('8,500만')
+    expect(formatPriceLabel(saleBuilding(8500), 'offitel-sale')).toBe('8,500만')
   })
 
-  it('가격이 없으면 대시', () => {
-    expect(formatPriceLabel(building({ latestPrice: null }))).toBe('—')
+  it('latestDeals 슬롯이 null 이면 stale flat 금액 대신 거래 없음을 표시한다', () => {
+    expect(formatPriceLabel(building({
+      latestPrice: 98765,
+      monthlyRent: null,
+      latestDeals: deals(),
+    }), 'apt-sale')).toBe('거래 없음')
+  })
+
+  it('latestDeals bundle 이 없으면 stale flat 금액 대신 로드 실패를 표시한다', () => {
+    expect(formatPriceLabel(building({
+      latestPrice: 98765,
+      monthlyRent: null,
+      latestDeals: undefined,
+    }), 'apt-sale')).toBe('거래 정보를 불러오지 못했습니다')
   })
 })
 
 describe('formatJeonseLabel / formatWolseLabel', () => {
   it('전세 보증금을 만원 단위로 보여준다', () => {
-    expect(formatJeonseLabel(building({ jeonseDeposit: 96000 }))).toBe('9억 6,000만')
+    expect(formatJeonseLabel(rentBuilding({ jeonse: jeonseDeal(96000) }))).toBe('9억 6,000만')
   })
 
   it('전세 거래가 없으면 null 이다 — 호출부가 "거래 없음" 을 그릴 수 있게 한다', () => {
-    expect(formatJeonseLabel(building({ jeonseDeposit: null }))).toBeNull()
+    expect(formatJeonseLabel(rentBuilding({ jeonse: null }))).toBeNull()
   })
 
   it('전세 보증금 0원도 그린다 — 0 을 "없음" 으로 쓰지 않는다', () => {
-    expect(formatJeonseLabel(building({ jeonseDeposit: 0 }))).toBe('0만')
+    expect(formatJeonseLabel(rentBuilding({ jeonse: jeonseDeal(0) }))).toBe('0만')
   })
 
   it('월세는 보증금과 월세액을 가운뎃점으로 가른다', () => {
-    expect(formatWolseLabel(building({ wolseDeposit: 75000, wolseMonthlyRent: 340 }))).toBe('7억 5,000만 · 340만')
+    expect(formatWolseLabel(rentBuilding({ wolse: wolseDeal(75000, 340) }))).toBe('7억 5,000만 · 340만')
   })
 
   it('월세 보증금이 억으로 딱 떨어지면 만원 자리를 붙이지 않는다', () => {
-    expect(formatWolseLabel(building({ wolseDeposit: 90000, wolseMonthlyRent: 100 }))).toBe('9억 · 100만')
+    expect(formatWolseLabel(rentBuilding({ wolse: wolseDeal(90000, 100) }))).toBe('9억 · 100만')
   })
 
   it('월세 거래가 없으면 null 이다', () => {
-    expect(formatWolseLabel(building({ wolseDeposit: null, wolseMonthlyRent: null }))).toBeNull()
+    expect(formatWolseLabel(rentBuilding({ wolse: null }))).toBeNull()
   })
 
   it('보증금은 있는데 월세액이 없으면 null 이다 — 반쪽 값을 그리지 않는다', () => {
-    expect(formatWolseLabel(building({ wolseDeposit: 75000, wolseMonthlyRent: null }))).toBeNull()
+    expect(formatWolseLabel(building({
+      latestDeals: deals({ wolse: { ...wolseDeal(75000, 340), monthlyRent: null } }),
+    }))).toBeNull()
   })
 
   it('보증금 0원 월세도 그린다 — 0 을 "없음" 으로 쓰지 않는다', () => {
-    expect(formatWolseLabel(building({ wolseDeposit: 0, wolseMonthlyRent: 50 }))).toBe('0만 · 50만')
+    expect(formatWolseLabel(rentBuilding({ wolse: wolseDeal(0, 50) }))).toBe('0만 · 50만')
   })
 })
 
-describe('getRentDisplay — 배포 직후 summary 미갱신 폴백 (B-1)', () => {
-  it('새 분리 컬럼이 있으면(둘 중 하나라도) formatJeonseLabel/formatWolseLabel 그대로다', () => {
-    const item = building({
-      jeonseDeposit: 96000, jeonseDealKey: 20260712,
-      wolseDeposit: 75000, wolseMonthlyRent: 340, wolseDealKey: 20260725,
-      latestPrice: 75000, monthlyRent: 340,
-    })
+describe('getRentDisplay — latestDeals bundle contract', () => {
+  it('present snapshot slots provide the two popup values', () => {
+    const item = rentBuilding({ jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) })
     expect(getRentDisplay(item)).toEqual({
       jeonse: formatJeonseLabel(item),
       wolse: formatWolseLabel(item),
+      unavailable: false,
     })
   })
 
-  it('둘 다 null + monthlyRent===0(레거시 전세) 이면 전세는 레거시 가격, 월세는 없음', () => {
+  it('latestDeals.jeonse/wolse 가 있으면 선택 팝업도 같은 거래 bundle 을 우선한다', () => {
     const item = building({
-      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
-      latestPrice: 60000, monthlyRent: 0,
+      jeonseDeposit: 96000,
+      wolseDeposit: 75000,
+      wolseMonthlyRent: 340,
+      latestDeals: {
+        sale: null,
+        jeonse: {
+          kind: 'jeonse',
+          amount: null,
+          deposit: 97000,
+          monthlyRent: null,
+          exclusiveArea: 84.9,
+          floor: 12,
+          dealYear: 2026,
+          dealMonth: 9,
+          dealDay: 1,
+        },
+        wolse: {
+          kind: 'wolse',
+          amount: null,
+          deposit: 76000,
+          monthlyRent: 350,
+          exclusiveArea: 59.4,
+          floor: 8,
+          dealYear: 2026,
+          dealMonth: 9,
+          dealDay: 2,
+        },
+      },
     })
-    expect(getRentDisplay(item)).toEqual({ jeonse: '6억', wolse: null })
+
+    expect(getRentDisplay(item)).toEqual({
+      jeonse: '9억 7,000만',
+      wolse: '7억 6,000만 · 350만',
+      unavailable: false,
+    })
   })
 
-  it('둘 다 null + monthlyRent>0(레거시 월세) 이면 월세는 "보증금 · 월세액", 전세는 없음', () => {
+  it('present null slots mean verified no transaction even when flat amounts are stale', () => {
     const item = building({
-      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
-      latestPrice: 75000, monthlyRent: 340,
+      jeonseDeposit: 87654, wolseDeposit: 76543, wolseMonthlyRent: 321,
+      latestPrice: 98765, monthlyRent: 432,
+      latestDeals: deals(),
     })
-    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: '7억 5,000만 · 340만' })
+    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: null, unavailable: false })
   })
 
-  it('둘 다 null + latestPrice 도 null 이면 둘 다 없음이다', () => {
+  it('absent bundle means transaction data is unavailable even when flat amounts are populated', () => {
     const item = building({
-      jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
-      latestPrice: null, monthlyRent: null,
+      jeonseDeposit: 87654, wolseDeposit: 76543, wolseMonthlyRent: 321,
+      latestPrice: 98765, monthlyRent: 432,
+      latestDeals: undefined,
     })
-    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: null })
+    expect(getRentDisplay(item)).toEqual({ jeonse: null, wolse: null, unavailable: true })
   })
 })
 
@@ -188,10 +293,10 @@ describe('useMapOverlays', () => {
       // 목록 114 vs 라벨 76 → 38개 실종). 점으로라도 위치·클릭 대상을 유지한다.
       const { renderOverlays } = useMapOverlays()
       renderOverlays(projMap, [
-        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'C', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
-      ])
+        saleBuilding(50000, { buildingName: 'A', lat: 100, lng: 100 }),
+        saleBuilding(60000, { buildingName: 'B', lat: 100, lng: 100 }),
+        saleBuilding(70000, { buildingName: 'C', lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale' })
 
       expect(created).toHaveLength(3)
       const classes = created.map((o) => o.opts.content.className)
@@ -206,28 +311,28 @@ describe('useMapOverlays', () => {
     it('충분히 떨어진 라벨은 모두 남는다', () => {
       const { renderOverlays } = useMapOverlays()
       renderOverlays(projMap, [
-        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 400, lng: 400 }),
-      ])
+        saleBuilding(50000, { buildingName: 'A', lat: 100, lng: 100 }),
+        saleBuilding(60000, { buildingName: 'B', lat: 400, lng: 400 }),
+      ], {}, { type: 'apt-sale' })
       expect(created).toHaveLength(2)
     })
 
     it('projection 이 없으면(구형 SDK 등) 생략 없이 전부 그린다', () => {
       const { renderOverlays } = useMapOverlays()
       renderOverlays(fakeMap, [
-        building({ buildingName: 'A', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'B', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
-      ])
+        saleBuilding(50000, { buildingName: 'A', lat: 100, lng: 100 }),
+        saleBuilding(60000, { buildingName: 'B', lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale' })
       expect(created).toHaveLength(2)
     })
   })
 
   it('건물 아이템은 가격 라벨(map-price-label), 지역 아이템은 버블(map-region-bubble) 오버레이를 그린다', () => {
     const { renderOverlays } = useMapOverlays()
-    const b = building({ latestPrice: 50000, monthlyRent: null, lat: 37.1, lng: 127.1 })
+    const b = saleBuilding(50000, { lat: 37.1, lng: 127.1 })
     const r = regionItem({ avgPricePerPyeong: 3000, lat: 37.2, lng: 127.2 })
 
-    renderOverlays(fakeMap, [b, r])
+    renderOverlays(fakeMap, [b, r], {}, { type: 'apt-sale' })
 
     expect(created).toHaveLength(2)
     const [bOverlay, rOverlay] = created
@@ -246,14 +351,31 @@ describe('useMapOverlays', () => {
     expect(rOverlay.setMapCalls).toEqual([fakeMap])
   })
 
+  it('마커 라벨은 null snapshot 과 absent bundle 을 거래 없음과 로드 실패로 구분한다', () => {
+    const { renderOverlays } = useMapOverlays()
+    renderOverlays(fakeMap, [
+      building({
+        buildingName: '거래없음', latestPrice: 98765, monthlyRent: null,
+        latestDeals: deals(), lat: 37.1, lng: 127.1,
+      }),
+      building({
+        buildingName: 'bundle누락', latestPrice: 87654, monthlyRent: null,
+        latestDeals: undefined, lat: 37.2, lng: 127.2,
+      }),
+    ], {}, { type: 'apt-sale' })
+
+    expect(created[0].opts.content.textContent).toBe('거래 없음')
+    expect(created[1].opts.content.textContent).toBe('거래 정보를 불러오지 못했습니다')
+  })
+
   it('lat 또는 lng 가 null 인 아이템은 건너뛰고, 주변 아이템은 그대로 렌더된다', () => {
     const { renderOverlays } = useMapOverlays()
-    const skippedLat = building({ latestPrice: 10000, lat: null })
-    const skippedLng = building({ latestPrice: 20000, lng: null })
-    const okBuilding = building({ latestPrice: 30000, monthlyRent: null })
+    const skippedLat = saleBuilding(10000, { lat: null })
+    const skippedLng = saleBuilding(20000, { lng: null })
+    const okBuilding = saleBuilding(30000)
     const okRegion = regionItem({ avgPricePerPyeong: 4000 })
 
-    renderOverlays(fakeMap, [skippedLat, skippedLng, okBuilding, okRegion])
+    renderOverlays(fakeMap, [skippedLat, skippedLng, okBuilding, okRegion], {}, { type: 'apt-sale' })
 
     expect(created).toHaveLength(2)
     expect(created[0].opts.content.textContent).toBe(formatPriceLabel(okBuilding))
@@ -262,15 +384,15 @@ describe('useMapOverlays', () => {
 
   it('clear-before-render: 이전 호출의 오버레이는 전부 setMap(null) 되고 최신 호출분만 남는다', () => {
     const { renderOverlays } = useMapOverlays()
-    const first = building({ latestPrice: 10000 })
-    renderOverlays(fakeMap, [first])
+    const first = saleBuilding(10000)
+    renderOverlays(fakeMap, [first], {}, { type: 'apt-sale' })
     expect(created).toHaveLength(1)
     const firstOverlay = created[0]
     expect(firstOverlay.setMapCalls).toEqual([fakeMap])
 
-    const second = building({ latestPrice: 20000 })
+    const second = saleBuilding(20000)
     const third = regionItem({ avgPricePerPyeong: 5000 })
-    renderOverlays(fakeMap, [second, third])
+    renderOverlays(fakeMap, [second, third], {}, { type: 'apt-sale' })
 
     // 이전 호출분은 clearOverlays() 로 인해 setMap(null) 이 추가로 호출된다
     expect(firstOverlay.setMapCalls).toEqual([fakeMap, null])
@@ -283,9 +405,9 @@ describe('useMapOverlays', () => {
 
   it('clearOverlays() 는 모든 오버레이를 떼어내고, 이후 renderOverlays 는 깨끗한 상태에서 동작한다', () => {
     const { renderOverlays, clearOverlays } = useMapOverlays()
-    const a = building({ latestPrice: 10000 })
-    const b = building({ latestPrice: 20000 })
-    renderOverlays(fakeMap, [a, b])
+    const a = saleBuilding(10000)
+    const b = saleBuilding(20000)
+    renderOverlays(fakeMap, [a, b], {}, { type: 'apt-sale' })
     expect(created).toHaveLength(2)
     const [overlayA, overlayB] = created
 
@@ -293,8 +415,8 @@ describe('useMapOverlays', () => {
     expect(overlayA.setMapCalls).toEqual([fakeMap, null])
     expect(overlayB.setMapCalls).toEqual([fakeMap, null])
 
-    const c = building({ latestPrice: 30000 })
-    renderOverlays(fakeMap, [c])
+    const c = saleBuilding(30000)
+    renderOverlays(fakeMap, [c], {}, { type: 'apt-sale' })
 
     // 이미 떼어진 오버레이가 다시 setMap(null) 되지 않고, 새 오버레이 하나만 추가된다
     expect(overlayA.setMapCalls).toEqual([fakeMap, null])
@@ -307,11 +429,11 @@ describe('useMapOverlays', () => {
 
   it('클릭/호버 핸들러가 올바른 아이템으로 호출된다 — mouseleave 는 null 을 전달한다', () => {
     const { renderOverlays } = useMapOverlays()
-    const item = building({ latestPrice: 10000 })
+    const item = saleBuilding(10000)
     const onClick = vi.fn()
     const onHover = vi.fn()
 
-    renderOverlays(fakeMap, [item], { onClick, onHover })
+    renderOverlays(fakeMap, [item], { onClick, onHover }, { type: 'apt-sale' })
 
     const el: HTMLElement = created[0].opts.content
     el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -334,27 +456,26 @@ describe('useMapOverlays', () => {
 
     it('선택하지 않으면 라벨은 한 줄이다 — 두 줄이면 겹쳐서 접히는 마커가 늘어난다', () => {
       const { renderOverlays } = useMapOverlays()
-      const item = building({
-        buildingName: '은마', latestPrice: 75000, monthlyRent: 340,
-        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
-      })
+      const item = rentBuilding(
+        { jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) },
+        { buildingName: '은마' },
+      )
       renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: null })
       const el = contentOf(0)
       expect(el.className).toContain('map-price-label')
       expect(el.querySelector('a')).toBeNull()
       // 한 줄이다: 자식 엘리먼트(<br> 등)가 전혀 없고, textContent 가 라벨 문자열과 정확히 같다.
       expect(el.children.length).toBe(0)
-      expect(el.textContent).toBe(formatPriceLabel(item))
+      expect(el.textContent).toBe(formatPriceLabel(item, 'apt-rent'))
     })
 
     it('선택된 항목은 전세·월세와 상세 링크를 펼친다', () => {
       const { renderOverlays } = useMapOverlays()
-      const item = building({
-        buildingName: '은마', city: '서울', district: '강남구',
-        latestPrice: 75000, monthlyRent: 340,
-        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
-      })
-      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: '은마|강남구' })
+      const item = rentBuilding(
+        { jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) },
+        { buildingName: '은마', city: '서울', district: '강남구' },
+      )
+      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: '은마|1168010300' })
       const el = contentOf(0)
       expect(el.className).toContain('map-popup')
       expect(el.textContent).toContain('9억 6,000만')
@@ -362,16 +483,30 @@ describe('useMapOverlays', () => {
       expect(el.querySelector('a')?.getAttribute('href')).toBe('/real-estate/apt-rent/seoul/gangnam/%EC%9D%80%EB%A7%88')
     })
 
+    it('buildingKey로 선택한 팝업 링크는 주소 식별 경로를 사용한다', () => {
+      const { renderOverlays } = useMapOverlays()
+      const buildingKey = 'a'.repeat(64)
+      const item = rentBuilding(
+        { jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) },
+        { buildingName: '은마', city: '서울', district: '강남구', buildingKey },
+      )
+
+      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: buildingKey })
+
+      expect(contentOf(0).querySelector('a')?.getAttribute('href')).toBe(
+        `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('은마')}/${buildingKey}`,
+      )
+    })
+
     it('펼침 카드의 상세 링크 클릭은 onClick 토글을 막고, 카드의 다른 영역 클릭은 토글을 부른다', () => {
       // 링크는 이동이 목적이다 — onClick 이 같이 돌면 이동 직전에 카드가 접힌다(useMapOverlays.ts:249 가드).
       const { renderOverlays } = useMapOverlays()
-      const item = building({
-        buildingName: '은마', city: '서울', district: '강남구',
-        latestPrice: 75000, monthlyRent: 340,
-        jeonseDeposit: 96000, wolseDeposit: 75000, wolseMonthlyRent: 340,
-      })
+      const item = rentBuilding(
+        { jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) },
+        { buildingName: '은마', city: '서울', district: '강남구' },
+      )
       const onClick = vi.fn()
-      renderOverlays(fakeMap, [item], { onClick }, { type: 'apt-rent', selectedKey: '은마|강남구' })
+      renderOverlays(fakeMap, [item], { onClick }, { type: 'apt-rent', selectedKey: '은마|1168010300' })
 
       const el = contentOf(0)
       const link = el.querySelector('a')
@@ -387,10 +522,9 @@ describe('useMapOverlays', () => {
 
     it('매매도 펼쳐진다 — 값은 한 줄이고 상세 링크가 붙는다', () => {
       const { renderOverlays } = useMapOverlays()
-      renderOverlays(fakeMap, [building({
+      renderOverlays(fakeMap, [saleBuilding(245000, {
         buildingName: '도곡렉슬', city: '서울', district: '강남구',
-        latestPrice: 245000, monthlyRent: null,
-      })], {}, { type: 'apt-sale', selectedKey: '도곡렉슬|강남구' })
+      })], {}, { type: 'apt-sale', selectedKey: '도곡렉슬|1168010300' })
       const el = contentOf(0)
       expect(el.className).toContain('map-popup')
       expect(el.textContent).toContain('24억 5,000만')
@@ -399,24 +533,40 @@ describe('useMapOverlays', () => {
 
     it('거래가 없는 종류는 "거래 없음" 으로 그린다', () => {
       const { renderOverlays } = useMapOverlays()
-      renderOverlays(fakeMap, [building({
-        buildingName: '신동아', city: '서울', district: '강남구',
-        latestPrice: 60000, monthlyRent: 0,
-        jeonseDeposit: 60000, wolseDeposit: null, wolseMonthlyRent: null,
-      })], {}, { type: 'apt-rent', selectedKey: '신동아|강남구' })
+      renderOverlays(fakeMap, [rentBuilding(
+        { jeonse: jeonseDeal(60000), wolse: null },
+        { buildingName: '신동아', city: '서울', district: '강남구' },
+      )], {}, { type: 'apt-rent', selectedKey: '신동아|1168010300' })
       expect(contentOf(0).textContent).toContain('거래 없음')
     })
 
-    it('배포 직후처럼 새 분리 컬럼이 전부 null 이면 펼침 카드도 레거시 값으로 폴백한다 (B-1)', () => {
+    it('present null slots make the popup show 거래 없음 without stale flat amounts', () => {
       const { renderOverlays } = useMapOverlays()
       renderOverlays(fakeMap, [building({
-        buildingName: '미갱신', city: '서울', district: '강남구',
-        latestPrice: 60000, monthlyRent: 0,
-        jeonseDeposit: null, wolseDeposit: null, wolseMonthlyRent: null,
-      })], {}, { type: 'apt-rent', selectedKey: '미갱신|강남구' })
+        buildingName: '거래없음', city: '서울', district: '강남구',
+        latestPrice: 98765, monthlyRent: 432,
+        jeonseDeposit: 87654, wolseDeposit: 76543, wolseMonthlyRent: 321,
+        latestDeals: deals(),
+      })], {}, { type: 'apt-rent', selectedKey: '거래없음|1168010300' })
       const el = contentOf(0)
-      expect(el.textContent).toContain('6억')
-      expect(el.textContent).toContain('거래 없음')
+      expect(el.textContent?.match(/거래 없음/g)).toHaveLength(2)
+      expect(el.textContent).not.toContain('9억 8,765만')
+      expect(el.textContent).not.toContain('8억 7,654만')
+      expect(el.textContent).not.toContain('7억 6,543만')
+    })
+
+    it('absent bundle makes the popup show an explicit load failure without stale flat amounts', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [building({
+        buildingName: 'bundle누락', city: '서울', district: '강남구',
+        latestPrice: 98765, monthlyRent: 432,
+        jeonseDeposit: 87654, wolseDeposit: 76543, wolseMonthlyRent: 321,
+        latestDeals: undefined,
+      })], {}, { type: 'apt-rent', selectedKey: 'bundle누락|1168010300' })
+      const el = contentOf(0)
+      expect(el.textContent).toContain('거래 정보를 불러오지 못했습니다')
+      expect(el.textContent).not.toContain('거래 없음')
+      expect(el.textContent).not.toContain('9억 8,765만')
     })
 
     // "보조값이냐"(secondary)와 "값이 없냐"(absent)는 다른 축이다. 월세만 있는 건물에서
@@ -425,11 +575,10 @@ describe('useMapOverlays', () => {
     // 같은 회색이 되어 없는 값이 값처럼 읽힌다.
     it('전세 거래가 없으면 전세 줄은 --absent, 실제 값이 있는 월세 줄은 --sub 이다 (M-4)', () => {
       const { renderOverlays } = useMapOverlays()
-      renderOverlays(fakeMap, [building({
-        buildingName: '월세만', city: '서울', district: '강남구',
-        latestPrice: 75000, monthlyRent: 340,
-        jeonseDeposit: null, wolseDeposit: 75000, wolseMonthlyRent: 340,
-      })], {}, { type: 'apt-rent', selectedKey: '월세만|강남구' })
+      renderOverlays(fakeMap, [rentBuilding(
+        { jeonse: null, wolse: wolseDeal(75000, 340) },
+        { buildingName: '월세만', city: '서울', district: '강남구' },
+      )], {}, { type: 'apt-rent', selectedKey: '월세만|1168010300' })
       const el = contentOf(0)
       const lines = Array.from(el.querySelectorAll('.map-popup-line'))
       const jeonseLine = lines.find((l) => l.textContent?.includes('전세'))
@@ -449,16 +598,45 @@ describe('useMapOverlays', () => {
       const { renderOverlays } = useMapOverlays()
       // 셋이 같은 지점 — 순서상 뒤엣것은 점이 된다. B 를 선택하면 B 가 살아남아야 한다.
       renderOverlays(projMap, [
-        building({ buildingName: 'A', city: '서울', district: '강남구', latestPrice: 50000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'B', city: '서울', district: '강남구', latestPrice: 60000, monthlyRent: null, lat: 100, lng: 100 }),
-        building({ buildingName: 'C', city: '서울', district: '강남구', latestPrice: 70000, monthlyRent: null, lat: 100, lng: 100 }),
-      ], {}, { type: 'apt-sale', selectedKey: 'B|강남구' })
+        saleBuilding(50000, { buildingName: 'A', city: '서울', district: '강남구', lat: 100, lng: 100 }),
+        saleBuilding(60000, { buildingName: 'B', city: '서울', district: '강남구', lat: 100, lng: 100 }),
+        saleBuilding(70000, { buildingName: 'C', city: '서울', district: '강남구', lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale', selectedKey: 'B|1168010300' })
       expect(created).toHaveLength(3)
       // 그 wrapper 가 마지막 형제여야 이웃 라벨보다 위에 그려져 클릭을 가로채이지 않는다.
       const lastIndex = created.length - 1
       expect(contentOf(lastIndex).className).toContain('map-popup')
       // 점으로 접히지 않는다는 기존 보장은 그대로 유지된다.
       expect(contentOf(lastIndex).textContent).toContain('6억')
+    })
+
+    it('같은 이름·구의 건물 중 bjdCode 가 일치하는 하나만 선택 팝업으로 마지막에 그린다', () => {
+      const projMap = {
+        id: 'proj-map',
+        getProjection: () => ({
+          containerPointFromCoords: (ll: { lat: number; lng: number }) => ({ x: ll.lng, y: ll.lat }),
+        }),
+      }
+      const { renderOverlays } = useMapOverlays()
+      const daechi = saleBuilding(50000, {
+        buildingName: '은마', district: '강남구', dongName: '대치동', bjdCode: '1168010100',
+        lat: 100, lng: 100,
+      })
+      const dogok = saleBuilding(60000, {
+        buildingName: '은마', district: '강남구', dongName: '도곡동', bjdCode: '1168010300',
+        lat: 100, lng: 100,
+      })
+
+      renderOverlays(projMap, [dogok, daechi], {}, {
+        type: 'apt-sale',
+        selectedKey: '은마|1168010300',
+      })
+
+      const contents = created.map((_, index) => contentOf(index))
+      expect(contents.filter((content) => content.className.includes('map-popup'))).toHaveLength(1)
+      expect(contents.at(-1)?.className).toContain('map-popup')
+      expect(contents.at(-1)?.textContent).toContain('6억')
+      expect(contents.at(-1)?.textContent).not.toContain('5억')
     })
 
     it('opts 를 안 넘기면 기존 동작 그대로다 — 지역 오버레이 호출부가 깨지지 않는다', () => {

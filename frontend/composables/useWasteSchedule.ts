@@ -1,4 +1,6 @@
 import { ref, readonly } from 'vue'
+import type { WasteSourceScheduleQuery } from '~/utils/wasteAreaQuery'
+import type { ApplicableWasteArea } from '~/types/wasteArea'
 
 export interface WasteTypeInfo {
   dayOfWeek?: string
@@ -58,6 +60,19 @@ export interface WasteScheduleDetail {
   district: string
   targetRegion: string | null
   emissionPlace: string | null
+  sourceUrl?: string | null
+  govCode?: string | null
+  sourceStatus?: string | null
+  applicableAreas: ApplicableWasteArea[]
+  appliesTo?: Array<{
+    areaId: number | null
+    districtCode: string | null
+    scope: string
+    conditionText: string
+    state: string
+    reason: string
+    evidence: unknown
+  }>
   details: {
     emissionPlaceType?: string
     managementZone?: string
@@ -167,25 +182,22 @@ export function useWasteSchedule() {
     }
   }
 
-  async function getSchedules(options?: {
-    city?: string
-    district?: string
-    keyword?: string
-    page?: number
-    limit?: number
-  }): Promise<RegionScheduleResponse> {
+  async function getSchedules(options?: WasteSourceScheduleQuery): Promise<RegionScheduleResponse> {
     isLoading.value = true
     error.value = null
 
     try {
-      const params = new URLSearchParams()
-      if (options?.city) params.set('city', options.city)
-      if (options?.district) params.set('district', options.district)
-      if (options?.keyword) params.set('keyword', options.keyword)
-      if (options?.page) params.set('page', String(options.page))
-      if (options?.limit) params.set('limit', String(options.limit))
-      const url = `${apiBase}/api/waste-schedules?${params.toString()}`
-      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(url)
+      const params: Record<string, string | number> = {}
+      if (options?.city) params.city = options.city
+      if (options?.district) params.district = options.district
+      if (options?.keyword) params.keyword = options.keyword
+      if (options?.coverage) params.coverage = options.coverage
+      if (options?.page) params.page = options.page
+      if (options?.limit) params.limit = options.limit
+      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(
+        `${apiBase}/api/waste-schedules`,
+        { params }
+      )
       return transformToRegionSchedules(response.data)
     } catch (e) {
       // 예전 구현은 여기서 '서울특별시', '{구} 1동~3동', '02-1234-5678' 과 임의 요일
@@ -204,7 +216,7 @@ export function useWasteSchedule() {
       const response = await $fetch<{ success: boolean; data: WasteScheduleDetail }>(
         `${apiBase}/api/waste-schedules/${id}`
       )
-      return response.data
+      return { ...response.data, applicableAreas: response.data.applicableAreas ?? [] }
     } catch (e) {
       console.error('Failed to fetch schedule detail:', e)
       return null

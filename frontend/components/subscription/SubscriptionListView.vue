@@ -1,209 +1,791 @@
 <template>
-  <div class="flex flex-col gap-3">
-    <!-- 상태와 지역 -->
-    <SectionBlock heading="상태와 지역" subtext="시간성이 있는 청약이므로 상태 칩을 먼저 선택하세요.">
-      <!-- Status Chips -->
-      <div class="mb-3 flex flex-wrap gap-2">
-        <button
-          v-for="tab in STATUS_ORDER"
-          :key="tab.key ?? 'all'"
-          :class="[
-            'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
-            currentStatus === tab.key
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-ink border-line hover:border-primary hover:text-primary'
-          ]"
-          @click="selectStatus(tab.key)"
+  <section class="subscription-list" aria-labelledby="subscription-list-title">
+    <SubscriptionNav :filters="filters" />
+
+    <div class="filter-box" aria-label="공고 검색 필터">
+      <nav class="type-tabs" aria-label="공급유형">
+        <NuxtLink
+          v-for="link in typeLinks"
+          :key="link.path"
+          :to="{ path: link.path, query: link.query }"
+          :aria-current="link.active ? 'page' : undefined"
+          class="type-tab"
         >
-          {{ tab.label }}
-        </button>
-      </div>
+          {{ link.label }}
+        </NuxtLink>
+      </nav>
 
-      <!-- Region Filter -->
-      <RegionCascadingDropdown
-        v-model:city="selectedRegion"
-        v-model:district="selectedDistrict"
-      />
-    </SectionBlock>
-
-    <!-- Ad (필터 이후) -->
-    <AdBanner />
-
-    <!-- Loading State -->
-    <SectionBlock v-if="pending" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
-      <LoadingSkeleton variant="card" :footer="true" />
-    </SectionBlock>
-
-    <!-- Error State -->
-    <SectionBlock v-else-if="error" heading="오류">
-      <div class="rounded-xl bg-red-50 p-8 text-center">
-        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+      <form class="filter-controls" @submit.prevent="submitKeyword">
+        <div class="region-filter-field">
+          <RegionCascadingDropdown
+            :city="filters.city"
+            :district="filters.district"
+            @update:city="(city: string) => applyFilters({ city, district: '' })"
+            @update:district="(district: string) => applyFilters({ district })"
+          />
         </div>
-        <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
+        <div>
+          <label for="subscription-keyword">공고명 또는 지역 검색</label>
+          <input
+            id="subscription-keyword"
+            v-model="draftKeyword"
+            type="search"
+            autocomplete="off"
+            maxlength="120"
+            placeholder="공고명이나 지역명"
+          >
+        </div>
+        <button class="search-button" type="submit">검색</button>
         <button
-          class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-          @click="loadSubscriptions"
-        >
-          <span class="material-symbols-outlined text-[16px]">refresh</span>
-          다시 시도
-        </button>
-      </div>
-    </SectionBlock>
-
-    <!-- Empty State -->
-    <SectionBlock v-else-if="subscriptions.length === 0" :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`">
-      <EmptyState icon="apartment" :title="emptyFiltered('청약')" description="다른 조건으로 다시 검색해보세요">
-        <button
-          class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+          type="button"
+          class="reset"
+          data-testid="reset-filters"
           @click="resetFilters"
         >
-          <span class="material-symbols-outlined text-[16px]">refresh</span>
-          필터 초기화
+          조건 초기화
         </button>
-      </EmptyState>
-    </SectionBlock>
+      </form>
 
-    <!-- Subscription List -->
-    <SectionBlock
-      v-else
-      :heading="`${getStatusLabel(currentStatus) || '전체'} 청약`"
-      subtext="마감 D-day와 접수 기간을 먼저 확인하세요."
-    >
-      <template #right>
-        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-          {{ total.toLocaleString() }}건
-        </span>
-      </template>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <SubscriptionCard v-for="sub in subscriptions" :key="sub.id" :subscription="sub" />
+      <p v-if="keywordError" class="filter-error" role="alert">
+        {{ keywordError }}
+      </p>
+    </div>
+
+    <div class="status-tabs" role="group" aria-label="접수 상태">
+      <button
+        v-for="status in statuses"
+        :key="status.value"
+        type="button"
+        :aria-pressed="filters.status === status.value"
+        @click="applyFilters({ status: status.value })"
+      >
+        {{ status.label }}
+      </button>
+    </div>
+
+    <div v-if="showAds" class="ad-slot">
+      <AdBanner />
+    </div>
+
+    <section aria-label="검색 결과">
+      <div id="subscription-results" class="results-tools">
+        <p id="subscription-list-title">
+          <template v-if="pending">공고를 불러오는 중입니다</template>
+          <template v-else-if="showResultCount"><strong>{{ displayedCount }}</strong>건 표시 / 총 <strong>{{ totalCount }}</strong>건</template>
+          <template v-else>{{ resultStatusText }}</template>
+        </p>
+        <label>
+          <span class="sr-only">공고 정렬</span>
+          <select
+            class="sort-select"
+            :value="filters.sort"
+            aria-label="공고 정렬"
+            @change="applyFilters({ sort: ($event.target as HTMLSelectElement).value as SubscriptionListFilters['sort'] })"
+          >
+            <option value="priority">추천순</option>
+            <option value="deadline">마감 가까운 순</option>
+            <option value="recent">최근 공고순</option>
+          </select>
+        </label>
       </div>
-      <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="goToPage" />
-    </SectionBlock>
 
-    <!-- Ad: 하단 -->
-    <AdBanner />
-  </div>
+      <div class="list-shell" :aria-busy="pending ? 'true' : 'false'">
+        <div class="row-head" aria-hidden="true">
+          <span>공고명 / 공급유형</span>
+          <span>지역</span>
+          <span>공급규모</span>
+          <span>접수기간</span>
+        </div>
+
+        <template v-if="pending">
+          <div
+            v-for="index in 5"
+            :key="index"
+            class="notice-row-skeleton"
+            data-testid="list-skeleton"
+          >
+            <span class="skeleton-line skeleton-line--title" />
+            <span class="skeleton-line" />
+            <span class="skeleton-line" />
+            <span class="skeleton-line" />
+          </div>
+        </template>
+
+        <div v-else-if="regionError" class="state-box state-box--error" role="alert">
+          <p>{{ regionError }}</p>
+          <button type="button" data-testid="region-retry" @click="retry">지역 다시 불러오기</button>
+        </div>
+
+        <div v-else-if="error" class="state-box state-box--error" role="alert">
+          <p>{{ error }}</p>
+          <button type="button" @click="retry">다시 시도</button>
+        </div>
+
+        <div v-else-if="items.length === 0" class="empty">
+          <h3>조건에 맞는 공고가 없어요</h3>
+          <p>지역이나 접수 상태를 바꿔 다시 살펴보세요.</p>
+          <button type="button" @click="resetFilters">모든 공고 보기</button>
+        </div>
+
+        <template v-else>
+          <SubscriptionNoticeRow
+            v-for="item in items"
+            :key="item.id"
+            :ref="(el) => setRowRef(item.id, el)"
+            :item="item"
+            :selected-city="filters.city"
+            :selected-district="filters.district"
+            @open-detail="saveForDetail"
+          />
+
+          <p v-if="props.scope.category === 'rent'" class="schedule-note">
+            <strong>일정 확인이 필요한 공고도 있어요</strong>
+            지역·공급별 접수기간이 다를 수 있습니다. 상세에서 해당 일정을 확인하세요.
+          </p>
+        </template>
+      </div>
+
+      <p class="load-status" role="status" aria-live="polite">{{ loadStatus }}</p>
+
+      <button
+        v-if="canLoadMore && !moreError"
+        type="button"
+        class="load-more"
+        data-testid="load-more"
+        :disabled="pendingMore"
+        @click="handleLoadMore"
+      >
+        {{ pendingMore ? '불러오는 중' : '공고 더 보기' }}
+      </button>
+
+      <div v-if="moreError" class="more-error">
+        <p>{{ moreError }}</p>
+        <button type="button" data-testid="load-more-retry" @click="handleLoadMore">다시 시도</button>
+      </div>
+    </section>
+
+    <div v-if="showAds" class="ad-slot">
+      <AdBanner />
+    </div>
+
+    <DataSourceSection domain="subscription" class="source-note" />
+
+    <section class="faq" aria-labelledby="subscription-list-faq-title">
+      <h2 id="subscription-list-faq-title">공고를 보기 전에</h2>
+      <div>
+        <details v-for="faq in faqs" :key="faq.question">
+          <summary>{{ faq.question }}</summary>
+          <p>{{ faq.answer }}</p>
+        </details>
+      </div>
+    </section>
+  </section>
 </template>
 
 <script setup lang="ts">
-import type { Subscription, SubscriptionSourceType } from '~/types/subscription'
-import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
-import { useSubscription } from '~/composables/useSubscription'
-import SectionBlock from '~/components/common/SectionBlock.vue'
-import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
+import { computed, nextTick, ref, watch, watchEffect } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
+import type { SubscriptionListFilters, SubscriptionListScope } from '~/types/subscriptionList'
+import type { CityData } from '~/composables/useRegions'
+import { suppressAds } from '~/composables/useAdsPolicy'
+import { useSubscriptionList } from '~/composables/useSubscriptionList'
+import { useRegions } from '~/composables/useRegions'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
-import EmptyState from '~/components/common/EmptyState.vue'
-
-/// 상태 칩 순서: 전체 → 청약중 → 청약예정 → 마감
-const STATUS_ORDER: { key: 'ongoing' | 'upcoming' | null | 'closed'; label: string }[] = [
-  { key: null, label: '전체' },
-  { key: 'ongoing', label: '청약중' },
-  { key: 'upcoming', label: '청약예정' },
-  { key: 'closed', label: '마감' },
-]
+import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import SubscriptionNav from '~/components/subscription/SubscriptionNav.vue'
+import SubscriptionNoticeRow from '~/components/subscription/SubscriptionNoticeRow.vue'
+import { normalizeSubscriptionQuery, subscriptionScopeForPath } from '~/utils/subscriptionListQuery'
+import { RENT_TYPES, SALE_TYPES } from '~/utils/subscriptionMeta'
 
 const props = defineProps<{
-  category?: 'sale' | 'rent'
-  sourceType?: SubscriptionSourceType
-  rentType?: string
+  scope: SubscriptionListScope
 }>()
 
-const { getSubscriptionList } = useSubscription()
+const regions = useRegions()
 
-const currentStatus = ref<'upcoming' | 'ongoing' | 'closed' | null>(null)
-const selectedRegion = ref('')
-const selectedDistrict = ref('')
-const currentPage = ref(1)
+const {
+  filters,
+  items,
+  total,
+  page,
+  totalPages,
+  pending,
+  pendingMore,
+  error,
+  moreError,
+  keywordError,
+  regionError,
+  applyFilters,
+  resetFilters,
+  loadMore,
+  retry,
+  saveForDetail,
+} = await useSubscriptionList(computed(() => props.scope))
 
-const subscriptions = ref<Subscription[]>([])
-const total = ref(0)
-const totalPages = ref(0)
-const pending = ref(false)
-const error = ref<string | null>(null)
-
-watch([currentStatus, selectedRegion, selectedDistrict], () => {
-  currentPage.value = 1
-  loadSubscriptions()
+const statuses = computed<Array<{ value: SubscriptionListFilters['status']; label: string }>>(() => {
+  const base: Array<{ value: SubscriptionListFilters['status']; label: string }> = [
+    { value: 'all', label: '전체' },
+    { value: 'ongoing', label: '접수 중' },
+    { value: 'upcoming', label: '접수 예정' },
+  ]
+  if (props.scope.category === 'rent' && props.scope.sourceType !== 'PRIVATE_RENT' && props.scope.type !== 'private') {
+    base.push({ value: 'unknown', label: '일정 확인 필요' })
+  }
+  base.push({ value: 'closed', label: '마감' })
+  return base
 })
 
-function selectStatus(key: 'ongoing' | 'upcoming' | 'closed' | null) {
-  if (currentStatus.value === key) {
-    currentPage.value = 1
-    loadSubscriptions()
+const faqs = [
+  { question: '일상킷에서 바로 신청할 수 있나요?', answer: '공고 상세에서 일정과 공급정보를 확인한 뒤, 모집공고에 안내된 공식 신청처를 이용해 주세요.' },
+  { question: '공공임대는 모두 청약통장이 필요한가요?', answer: '공급유형과 공고에 따라 신청 조건이 다릅니다. 청약통장, 소득·자산, 거주지역 등 자격은 해당 모집공고에서 확인해 주세요.' },
+  { question: '일정 확인 필요는 어떤 상태인가요?', answer: '공개 자료에서 접수기간을 확인하기 어렵거나 공급지역별 일정이 다른 공고입니다. 마감된 공고라는 뜻은 아니며, 상세와 원문에서 일정을 확인할 수 있습니다.' },
+]
+
+const draftKeyword = ref(filters.value.q)
+const rowRefs = new Map<number, Element>()
+const loadStatus = ref('')
+
+const failed = computed(() => Boolean(error.value || keywordError.value || regionError.value))
+const filtered = computed(() =>
+  Boolean(filters.value.q || filters.value.city || filters.value.district || filters.value.status !== 'all' || filters.value.sort !== 'priority')
+)
+const showAds = computed(() => !filtered.value && !failed.value)
+const canLoadMore = computed(() => !pending.value && !regionError.value && !error.value && page.value < totalPages.value)
+const showResultCount = computed(() => !pending.value && !failed.value)
+const displayedCount = computed(() => items.value.length.toLocaleString('ko-KR'))
+const totalCount = computed(() => total.value.toLocaleString('ko-KR'))
+const resultStatusText = computed(() => {
+  if (keywordError.value) return '검색 조건을 확인해 주세요'
+  if (regionError.value) return '지역 정보를 확인할 수 없습니다'
+  if (error.value) return '조회 결과를 불러오지 못했습니다'
+  return '조회 결과'
+})
+
+function fallbackCitiesForFilters(): CityData[] {
+  if (!filters.value.city) return []
+  return [{
+    slug: filters.value.city,
+    name: filters.value.city,
+    districts: filters.value.district
+      ? [{ slug: filters.value.district, name: filters.value.district, lat: 0, lng: 0, bjdCode: '' }]
+      : [],
+  }]
+}
+
+function queryForScope(targetScope: SubscriptionListScope): Record<string, string> {
+  const cities = regions.citiesWithDistricts.value.length > 0
+    ? regions.citiesWithDistricts.value
+    : fallbackCitiesForFilters()
+  return normalizeSubscriptionQuery(filters.value, targetScope, cities).query
+}
+
+const typeLinks = computed(() => {
+  const basePath = `/subscription/${props.scope.category}`
+  const entries = props.scope.category === 'sale'
+    ? Object.entries(SALE_TYPES)
+    : Object.entries(RENT_TYPES)
+  const allScope = subscriptionScopeForPath(basePath)!
+  return [
+    { label: '전체', path: basePath, scope: allScope, active: !props.scope.type },
+    ...entries.map(([slug, meta]) => {
+      const path = `${basePath}/${slug}`
+      return { label: meta.label, path, scope: subscriptionScopeForPath(path)!, active: props.scope.type === slug }
+    }),
+  ].map(link => ({ ...link, query: queryForScope(link.scope) }))
+})
+
+watch(() => filters.value.q, (value) => {
+  if (import.meta.client && document.activeElement?.id === 'subscription-keyword' && draftKeyword.value !== value) {
     return
   }
-  currentStatus.value = key
-}
-
-watch(currentPage, () => {
-  loadSubscriptions()
+  draftKeyword.value = value
 })
 
-async function loadSubscriptions() {
-  pending.value = true
-  error.value = null
-  try {
-    const region = [selectedRegion.value, selectedDistrict.value].filter(Boolean).join(' ') || undefined
-    const result = await getSubscriptionList({
-      status: currentStatus.value ?? undefined,
-      region,
-      sourceType: props.sourceType,
-      rentType: props.rentType,
-      category: props.sourceType ? undefined : props.category,
-      page: currentPage.value,
-      limit: 18,
-    })
-    subscriptions.value = result.items
-    total.value = result.total
-    totalPages.value = result.totalPages
-  } catch (err) {
-    error.value = '청약 정보를 불러올 수 없습니다'
-    // eslint-disable-next-line no-console
-    console.error('Failed to load subscriptions:', err)
-  } finally {
-    pending.value = false
+watchEffect(() => {
+  suppressAds(filtered.value || failed.value)
+})
+
+function submitKeyword(): void {
+  void applyFilters({ q: draftKeyword.value })
+}
+
+function setRowRef(id: number, el: Element | ComponentPublicInstance | null): void {
+  if (!el) {
+    rowRefs.delete(id)
+    return
   }
+  const element = '$el' in el ? el.$el as Element : el
+  rowRefs.set(id, element)
 }
 
-function resetFilters() {
-  currentStatus.value = null
-  selectedRegion.value = ''
-  selectedDistrict.value = ''
-  currentPage.value = 1
-  loadSubscriptions()
-}
+async function handleLoadMore(): Promise<void> {
+  const beforeIds = new Set(items.value.map(item => item.id))
+  const beforeCount = items.value.length
+  await loadMore()
+  await nextTick()
+  if (items.value.length <= beforeCount) return
 
-function goToPage(page: number) {
-  currentPage.value = page
-  if (import.meta.client) {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
-function getStatusLabel(status: string): string {
-  if (status === 'upcoming') return '접수예정'
-  if (status === 'ongoing') return '청약중'
-  if (status === 'closed') return '마감'
-  return ''
-}
-
-// SSR: Load initial data
-const { data } = await useAsyncData(
-  `subscription-${props.category || props.sourceType || 'all'}`,
-  () => getSubscriptionList({
-    status: undefined,
-    sourceType: props.sourceType,
-    rentType: props.rentType,
-    category: props.sourceType ? undefined : props.category,
-    page: 1,
-    limit: 18,
-  })
-)
-
-if (data.value) {
-  subscriptions.value = data.value.items
-  total.value = data.value.total
-  totalPages.value = data.value.totalPages
+  const firstNew = items.value.find(item => !beforeIds.has(item.id))
+  const added = items.value.length - beforeCount
+  loadStatus.value = `총 ${total.value.toLocaleString('ko-KR')}건 중 ${items.value.length.toLocaleString('ko-KR')}건 표시, ${added.toLocaleString('ko-KR')}건을 더 불러왔습니다.`
+  if (!firstNew) return
+  const target = rowRefs.get(firstNew.id)?.querySelector<HTMLElement>('.notice-name')
+  target?.focus()
 }
 </script>
+
+<style scoped>
+.subscription-list {
+  color: #15213b;
+}
+
+.filter-box {
+  margin-bottom: 28px;
+  border-radius: 8px;
+  background: #f7f8fa;
+  padding: 22px 24px;
+}
+
+
+.type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e6e9f0;
+  padding-bottom: 17px;
+}
+
+.type-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border-radius: 5px;
+  color: #15213b;
+  font-size: 14px;
+  padding: 7px 12px;
+}
+
+.type-tab[aria-current='page'] {
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(21 33 59 / 4%);
+  color: #2450dc;
+  font-weight: 650;
+}
+
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.status-tabs button {
+  min-height: 44px;
+  border: 1px solid #e6e9f0;
+  border-radius: 20px;
+  padding: 7px 13px;
+  font-size: 13px;
+}
+
+.status-tabs button[aria-pressed='true'] {
+  border-color: #15213b;
+  background: #15213b;
+  color: #fff;
+}
+
+.filter-controls {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 1fr) auto auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.filter-controls label {
+  display: block;
+  color: #56627a;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.filter-controls :deep(select),
+.filter-controls input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: 1px solid #dce1eb;
+  border-radius: 5px;
+  background: #fff;
+  color: #15213b;
+  font-size: 14px;
+  padding: 0 12px;
+}
+
+.search-button {
+  min-height: 44px;
+  border-radius: 5px;
+  background: #2450dc;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 650;
+  padding: 0 18px;
+}
+
+.reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 44px;
+  color: #56627a;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+}
+
+.filter-error {
+  margin-top: 12px;
+  color: #b42318;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ad-slot {
+  margin: 32px 0;
+}
+
+.results-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0 14px;
+  scroll-margin-top: 90px;
+}
+
+.results-tools p {
+  font-size: 14px;
+}
+
+.results-tools strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.sort-select {
+  min-height: 44px;
+  border: 0;
+  background: #fff;
+  color: #56627a;
+  font-size: 13px;
+  padding: 6px 25px 6px 8px;
+}
+
+.row-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 80px 178px;
+  gap: 24px;
+  border-top: 1px solid #e6e9f0;
+  border-bottom: 1px solid #e6e9f0;
+  background: #f7f8fa;
+  color: #56627a;
+  font-size: 12px;
+  padding: 11px 18px;
+}
+
+.row-head > :nth-child(3),
+.row-head > :last-child {
+  text-align: right;
+}
+
+
+.notice-row-skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 80px 178px;
+  gap: 24px;
+  align-items: center;
+  border-bottom: 1px solid #e6e9f0;
+  padding: 22px 18px;
+}
+
+.skeleton-line {
+  display: block;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef1f6 0%, #f7f8fa 45%, #eef1f6 100%);
+}
+
+.skeleton-line--title {
+  height: 18px;
+  max-width: 72%;
+}
+
+.state-box,
+.empty {
+  border-block: 1px solid #e6e9f0;
+  padding: 65px 20px;
+  text-align: center;
+}
+
+.state-box {
+  color: #56627a;
+}
+
+.state-box p,
+.more-error p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.state-box button,
+.empty button,
+.more-error button {
+  min-height: 44px;
+  color: #2450dc;
+  font-weight: 600;
+}
+
+.state-box--error {
+  color: #b42318;
+}
+
+.empty h3 {
+  font-size: 19px;
+}
+
+.empty p {
+  margin: 9px 0 18px;
+  color: #56627a;
+  font-size: 14px;
+}
+
+.schedule-note {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-top: 20px;
+  border-bottom: 1px solid #e6e9f0;
+  color: #56627a;
+  font-size: 13px;
+  padding: 15px 0;
+}
+
+.schedule-note strong {
+  color: #15213b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.load-status {
+  min-height: 1px;
+  color: #56627a;
+  font-size: 13px;
+}
+
+.load-more {
+  display: block;
+  min-width: 200px;
+  margin: 26px auto 8px;
+  border: 1px solid #d7deea;
+  border-radius: 6px;
+  color: #56627a;
+  font-size: 14px;
+  padding: 11px 24px;
+}
+
+.load-more:disabled {
+  opacity: 0.6;
+}
+
+.more-error {
+  margin: 20px 0;
+  text-align: center;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.source-note {
+  margin: 26px 0 45px;
+}
+
+
+.faq {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 36px;
+  margin: 36px 0 52px;
+  border-top: 1px solid #e6e9f0;
+  padding-top: 26px;
+}
+
+.faq h2 {
+  color: #15213b;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.faq details {
+  border-bottom: 1px solid #e6e9f0;
+  padding: 13px 0;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 550;
+}
+
+.faq p {
+  color: #56627a;
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 10px 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1000px) {
+  .row-head,
+  .notice-row-skeleton {
+    grid-template-columns: minmax(0, 1fr) 90px 70px 156px;
+    gap: 14px;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 900px) {
+  .filter-controls {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .region-filter-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .filter-box {
+    margin-bottom: 22px;
+    padding: 15px;
+  }
+
+  .type-tabs {
+    gap: 3px;
+    margin-bottom: 13px;
+    padding-bottom: 12px;
+  }
+
+  .type-tab {
+    min-height: 44px;
+    font-size: 12px;
+    padding: 6px 9px;
+  }
+
+  .status-tabs {
+    gap: 5px;
+  }
+
+  .status-tabs button {
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .filter-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(88px, auto);
+    gap: 10px 8px;
+  }
+
+  .region-filter-field {
+    grid-column: 1 / -1;
+  }
+
+  .filter-controls :deep(.grid) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .filter-controls :deep(select),
+  .filter-controls input {
+    min-height: 44px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+
+  .search-button {
+    min-width: 88px;
+    padding: 0 12px;
+  }
+
+  .reset {
+    grid-column: 1 / -1;
+    justify-self: end;
+    min-width: 96px;
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .results-tools {
+    align-items: baseline;
+    margin: 15px 0 8px;
+  }
+
+  .results-tools p {
+    font-size: 13px;
+  }
+
+  .row-head {
+    display: none;
+  }
+
+  .notice-row-skeleton {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 20px 0;
+  }
+
+  .notice-row-skeleton .skeleton-line:not(.skeleton-line--title) {
+    max-width: 45%;
+  }
+
+  .schedule-note {
+    display: block;
+    font-size: 12px;
+  }
+
+  .schedule-note strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .load-more {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .faq {
+    display: block;
+    margin: 30px 0 40px;
+  }
+
+  .faq h2 {
+    margin-bottom: 13px;
+  }
+
+  .faq summary {
+    font-size: 14px;
+  }
+}
+</style>

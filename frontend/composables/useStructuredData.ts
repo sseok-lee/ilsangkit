@@ -350,6 +350,7 @@ export function useStructuredData() {
     city: string
     district: string
     targetRegion?: string | null
+    applicableAreas?: Array<{ name: string }>
     details?: { manageDepartment?: string; managePhone?: string } | null
   }) {
     const schema = {
@@ -358,10 +359,12 @@ export function useStructuredData() {
       name: `${schedule.city} ${schedule.district} 쓰레기 배출 안내`,
       description: `${schedule.city} ${schedule.district} 지역 쓰레기 배출 일정 및 방법`,
       serviceType: '쓰레기 배출 안내',
-      areaServed: {
-        '@type': 'AdministrativeArea',
-        name: `${schedule.city} ${schedule.district}`,
-      },
+      areaServed: (schedule.applicableAreas?.length
+        ? schedule.applicableAreas.map(area => ({ '@type': 'AdministrativeArea', name: `${schedule.city} ${schedule.district} ${area.name}` }))
+        : {
+            '@type': 'AdministrativeArea',
+            name: `${schedule.city} ${schedule.district}`,
+          }),
       url: `${SITE_URL}/trash/${schedule.id}`,
     }
 

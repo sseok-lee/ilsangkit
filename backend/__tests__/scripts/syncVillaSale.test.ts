@@ -1,6 +1,9 @@
 // @TASK Phase2-4 - 빌라 매매 동기화 스크립트 테스트 (TDD)
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock prisma
 const { mockUpsert, mockFindUnique, mockFindMany, mockTransaction } = vi.hoisted(() => ({
@@ -26,6 +29,19 @@ import {
   syncVillaSaleByLawd,
   type RawVillaSaleItem,
 } from '../../src/scripts/syncVillaSale.js';
+
+let lockDir: string;
+
+beforeEach(() => {
+  lockDir = mkdtempSync(join(tmpdir(), 'real-estate-lock-'));
+  process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
+});
+
+afterEach(() => {
+  delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+  delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
+  rmSync(lockDir, { recursive: true, force: true });
+});
 
 describe('transformVillaSaleItem', () => {
   it('API 응답 item을 DB 필드로 변환', () => {

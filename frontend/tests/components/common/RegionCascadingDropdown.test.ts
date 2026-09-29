@@ -65,3 +65,12 @@ describe('RegionCascadingDropdown', () => {
     expect(text).toContain('강남구')
   })
 })
+
+
+it('opt-in preserves URL selection before its region dictionary is available', () => {
+  const wrapper = mountIt({ city: '선택시', district: '선택구', preserveCurrentSelection: true })
+  expect((wrapper.findAll('select')[0].element as HTMLSelectElement).value).toBe('선택시')
+  expect((wrapper.findAll('select')[1].element as HTMLSelectElement).value).toBe('선택구')
+  const defaultWrapper = mountIt({ city: '선택시', district: '선택구' })
+  expect(defaultWrapper.find('option[value="선택시"]').exists()).toBe(false)
+})

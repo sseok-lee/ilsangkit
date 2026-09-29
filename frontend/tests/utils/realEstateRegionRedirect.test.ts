@@ -85,6 +85,17 @@ describe('buildCanonicalRealEstatePath — 합칠 목적지', () => {
     })).toBe(`/real-estate/villa-sale/jeju/seogwipo/${encodeURIComponent(HYUNDAI)}`)
   })
 
+  it('buildingKey가 있으면 주소 식별 segment까지 정규 경로에 보존한다', () => {
+    const buildingKey = 'a'.repeat(64)
+    expect(buildCanonicalRealEstatePath({
+      type: 'villa-sale',
+      buildingName: HYUNDAI,
+      actualCity: '제주특별자치도',
+      actualDistrict: '서귀포시',
+      buildingKey,
+    })).toBe(`/real-estate/villa-sale/jeju/seogwipo/${encodeURIComponent(HYUNDAI)}/${buildingKey}`)
+  })
+
   it('slug 로 되돌릴 수 없는 지역이면 null (잘못된 목적지로 보내지 않는다)', () => {
     expect(buildCanonicalRealEstatePath({
       type: 'apt-sale',

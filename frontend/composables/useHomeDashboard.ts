@@ -1,9 +1,12 @@
 import type { RealEstatePropertyType } from '~/types/realEstate'
 
 export interface TrendingBuildingItem {
+  buildingKey?: string;
   buildingName: string;
   city: string;
   district: string;
+  dongName?: string;
+  jibun?: string | null;
   txnCount: number;
   representativeArea: number | null;
   medianPrice: number | null;

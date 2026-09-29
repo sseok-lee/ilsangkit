@@ -3,10 +3,10 @@
     <template v-for="(item, i) in items" :key="`${item.label}-${i}`">
       <div
         v-if="alwaysShow || hasValue(item.value)"
-        class="bg-slate-50 rounded-lg text-center"
-        :class="variant === 'prominent' ? 'p-3' : 'py-2.5 px-2 flex flex-col items-center justify-center'"
+        class="bg-white rounded-lg border border-line text-left"
+        :class="variant === 'prominent' ? 'p-3' : 'py-2.5 px-3 flex flex-col justify-center'"
       >
-        <p class="text-xs text-gray-600" :class="variant === 'prominent' ? 'mb-1' : ''">{{ item.label }}</p>
+        <p class="text-xs text-gray-500" :class="variant === 'prominent' ? 'mb-1' : ''">{{ item.label }}</p>
         <p v-if="hasValue(item.value)" class="font-bold text-slate-900 tabular-nums" :class="variant === 'prominent' ? 'text-lg' : 'text-sm'">
           {{ item.value }}<span v-if="item.unit" class="text-xs font-normal text-gray-600">{{ item.unit }}</span>
         </p>

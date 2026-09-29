@@ -3,6 +3,7 @@ import type { SearchParams, SearchResponse, GroupedSearchResponse, GroupedCatego
 
 export interface RecoveryChip { label: string; category: string; city: string | null; district: string | null }
 export interface Recovery { scope: 'region' | 'category' | 'popular'; regionLabel: string | null; chips: RecoveryChip[] }
+type GroupedRequestResponse = GroupedSearchResponse & { recovery?: Recovery }
 
 export function useFacilitySearch() {
   const loading = ref(false)
@@ -69,25 +70,36 @@ export function useFacilitySearch() {
     currentPage.value = page
   }
 
-  const searchGrouped = async (params: Omit<SearchParams, 'grouped'>) => {
+  const requestGrouped = async (
+    params: Omit<SearchParams, 'grouped'>,
+    signal?: AbortSignal
+  ): Promise<GroupedRequestResponse> => {
+    const response = await $fetch<ApiResponse<GroupedRequestResponse>>(
+      '/api/facilities/search',
+      {
+        method: 'POST',
+        body: { ...params, grouped: true },
+        retry: 1,
+        ...(signal ? { signal } : {}),
+      }
+    )
+
+    if (!response.success || !response.data) {
+      throw new Error(response.error?.message || '검색 중 오류가 발생했습니다')
+    }
+
+    return response.data
+  }
+
+  const searchGrouped = async (params: Omit<SearchParams, 'grouped'>): Promise<void> => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await $fetch<ApiResponse<GroupedSearchResponse>>(
-        '/api/facilities/search',
-        {
-          method: 'POST',
-          body: { ...params, grouped: true },
-          retry: 1,
-        }
-      )
-
-      if (response.success && response.data) {
-        groupedResults.value = response.data.categories
-        groupedTotalCount.value = response.data.totalCount
-        recovery.value = (response.data as unknown as { recovery?: Recovery }).recovery ?? null
-      }
+      const data = await requestGrouped(params)
+      groupedResults.value = data.categories
+      groupedTotalCount.value = data.totalCount
+      recovery.value = data.recovery ?? null
     } catch (err: any) {
       error.value = err?.message || '검색 중 오류가 발생했습니다'
       groupedResults.value = []
@@ -140,6 +152,7 @@ export function useFacilitySearch() {
     crossLoading: readonly(crossLoading),
     recovery: readonly(recovery),
     search,
+    requestGrouped,
     searchGrouped,
     searchNearby,
     searchNearbyCross,

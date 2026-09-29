@@ -8,6 +8,9 @@ export interface SuggestItem {
   district?: string
   category?: string
   buildingName?: string
+  buildingKey?: string
+  dongName?: string
+  jibun?: string | null
   bjdCode?: string
   reType?: string
 }

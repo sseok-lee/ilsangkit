@@ -112,6 +112,10 @@ describe('searchGrouped (fulltext 경로)', () => {
     );
     expect(matchCall).toBeTruthy();
     expect(matchCall![1]).toBe('"서초동"'); // toBooleanPhrase 구문 검색
+    expect(matchCall![0]).toContain('NOT EXISTS');
+    expect(matchCall![0]).toContain('WasteStagedSchedule');
+    expect(mockFindMany.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+    expect(mockCount.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
   });
 
   it('1자 freeText의 trash 검색은 기존 LIKE(contains) 경로를 유지한다', async () => {

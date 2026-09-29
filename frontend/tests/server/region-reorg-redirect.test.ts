@@ -181,6 +181,47 @@ describe('resolveIncheonReorgRedirect — 인천 개편 소멸구(서구/중구/
     )).toEqual({ redirect: '/real-estate/apt-sale/incheon/geomdan/당하푸르지오' })
   })
 
+  it('buildingKey가 있는 단지 상세는 building-info exact lookup으로 신설구를 찾고 key를 보존한다', async () => {
+    const key = 'b'.repeat(64)
+    const fetcher = vi.fn(async () => ({
+      success: true,
+      data: {
+        buildingName: '청라푸르지오',
+        buildingKey: key,
+        city: '인천광역시',
+        district: '검단구',
+      },
+    }))
+
+    expect(await resolveIncheonReorgRedirect(
+      `/real-estate/apt-sale/incheon/seo/${encodeURIComponent('청라푸르지오')}/${key}`,
+      fetcher,
+    )).toEqual({
+      redirect: `/real-estate/apt-sale/incheon/geomdan/${encodeURIComponent('청라푸르지오')}/${key}`,
+    })
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/real-estate/apt-sale/building-info?bjdCode=&buildingName=${encodeURIComponent('청라푸르지오')}&buildingKey=${key}`,
+    )
+  })
+
+  it('buildingKey가 있는 단지 상세는 building-info가 key를 확정하지 못하면 notFound로 둔다', async () => {
+    const key = 'c'.repeat(64)
+    const fetcher = vi.fn(async () => ({
+      success: true,
+      data: {
+        buildingName: '청라푸르지오',
+        buildingKey: 'd'.repeat(64),
+        city: '인천광역시',
+        district: '검단구',
+      },
+    }))
+
+    expect(await resolveIncheonReorgRedirect(
+      `/real-estate/apt-sale/incheon/seo/${encodeURIComponent('청라푸르지오')}/${key}`,
+      fetcher,
+    )).toEqual({ notFound: true })
+  })
+
   it('현행 구 결과 없으면 notFound', async () => {
     expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seo/사라진단지', mkFetcher([])))
       .toEqual({ notFound: true })

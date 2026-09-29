@@ -293,6 +293,19 @@ describe('listStationsGrouped', () => {
     );
   });
 
+  it('keyword 필터에서 LIKE 와일드카드 문자는 literal 로 이스케이프한다', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    const r = await listStationsGrouped({ page: 1, limit: 20, keyword: '%_' });
+    expect(r.total).toBe(0);
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          name: { contains: '\\%\\_' },
+        }),
+      }),
+    );
+  });
+
   it('Decimal lat/lng는 number로 변환', async () => {
     mockFindMany.mockResolvedValueOnce([
       row({

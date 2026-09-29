@@ -94,15 +94,47 @@ export async function resolveIncheonReorgRedirect(
   let decoded: string
   try { decoded = decodeURIComponent(building) } catch { decoded = building }
   const nfc = decoded.normalize('NFC')
+  const buildingKey = seg[6]
+  const isCurrent = (d: string) => {
+    const s = DISTRICT_SLUG_MAP[d]
+    return !!s && INCHEON_CURRENT_DISTRICT_SLUGS.has(s)
+  }
+  const isIncheon = (city: string | null | undefined) => {
+    const normalized = city?.trim()
+    return normalized === '인천' || normalized === '인천광역시'
+  }
+
   try {
+    if (buildingKey) {
+      const res = (await fetcher(
+        `/api/real-estate/${seg[2]}/building-info?bjdCode=&buildingName=${encodeURIComponent(nfc)}&buildingKey=${encodeURIComponent(buildingKey)}`,
+      )) as {
+        success?: boolean
+        data?: {
+          city?: string | null
+          district?: string | null
+          buildingName?: string | null
+          buildingKey?: string | null
+        } | null
+      } | null
+      const info = res?.data
+      if (
+        !info
+        || info.buildingName !== nfc
+        || info.buildingKey !== buildingKey
+        || !isIncheon(info.city)
+        || !info.district
+        || !isCurrent(info.district)
+      ) {
+        return { notFound: true }
+      }
+      return { redirect: `/real-estate/${seg[2]}/incheon/${DISTRICT_SLUG_MAP[info.district]}/${building}/${buildingKey}` }
+    }
+
     const res = (await fetcher(
       `/api/real-estate/${seg[2]}/complexes?city=${encodeURIComponent('인천')}&buildingName=${encodeURIComponent(nfc)}&limit=20`,
     )) as { success?: boolean; data?: { items?: Array<{ district: string; buildingName: string }> } } | null
     const items = res?.data?.items ?? []
-    const isCurrent = (d: string) => {
-      const s = DISTRICT_SLUG_MAP[d]
-      return !!s && INCHEON_CURRENT_DISTRICT_SLUGS.has(s)
-    }
     // 정확 일치(현행구) 우선, 없으면 현행구 첫 건
     const cur = items.find((it) => it.buildingName === nfc && isCurrent(it.district))
       ?? items.find((it) => isCurrent(it.district))

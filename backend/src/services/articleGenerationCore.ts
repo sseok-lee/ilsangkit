@@ -635,7 +635,7 @@ const FACILITY_COUNT: Partial<Record<GuideCategory, () => Promise<number>>> = {
   school: () => prisma.school.count(),
   market: () => prisma.market.count(),
   library: () => prisma.library.count(),
-  trash: () => prisma.wasteSchedule.count(),
+  trash: () => prisma.wasteSchedule.count({ where: { stagedMarker: null } }),
   childcare: () => prisma.childcare.count(),
   'ev-charger': () => prisma.evCharger.count(),
   sports: () => prisma.sports.count(),

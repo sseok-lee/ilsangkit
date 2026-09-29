@@ -6,10 +6,11 @@ import { isRegenRequest, tryServeStaticSitemap } from '../../utils/sitemapStatic
 import {
   SITE_URL,
   MAX_URLS_PER_SITEMAP,
+  TRASH_MAX_URLS_PER_SITEMAP,
   generateSitemapXml,
   formatDateForSitemap,
   fetchFacilityIds,
-  fetchWasteScheduleRegions,
+  fetchWasteSitemapInputs,
   fetchRealEstateBuildings,
   fetchRealEstateCityDistrictHubs,
   fetchLandSitemap,
@@ -24,7 +25,6 @@ import {
   isSitemapFacilityCategory,
 } from '../../utils/sitemapPolicy'
 import { toAbsoluteRealEstateUrl, toCitySlugByDistrict, toDistrictSlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
-import { buildTrashRegionPath } from '~/shared/regionSlugs'
 
 // wifi는 noindex-only 상세 정책에 따라 사이트맵 인덱스에서 제외된 카테고리다.
 // 동적 핸들러에서도 제외하여 sitemap URL은 404를 반환한다.
@@ -178,6 +178,7 @@ export default defineEventHandler(async (event) => {
         city: item.city,
         district: item.district,
         buildingName: item.buildingName,
+        buildingKey: item.buildingKey,
       }),
       // 건물별 최근 실거래월(진짜 freshness). 백엔드 미배포/구버전 응답 시 weekStart 폴백.
       lastmod: item.lastmod || weekStart,
@@ -355,34 +356,24 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 쓰레기 배출(trash) — 개별 /trash/[id] 대신 구·군 집계 URL 사이트맵.
-  // buildTrashRegionPath 출력이 개별 상세의 301 타겟·집계 페이지 canonical과 byte-match 되어야 한다.
+  // 쓰레기 배출(trash) — 구·군 집계 URL + W9 색인 적격 동별 URL.
   if (category === 'trash') {
-    const regions = await fetchWasteScheduleRegions()
-    // API 실패로 데이터 없음 — 503으로 크롤러 재시도 유도 (빈 sitemap 캐시·베이크 방지)
-    if (regions.length === 0) {
-      return sitemapUpstreamUnavailable(event, 'waste-schedule-regions')
+    let inputs
+    try {
+      inputs = await fetchWasteSitemapInputs()
+    } catch {
+      return sitemapUpstreamUnavailable(event, 'waste-sitemap')
+    }
+    if (inputs.urls.length === 0) {
+      return sitemapUpstreamUnavailable(event, 'waste-sitemap')
     }
 
-    const seen = new Set<string>()
-    const urls: Parameters<typeof generateSitemapXml>[0] = []
-    for (const r of regions) {
-      const regionPath = buildTrashRegionPath(r.city, r.district)
-      if (!regionPath || seen.has(regionPath)) continue
-      seen.add(regionPath)
-      urls.push({
-        loc: `${SITE_URL}${regionPath}`,
-        lastmod: formatDateForSitemap(r.updatedAt),
-      })
-    }
-
-    // region 수(~250)는 MAX_URLS_PER_SITEMAP 이하라 단일 청크. page>totalPages 404 유지.
-    const totalPages = Math.max(1, Math.ceil(urls.length / MAX_URLS_PER_SITEMAP))
+    const totalPages = Math.max(1, Math.ceil(inputs.urls.length / TRASH_MAX_URLS_PER_SITEMAP))
     if (page > totalPages) {
       return sitemapNotFound(event)
     }
-    const offset = (page - 1) * MAX_URLS_PER_SITEMAP
-    return generateSitemapXml(urls.slice(offset, offset + MAX_URLS_PER_SITEMAP))
+    const offset = (page - 1) * TRASH_MAX_URLS_PER_SITEMAP
+    return generateSitemapXml(inputs.urls.slice(offset, offset + TRASH_MAX_URLS_PER_SITEMAP))
   }
 
   // 시설 카테고리 — 인덱스와 동일한 limit을 적용해 청크 수가 어긋나지 않게 한다

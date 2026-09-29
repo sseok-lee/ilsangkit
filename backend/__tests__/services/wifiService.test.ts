@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockFindMany, mockFindUnique, mockFindFirst } = vi.hoisted(() => ({
+const { mockFindMany, mockFindUnique, mockFindFirst, mockQueryRawUnsafe } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockFindUnique: vi.fn(),
   mockFindFirst: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
   const wifi = { findMany: mockFindMany, findUnique: mockFindUnique, findFirst: mockFindFirst };
-  const client = { wifi };
+  const client = { wifi, $queryRawUnsafe: mockQueryRawUnsafe };
   return { default: client, prisma: client };
 });
 
@@ -16,7 +17,20 @@ vi.mock('../../src/services/viewCountService.js', () => ({
   bufferViewCount: vi.fn(),
 }));
 
-import { getWifiGroupDetail, resolveWifiGroupRedirect, getWifiGroupHeader } from '../../src/services/wifiService.js';
+vi.mock('../../src/services/search/fulltextKeyword.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/search/fulltextKeyword.js');
+  return {
+    ...actual,
+    canUseFulltext: () => false,
+  };
+});
+
+import {
+  getWifiGroupDetail,
+  resolveWifiGroupRedirect,
+  getWifiGroupHeader,
+  wifiGroupSearch,
+} from '../../src/services/wifiService.js';
 import { buildWifiGroupId } from '../../src/services/wifiGroup.js';
 
 const GROUP = { name: '경의선숲길', city: '서울', district: '마포구', address: null };
@@ -57,6 +71,36 @@ beforeEach(() => {
   mockFindMany.mockReset();
   mockFindUnique.mockReset();
   mockFindFirst.mockReset();
+  mockQueryRawUnsafe.mockReset();
+});
+
+describe('wifiGroupSearch', () => {
+  it('escapes literal SQL LIKE wildcards in raw adapter keyword fallback', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ cnt: 0n }])
+      .mockResolvedValueOnce([]);
+
+    await wifiGroupSearch({ keyword: '%_', city: '서울', district: '강남구', page: 1, limit: 20 });
+
+    const [countSql, ...countValues] = mockQueryRawUnsafe.mock.calls[0];
+    expect(countSql).toContain("LIKE ? ESCAPE '\\\\'");
+    expect(countValues).toEqual(expect.arrayContaining(['%\\%\\_%']));
+  });
+
+  it('uses groupKey as a deterministic tie breaker for duplicate group names', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ cnt: 2n }])
+      .mockResolvedValueOnce([
+        { groupKey: 'wifi-group-a', name: '같은이름', address: null, roadAddress: null, lat: 37, lng: 127, city: '서울', district: '강남구', ssid: null, installLocation: null, accessPointCount: 1 },
+        { groupKey: 'wifi-group-b', name: '같은이름', address: null, roadAddress: null, lat: 37.1, lng: 127.1, city: '서울', district: '강남구', ssid: null, installLocation: null, accessPointCount: 1 },
+      ]);
+
+    const result = await wifiGroupSearch({ city: '서울', district: '강남구', page: 1, limit: 2 });
+
+    const listSql = mockQueryRawUnsafe.mock.calls[1][0] as string;
+    expect(listSql).toContain('ORDER BY name ASC, groupKey ASC');
+    expect(result.items.map((item) => item.id)).toEqual(['wifi-group-a', 'wifi-group-b']);
+  });
 });
 
 describe('getWifiGroupHeader', () => {

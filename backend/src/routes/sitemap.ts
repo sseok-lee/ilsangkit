@@ -9,6 +9,7 @@ import {
   getFacilityIds,
   getWasteScheduleIds,
   getWasteScheduleRegions,
+  getWasteAreaIdsForSitemap,
   getRegionCategoryCombinations,
   getRealEstateBuildings,
   getRealEstateBuildingCount,
@@ -71,6 +72,18 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const regions = await getWasteScheduleRegions();
     res.json({ success: true, data: { regions } });
+  })
+);
+
+/**
+ * GET /api/sitemap/waste-areas
+ * W9 색인 정책을 통과한 동별 쓰레기 배출 안내만 반환한다.
+ */
+router.get(
+  '/waste-areas',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const areas = await getWasteAreaIdsForSitemap();
+    res.json({ success: true, data: { areas } });
   })
 );
 

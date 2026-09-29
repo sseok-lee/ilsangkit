@@ -1,20 +1,35 @@
 <template>
   <div class="relative w-full h-full min-h-[400px] rounded-lg overflow-hidden">
     <div
+      v-if="isValidCenter"
       ref="mapContainer"
       role="application"
       aria-label="시설 위치 지도"
       data-testid="map-container"
       class="w-full h-full"
     />
+    <div
+      v-else
+      role="status"
+      class="flex h-full min-h-[220px] items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-500"
+    >
+      좌표 정보가 없어 지도를 표시할 수 없습니다.
+    </div>
+    <div
+      v-if="mapError"
+      role="alert"
+      class="absolute inset-x-3 bottom-3 rounded-lg border border-red-200 bg-white/95 px-3 py-2 text-sm font-medium text-red-700 shadow-sm"
+    >
+      지도 SDK를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+    </div>
     <div class="sr-only" aria-live="polite" aria-atomic="true">
-      {{ facilities.length }}개의 시설이 지도에 표시됩니다. 마커를 클릭하면 상세 정보를 확인할 수 있습니다.
+      {{ isValidCenter ? `${facilities.length}개의 시설이 지도에 표시됩니다. 마커를 클릭하면 상세 정보를 확인할 수 있습니다.` : '좌표 정보가 없어 지도를 표시할 수 없습니다.' }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
 import type { FacilitySearchItem } from '~/types'
 import { CATEGORY_MARKER_COLORS } from '~/utils/categoryColors'
@@ -45,6 +60,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const mapContainer = ref<HTMLElement | null>(null)
+const mapError = ref<string | null>(null)
+const isValidCenter = computed(() => Number.isFinite(props.center.lat) && Number.isFinite(props.center.lng))
 const { map, initMap, addMarkers, clearMarkers, panTo, setUserLocationMarker, getCenter, getBounds } = useKakaoMap()
 
 function emitBounds() {
@@ -59,22 +76,28 @@ function emitBounds() {
 
 // 지도 초기화
 onMounted(async () => {
-  if (mapContainer.value) {
+  if (!isValidCenter.value || !mapContainer.value) return
+
+  try {
     await initMap(mapContainer.value, {
       center: props.center,
       level: props.level,
     })
+    mapError.value = null
+  } catch (error) {
+    mapError.value = error instanceof Error ? error.message : 'map-init-failed'
+    return
+  }
 
-    // 지도 이동/줌 시 bounds emit
-    if (map.value) {
-      window.kakao.maps.event.addListener(map.value, 'dragend', emitBounds)
-      window.kakao.maps.event.addListener(map.value, 'zoom_changed', emitBounds)
-    }
+  // 지도 이동/줌 시 bounds emit
+  if (map.value) {
+    window.kakao.maps.event.addListener(map.value, 'dragend', emitBounds)
+    window.kakao.maps.event.addListener(map.value, 'zoom_changed', emitBounds)
+  }
 
-    // 초기 마커 표시
-    if (props.facilities.length > 0) {
-      updateMarkers(props.facilities)
-    }
+  // 초기 마커 표시
+  if (props.facilities.length > 0) {
+    updateMarkers(props.facilities)
   }
 })
 
@@ -108,7 +131,9 @@ watch(
 watch(
   () => props.center,
   (newCenter) => {
-    panTo(newCenter.lat, newCenter.lng)
+    if (Number.isFinite(newCenter.lat) && Number.isFinite(newCenter.lng)) {
+      panTo(newCenter.lat, newCenter.lng)
+    }
   }
 )
 

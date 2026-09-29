@@ -58,6 +58,47 @@ describe('useWasteSchedule().getSchedules', () => {
     vi.clearAllMocks()
   })
 
+  it('forwards unresolved source filters as $fetch params instead of dropping them into a partial URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: backendData() })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+    const { getSchedules } = useWasteSchedule()
+
+    await getSchedules({
+      city: '서울특별시',
+      district: '강남구',
+      keyword: '역삼',
+      coverage: 'unresolved',
+      page: 2,
+      limit: 20,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/waste-schedules'),
+      expect.objectContaining({
+        params: {
+          city: '서울특별시',
+          district: '강남구',
+          keyword: '역삼',
+          coverage: 'unresolved',
+          page: 2,
+          limit: 20,
+        },
+      })
+    )
+  })
+
+
+
+  it('normalizes old detail responses without applicableAreas to an empty array', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { ...backendData().items[0], applicableAreas: undefined } })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+    const { getScheduleDetail } = useWasteSchedule()
+
+    await expect(getScheduleDetail(10817)).resolves.toMatchObject({ applicableAreas: [] })
+  })
+
   it('API 실패를 가짜 일정으로 덮지 않고 오류를 전파한다', async () => {
     // 운영 배포본(_nuxt/Bw_e19JL.js)의 catch 분기는 '서울특별시', '{구} 1동~3동',
     // 전화번호 '02-1234-5678' 과 임의 요일 2건을 실제 공공데이터처럼 반환했다.

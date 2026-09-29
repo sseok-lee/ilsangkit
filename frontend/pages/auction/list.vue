@@ -1,17 +1,22 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="공매"
         :title="pageHeading"
         :description="`온비드 부동산 공매 물건을 지역·용도·상태별로 조회하세요.`"
       />
 
       <!-- 필터 -->
-      <SectionBlock heading="필터" subtext="용도·상태·지역으로 공매 물건을 좁혀보세요.">
+      <SectionBlock class="property-section property-filter-pane" heading="필터" subtext="용도·상태·지역으로 공매 물건을 좁혀보세요.">
         <AuctionFilters
+          :keyword="keyword"
+          :status-mode="statusMode"
+          @update:keyword="onKeyword"
+          @update:status-mode="onStatusMode"
           :usage="usage"
           :status="filterStatus"
           :city="filterCity"
@@ -21,14 +26,27 @@
           @update:city="onCity"
           @update:district="onDistrict"
         />
+        <label class="mt-4 grid gap-1 text-sm text-muted" for="auction-sort">정렬
+          <select id="auction-sort" :value="sort" class="min-h-11 rounded-lg border border-line px-3 text-ink" @change="applyQuery({ sort: ($event.target as HTMLSelectElement).value, page: undefined })">
+            <option value="deadline" :selected="sort === 'deadline'">마감 임박순</option>
+            <option value="apsl" :selected="sort === 'apsl'">감정가 높은순</option>
+            <option value="bidRate" :selected="sort === 'bidRate'">낙찰가율 높은순</option>
+          </select>
+        </label>
       </SectionBlock>
 
       <!-- Ad: 필터 직후 (시설·부동산 목록 페이지와 동일 위치) -->
       <AdBanner />
 
       <!-- 결과 -->
+      <div v-if="itemsError" role="alert" class="border-y border-line py-10 text-center">
+        <p>공매 물건을 불러오지 못했습니다.</p>
+        <button type="button" class="min-h-11 px-4 text-primary" @click="refresh()">다시 시도</button>
+      </div>
+      <p v-else-if="pending" role="status" class="py-10 text-center text-muted">데이터를 불러오는 중입니다.</p>
       <SectionBlock
-        v-if="data && data.items.length > 0"
+        class="property-section"
+        v-else-if="data && data.items.length > 0"
         :heading="`${pageHeading} 목록`"
         subtext="감정가·최저가와 입찰 마감일을 확인하세요."
       >
@@ -37,17 +55,19 @@
             {{ data.total.toLocaleString('ko-KR') }}건
           </span>
         </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AuctionCard v-for="item in data.items" :key="item.cltrMngNo" :item="item" />
+        <div class="flex flex-col">
+          <AuctionCard variant="row" v-for="item in data.items" :key="item.cltrMngNo" :item="item" />
         </div>
         <Pagination
+          class="flex-wrap"
+          :href-for="pageHref"
           :current-page="currentPage"
           :total-pages="data.totalPages"
           @page-change="onPageChange"
         />
       </SectionBlock>
 
-      <SectionBlock v-else-if="data && data.items.length === 0" :heading="`${pageHeading} 목록`">
+      <SectionBlock class="property-section" v-else-if="data && data.items.length === 0" :heading="`${pageHeading} 목록`">
         <EmptyState icon="gavel" title="조회된 공매 물건이 없습니다" description="필터를 변경하거나 전체 목록을 확인해 보세요.">
           <div class="flex items-center justify-center gap-3">
             <button
@@ -68,7 +88,7 @@
         </EmptyState>
       </SectionBlock>
 
-      <SectionBlock v-else :heading="`${pageHeading} 목록`">
+      <SectionBlock class="property-section" v-else :heading="`${pageHeading} 목록`">
         <div class="rounded-xl bg-background-light p-12 text-center">
           <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
         </div>
@@ -80,7 +100,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, watchEffect } from 'vue'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import type { LocationQueryRaw } from 'vue-router'
 import { useAuction } from '~/composables/useAuction'
@@ -106,6 +127,9 @@ const filterStatus = computed(() => (route.query.status as string) ?? '')
 const filterCity = computed(() => (route.query.city as string) ?? '')
 const filterDistrict = computed(() => (route.query.district as string) ?? '')
 const currentPage = computed(() => Number(route.query.page ?? 1))
+const keyword = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
+const statusMode = computed(() => route.query.statusMode === 'exact' ? 'exact' : 'legacy')
+const sort = computed(() => typeof route.query.sort === 'string' ? route.query.sort : 'deadline')
 
 // 알려진 용도 키인가. 빈 값(필터 없음)도 정상으로 본다.
 //
@@ -139,9 +163,13 @@ const breadcrumbItems = computed(() => [
 
 const auction = useAuction()
 
-const { data, error: itemsError } = await useAsyncData(
-  `auction-list-${usage.value}-${filterStatus.value}-${filterCity.value}-${filterDistrict.value}-${currentPage.value}`,
+const dataKey = computed(() => `auction-list-${JSON.stringify([usage.value, filterStatus.value, statusMode.value, keyword.value, filterCity.value, filterDistrict.value, sort.value, currentPage.value])}`)
+const { data, error: itemsError, pending, refresh } = await useAsyncData(
+  dataKey,
   () => auction.getItems({
+    keyword: keyword.value || undefined,
+    statusMode: statusMode.value === 'exact' ? 'exact' : undefined,
+    sort: sort.value,
     usage: usage.value || undefined,
     status: filterStatus.value || undefined,
     city: filterCity.value || undefined,
@@ -149,9 +177,8 @@ const { data, error: itemsError } = await useAsyncData(
     page: currentPage.value,
     limit: 20,
   }),
-  // ⚠️ 쿼리파라미터 필터/페이지는 같은 페이지에서 바뀌므로(컴포넌트 unmount 안 됨)
-  //    watch 없으면 재요청이 안 일어나 필터·페이징이 전부 죽는다.
-  { watch: [usage, filterStatus, filterCity, filterDistrict, currentPage], default: () => null },
+  // Reactive key keeps SSR and client history on the same filter payload.
+  { default: () => null },
 )
 
 // 일시 장애를 200 + index 로 굳히지 않는다 (#467 / #674). 사용자에겐 페이지를 그대로
@@ -187,6 +214,20 @@ function applyQuery(patch: LocationQueryRaw) {
     router.push({ query: q })
   })
 }
+function onKeyword(value: string) {
+  applyQuery({ q: value || undefined, page: undefined })
+}
+function onStatusMode(value: string) {
+  applyQuery({ statusMode: value === 'exact' ? 'exact' : undefined, page: undefined })
+}
+function pageHref(page: number) {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(route.query)) {
+    if (key !== 'page' && typeof value === 'string' && value) query.set(key, value)
+  }
+  if (page > 1) query.set('page', String(page))
+  return `/auction/list${query.size ? `?${query}` : ''}`
+}
 function onUsage(v: string) {
   applyQuery({ usage: v || undefined, page: undefined })
 }
@@ -204,8 +245,10 @@ function onPageChange(p: number) {
 }
 
 const hasActiveFilter = computed(() =>
-  !!(usage.value || filterStatus.value || filterCity.value || filterDistrict.value),
+  !!(keyword.value || usage.value || filterStatus.value || filterCity.value || filterDistrict.value),
 )
+
+watchEffect(() => suppressAds(!isIndexable.value || !!itemsError.value || !!pending.value || !data.value?.items.length))
 
 function resetFilters() {
   router.push({ query: {} })
@@ -262,7 +305,9 @@ useHead(() => {
   return {
     title,
     meta,
-    ...(isIndexable.value ? { link: [{ rel: 'canonical', href: selfUrl.value }] } : {}),
+    link: isIndexable.value ? [{ rel: 'canonical', href: selfUrl.value }] : [],
   }
 })
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

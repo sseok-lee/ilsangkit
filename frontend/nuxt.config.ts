@@ -1,11 +1,52 @@
 import { fileURLToPath } from 'node:url'
+import { CITY_SLUGS } from './shared/regionSlugs'
 
 const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
 const gaId = process.env.NUXT_PUBLIC_GA_ID || ''
+const explorationRealEstateTypes = [
+  'apt-sale',
+  'apt-rent',
+  'villa-sale',
+  'villa-rent',
+  'offitel-sale',
+  'offitel-rent',
+] as const
+
+const wasteRegionalNoCacheRules = Object.fromEntries(
+  Object.values(CITY_SLUGS).map((city) => [
+    `/${city}/*/trash`,
+    { swr: false, cache: false, headers: { 'cache-control': 'private, no-store' } },
+  ] as const)
+)
+
+const explorationDistrictNoCacheRules = Object.fromEntries(
+  explorationRealEstateTypes.flatMap((type) =>
+    Object.values(CITY_SLUGS).map((city) => [
+      `/real-estate/${type}/${city}/*`,
+      { swr: false, cache: false },
+    ] as const)
+  )
+)
+
+function isWasteBearingApiRequest({ url }: { url: URL }): boolean {
+  if (/^\/api\/(?:waste-areas|waste-schedules)(?:\/|$)/.test(url.pathname)) return true
+  if (/^\/api\/facilities\/trash(?:\/|$)/.test(url.pathname)) return true
+  if (/^\/api\/facilities\/(?:browse|search|all)(?:\/|$)/.test(url.pathname)) {
+    const category = url.searchParams.get('category')
+    return category === null || category === '' || category === 'trash'
+  }
+  const regionMatch = url.pathname.match(/^\/api\/facilities\/region\/[^/]+\/[^/]+(?:\/([^/]+))?\/?$/)
+  if (regionMatch) {
+    const category = regionMatch[1]
+    return category === undefined || category === '' || category === 'trash'
+  }
+  return false
+}
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
-  devtools: { enabled: true },
+  // DevTools storage watchers exhaust macOS file handles and stall SSR module loading.
+  devtools: { enabled: false },
 
   modules: [
     '@nuxtjs/tailwindcss',
@@ -25,8 +66,21 @@ export default defineNuxtConfig({
       enabled: false,
     },
     workbox: {
+      importScripts: ['/sw-waste-cache-cleanup.js'],
       // API 요청: NetworkFirst (네트워크 우선, 오프라인 시 캐시 사용)
       runtimeCaching: [
+        {
+          urlPattern: /\/api\/real-estate\/(home-market|[^/]+\/detail(?:-overview|-page)?)(?:\?|$)/,
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: /\/api\/subscription\/?(?:\?|$)/,
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: isWasteBearingApiRequest,
+          handler: 'NetworkOnly',
+        },
         {
           urlPattern: /^https?:\/\/.*\/api\/.*/,
           handler: 'NetworkFirst',
@@ -123,7 +177,8 @@ export default defineNuxtConfig({
       '/park/**': { swr: 600 },
       '/school/**': { swr: 600 },
       '/market/**': { swr: 600 },
-      '/trash/**': { swr: 600 },
+      '/trash': { swr: false, cache: false, headers: { 'cache-control': 'private, no-store' } },
+      '/trash/**': { swr: false, cache: false, headers: { 'cache-control': 'private, no-store' } },
       '/childcare/**': { swr: 600 },
       '/ev-charger/**': { swr: 600 },
       '/sports/**': { swr: 600 },
@@ -145,15 +200,21 @@ export default defineNuxtConfig({
       '/gyeongbuk/**': { swr: 1800 },
       '/gyeongnam/**': { swr: 1800 },
       '/jeju/**': { swr: 1800 },
+      ...wasteRegionalNoCacheRules,
       // 부동산 — 5분
       '/real-estate/**': { swr: 300 },
+      // 구군 목록은 ?page=N 별 SSR payload가 달라야 한다. SWR이 켜지면 Nuxt의 추출
+      // payload 요청에서 query가 빠져 page 1 payload로 수화되므로 이 깊이만 캐시를 끈다.
+      // 유형·시도는 유효 slug로 고정해 단일 placeholder가 구군 한 단계에만 매치되게 한다.
+      // 전국/시도/상세 경로는 위의 기존 5분 SWR을 그대로 유지한다.
+      ...explorationDistrictNoCacheRules,
       // 가이드 — 1시간
       '/guide/**': { swr: 3600 },
       // sitemap은 디스크 정적 파일을 직접 서빙(없으면 동적 폴백)하므로 Nitro SWR 캐시 불필요.
       // SWR 유지 시 재생성 후에도 최대 24h 구버전이 잔존하므로 제거한다.
       '/sitemap.xml': { headers: { 'cache-control': 'public, max-age=3600' } },
       '/sitemap/**': { headers: { 'cache-control': 'public, max-age=3600' } },
-      '/': { swr: 3600 },
+      '/': { swr: false, cache: false, headers: { 'cache-control': 'private, no-store' } },
       '/about': { prerender: true },
       '/faq': { prerender: true },
       '/privacy': { prerender: true },
@@ -213,6 +274,7 @@ export default defineNuxtConfig({
       gaId: process.env.NUXT_PUBLIC_GA_ID || '',
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://ilsangkit.co.kr',
       disableMsw: process.env.NUXT_PUBLIC_DISABLE_MSW === 'true',
+      wasteAreaDiscoveryEnabled: process.env.NUXT_PUBLIC_WASTE_AREA_DISCOVERY_ENABLED === 'true',
       // ⚠️ 리터럴 boolean 필수 — NUXT_PUBLIC_ADS_ENABLED override가 boolean으로 강제 변환됨.
       // process.env 읽기/문자열 금지. CI/Lighthouse에서만 NUXT_PUBLIC_ADS_ENABLED=false.
       adsEnabled: true

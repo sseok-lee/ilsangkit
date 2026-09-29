@@ -1,137 +1,137 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
-import type { VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { nextTick, reactive, ref } from 'vue'
 import SearchPage from '~/pages/search.vue'
 
-const logSearchMock = vi.fn()
+enableAutoUnmount(afterEach)
 
-vi.mock('vue-router', () => ({
-  useRoute: () => ({ query: {} }),
-  useRouter: () => ({ push: vi.fn() }),
+const routeQuery = reactive<Record<string, string>>({ q: '강남' })
+const api = vi.hoisted(() => ({
+  searchAll: vi.fn(),
+  searchProperty: vi.fn(),
+  requestGrouped: vi.fn(),
+  logSearch: vi.fn(),
+  trackView: vi.fn(),
+  trackNoResults: vi.fn(),
 }))
 
-vi.mock('~/composables/useFacilityMeta', () => ({
-  useFacilityMeta: () => ({
-    setMeta: vi.fn(),
-    setSearchMeta: vi.fn(),
-    setCategoryMeta: vi.fn(),
-    setDetailMeta: vi.fn(),
-    setRegionMeta: vi.fn(),
-    SITE_NAME: '일상킷',
-  }),
-}))
-
-vi.mock('~/composables/useWasteSchedule', () => ({
-  useWasteSchedule: () => ({
-    isLoading: { value: false },
-    error: { value: null },
-    getCities: vi.fn().mockResolvedValue([]),
-    getDistricts: vi.fn().mockResolvedValue([]),
-    getSchedules: vi.fn().mockResolvedValue({ schedules: [] }),
-  }),
-}))
-
-// 통합 검색으로 search.vue가 useFacilitySearch를 다시 소비 — 시설 5건으로 combinedTotalCount 검증
-vi.mock('~/composables/useFacilitySearch', () => ({
-  useFacilitySearch: () => ({
-    searchGrouped: vi.fn().mockResolvedValue(undefined),
-    groupedResults: ref([{ category: 'toilet', label: '화장실', count: 5, items: [] }]),
-    groupedTotalCount: ref(5),
-    recovery: ref(null),
-  }),
-}))
-
-vi.mock('~/composables/useAnalytics', () => ({
-  useAnalytics: () => ({
-    trackSearchResultsView: vi.fn(),
-    trackSearchNoResults: vi.fn(),
-  }),
-}))
-
-// resultCount = 부동산 유니크 건물수(buildingCounts apt 4 + villa 3 = 7) + 시설(5) = 12, category='unified'
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: routeQuery }) }))
 vi.mock('~/composables/useRealEstate', () => ({
-  useRealEstate: () => ({
-    searchAll: vi.fn().mockResolvedValue({
-      categories: [
-        { type: 'apt-sale', count: 4, items: [] },
-        { type: 'villa-sale', count: 3, items: [] },
-      ],
-      buildingCounts: { apt: 4, villa: 3, offitel: 0 },
-    }),
-    getComplexList: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, total: 0 }),
-  }),
+  useRealEstate: () => ({ searchAll: api.searchAll, searchPropertyComplexesByKeyword: api.searchProperty }),
 }))
-
-vi.mock('~/composables/useSearchSuggest', () => ({
-  useSearchSuggest: () => ({
-    items: ref([]),
-    popular: ref([]),
-    recent: ref([]),
-    suggest: vi.fn(),
-    loadPopular: vi.fn(),
-    logSearch: logSearchMock,
-    addRecent: vi.fn(),
-    removeRecent: vi.fn(),
-    clearRecent: vi.fn(),
-    getSessionId: vi.fn().mockReturnValue('test-sid'),
-  }),
+vi.mock('~/composables/useFacilitySearch', () => ({ useFacilitySearch: () => ({ requestGrouped: api.requestGrouped }) }))
+vi.mock('~/composables/useFacilityMeta', () => ({ useFacilityMeta: () => ({ setSearchMeta: vi.fn() }) }))
+vi.mock('~/composables/useAnalytics', () => ({
+  useAnalytics: () => ({ trackSearchResultsView: api.trackView, trackSearchNoResults: api.trackNoResults }),
 }))
+vi.mock('~/composables/useSearchSuggest', () => ({ useSearchSuggest: () => ({ logSearch: api.logSearch, items: ref([]) }) }))
 
-const globalStubs = {
-  FacilityCard: { template: '<div data-testid="facility-card" />' },
-  CategoryIcon: { template: '<span />' },
-  AdBanner: { template: '<div />' },
-  Pagination: { template: '<div />' },
-  PageHero: { template: '<div><slot name="search" /></div>' },
-  SectionBlock: { template: '<div><slot /><slot name="right" /></div>' },
-  EmptyState: { template: '<div><slot /></div>' },
-  NuxtLink: { template: '<a><slot /></a>' },
-}
-
-describe('/search 검색 로깅 (logSearch)', () => {
-  let wrapper: VueWrapper | null = null
-
+describe('/search 검색 로깅', () => {
   beforeEach(() => {
-    logSearchMock.mockClear()
-    localStorage.clear()
+    vi.clearAllMocks()
+    routeQuery.q = '강남'
+    delete routeQuery.tab
+    delete routeQuery.property
+    delete routeQuery.page
+    api.searchAll.mockResolvedValue({ categories: [], buildingCounts: { apt: 4, villa: 3, offitel: 0 } })
+    api.requestGrouped.mockResolvedValue({ categories: [], totalCount: 5 })
+    api.searchProperty.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 })
   })
 
-  afterEach(() => {
-    wrapper?.unmount()
-    wrapper = null
+  it('성공한 domain count 합계로 한 번 기록하고 탭 변경에는 중복 기록하지 않는다', async () => {
+    mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
+    await flushPromises()
+
+    expect(api.logSearch).toHaveBeenCalledOnce()
+    expect(api.logSearch).toHaveBeenCalledWith({ keyword: '강남', resultCount: 12, category: 'unified' })
+    expect(api.trackView).toHaveBeenCalledOnce()
+
+    routeQuery.tab = 'facilities'
+    await nextTick()
+    await flushPromises()
+
+    expect(api.searchAll).toHaveBeenCalledOnce()
+    expect(api.requestGrouped).toHaveBeenCalledOnce()
+    expect(api.logSearch).toHaveBeenCalledOnce()
   })
 
-  it('컴포넌트가 에러 없이 마운트된다', async () => {
-    wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+  it('부분 성공은 통합 count 분석으로 기록하지 않는다', async () => {
+    api.requestGrouped.mockRejectedValueOnce(new Error('unavailable'))
+    mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
     await flushPromises()
-    expect(wrapper.exists()).toBe(true)
+
+    expect(api.logSearch).not.toHaveBeenCalled()
+    expect(api.trackView).not.toHaveBeenCalled()
+    expect(api.trackNoResults).not.toHaveBeenCalled()
   })
 
-  it('loading true→false 전이 + keyword 있을 때 logSearch가 통합 결과 합계로 호출된다', async () => {
-    wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
-    await flushPromises()
-    // 마운트 시 초기 검색(키워드 없음)은 로깅되지 않지만, 방어적으로 초기화
-    logSearchMock.mockClear()
-
-    // Set a search keyword and trigger the real search flow (다시 검색 = handleSearch → performSearch)
-    const input = wrapper.find('input[aria-label="통합 검색"]')
-    await input.setValue('강남')
-    await input.trigger('keyup.enter')
+  it('부분 성공 0건과 전체 실패를 no-results로 기록하지 않는다', async () => {
+    api.searchAll.mockResolvedValueOnce({ categories: [], buildingCounts: { apt: 0, villa: 0, offitel: 0 } })
+    api.requestGrouped.mockRejectedValueOnce(new Error('unavailable'))
+    const partial = mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
     await flushPromises()
 
-    expect(logSearchMock).toHaveBeenCalledOnce()
-    const call = logSearchMock.mock.calls[0][0]
-    expect(call.keyword).toBe('강남')
-    // resultCount = 부동산 유니크 건물수(buildingCounts 4+3) + 시설(5) = 12, category='unified'
-    expect(call.resultCount).toBe(12)
-    expect(call.category).toBe('unified')
+    expect(api.trackNoResults).not.toHaveBeenCalled()
+    expect(api.logSearch).not.toHaveBeenCalled()
+    partial.unmount()
+
+    vi.clearAllMocks()
+    api.searchAll.mockRejectedValueOnce(new Error('unavailable'))
+    api.requestGrouped.mockRejectedValueOnce(new Error('unavailable'))
+    mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
+    await flushPromises()
+
+    expect(api.trackNoResults).not.toHaveBeenCalled()
+    expect(api.logSearch).not.toHaveBeenCalled()
   })
 
-  it('keyword가 없을 때 logSearch가 호출되지 않는다', async () => {
-    wrapper = mount(SearchPage, { global: { stubs: globalStubs } })
+  it('실제 useUnifiedSearch에서 늦은 A 응답이 현재 B 분석을 중복 기록하지 않는다', async () => {
+    function deferred<T>() {
+      let resolve!: (value: T) => void
+      const promise = new Promise<T>((promiseResolve) => { resolve = promiseResolve })
+      return { promise, resolve }
+    }
+    const aBuildings = deferred<{ categories: never[]; buildingCounts: { apt: number; villa: number; offitel: number } }>()
+    const aFacilities = deferred<{ categories: never[]; totalCount: number }>()
+    const bBuildings = deferred<{ categories: never[]; buildingCounts: { apt: number; villa: number; offitel: number } }>()
+    const bFacilities = deferred<{ categories: never[]; totalCount: number }>()
+    api.searchAll.mockReset().mockReturnValueOnce(aBuildings.promise).mockReturnValueOnce(bBuildings.promise)
+    api.requestGrouped.mockReset().mockReturnValueOnce(aFacilities.promise).mockReturnValueOnce(bFacilities.promise)
+
+    mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
+    await nextTick()
+    routeQuery.q = '잠실'
+    await nextTick()
+
+    bBuildings.resolve({ categories: [], buildingCounts: { apt: 2, villa: 0, offitel: 0 } })
+    bFacilities.resolve({ categories: [], totalCount: 20 })
     await flushPromises()
 
-    expect(logSearchMock).not.toHaveBeenCalled()
+    expect(api.logSearch).toHaveBeenCalledOnce()
+    expect(api.logSearch).toHaveBeenCalledWith({ keyword: '잠실', resultCount: 22, category: 'unified' })
+
+    aBuildings.resolve({ categories: [], buildingCounts: { apt: 1, villa: 0, offitel: 0 } })
+    aFacilities.resolve({ categories: [], totalCount: 10 })
+    await flushPromises()
+
+    expect(api.logSearch).toHaveBeenCalledOnce()
+    expect(api.trackView).toHaveBeenCalledOnce()
+  })
+
+  it('페이지가 dispose된 뒤 완료된 요청은 분석을 기록하지 않는다', async () => {
+    let resolveBuildings!: (value: { categories: never[]; buildingCounts: { apt: number; villa: number; offitel: number } }) => void
+    let resolveFacilities!: (value: { categories: never[]; totalCount: number }) => void
+    api.searchAll.mockReset().mockReturnValueOnce(new Promise(resolve => { resolveBuildings = resolve }))
+    api.requestGrouped.mockReset().mockReturnValueOnce(new Promise(resolve => { resolveFacilities = resolve }))
+
+    const wrapper = mount(SearchPage, { global: { stubs: { AdBanner: { template: '<div />' }, EmptyState: { template: '<div />' } } } })
+    await nextTick()
+    wrapper.unmount()
+    resolveBuildings({ categories: [], buildingCounts: { apt: 1, villa: 0, offitel: 0 } })
+    resolveFacilities({ categories: [], totalCount: 1 })
+    await flushPromises()
+
+    expect(api.logSearch).not.toHaveBeenCalled()
+    expect(api.trackView).not.toHaveBeenCalled()
   })
 })

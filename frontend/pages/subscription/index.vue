@@ -1,185 +1,222 @@
 <template>
-  <div class="bg-background-light">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <PageHero
-        eyebrow="청약"
-        title="청약 일정·분양정보"
-        description="아파트·오피스텔 분양, 무순위·잔여세대, 공공·민간 임대까지 모든 청약 일정과 정보를 한눈에 확인하세요."
-        :stats="heroStats"
-      />
-
-      <!-- 페이지 인트로 (AI 검색·SEO 답변형 콘텐츠) -->
-      <section class="bg-white rounded-xl border border-slate-200 p-5 md:p-6 leading-relaxed text-slate-700 text-[15px]">
-        <h2 class="text-display-3 text-slate-900 mb-2">청약이란?</h2>
-        <p class="mb-3">
-          <strong>청약</strong>은 새로 짓는 아파트·오피스텔을 분양받기 위해 사전에 신청하는 절차입니다. 일상킷에서는
-          한국부동산원 청약홈, LH·SH, 민간 분양사가 공고하는 모든 청약·임대 일정을
-          <NuxtLink to="/subscription/sale" class="text-primary hover:underline">분양</NuxtLink>·<NuxtLink to="/subscription/rent" class="text-primary hover:underline">임대</NuxtLink> 카테고리로 구분해 모아 보여줍니다.
-        </p>
-        <h3 class="font-semibold text-slate-900 mt-4 mb-1.5">어떤 정보를 확인할 수 있나요?</h3>
-        <ul class="list-disc pl-5 space-y-1 mb-3">
-          <li>모집·접수일, 당첨자 발표일, 입주 예정일 등 주요 일정</li>
-          <li>분양가·임대료·공급세대수·평형별 면적</li>
-          <li>특별공급(신혼부부·다자녀·생애최초·신생아 등) 자격 안내</li>
-          <li>경쟁률·당첨 가점 컷·최저당첨선 (공개된 단지)</li>
-          <li>주변 시세 비교 (부동산 실거래가 데이터 연동)</li>
-        </ul>
-        <h3 class="font-semibold text-slate-900 mt-4 mb-1.5">언제 사용하면 좋나요?</h3>
-        <p class="mb-1">
-          청약통장 가입 후 <strong>접수 기간</strong>이 임박했을 때, 또는 무주택 기간·가점을 점검해
-          <strong>예정 단지</strong>를 미리 확인할 때 가장 유용합니다. 청약 신청은
-          <a href="https://www.applyhome.co.kr" target="_blank" rel="noopener" class="text-primary hover:underline">청약홈</a>
-          (한국부동산원 운영) 또는 분양사 지정 은행에서 진행하며, 일상킷은 일정과 상세 정보 제공에 집중합니다.
+  <main class="subscription-hub" :aria-busy="pending ? 'true' : 'false'">
+    <div class="hub-shell">
+      <section class="hub-hero">
+        <p class="hero-kicker">청약</p>
+        <h1>청약·임대, 신청할 공고부터.</h1>
+        <p class="hero-description">
+          한국부동산원 청약홈, 마이홈·LH, 민간 분양사가 제공하는 청약·임대 공고를
+          분양과 임대로 나눠 접수 상태와 공급 규모 중심으로 확인하세요.
         </p>
       </section>
 
-      <!-- 분양 Section -->
-      <SectionBlock>
-        <template #heading>
-          <div class="flex items-center gap-2">
-            <img src="/icons/category/sale.webp?v2" alt="분양" class="w-6 h-6" width="24" height="24" />
-            <h2 class="text-lg md:text-xl font-bold text-slate-900">분양</h2>
-          </div>
-        </template>
-        <template #right>
-          <NuxtLink to="/subscription/sale" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <NuxtLink
-            v-for="(meta, slug) in SALE_TYPES"
-            :key="slug"
-            :to="`/subscription/sale/${slug}`"
-            class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-primary/30 transition-all"
-          >
-            <div class="flex items-center gap-3 mb-3">
-              <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
-              <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors">{{ meta.label }}</h3>
-            </div>
-            <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
-          </NuxtLink>
-        </div>
-      </SectionBlock>
+      <SubscriptionNav />
 
-      <!-- 임대 Section -->
-      <SectionBlock>
-        <template #heading>
-          <div class="flex items-center gap-2">
-            <img src="/icons/category/rent.webp?v2" alt="임대" class="w-6 h-6" width="24" height="24" />
-            <h2 class="text-lg md:text-xl font-bold text-slate-900">임대</h2>
+      <section class="ongoing-panels" aria-labelledby="ongoing-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="ongoing-title">접수 중 공고</h2>
+            <p>마감일이 가까운 분양과 공공임대를 나눠 보여줍니다.</p>
           </div>
-        </template>
-        <template #right>
-          <NuxtLink to="/subscription/rent" class="ml-auto text-sm text-primary hover:underline">전체보기 →</NuxtLink>
-        </template>
-        <div class="space-y-5">
-          <div v-for="group in rentGroups" :key="group" class="space-y-2.5" :data-test-group="group">
-            <h3 class="text-sm font-semibold text-slate-700">{{ RENT_GROUP_META[group].heading }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <NuxtLink
-                v-for="[slug, meta] in rentTypesByGroup(group)"
-                :key="slug"
-                :to="`/subscription/rent/${slug}`"
-                class="group block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-amber-300/50 transition-all"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <img :src="`/icons/category/${meta.iconImg}.webp?v2`" :alt="meta.label" class="w-10 h-10" width="40" height="40" />
-                  <h3 class="font-bold text-slate-900 group-hover:text-amber-600 transition-colors">{{ meta.label }}</h3>
-                </div>
-                <p class="text-sm text-slate-500 leading-relaxed">{{ meta.description }}</p>
+        </div>
+
+        <div class="ongoing-grid">
+          <article
+            v-for="panel in ongoingPanels"
+            :key="panel.key"
+            class="hub-panel"
+            :data-panel="panel.key"
+          >
+            <header class="panel-header">
+              <div>
+                <h3>{{ panel.title }}</h3>
+                <p>{{ panel.description }}</p>
+              </div>
+              <NuxtLink :to="panel.href" class="control-link">
+                전체 보기
+              </NuxtLink>
+            </header>
+
+            <div class="panel-total" :class="{ 'is-error': panel.data.error }">
+              <strong>{{ totalLabel(panel.data.total, panel.data.error) }}</strong>
+              <span>{{ panel.totalCaption }}</span>
+            </div>
+
+            <div v-if="panel.data.error" class="state-box" role="status">
+              <p>{{ panel.title }} 정보를 불러오지 못했습니다.</p>
+              <button type="button" class="text-button" @click="refresh">
+                다시 불러오기
+              </button>
+            </div>
+            <div v-else-if="panel.data.items.length === 0" class="state-box">
+              <p>현재 접수 중인 {{ panel.title }} 공고가 없습니다.</p>
+              <NuxtLink :to="panel.href" class="text-button">
+                전체 목록 보기
+              </NuxtLink>
+            </div>
+            <div v-else class="notice-list">
+              <SubscriptionNoticeRow
+                v-for="item in panel.data.items"
+                :key="item.id"
+                :item="item"
+              />
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <AdBanner class="hub-ad" />
+
+      <div class="upcoming-guide-grid">
+        <section class="upcoming-panel" aria-labelledby="upcoming-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="upcoming-title">접수 예정</h2>
+              <p>시작일이 가까운 분양·임대 공고 4건입니다.</p>
+            </div>
+            <div class="upcoming-actions">
+              <NuxtLink to="/subscription/sale?status=upcoming" class="control-link">
+                분양 예정 더보기
+              </NuxtLink>
+              <NuxtLink to="/subscription/rent?status=upcoming" class="control-link">
+                임대 예정 더보기
               </NuxtLink>
             </div>
           </div>
-        </div>
-      </SectionBlock>
 
-      <!-- Ad Banner -->
-      <AdBanner />
-
-      <!-- 청약중 미리보기 -->
-      <SectionBlock v-if="ongoingItems.length > 0">
-        <template #heading>
-          <div class="flex items-center gap-2">
-            <img src="/icons/category/subscription.webp?v2" alt="청약중" class="w-6 h-6" width="24" height="24" />
-            <h2 class="text-lg md:text-xl font-bold text-slate-900">청약중</h2>
+          <div class="panel-total" :class="{ 'is-error': upcoming.error }">
+            <strong>{{ totalLabel(upcoming.total, upcoming.error) }}</strong>
+            <span>전체 접수 예정 공고</span>
           </div>
-        </template>
-        <template #right>
-          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-            {{ ongoingItems.length }}
-          </span>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SubscriptionCard
-            v-for="sub in ongoingItems"
-            :key="sub.id"
-            :subscription="sub"
-          />
-        </div>
-      </SectionBlock>
 
-      <!-- 접수예정 미리보기 -->
-      <SectionBlock v-if="upcomingItems.length > 0">
-        <template #heading>
-          <div class="flex items-center gap-2">
-            <img src="/icons/category/subscription.webp?v2" alt="접수예정" class="w-6 h-6" width="24" height="24" />
-            <h2 class="text-lg md:text-xl font-bold text-slate-900">접수예정 청약</h2>
+          <div v-if="upcoming.error" class="state-box" role="status">
+            <p>접수 예정 공고를 불러오지 못했습니다.</p>
+            <button type="button" class="text-button" @click="refresh">
+              다시 불러오기
+            </button>
           </div>
-        </template>
-        <template #right>
-          <span class="inline-flex px-2.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold">
-            {{ upcomingItems.length }}
-          </span>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SubscriptionCard
-            v-for="sub in upcomingItems"
-            :key="sub.id"
-            :subscription="sub"
-          />
+          <div v-else-if="upcoming.items.length === 0" class="state-box">
+            <p>현재 접수 예정 공고가 없습니다.</p>
+            <div class="empty-actions">
+              <NuxtLink to="/subscription/sale?status=upcoming" class="text-button">
+                분양 예정 보기
+              </NuxtLink>
+              <NuxtLink to="/subscription/rent?status=upcoming" class="text-button">
+                임대 예정 보기
+              </NuxtLink>
+            </div>
+          </div>
+          <div v-else class="notice-list">
+            <SubscriptionNoticeRow
+              v-for="item in upcoming.items"
+              :key="item.id"
+              :item="item"
+              show-category
+            />
+          </div>
+        </section>
+
+        <section class="type-guide" aria-labelledby="type-guide-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="type-guide-title">유형 안내</h2>
+              <p>실제 제공 중인 분양·임대 경로로 이동합니다.</p>
+            </div>
+          </div>
+
+          <div class="guide-links">
+            <NuxtLink
+              v-for="link in typeLinks"
+              :key="link.to"
+              :to="link.to"
+              class="guide-link"
+            >
+              <strong>{{ link.title }}</strong>
+              <span>{{ link.description }}</span>
+            </NuxtLink>
+          </div>
+        </section>
+      </div>
+
+      <section class="hub-faq" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="faq-title">자주 묻는 질문</h2>
+          </div>
         </div>
-      </SectionBlock>
-
-      <!-- 데이터 출처 -->
-      <SectionBlock heading="데이터 정보">
-        <DataSourceSection domain="subscription" />
-        <p class="mt-3 text-xs text-slate-500 leading-relaxed">
-          분양·민영주택 청약 정보는 한국부동산원 청약Home(applyhome.co.kr) 공개 API 기준이며,
-          공공임대(LH·SH) 매물은 각 공급기관 공고를 기준으로 합니다.
-          실제 신청 전 반드시 청약Home 또는 해당 공급기관의 최신 공고를 확인하세요.
-        </p>
-      </SectionBlock>
-
-      <!-- FAQ Section -->
-      <SectionBlock heading="자주 묻는 질문">
-        <div class="space-y-1">
-          <details v-for="(faq, i) in faqs" :key="i" class="border-b border-gray-200">
-            <summary class="py-3 cursor-pointer font-medium text-gray-800 hover:text-primary">{{ faq.question }}</summary>
-            <p class="pb-3 text-gray-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+        <div class="faq-list">
+          <details v-for="faq in faqs" :key="faq.question">
+            <summary>{{ faq.question }}</summary>
+            <p>{{ faq.answer }}</p>
           </details>
         </div>
-      </SectionBlock>
+      </section>
+
+      <section class="data-source" aria-labelledby="source-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="source-title">출처</h2>
+            <p>분양·민영주택 청약 정보는 한국부동산원 청약Home(applyhome.co.kr) 공개 API 기준입니다.</p>
+          </div>
+        </div>
+        <DataSourceSection domain="subscription" />
+        <p class="source-copy">
+          공공임대(마이홈·LH) 공고는 각 공급기관 원문을 기준으로 합니다.
+          실제 신청 전 반드시 청약Home·마이홈·LH 또는 해당 공급기관의 최신 공고를 확인하세요.
+        </p>
+      </section>
     </div>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { SITE_URL } from '~/utils/seoConstants'
-import { markDegradedResponse } from '~/composables/useDegradedResponse'
-import { SALE_TYPES, RENT_GROUP_META, rentTypesByGroup, SUBSCRIPTION_HUB_DESCRIPTION, type RentGroup } from '~/utils/subscriptionMeta'
+import { computed, onMounted } from 'vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
-import { useFacilityMeta } from '~/composables/useFacilityMeta'
-
-const rentGroups: RentGroup[] = ['apply']
-import type { Subscription } from '~/types/subscription'
-import { useStructuredData } from '~/composables/useStructuredData'
-import { useSubscription } from '~/composables/useSubscription'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import { useStructuredData } from '~/composables/useStructuredData'
+import { useSubscriptionHub, type SubscriptionHubPanel } from '~/composables/useSubscriptionHub'
+import { SITE_URL } from '~/utils/seoConstants'
+import { SUBSCRIPTION_HUB_DESCRIPTION } from '~/utils/subscriptionMeta'
 
-const heroStats = [
-  { label: '분양', value: '아파트·오피스텔·무순위' },
-  { label: '임대', value: '공공·민간임대' },
-  { label: '상태', value: '청약중·접수예정' },
+const { sale, publicRent, upcoming, pending, refresh } = await useSubscriptionHub()
+
+const faqs = [
+  { question: '청약 신청은 어디에서 하나요?', answer: '공고 상세에서 모집공고 원문과 안내된 공식 신청처를 확인하세요. 일상킷에서는 신청을 접수하지 않습니다.' },
+  { question: '일정 확인 필요는 무슨 뜻인가요?', answer: '확인된 접수 일정이 없는 공고입니다. 모집공고 원문에서 접수기간을 확인하세요.' },
+  { question: '지역을 선택하면 공급수도 달라지나요?', answer: '해당 지역을 포함한 공고를 찾습니다. 표시된 공급수와 기간은 공고 전체 기준이며 세부 공급정보는 상세에서 확인하세요.' },
 ]
+
+const ongoingPanels = computed(() => [
+  {
+    key: 'sale',
+    title: '분양',
+    description: '아파트·오피스텔·무순위·임의공급',
+    href: '/subscription/sale?status=ongoing',
+    totalCaption: '전체 접수 중 분양',
+    data: sale.value,
+  },
+  {
+    key: 'public-rent',
+    title: '공공임대',
+    description: '청약홈·마이홈·LH 공공임대',
+    href: '/subscription/rent/public?status=ongoing',
+    totalCaption: '전체 접수 중 공공임대',
+    data: publicRent.value,
+  },
+])
+
+const typeLinks = [
+  { to: '/subscription/sale', title: '분양', description: '아파트·오피스텔·무순위·임의공급' },
+  { to: '/subscription/rent/public', title: '공공임대', description: '마이홈·LH를 포함한 공공임대주택' },
+  { to: '/subscription/rent/private', title: '민간임대', description: '공공지원 민간임대 모집공고' },
+]
+
+function totalLabel(total: SubscriptionHubPanel['total'], error: boolean): string {
+  if (error) return '조회 실패'
+  if (total === null) return '원문 확인'
+  return `${total.toLocaleString('ko-KR')}건`
+}
 
 const { setMeta } = useFacilityMeta()
 setMeta({
@@ -188,38 +225,7 @@ setMeta({
   path: '/subscription',
 })
 
-const faqs = [
-  { question: '청약통장은 어떻게 가입하나요?', answer: '청약통장은 주택도시기금에 가입하거나 은행에서 직접 가입할 수 있습니다. 만 18세 이상 대한민국 국민이면 가능하며, 매월 일정 금액을 저축하여 청약 자격을 갖춥니다.' },
-  { question: '청약 가점은 어떻게 계산하나요?', answer: '청약 가점은 무주택 기간(30점 만점), 청약통장 가입기간(20점 만점), 부양가족 수(15점 만점) 등을 합산합니다. 분양사나 청약홈에서 가점 계산 도구를 제공합니다.' },
-  { question: '특별공급 자격 조건은 무엇인가요?', answer: '특별공급은 신혼부부, 다자녀, 생애최초, 노부모부양, 기관추천, 청년, 신생아 등 여러 유형이 있으며 각 유형별로 소득, 자산 등 조건이 다릅니다.' },
-  { question: '무순위·잔여세대 청약은 무엇인가요?', answer: '정당 청약에서 미달된 물량이나 취소·해약 물량을 대상으로 하며, 청약통장 없이도 신청 가능합니다. 경쟁률이 상대적으로 낮아 관심이 높습니다.' },
-  { question: '분양과 임대의 차이는 무엇인가요?', answer: '분양은 주택을 구매하는 것이고, 임대는 일정 기간 동안 임차하는 것입니다. 공공임대는 시세보다 저렴하며, 민간임대는 민간사업자가 운영합니다.' },
-  { question: '청약 접수는 어디서 하나요?', answer: '청약 접수는 청약홈(www.applyhome.co.kr) 또는 분양사 지정 은행에서 가능합니다. 온라인 접수는 청약통장 보유자이면 누구나 신청할 수 있습니다.' },
-]
-
 const { setFAQSchema, setBreadcrumbSchema } = useStructuredData()
-
-const { getUpcomingSubscriptions, getSubscriptionList } = useSubscription()
-
-const upcomingItems = ref<Subscription[]>([])
-const ongoingItems = ref<Subscription[]>([])
-
-const { data: upcomingData, error: upcomingError } = await useAsyncData('subscription-upcoming', () => getUpcomingSubscriptions())
-if (upcomingData.value) {
-  upcomingItems.value = upcomingData.value
-}
-
-const { data: ongoingData, error: ongoingError } = await useAsyncData('subscription-ongoing', () =>
-  getSubscriptionList({ status: 'ongoing', page: 1, limit: 6 })
-)
-
-// 상류 실패를 색인 신호로 굳히지 않는다 (#467 / #674) — 서버에서만 503 + no-store.
-// 종전엔 두 호출 다 error 를 보지 않아, 백엔드가 죽으면 빈 청약 목록이 200 + index 로 나갔다.
-if (import.meta.server && (upcomingError.value || ongoingError.value)) markDegradedResponse()
-if (ongoingData.value) {
-  ongoingItems.value = ongoingData.value.items
-}
-
 setFAQSchema(faqs.map(f => ({ question: f.question, answer: f.answer })))
 setBreadcrumbSchema([
   { name: '홈', url: SITE_URL },
@@ -229,3 +235,398 @@ setBreadcrumbSchema([
 const { trackSubscriptionListView } = useAnalytics()
 onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 </script>
+
+<style scoped>
+.subscription-hub {
+  min-height: 100vh;
+  background: #fff;
+  color: #15213b;
+}
+
+.hub-shell {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  padding: 30px 24px 56px;
+}
+
+.hub-hero {
+  padding: 20px 0 6px;
+}
+
+.hero-kicker {
+  margin: 0 0 8px;
+  color: #2450dc;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hub-hero h1 {
+  margin: 0;
+  color: #15213b;
+  font-size: 36px;
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.28;
+}
+
+.hero-description {
+  max-width: 760px;
+  margin: 14px 0 0;
+  color: #56627a;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #15213b;
+  font-size: 22px;
+  font-weight: 730;
+  letter-spacing: 0;
+}
+
+.section-heading p {
+  margin: 6px 0 0;
+  color: #56627a;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ongoing-panels,
+.upcoming-guide-grid,
+.type-guide,
+.hub-faq,
+.data-source {
+  margin-top: 34px;
+}
+
+.ongoing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.hub-panel,
+.upcoming-panel,
+.type-guide,
+.hub-faq,
+.data-source {
+  min-width: 0;
+}
+
+.hub-panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.panel-header h3 {
+  margin: 0;
+  color: #15213b;
+  font-size: 19px;
+  font-weight: 730;
+  letter-spacing: 0;
+}
+
+.panel-header p {
+  margin: 6px 0 0;
+  color: #56627a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.control-link,
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #2450dc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.control-link:hover,
+.text-button:hover {
+  text-decoration: underline;
+}
+
+.panel-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 18px 10px;
+  background: transparent;
+  border-bottom: 0;
+}
+
+.panel-total strong {
+  color: #2450dc;
+  font-size: 20px;
+  font-weight: 760;
+}
+
+.panel-total span {
+  color: #56627a;
+  font-size: 13px;
+}
+
+.panel-total.is-error strong {
+  color: #9a3412;
+}
+
+.notice-list {
+  background: #fff;
+}
+
+.state-box {
+  padding: 28px 18px 30px;
+  text-align: center;
+}
+
+.state-box p {
+  margin: 0;
+  color: #56627a;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+}
+
+.upcoming-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+}
+
+.upcoming-panel,
+.type-guide,
+.hub-faq,
+.data-source {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.upcoming-guide-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 0.9fr);
+  gap: 56px;
+  align-items: start;
+  padding-top: 10px;
+}
+
+.guide-links {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border-top: 1px solid #e6e9f0;
+}
+
+.guide-link {
+  display: flex;
+  min-height: 92px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e6e9f0;
+  color: #15213b;
+  text-decoration: none;
+}
+
+.guide-link:hover {
+  color: #2450dc;
+}
+
+.guide-link strong {
+  font-size: 16px;
+}
+
+.guide-link span {
+  color: #56627a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.faq-list {
+  border-top: 1px solid #e6e9f0;
+}
+
+.faq-list details {
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.faq-list summary {
+  min-height: 44px;
+  padding: 14px 0;
+  color: #15213b;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.faq-list p {
+  margin: 0;
+  padding: 0 0 16px;
+  color: #56627a;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.source-copy {
+  margin: 14px 0 0;
+  color: #56627a;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.hub-ad {
+  margin-top: 42px;
+}
+
+@media (min-width: 769px) {
+  .ongoing-grid {
+    gap: 0;
+    border-top: 0;
+  }
+
+  .hub-panel {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .hub-panel:first-child {
+    padding-right: 32px;
+  }
+
+  .hub-panel + .hub-panel {
+    padding-left: 32px;
+    border-left: 1px solid #e6e9f0;
+  }
+
+  .panel-header {
+    padding: 0 0 16px;
+    border-bottom: 0;
+  }
+
+  .panel-total {
+    padding: 0 0 12px;
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .notice-list {
+    background: transparent;
+  }
+
+  .hub-panel :deep(.notice-row) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 14px;
+    padding: 20px 0;
+  }
+
+  .hub-panel :deep(.notice-main) {
+    grid-column: 1 / -1;
+  }
+
+  .hub-panel :deep(.notice-name) {
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  .hub-panel :deep(.region) {
+    font-size: 13px;
+  }
+
+  .hub-panel :deep(.supply) {
+    font-size: 13px;
+  }
+
+  .hub-panel :deep(.period) {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+  }
+}
+
+@media (max-width: 768px) {
+  .hub-shell {
+    padding: 24px 16px 44px;
+  }
+
+  .hub-hero h1 {
+    font-size: 27px;
+  }
+
+  .hero-description {
+    font-size: 15px;
+  }
+
+  .section-heading {
+    display: block;
+  }
+
+  .section-heading .control-link {
+    margin-top: 8px;
+  }
+
+  .ongoing-grid,
+  .upcoming-guide-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .panel-header {
+    padding: 18px 0 14px;
+  }
+
+  .hub-panel {
+    padding: 0 16px;
+  }
+
+  .panel-total {
+    margin: 0 -16px;
+    padding: 13px 16px;
+  }
+
+  .hub-ad {
+    margin-top: 30px;
+  }
+}
+</style>

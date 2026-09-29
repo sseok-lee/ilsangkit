@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma.js';
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, SHORT_TO_SLUG, FULL_TO_SLUG } from './cityMapping.js';
 import { canUseFulltext, toBooleanPhrase } from './search/fulltextKeyword.js';
+import { containsSqlLikeKeyword } from './search/sqlLike.js';
 import { bufferViewCount } from './viewCountService.js';
 
 function toRad(deg: number): number {
@@ -84,8 +85,9 @@ export async function evChargerStationSearch(params: {
       conditions.push('MATCH(name, address, roadAddress) AGAINST (? IN BOOLEAN MODE)');
       values.push(toBooleanPhrase(keyword));
     } else {
-      conditions.push('(name LIKE ? OR address LIKE ? OR roadAddress LIKE ?)');
-      values.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+      conditions.push("(name LIKE ? ESCAPE '\\\\' OR address LIKE ? ESCAPE '\\\\' OR roadAddress LIKE ? ESCAPE '\\\\')");
+      const keywordPattern = containsSqlLikeKeyword(keyword);
+      values.push(keywordPattern, keywordPattern, keywordPattern);
     }
   }
   if (city) {
@@ -149,7 +151,7 @@ export async function evChargerStationSearch(params: {
             SUM(CASE WHEN CAST(output AS DECIMAL) >= 50 THEN 1 ELSE 0 END) as rapidCount,
             SUM(CASE WHEN CAST(output AS DECIMAL) < 50 THEN 1 ELSE 0 END) as slowCount
      FROM EvCharger WHERE ${whereClause}
-     GROUP BY statId ORDER BY name ASC LIMIT ? OFFSET ?`,
+     GROUP BY statId ORDER BY name ASC, statId ASC LIMIT ? OFFSET ?`,
     ...values, limit, offset,
   );
 

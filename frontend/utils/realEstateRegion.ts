@@ -120,6 +120,7 @@ export function isRegionMismatch(input: RegionMismatchInput): boolean {
 export interface CanonicalRealEstatePathInput {
   type: RealEstateUrlType
   buildingName: string
+  buildingKey?: string | null
   actualCity: string | null | undefined
   actualDistrict: string | null | undefined
 }
@@ -143,6 +144,7 @@ export function buildCanonicalRealEstatePath(input: CanonicalRealEstatePathInput
     city: cityName,
     district: input.actualDistrict!.trim(),
     buildingName: input.buildingName,
+    buildingKey: input.buildingKey,
   })
 }
 

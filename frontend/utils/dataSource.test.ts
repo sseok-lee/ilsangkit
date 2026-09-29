@@ -25,7 +25,13 @@ describe('resolveDataSource', () => {
     expect(resolveDataSource({ domain: 'real-estate' })).toBe(REAL_ESTATE_DATA_SOURCE)
   })
 
-  it('subscription 도메인은 청약 출처를 반환한다', () => {
+  it('subscription 도메인은 청약홈·마이홈·LH 통합 출처를 반환한다', () => {
     expect(resolveDataSource({ domain: 'subscription' })).toBe(SUBSCRIPTION_DATA_SOURCE)
+    expect(SUBSCRIPTION_DATA_SOURCE.datasetName).toContain('청약Home')
+    expect(SUBSCRIPTION_DATA_SOURCE.datasetName).toContain('마이홈')
+    expect(SUBSCRIPTION_DATA_SOURCE.datasetName).toContain('LH')
+    expect(SUBSCRIPTION_DATA_SOURCE.provider).toContain('한국부동산원')
+    expect(SUBSCRIPTION_DATA_SOURCE.provider).toContain('국토교통부')
+    expect(SUBSCRIPTION_DATA_SOURCE.provider).toContain('한국토지주택공사')
   })
 })

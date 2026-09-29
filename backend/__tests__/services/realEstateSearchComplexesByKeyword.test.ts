@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Prisma mock ────────────────────────────────────────────────────────────
-const { mockQueryRawUnsafe } = vi.hoisted(() => ({
+const { mockQueryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
   mockQueryRawUnsafe: vi.fn(),
+  mockGetLatestDeals: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -26,7 +27,21 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
   };
 });
 
+vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/realEstateLatestDeals.js');
+  return {
+    ...actual,
+    getLatestDeals: mockGetLatestDeals,
+  };
+});
+
 import { searchComplexesByKeyword, searchPropertyComplexesByKeyword } from '../../src/services/realEstateService.js';
+import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
+import type { BuildingKey, LatestDeals } from '../../src/types/realEstateExploration.js';
+
+function emptyLatestDeals(): LatestDeals {
+  return { sale: null, jeonse: null, wolse: null };
+}
 
 // SELECT(paginated) 호출을 찾아 SQL + 바인딩 파라미터를 돌려준다.
 function selectCall() {
@@ -42,6 +57,11 @@ beforeEach(() => {
   mockQueryRawUnsafe.mockImplementation((sql: string) => {
     if (String(sql).includes('COUNT(*)')) return Promise.resolve([{ total: 0n }]);
     return Promise.resolve([]);
+  });
+  mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
+    const bundles = new Map<string, LatestDeals>();
+    for (const key of keys) bundles.set(latestDealsKey(key), emptyLatestDeals());
+    return Promise.resolve(bundles);
   });
 });
 
@@ -104,13 +124,41 @@ describe('searchComplexesByKeyword (드릴다운 지역 해석)', () => {
       buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
       dongName: '역삼동', transactionCount: 12, latestPrice: 150000,
       lat: 37.5, lng: 127.0, lastDealYear: 2026, lastDealMonth: 5, buildYear: 2010,
+      latestDeals: { sale: null, jeonse: null, wolse: null },
     });
   });
 
   it('목록은 안내 문구와 같이 최신 거래월부터 정렬한다', async () => {
     await searchComplexesByKeyword('apt-sale', '강남', 1, 20);
     const { sql } = selectCall();
-    expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC');
+    expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC');
+  });
+
+  it('type scope로 latestDeals를 보완한다', async () => {
+    mockQueryRawUnsafe.mockImplementation((sql: string) => {
+      if (String(sql).includes('COUNT(*)')) return Promise.resolve([{ total: 1n }]);
+      return Promise.resolve([{
+        buildingName: '래미안강남', bjdCode: '11680', city: '서울', district: '강남구',
+        dongName: '역삼동', transactionCount: 12, latestPrice: 150000n,
+        latestDealYear: 2026, latestDealMonth: 5, buildYear: 2010, lat: '37.5', lng: '127.0',
+      }]);
+    });
+    mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
+      const bundle: LatestDeals = {
+        sale: { kind: 'sale', amount: 150000, deposit: null, monthlyRent: null, exclusiveArea: 84.9, floor: 12, dealYear: 2026, dealMonth: 5, dealDay: 20 },
+        jeonse: null,
+        wolse: null,
+      };
+      return Promise.resolve(new Map([[latestDealsKey(keys[0]), bundle]]));
+    });
+
+    const res = await searchComplexesByKeyword('apt-sale', '강남', 1, 20);
+
+    expect(mockGetLatestDeals).toHaveBeenCalledWith([
+      { propertyType: 'apt', buildingName: '래미안강남', bjdCode: '11680', dongName: '역삼동', jibun: null },
+    ], 'sale');
+    expect(res.items[0].latestDeals.sale?.exclusiveArea).toBe(84.9);
+    expect(res.items[0].latestDeals.jeonse).toBeNull();
   });
 
   it('알 수 없는 type이면 에러를 던진다', async () => {
@@ -123,10 +171,10 @@ describe('searchPropertyComplexesByKeyword (통합검색 부동산 더보기)', 
     await searchPropertyComplexesByKeyword('apt', '잠실', 1, 20);
 
     const select = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('ROW_NUMBER() OVER'));
-    const count = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('COUNT(DISTINCT buildingName, bjdCode)'));
+    const count = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('COUNT(DISTINCT buildingKey)'));
     expect(String(select?.[0] ?? '')).toContain('type IN (?, ?)');
-    expect(String(select?.[0] ?? '')).toContain('PARTITION BY buildingName, bjdCode');
-    expect(String(select?.[0] ?? '')).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC');
+    expect(String(select?.[0] ?? '')).toContain('PARTITION BY buildingKey');
+    expect(String(select?.[0] ?? '')).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC');
     expect(select).toContain('apt-sale');
     expect(select).toContain('apt-rent');
     expect(count).toContain('apt-sale');
@@ -152,6 +200,25 @@ describe('searchPropertyComplexesByKeyword (통합검색 부동산 더보기)', 
       lastDealYear: 2026,
       lastDealMonth: 9,
       latestPrice: 90000,
+      latestDeals: { sale: null, jeonse: null, wolse: null },
     });
+  });
+
+  it('property 더보기는 sale/rent 합집합을 all scope로 보완한다', async () => {
+    mockQueryRawUnsafe.mockImplementation((sql: string) => {
+      if (String(sql).includes('COUNT(DISTINCT')) return Promise.resolve([{ total: 1n }]);
+      return Promise.resolve([{
+        type: 'apt-rent',
+        buildingName: '잠실엘스', bjdCode: '11710', city: '서울', district: '송파구',
+        dongName: '잠실동', transactionCount: 2, latestPrice: 90000n,
+        latestDealYear: 2026, latestDealMonth: 9, buildYear: 2008, lat: null, lng: null,
+      }]);
+    });
+
+    await searchPropertyComplexesByKeyword('apt', '잠실', 1, 20);
+
+    expect(mockGetLatestDeals).toHaveBeenCalledWith([
+      { propertyType: 'apt', buildingName: '잠실엘스', bjdCode: '11710', dongName: '잠실동', jibun: null },
+    ], 'all');
   });
 });

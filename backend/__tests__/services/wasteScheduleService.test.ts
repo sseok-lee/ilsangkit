@@ -1,10 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { groupByMock, findManyMock, countMock, findFirstMock } = vi.hoisted(() => ({
+const {
+  groupByMock,
+  findManyMock,
+  countMock,
+  findFirstMock,
+  publicationFindUniqueMock,
+  revisionFindManyMock,
+  revisionCountMock,
+  revisionFindUniqueMock,
+  revisionFindFirstMock,
+  revisionGroupByMock,
+  applicableAreasMock,
+} = vi.hoisted(() => ({
   groupByMock: vi.fn(),
   findManyMock: vi.fn(),
   countMock: vi.fn(),
   findFirstMock: vi.fn(),
+  publicationFindUniqueMock: vi.fn(),
+  revisionFindManyMock: vi.fn(),
+  revisionCountMock: vi.fn(),
+  revisionFindUniqueMock: vi.fn(),
+  revisionFindFirstMock: vi.fn(),
+  revisionGroupByMock: vi.fn(),
+  applicableAreasMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -14,8 +33,29 @@ vi.mock('../../src/lib/prisma.js', () => {
     count: countMock,
     findFirst: findFirstMock,
   };
-  return { prisma: { wasteSchedule }, default: { wasteSchedule } };
+  const wastePublication = { findUnique: publicationFindUniqueMock };
+  const wasteScheduleRevision = {
+    findMany: revisionFindManyMock,
+    count: revisionCountMock,
+    findUnique: revisionFindUniqueMock,
+    findFirst: revisionFindFirstMock,
+    groupBy: revisionGroupByMock,
+  };
+  return {
+    prisma: { wasteSchedule, wastePublication, wasteScheduleRevision },
+    default: { wasteSchedule, wastePublication, wasteScheduleRevision },
+  };
 });
+
+
+vi.mock('../../src/services/wasteAreaService.js', () => ({
+  isWasteAreaDiscoveryEnabled: () => process.env.WASTE_AREA_DISCOVERY_ENABLED === 'true',
+  getActiveWasteGeneration: async () => {
+    const publication = await publicationFindUniqueMock({ where: { id: 1 }, select: { activeGenerationId: true } });
+    return publication?.activeGenerationId ?? null;
+  },
+  getApplicableAreasForSchedules: applicableAreasMock,
+}));
 
 import {
   getByRegion,
@@ -29,6 +69,8 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+  applicableAreasMock.mockResolvedValue(new Map());
 });
 
 describe('getWasteScheduleRegions', () => {
@@ -136,12 +178,34 @@ describe('getByRegion — city variant matching', () => {
     expect(where.district).toBe('없음');
   });
 
-  it('keyword 는 city variant 필터와 공존한다', async () => {
+  it('keyword 는 city variant 필터와 공존하되 DB 와일드카드 조건으로 넘기지 않는다', async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: 1,
+        city: '서울특별시',
+        district: '강남구',
+        targetRegion: '문자 %_\\ 역삼',
+        emissionPlace: '집 앞',
+        sourceUrl: null,
+        govCode: null,
+        details: null,
+      },
+      {
+        id: 2,
+        city: '서울특별시',
+        district: '강남구',
+        targetRegion: '문자 AAA 역삼',
+        emissionPlace: '집 앞',
+        sourceUrl: null,
+        govCode: null,
+        details: null,
+      },
+    ]);
     await getByRegion('서울', undefined, '역삼');
 
     const where = findManyMock.mock.calls[0][0].where;
     expect(where.city).toEqual({ in: expect.arrayContaining(['서울특별시']) });
-    expect(where.targetRegion).toEqual({ contains: '역삼' });
+    expect(where).not.toHaveProperty('targetRegion');
   });
 
   it('findMany 와 count 가 동일한 where 를 사용한다', async () => {
@@ -248,6 +312,7 @@ describe('seed 데이터 공개 노출 제외', () => {
     expect(findFirstMock.mock.calls[0][0].where).toEqual({
       id: 15346,
       sourceId: SEED_EXCLUDED,
+      stagedMarker: null,
     });
     expect(result).toBeNull();
   });
@@ -259,6 +324,8 @@ describe('seed 데이터 공개 노출 제외', () => {
       district: '종로구',
       targetRegion: '청운효자동',
       emissionPlace: '문전배출',
+      sourceUrl: 'https://example.test/source',
+      govCode: '3220000',
       details: { livingWaste: { dayOfWeek: '일+월+화+수+목+금' } },
     });
 
@@ -268,3 +335,182 @@ describe('seed 데이터 공개 노출 제외', () => {
     expect(result?.details?.livingWaste?.dayOfWeek).toBe('일+월+화+수+목+금');
   });
 });
+
+describe('waste area discovery source compatibility', () => {
+  it('keeps disabled legacy readers away from publication tables', async () => {
+    findManyMock.mockResolvedValue([]);
+    countMock.mockResolvedValue(0);
+
+    await getByRegion('서울', '강남구');
+
+    expect(publicationFindUniqueMock).not.toHaveBeenCalled();
+    expect(findManyMock.mock.calls[0][0].where.stagedMarker).toBeNull();
+  });
+
+  it('excludes staged rows from every legacy reader even when discovery is disabled', async () => {
+    groupByMock.mockResolvedValue([]);
+    findManyMock.mockResolvedValue([]);
+    countMock.mockResolvedValue(0);
+    findFirstMock.mockResolvedValue(null);
+
+    await getByRegion('서울', '강남구');
+    expect(findManyMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+    expect(countMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getRegions();
+    expect(groupByMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getCities();
+    expect(groupByMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getDistricts('서울');
+    expect(groupByMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getAllIds();
+    expect(findManyMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getWasteScheduleRegions();
+    expect(groupByMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+
+    await getById(15346);
+    expect(findFirstMock.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+  });
+
+  it('falls back to unmarked legacy rows only when enabled and no pointer exists', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: null });
+    findManyMock.mockResolvedValue([]);
+    countMock.mockResolvedValue(0);
+
+    await getByRegion('서울', '강남구');
+
+    expect(publicationFindUniqueMock).toHaveBeenCalledOnce();
+    expect(findManyMock.mock.calls[0][0].where.stagedMarker).toBeNull();
+    expect(countMock.mock.calls[0][0].where).toEqual(findManyMock.mock.calls[0][0].where);
+  });
+
+  it('preserves seed exclusion across published list, regions, cities, districts, IDs, sitemap regions, and detail', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindManyMock.mockResolvedValue([]);
+    revisionCountMock.mockResolvedValue(0);
+    revisionGroupByMock.mockResolvedValue([]);
+    revisionFindFirstMock.mockResolvedValue(null);
+
+    await getByRegion('서울', '강남구');
+    expect(revisionFindManyMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+    expect(revisionCountMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    await getRegions();
+    expect(revisionGroupByMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    await getCities();
+    expect(revisionGroupByMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    await getDistricts('서울');
+    expect(revisionGroupByMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    await getAllIds();
+    expect(revisionFindManyMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    await getWasteScheduleRegions();
+    expect(revisionGroupByMock.mock.calls.at(-1)?.[0].where.sourceId).toEqual(SEED_EXCLUDED);
+
+    const detail = await getById(15346);
+    expect(revisionFindFirstMock.mock.calls.at(-1)?.[0].where).toMatchObject({
+      generationId: 'generation-1',
+      scheduleId: 15346,
+      sourceId: SEED_EXCLUDED,
+    });
+    expect(detail).toBeNull();
+  });
+
+  it('uses published revisions when a pointer exists and never queries legacy schedules', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindManyMock.mockResolvedValue([revision(7, 'active')]);
+    revisionCountMock.mockResolvedValue(1);
+    applicableAreasMock.mockResolvedValue(new Map([[7, [{
+      areaId: 101,
+      name: '역삼1동',
+      href: '/trash/areas/101',
+      scope: 'whole',
+      conditionText: '전체',
+    }]]]));
+
+    const result = await getByRegion('서울', '강남구', undefined, { coverage: 'unresolved' });
+
+    expect(findManyMock).not.toHaveBeenCalled();
+    expect(revisionFindManyMock.mock.calls[0][0].where).toMatchObject({
+      generationId: 'generation-1',
+      state: 'active',
+      coverages: { some: { state: 'unresolved' } },
+    });
+    expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [7]);
+    expect(result.items[0]).toMatchObject({
+      id: 7,
+      sourceStatus: 'active',
+      applicableAreas: [{ areaId: 101, href: '/trash/areas/101' }],
+      appliesTo: [expect.objectContaining({ state: 'unresolved' })],
+    });
+  });
+
+  it('returns an empty applicableAreas array for old published responses without verified detail areas', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindFirstMock.mockResolvedValue(revision(8, 'active'));
+    applicableAreasMock.mockResolvedValue(new Map());
+
+    const detail = await getById(8);
+
+    expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [8]);
+    expect(detail?.applicableAreas).toEqual([]);
+    expect(detail?.appliesTo).toEqual([expect.objectContaining({ state: 'unresolved' })]);
+  });
+
+  it('turns inactive published source detail into 410 Gone', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindFirstMock.mockResolvedValue(revision(7, 'inactive'));
+
+    await expect(getById(7)).rejects.toMatchObject({ statusCode: 410 });
+  });
+});
+
+function revision(scheduleId: number, state: 'active' | 'inactive') {
+  return {
+    generationId: 'generation-1',
+    scheduleId,
+    city: '서울특별시',
+    district: '강남구',
+    sourceId: `source-${scheduleId}`,
+    targetRegion: '역삼1동',
+    emissionPlace: '집 앞',
+    details: { livingWaste: { dayOfWeek: '월' } },
+    sourceUrl: 'https://example.test/source',
+    govCode: '3220000',
+    rawPayload: null,
+    provenance: 'legacy',
+    contentHash: 'a'.repeat(64),
+    sourceModifiedAt: null,
+    observedAt: new Date('2026-09-28T00:00:00Z'),
+    contentUpdatedAt: new Date('2026-09-28T00:00:00Z'),
+    state,
+    missingCompleteRuns: state === 'inactive' ? 2 : 0,
+    terminationEvidence: state === 'inactive' ? { reason: 'fixture' } : null,
+    coverages: [
+      {
+        generationId: 'generation-1',
+        scheduleId,
+        coverageKey: `coverage-${scheduleId}`,
+        areaId: state === 'active' ? 101 : null,
+        districtCode: null,
+        scope: 'whole',
+        conditionText: '전체',
+        state: 'unresolved',
+        reason: 'fixture',
+        evidence: [],
+      },
+    ],
+  };
+}

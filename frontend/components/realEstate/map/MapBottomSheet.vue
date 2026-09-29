@@ -1,13 +1,13 @@
 <template>
   <div
-    class="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.12)] transition-[top] duration-200"
+    class="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.12)]"
     :class="expanded ? 'top-[25dvh]' : 'top-[62dvh]'"
   >
     <button
       type="button"
       class="w-full flex items-center justify-center py-2 min-h-[44px]"
       :aria-expanded="expanded"
-      aria-label="목록 펼치기"
+      :aria-label="expanded ? '목록 접기' : '목록 펼치기'"
       @click="expanded = !expanded"
     >
       <span class="block w-10 h-1 rounded-full bg-slate-300" />
@@ -31,6 +31,5 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-const expanded = ref(false)
+const expanded = defineModel<boolean>('expanded', { default: false })
 </script>

@@ -1,4 +1,5 @@
 import { formatKoreanPrice } from '~/utils/formatters'
+import type { DetailOverview, LatestSale } from '~/types/housingRedesign'
 
 export interface RecentDealSource {
   latestDealAmount: number | null
@@ -28,6 +29,21 @@ export function resolveRecentDeal(info: RecentDealSource | null | undefined): Re
     monthlyRent: info?.latestMonthlyRent != null ? Number(info.latestMonthlyRent) : null,
     dealDate: info?.latestDealYear != null && info?.latestDealMonth != null
       ? `${info.latestDealYear}년 ${info.latestDealMonth}월`
+      : null,
+  }
+}
+
+export function resolveLatestSaleDeal(
+  source: LatestSale | DetailOverview | null | undefined
+): RecentDeal {
+  const latestSale = source && 'latestSale' in source ? source.latestSale : source
+  return {
+    amount: latestSale?.amount != null ? Number(latestSale.amount) : null,
+    monthlyRent: null,
+    dealDate: latestSale?.year != null && latestSale?.month != null
+      ? latestSale.day != null
+        ? `${latestSale.year}년 ${latestSale.month}월 ${latestSale.day}일`
+        : `${latestSale.year}년 ${latestSale.month}월`
       : null,
   }
 }

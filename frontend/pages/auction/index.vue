@@ -1,9 +1,10 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="공매"
         title="부동산 공매 물건 검색"
         :description="AUCTION_META.description"
@@ -11,35 +12,35 @@
 
       <!-- 요약 통계 -->
       <div v-if="hub" class="grid grid-cols-3 gap-3">
-        <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
+        <div class="property-stat text-center">
           <p class="text-caption text-slate-500 mb-1">진행중 물건</p>
-          <p class="text-display-2 font-bold text-slate-900">{{ hub.totalActive.toLocaleString('ko-KR') }}</p>
+          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.totalActive.toLocaleString('ko-KR') }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
+        <div class="property-stat text-center">
           <p class="text-caption text-slate-500 mb-1">누적 낙찰</p>
-          <p class="text-display-2 font-bold text-slate-900">{{ hub.totalSold.toLocaleString('ko-KR') }}</p>
+          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.totalSold.toLocaleString('ko-KR') }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-line p-4 shadow-card text-center">
+        <div class="property-stat text-center">
           <p class="text-caption text-slate-500 mb-1">집계 지역</p>
-          <p class="text-display-2 font-bold text-slate-900">{{ hub.regionCount.toLocaleString('ko-KR') }}</p>
+          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.regionCount.toLocaleString('ko-KR') }}</p>
         </div>
       </div>
 
       <!-- 용도별 진입 카드 -->
-      <SectionBlock heading="용도별 공매 물건" subtext="용도별로 공매 물건을 조회하세요.">
+      <SectionBlock class="property-section" heading="용도별 공매 물건" subtext="용도별로 공매 물건을 조회하세요.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink
             v-for="usage in usageCards"
             :key="usage.key"
             :to="`/auction/list?usage=${usage.key}`"
-            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out"
+            class="property-stat flex min-h-11 flex-col gap-1 hover:text-primary"
           >
             <span class="text-display-3 text-slate-800">{{ usage.label }}</span>
             <span class="text-caption text-slate-500">공매 물건 조회 →</span>
           </NuxtLink>
           <NuxtLink
             to="/auction/list"
-            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out"
+            class="property-stat flex min-h-11 flex-col gap-1 hover:text-primary"
           >
             <span class="text-display-3 text-slate-800">전체</span>
             <span class="text-caption text-slate-500">모든 용도 보기 →</span>
@@ -47,10 +48,15 @@
         </div>
       </SectionBlock>
 
+      <SectionBlock class="property-section" heading="지역별 공매" subtext="시·도와 구·군을 선택해 지역의 공매 물건을 확인하세요.">
+        <nav class="property-actions" aria-label="공매 지역 선택"><NuxtLink v-for="region in regionCities" :key="region.slug" :to="`/auction/${region.slug}`">{{ region.city }}</NuxtLink></nav>
+        <p v-if="regionsError" role="alert" class="text-sm text-muted">지역 정보를 불러오지 못했습니다.</p>
+      </SectionBlock>
+
       <!-- 부가④ 마감임박 물건 -->
-      <SectionBlock v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AuctionCard v-for="item in deadline.items" :key="item.cltrMngNo" :item="item" />
+      <SectionBlock class="property-section" v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
+        <div class="flex flex-col">
+          <AuctionCard variant="row" v-for="item in deadline.items" :key="item.cltrMngNo" :item="item" />
         </div>
         <div class="mt-3 text-right">
           <NuxtLink to="/auction/list?sort=deadline" class="text-sm text-primary hover:underline">전체 보기 →</NuxtLink>
@@ -63,7 +69,7 @@
           <p class="text-sm font-semibold text-slate-900">낙찰가율 랭킹</p>
           <p class="text-caption text-slate-500 mt-0.5">지역별·용도별 낙찰가율 통계를 확인하세요</p>
         </div>
-        <NuxtLink to="/auction/ranking" class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors">
+        <NuxtLink to="/auction/ranking" class="min-h-11 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors">
           랭킹 보기
         </NuxtLink>
       </div>
@@ -71,7 +77,7 @@
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock heading="자주 묻는 질문">
+      <SectionBlock class="property-section" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details
             v-for="(faq, index) in AUCTION_FAQ"
@@ -95,6 +101,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { CITY_SLUGS, CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useAuction } from '~/composables/useAuction'
 import { AUCTION_META, AUCTION_FAQ } from '~/utils/auctionMeta'
@@ -115,6 +122,13 @@ const { data: hub, error: hubError } = await useAsyncData(
   { default: () => null },
 )
 
+const { data: regions, error: regionsError } = await useAsyncData(
+  'auction-hub-regions', () => auction.getRegions({ onlyIndexable: true }), { default: () => ({ items: [] }) },
+)
+const regionCities = computed(() => [...new Set(regions.value.items.map(row => row.city))].map(city => ({
+  city, slug: CITY_SLUGS[city] ?? CITY_FULL_NAME_TO_SLUG[city],
+})).filter(row => row.slug))
+
 const { data: deadline, error: deadlineError } = await useAsyncData(
   'auction-deadline',
   () => auction.getItems({ status: 'ongoing', sort: 'deadline', limit: 8 }),
@@ -126,7 +140,7 @@ const { data: deadline, error: deadlineError } = await useAsyncData(
 //
 // ⚠️ useAsyncData 핸들러 **밖**에서 불러야 한다. 핸들러 본문은 중첩 async 라 Nuxt 인스턴스
 // 컨텍스트가 없고, 그 안에서 부르면 useNuxtApp() 이 throw 해 503 이 영영 나가지 않는다.
-if ((hubError.value || deadlineError.value) && import.meta.server) markDegradedResponse()
+if ((hubError.value || deadlineError.value || regionsError.value) && import.meta.server) markDegradedResponse()
 
 const usageCards = computed(() =>
   (Object.entries(USAGE_GROUP_LABEL) as [string, string][]).map(([key, label]) => ({ key, label })),
@@ -159,3 +173,5 @@ useHead({
   link: [{ rel: 'canonical', href: `${SITE_URL}/auction` }],
 })
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

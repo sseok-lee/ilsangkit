@@ -60,12 +60,18 @@ export function useLand() {
   async function getTransactions(params: {
     bjdCode: string
     dongName: string
+    keyword?: string
+    jimok?: string
+    landUse?: string
     page?: number
     limit?: number
   }): Promise<LandTransactionsResult> {
     const query = new URLSearchParams()
     query.set('bjdCode', params.bjdCode)
     query.set('dongName', params.dongName)
+    if (params.keyword) query.set('keyword', params.keyword)
+    if (params.jimok) query.set('jimok', params.jimok)
+    if (params.landUse) query.set('landUse', params.landUse)
     if (params.page != null) query.set('page', String(params.page))
     if (params.limit != null) query.set('limit', String(params.limit))
 

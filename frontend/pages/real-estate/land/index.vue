@@ -1,35 +1,42 @@
 <template>
-  <div class="bg-background-light">
+  <div class="property-redesign bg-white">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <PageHero
+        class="property-hero"
         eyebrow="부동산"
         :title="LAND_META.label + ' 실거래가'"
         :description="LAND_META.description"
       />
 
-      <SectionBlock subtext="조회할 지역을 선택하세요.">
+      <SectionBlock class="property-section" subtext="조회할 지역을 선택하세요.">
         <template #heading>
           <h2 class="text-display-3 text-slate-900">시·도별 토지 실거래가</h2>
         </template>
-        <div v-if="hub && hub.cities.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <form class="property-search" @submit.prevent="regionSearch = regionDraft.trim()">
+          <label class="sr-only" for="land-region-search">지역명 검색</label>
+          <input id="land-region-search" v-model="regionDraft" placeholder="지역명 검색" maxlength="100">
+          <button type="submit">검색</button>
+        </form>
+        <div v-if="regionCandidates.length > 0" class="property-region-list">
           <HardLink
-            v-for="city in hub.cities"
+            v-for="city in regionCandidates"
             :key="city.slug"
             :to="`/real-estate/land/${city.slug}`"
-            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
+            class="property-region-link"
           >
             <span class="text-display-3 text-slate-800">{{ city.city }}</span>
-            <span class="text-caption text-slate-500">색인 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
+            <span class="text-caption text-slate-500">거래 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
             <span class="text-caption text-slate-500">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
           </HardLink>
         </div>
-        <div v-else class="text-sm text-slate-500">지역 데이터를 불러오는 중입니다.</div>
+        <div v-else-if="hubError" role="alert" class="py-8 text-sm text-muted">지역 정보를 불러오지 못했습니다. <button class="min-h-11 underline" @click="refresh()">다시 시도</button></div>
+        <p v-else class="py-8 text-sm text-muted">{{ regionSearch ? '검색한 지역이 없습니다.' : '등록된 토지 거래 지역이 없습니다.' }}</p>
       </SectionBlock>
 
       <!-- Ad: 시·도 카드 그리드 후 -->
       <AdBanner />
 
-      <SectionBlock>
+      <SectionBlock class="property-section">
         <template #heading>
           <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
         </template>
@@ -59,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -69,7 +77,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-const { data: hub, error: hubError } = await useAsyncData(
+const { data: hub, error: hubError, refresh } = await useAsyncData(
   'land-hub',
   () => useLand().getHubSummary(),
   { default: () => null },
@@ -100,4 +108,9 @@ setBreadcrumbSchema([
 // but we guard for null in case of SSR fetch failure.
 const cityItems = hub.value?.cities.map((c) => ({ name: `${c.city} 토지`, url: `/real-estate/land/${c.slug}` })) ?? []
 setItemListSchema(cityItems)
+const regionDraft = ref('')
+const regionSearch = ref('')
+const regionCandidates = computed(() => (hub.value?.cities ?? []).filter(row => row.city.includes(regionSearch.value)))
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

@@ -18,6 +18,8 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 ;(globalThis as any).onMounted = onMounted
 ;(globalThis as any).onUnmounted = onUnmounted
 
+const mockPush = vi.fn()
+;(globalThis as any).useRouter = () => ({ push: mockPush })
 ;(globalThis as any).useRoute = vi.fn(() => ({ params: {}, query: {} }))
 ;(globalThis as any).useRequestEvent = vi.fn(() => null)
 ;(globalThis as any).setResponseStatus = vi.fn()
@@ -118,6 +120,8 @@ function headOf(): { meta: Array<Record<string, string>>; link: Array<Record<str
 
 beforeEach(() => {
   capturedHeadCalls.length = 0
+  mockPush.mockReset()
+  ;(globalThis as any).useRoute = vi.fn(() => ({ params: {}, query: {} }))
   mockGetRanking.mockReset()
   mockGetRanking.mockImplementation(async (_params: any) => [])
 })
@@ -163,7 +167,8 @@ describe('pages/auction/ranking.vue — 색인 판정', () => {
     })
     const wrapper = await mountPage()
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.find('[data-stub="empty"]').exists()).toBe(true)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    expect(wrapper.find('[data-stub="empty"]').exists()).toBe(false)
   })
 
   it('og:image 는 색인 여부와 무관하게 유지된다(소셜 공유 신호)', async () => {
@@ -178,5 +183,27 @@ describe('pages/auction/ranking.vue — 색인 판정', () => {
     await mountPage()
     expect(capturedHeadCalls.length).toBeGreaterThan(0)
     expect(typeof capturedHeadCalls[capturedHeadCalls.length - 1]).toBe('function')
+  })
+})
+
+
+describe('ranking URL search', () => {
+  it('restores search and filters before the server request; query pages omit canonical', async () => {
+    ;(globalThis as any).useRoute = () => ({ query: { q: '강남', usage: 'land', order: 'count' } })
+    mockGetRanking.mockResolvedValue([rankingRow])
+    const wrapper = await mountPage()
+    expect(mockGetRanking).toHaveBeenCalledWith({ keyword: '강남', usage: 'land', order: 'count', limit: 50 })
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('강남')
+    expect(headOf().meta.find(m => m.name === 'robots')?.content).toBe('noindex, follow')
+    expect(headOf().link).toEqual([])
+  })
+
+  it('search is submitted explicitly and preserves the selected ordering', async () => {
+    ;(globalThis as any).useRoute = () => ({ query: { order: 'count', usage: 'land' } })
+    const wrapper = await mountPage()
+    await wrapper.get('input').setValue('  서울  ')
+    expect(mockPush).not.toHaveBeenCalled()
+    await wrapper.get('form').trigger('submit')
+    expect(mockPush).toHaveBeenCalledWith({ query: { order: 'count', usage: 'land', q: '서울' } })
   })
 })

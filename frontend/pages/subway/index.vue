@@ -19,7 +19,7 @@
 
       <!-- 지역과 키워드 필터 -->
       <SectionBlock heading="지역과 키워드" subtext="지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1.4fr]">
           <div class="relative">
             <label class="block text-xs font-medium text-muted mb-1 hidden md:block">시/도</label>
             <select
@@ -77,10 +77,12 @@
         </div>
 
         <template v-else>
-          <!-- Card Grid (FacilityCard 재사용) -->
-          <div v-if="facilities.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FacilityCard v-for="f in facilities" :key="f.id" :facility="f" />
-          </div>
+          <FacilityList
+            v-if="facilities.length > 0"
+            :facilities="facilities"
+            :loading="false"
+            variant="rows"
+          />
 
           <!-- Empty -->
           <EmptyState
@@ -164,7 +166,7 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import Pagination from '~/components/common/Pagination.vue'
-import FacilityCard from '~/components/facility/FacilityCard.vue'
+import FacilityList from '~/components/facility/FacilityList.vue'
 import { useRegions } from '~/composables/useRegions'
 import { CITY_SLUGS } from '~/shared/regionSlugs'
 import { RELATED_CATEGORIES } from '~/utils/seoConstants'

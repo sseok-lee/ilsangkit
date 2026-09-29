@@ -23,7 +23,10 @@ describe('부동산 상세 히어로 빈값 — EMPTY_FIELD_TEXT 통일 (§5-8 r
   it("bare '정보 없음' 리터럴이 남아있지 않다 (3곳 전부 상수화)", () => {
     expect(SRC).not.toContain("'정보 없음'")
   })
-  it('모바일 헤더칩 필터가 EMPTY_FIELD_TEXT 상수를 참조한다 (커플링 구조적 보장)', () => {
-    expect(SRC).toContain('s.value !== EMPTY_FIELD_TEXT')
+  it('히어로 대표값은 EMPTY_FIELD_TEXT 상수를 참조한다 (커플링 구조적 보장)', () => {
+    expect(SRC).toContain('return sale?.amount != null && sale.amount > 0 ? formatKoreanPrice(sale.amount) : EMPTY_FIELD_TEXT')
+    expect(SRC).toContain('return year ? `${year}년` : EMPTY_FIELD_TEXT')
+    expect(SRC).toContain("areaRange.value !== '-' ? areaRange.value.replace('~', '–') : EMPTY_FIELD_TEXT")
+    expect(SRC).toContain('Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT')
   })
 })

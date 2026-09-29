@@ -49,6 +49,8 @@ function getMockScheduleItem(id: number, district: string) {
     district,
     targetRegion: `${district} 1동~3동`,
     emissionPlace: '각 세대 앞',
+    applicableAreas: [],
+    appliesTo: [],
     details: {
       emissionPlaceType: '문전수거',
       managementZone: `${district} 관리구역`,
@@ -94,6 +96,8 @@ function getMockSchedules(district: string) {
       district,
       targetRegion: `${district} 4동~6동`,
       emissionPlace: '거점 수거',
+      applicableAreas: [],
+      appliesTo: [],
       details: {
         emissionPlaceType: '거점수거',
         livingWaste: {

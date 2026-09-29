@@ -1,7 +1,23 @@
 // @TASK T2.4 - 통합 동기화 스케줄러 테스트
 // @SPEC docs/planning/02-trd.md#데이터-동기화
 
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const syncTrashData = vi.hoisted(() => vi.fn());
+const publishWasteGeneration = vi.hoisted(() => vi.fn());
+const refreshAllSummaries = vi.hoisted(() => vi.fn());
+
+vi.mock('../../src/scripts/syncTrash.js', () => ({
+  syncTrashData,
+}));
+
+vi.mock('../../src/services/wastePublicationService.js', () => ({
+  publishWasteGeneration,
+}));
+
+vi.mock('../../src/services/realEstateSummaryService.js', () => ({
+  refreshAllSummaries,
+}));
 
 /**
  * 옵션 파싱 테스트
@@ -120,3 +136,181 @@ describe('syncAll 결과 집계', () => {
     expect(exitCode).toBe(1);
   });
 });
+
+describe('syncAll 쓰레기 후보 준비', () => {
+  const env = {
+    OPENAPI_SERVICE_KEY: 'test-key',
+    WASTE_REFERENCE_PATH: '/tmp/reference.json',
+    WASTE_REFERENCE_MANIFEST_PATH: '/tmp/manifest.json',
+    WASTE_REFERENCE_CHECKSUMS_PATH: '/tmp/checksums.json',
+    WASTE_REPORT_OUT: '/tmp/report.json',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    refreshAllSummaries.mockResolvedValue({ done: ['apt-sale'], failed: [], total: 1 });
+    syncTrashData.mockResolvedValue({
+      totalRecords: 12,
+      newRecords: 0,
+      updatedRecords: 0,
+      skippedRecords: 0,
+      status: 'prepared',
+      generationId: 'prepared-generation',
+      reportHash: 'a'.repeat(64),
+      canPublish: true,
+    });
+  });
+
+  it('passes validated trash options and treats prepared candidates as success without publishing', async () => {
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    const result = await runSyncAll({
+      argv: ['--only', 'trash'],
+      env,
+      waitMs: 0,
+      logger: silentLogger(),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(syncTrashData).toHaveBeenCalledWith(expect.objectContaining({
+      serviceKey: 'test-key',
+      referenceInput: {
+        referencePath: '/tmp/reference.json',
+        manifestPath: '/tmp/manifest.json',
+        checksumsPath: '/tmp/checksums.json',
+      },
+      reportOut: '/tmp/report.json',
+      dryRun: false,
+    }));
+    expect(result.results[0]).toMatchObject({
+      category: 'trash',
+      success: true,
+      count: 12,
+      status: 'prepared',
+      generationId: 'prepared-generation',
+      canPublish: true,
+    });
+    expect(publishWasteGeneration).not.toHaveBeenCalled();
+  });
+
+  it('keeps prepared status when review says it cannot be published and logs the state', async () => {
+    const logger = silentLogger();
+    syncTrashData.mockResolvedValueOnce({
+      totalRecords: 3,
+      newRecords: 0,
+      updatedRecords: 0,
+      skippedRecords: 0,
+      status: 'prepared',
+      generationId: 'needs-review-generation',
+      reportHash: 'b'.repeat(64),
+      canPublish: false,
+    });
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    const result = await runSyncAll({
+      argv: ['--only', 'trash'],
+      env,
+      waitMs: 0,
+      logger,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.results[0]).toMatchObject({
+      success: true,
+      status: 'prepared',
+      canPublish: false,
+    });
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('공개 불가'));
+    expect(publishWasteGeneration).not.toHaveBeenCalled();
+  });
+
+  it('records trash option failures, continues with later categories, and returns exit 1', async () => {
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    const result = await runSyncAll({
+      argv: ['--only', 'trash,wifi'],
+      env: { OPENAPI_SERVICE_KEY: 'test-key' },
+      waitMs: 0,
+      logger: silentLogger(),
+      categoryRunner: async (category) => ({
+        category,
+        success: true,
+        count: 1,
+        duration: 1,
+      }),
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.results.map((item) => item.category)).toEqual(['trash', 'wifi']);
+    expect(result.results[0]).toMatchObject({ category: 'trash', success: false });
+    expect(result.results[1]).toMatchObject({ category: 'wifi', success: true });
+  });
+
+  it('rejects integrated dry-run before starting when categories other than trash are included', async () => {
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    await expect(runSyncAll({
+      argv: ['--only', 'trash,wifi', '--dry-run'],
+      env,
+      waitMs: 0,
+      logger: silentLogger(),
+    })).rejects.toThrow(/--only trash --dry-run/);
+
+    expect(syncTrashData).not.toHaveBeenCalled();
+  });
+
+  it('rejects legacy publication flags in integrated trash sync before invoking trash collection', async () => {
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    const result = await runSyncAll({
+      argv: [
+        '--only',
+        'trash',
+        `--approval-report-hash=${'a'.repeat(64)}`,
+        '--expected-base',
+        'active-generation',
+      ],
+      env,
+      waitMs: 0,
+      logger: silentLogger(),
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.results[0]).toMatchObject({
+      category: 'trash',
+      success: false,
+      error: expect.stringMatching(/waste:publish/i),
+    });
+    expect(syncTrashData).not.toHaveBeenCalled();
+    expect(publishWasteGeneration).not.toHaveBeenCalled();
+  });
+
+  it('refreshes summaries after successful real estate collection through the shared mode-aware entrypoint', async () => {
+    const { runSyncAll } = await import('../../src/scripts/syncAll.js');
+
+    const result = await runSyncAll({
+      argv: ['--only', 'wifi'],
+      env,
+      waitMs: 0,
+      logger: silentLogger(),
+      categoryRunner: async (category) => ({
+        category: 'apt-sale',
+        success: true,
+        count: 2,
+        duration: 1,
+      }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(refreshAllSummaries).toHaveBeenCalledTimes(1);
+  });
+});
+
+function silentLogger() {
+  return {
+    log: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+}

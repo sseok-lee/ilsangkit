@@ -27,36 +27,47 @@
         />
 
         <!-- ② 구/군 선택 -->
-        <section id="districts" class="mb-6">
-          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
-            구/군 선택
-          </h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <section id="districts" class="mb-6 rounded-xl border border-line bg-white p-4 md:p-5">
+          <div class="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
+                구/군 선택
+              </h2>
+              <p class="mt-1 text-xs text-slate-500 md:text-sm">지역을 고르면 구·군별 시설과 부동산 정보를 함께 볼 수 있어요.</p>
+            </div>
+            <NuxtLink
+              :to="{ path: '/facilities', query: { city } }"
+              class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-4 text-sm font-semibold text-primary hover:bg-primary/10"
+            >
+              생활시설 전체 보기
+            </NuxtLink>
+          </div>
+          <div class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
             <NuxtLink
               v-for="d in cityData.districts"
               :key="d.slug"
               :to="`/${city}/${d.slug}`"
-              class="group flex flex-col items-center p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 hover:border-primary/30"
+              class="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
             >
-              <span class="font-bold text-slate-900 mb-1">{{ d.name }}</span>
+              <span class="font-bold text-slate-900">{{ d.name }}</span>
               <span class="text-xs text-slate-500">시설 {{ d.facilityTotal.toLocaleString() }}개</span>
             </NuxtLink>
           </div>
         </section>
 
         <!-- 카테고리별 바로가기 -->
-        <section id="categories" class="mb-6">
+        <section id="categories" class="mb-6 rounded-xl border border-line bg-white p-4 md:p-5">
           <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
             <span class="material-symbols-outlined text-primary text-[22px]">grid_view</span>
             카테고리별 바로가기
           </h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
             <NuxtLink
               v-for="cat in cityCategoryLinks"
               :key="cat.slug"
               :to="cat.to"
-              class="group flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 hover:border-primary/30"
+              class="group flex min-h-[52px] items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 transition-colors hover:border-primary/30 hover:bg-primary/5"
             >
               <span class="material-symbols-outlined text-primary text-[22px]">{{ cat.icon }}</span>
               <span class="font-semibold text-slate-900 text-sm">{{ cat.label }}</span>

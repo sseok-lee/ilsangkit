@@ -37,6 +37,8 @@ export interface DetailMetaInput {
      * BuildingInfo 는 rentType 을 돌려주지 않는다.
      */
     recentDeal?: { amount: number; dealDate: string; monthlyRent?: number | null }
+    /** 전월세 URL에서 독립 최신 매매를 보증금/월세로 오표기하지 않기 위한 별도 값. */
+    recentSale?: { amount: number; dealDate: string }
   } | null
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
@@ -136,8 +138,16 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
 
   const totalCount = input.summary?.totalCount ?? 0
   const recentDeal = input.summary?.recentDeal
+  const recentSale = input.summary?.recentSale
   const priceText = recentDeal ? formatRecentPrice(recentDeal, input.transactionMode) : ''
-  const priceClause = priceText ? `, 최근 ${priceText}(${recentDeal!.dealDate})` : ''
+  const salePriceText = recentSale?.amount != null && recentSale.amount > 0
+    ? `매매 ${formatKoreanPrice(recentSale.amount)}`
+    : ''
+  const priceClause = priceText
+    ? `, 최근 ${priceText}(${recentDeal!.dealDate})`
+    : salePriceText
+      ? `, 최근 ${salePriceText}(${recentSale!.dealDate})`
+      : ''
   const lead = totalCount > 0
     ? `${head} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
     : `${head} 실거래가.`

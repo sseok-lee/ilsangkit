@@ -50,13 +50,13 @@ export function buildMapHash(s: { type: string; level: number; lat: number; lng:
 }
 
 /**
- * 목록·오버레이의 Vue :key. 같은 구 안의 동들은 name(시/도)·district(구·군)가 모두
- * 같으므로 dong 까지 넣어야 고유해진다 — 빼면 강북구의 모든 동이 같은 키가 되어
- * 목록 렌더가 깨진다.
+ * 목록·오버레이의 Vue :key. 건물은 같은 구에 같은 이름이 있을 수 있으므로
+ * 백엔드가 제공하는 주소 단위 buildingKey 로 구분한다. 지역 항목은 같은 구 안의 동들이
+ * name(시/도)·district(구·군)가 모두 같으므로 dong 까지 넣어야 고유해진다.
  */
 export function itemKey(item: MapItem): string {
   return isBuildingItem(item)
-    ? `${item.buildingName}|${item.district}`
+    ? item.buildingKey ?? `${item.buildingName}|${item.bjdCode}`
     : `${item.name}|${item.district ?? ''}|${item.dong ?? ''}`
 }
 
@@ -74,14 +74,25 @@ export function useRealEstateMap(initial: {
   const total = ref(initial.items.length)
   const exact = ref(true)
   const pending = ref(false)
+  const error = ref<string | null>(null)
   const hoveredKey = ref<string | null>(null)
 
   // 빠르게 드래그하면 나중 요청이 먼저 도착한다. 시퀀스로 stale 응답을 버린다.
   let seq = 0
   let timer: ReturnType<typeof setTimeout> | null = null
+  let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+  let lastLevel = level.value
 
-  async function fetchNow(bounds: MapBounds, lvl: number): Promise<void> {
-    const mySeq = ++seq
+  function clearTimer(): void {
+    if (!timer) return
+    clearTimeout(timer)
+    timer = null
+  }
+
+  async function fetchNow(bounds: MapBounds, lvl: number, token?: number): Promise<void> {
+    const mySeq = token ?? ++seq
+    lastBounds = bounds
+    lastLevel = lvl
     pending.value = true
     const b = clampBounds(bounds)
     try {
@@ -99,9 +110,11 @@ export function useRealEstateMap(initial: {
       granularity.value = res.data.granularity
       total.value = res.data.total
       exact.value = res.data.exact
-    } catch {
+      error.value = null
+    } catch (e) {
       // 화면을 비우지 않는다. 직전 결과를 유지한다.
       if (mySeq !== seq) return
+      error.value = e instanceof Error ? e.message : '지도 데이터를 불러오지 못했습니다.'
     } finally {
       if (mySeq === seq) pending.value = false
     }
@@ -109,14 +122,33 @@ export function useRealEstateMap(initial: {
 
   function onMapIdle(bounds: MapBounds, lvl: number): void {
     level.value = lvl
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => void fetchNow(bounds, lvl), DEBOUNCE_MS)
+    lastBounds = bounds
+    lastLevel = lvl
+    clearTimer()
+    const mySeq = ++seq
+    pending.value = true
+    timer = setTimeout(() => {
+      timer = null
+      void fetchNow(bounds, lvl, mySeq)
+    }, DEBOUNCE_MS)
   }
 
   function setType(next: string, bounds: MapBounds): void {
+    const changedType = next !== type.value
     type.value = next
-    if (timer) clearTimeout(timer)
+    if (changedType) {
+      items.value = []
+      total.value = 0
+      exact.value = true
+      error.value = null
+    }
+    clearTimer()
     void fetchNow(bounds, level.value)
+  }
+
+  async function retry(): Promise<void> {
+    clearTimer()
+    await fetchNow(lastBounds, lastLevel)
   }
 
   // 해시(#level=)를 마운트 시 반영하기 위한 순수 setter — onMapIdle 과 달리 fetch 를
@@ -135,11 +167,13 @@ export function useRealEstateMap(initial: {
     total: readonly(total),
     exact: readonly(exact),
     pending: readonly(pending),
+    error: readonly(error),
     hoveredKey,
     isBuilding: computed(() => granularity.value === 'building'),
     setType,
     setLevel,
     onMapIdle,
     fetchNow,
+    retry,
   }
 }

@@ -21,39 +21,76 @@
       <NuxtLink
         v-if="moreHref"
         :to="moreHref"
-        class="shrink-0 inline-flex items-center gap-0.5 text-[13px] font-bold text-primary px-2 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
+        class="search-result-group__more"
       >
-        더보기
+        {{ moreLabel }}
         <span class="material-symbols-outlined text-[15px]" aria-hidden="true">chevron_right</span>
       </NuxtLink>
       <button
         v-else
         type="button"
-        class="shrink-0 inline-flex items-center gap-0.5 text-[13px] font-bold text-primary px-2 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
+        class="search-result-group__more"
         @click="emit('more')"
       >
-        더보기
+        {{ moreLabel }}
         <span class="material-symbols-outlined text-[15px]" aria-hidden="true">chevron_right</span>
       </button>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div
+      :data-layout="layout"
+      :class="layout === 'rows'
+        ? 'search-result-group__items--rows'
+        : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'"
+    >
       <slot />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 
 withDefaults(defineProps<{
   label: string
   count: number
-  moreHref?: string
+  moreHref?: RouteLocationRaw
   countUnit?: string
   iconImg?: string
   catColor?: string
   catCategory?: string
-}>(), { countUnit: '곳' })
+  layout?: 'cards' | 'rows'
+  moreLabel?: string
+}>(), {
+  countUnit: '곳',
+  layout: 'cards',
+  moreLabel: '더보기',
+})
 
 const emit = defineEmits<{ more: [] }>()
 </script>
+
+<style scoped>
+.search-result-group__more {
+  display: inline-flex;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  color: #2450dc;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.search-result-group__more:hover {
+  background: #eef2ff;
+}
+
+.search-result-group__items--rows {
+  overflow: hidden;
+  border-top: 1px solid #e6e9f0;
+  background: #fff;
+}
+</style>

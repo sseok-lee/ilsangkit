@@ -31,6 +31,22 @@ describe('toCitySlug / toDistrictSlug (frontend)', () => {
 })
 
 describe('toRealEstateUrl (frontend mirror)', () => {
+  it('appends a stable building key as the final path segment', () => {
+    const buildingKey = 'a'.repeat(64)
+
+    expect(
+      toRealEstateUrl({
+        type: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '스톤빌리지',
+        buildingKey,
+      }),
+    ).toBe(
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${buildingKey}`,
+    )
+  })
+
   it('matches backend contract for canonical Seoul Gangnam apt-sale', () => {
     expect(
       toRealEstateUrl({

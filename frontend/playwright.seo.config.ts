@@ -1,13 +1,31 @@
-import { defineConfig, devices } from '@playwright/test'
+import { chromium, defineConfig, devices } from '@playwright/test'
+import { existsSync } from 'node:fs'
+
+const useLocalChromeFallback = !process.env.CI && process.env.ILSK_SEO_USE_SYSTEM_CHROME === '1'
+  && !existsSync(chromium.executablePath())
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['seo-rendering-recovery.spec.ts', 'real-estate-nearby.spec.ts'],
+  testMatch: [
+    'seo-rendering-recovery.spec.ts',
+    'real-estate-nearby.spec.ts',
+    'real-estate-mode-navigation.spec.ts',
+    'housing-redesign.spec.ts',
+    'subscription-list-redesign.spec.ts',
+    'exploration-search-redesign.spec.ts',
+    'remaining-editorial-redesign.spec.ts',
+    'remaining-property-redesign.spec.ts',
+    'remaining-lifestyle-redesign.spec.ts',
+    'waste-area-discovery.spec.ts',
+  ],
   workers: 1,
   retries: 0,
-  reporter: [['list'], ['json', { outputFile: 'test-results/seo-results.json' }]],
+  reporter: [['list'], ['json', { outputFile: process.env.ILSK_SEO_REPORT_PATH || 'test-results/housing-redesign/seo-results.json' }]],
   use: { baseURL: 'http://127.0.0.1:13000', serviceWorkers: 'block', trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{
+    name: useLocalChromeFallback ? 'local-chrome' : 'chromium',
+    use: { ...devices['Desktop Chrome'], ...(useLocalChromeFallback ? { channel: 'chrome' } : {}) },
+  }],
   webServer: [
     { command: 'node tests/fixtures/seo/api.mjs', url: 'http://127.0.0.1:18080/health', reuseExistingServer: false },
     {

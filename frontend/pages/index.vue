@@ -1,37 +1,21 @@
 <template>
-  <div class="flex flex-col">
-    <!-- Hero Section -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 md:pt-8 pb-8 md:pb-12">
-      <!-- overflow-hidden 금지: 이 히어로 밴드가 검색 자동완성(아래 label 안 absolute top-full)의
-           조상이라, overflow-hidden 을 걸면 드롭다운이 히어로 하단 경계에서 잘린다. 둥근 모서리는
-           md:rounded-2xl 만으로 자기 배경이 클리핑되므로 overflow-hidden 없이도 유지된다. -->
-      <div class="relative bg-primary-press text-white -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-8 py-5 md:py-7 md:rounded-2xl">
-        <!-- 출처 배지 + 기준일 스탬프 -->
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">공공데이터포털</span>
-          <span class="hidden md:inline-flex items-center text-[11.5px] font-bold bg-white/[0.12] border border-white/20 px-2.5 py-1 rounded-full text-[#DCE6FD]">국토교통부 실거래가</span>
-          <span class="md:hidden inline-flex items-center text-[10px] font-bold bg-white/[0.12] border border-white/20 px-2 py-0.5 rounded-full text-[#DCE6FD]">공공데이터 기반</span>
-          <span class="ml-auto text-[10.5px] md:text-xs font-semibold text-[#B9C9F8]">
-            <template v-if="stampDate">
-              <b class="text-white font-extrabold tabular-nums">{{ stampDate }} 기준</b><span class="hidden md:inline"> · 매일 자동 동기화</span>
-            </template>
-            <template v-else>매일 자동 동기화</template>
-          </span>
-        </div>
+  <div class="housing-redesign flex flex-col">
+    <section class="home-hero-shell w-full border-b border-line bg-white">
+      <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10 pb-8 md:pb-10">
+        <div class="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8 lg:gap-12 items-center">
+          <div class="min-w-0">
+            <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
+            <div class="max-w-[620px]">
+              <div class="housing-title font-extrabold tracking-tight text-strong">
+                집값부터<br />청약 일정까지.
+              </div>
+              <p class="text-muted text-base mt-5 max-w-[560px] leading-relaxed">
+                궁금한 동네의 집값과 새로운 입주 기회를 살펴보세요.
+              </p>
+            </div>
 
-        <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
-        <div class="tracking-tight font-bold leading-[1.15] mt-3">
-          <div class="text-white text-[26px] md:text-[40px] md:font-extrabold">우리 동네 정보,</div>
-          <div class="text-[26px] md:text-[40px] md:font-extrabold">
-            <span class="md:hidden text-[#9DB4F5]">한번에.</span>
-            <span class="hidden md:inline"><span class="text-[#9DB4F5]">일상킷에서</span><span class="text-white"> 한번에.</span></span>
-          </div>
-        </div>
-        <p class="md:hidden text-[#C9D6FA] text-[15px] mt-1">부동산 · 청약 · 생활시설을 한 곳에서</p>
-        <p class="hidden md:block text-[#C9D6FA] text-lg mt-1">부동산 실거래가, 청약 정보, 생활시설을 한 곳에서.</p>
-
-        <!-- 검색바 -->
-        <div class="w-full md:max-w-[860px] mt-4 md:mt-5">
+            <!-- 검색바 -->
+            <div class="w-full md:max-w-[680px] mt-7">
           <label class="relative block">
             <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-faint">
@@ -46,7 +30,7 @@
                 :aria-controls="heroListboxId"
                 :aria-activedescendant="heroActiveDescendant"
                 class="flex-1 min-w-0 bg-transparent text-ink placeholder:text-faint px-2 text-base font-medium focus:outline-none border-none focus:ring-0 md:py-4"
-                placeholder="단지명, 지역, 시설 검색"
+                placeholder="단지명, 지역으로 찾아보세요"
                 @keydown="onHeroKeydown"
                 @input="onHeroInput"
                 @focus="heroFocused = true"
@@ -74,39 +58,33 @@
               />
             </div>
           </label>
-        </div>
-
-        <!-- 스탯 4칸 -->
-        <div class="mt-5 md:mt-6 border-t border-white/[0.16] pt-4">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 md:gap-y-0 md:divide-x md:divide-white/[0.14]">
-            <div class="flex flex-col md:px-4 md:first:pl-0">
-              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ buildingCountKor }}만</strong>
-              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">실거래 부동산</span>
             </div>
-            <div class="flex flex-col md:px-4">
-              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ stats.subscriptionActiveCount }}건</strong>
-              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">진행중 청약</span>
-            </div>
-            <div class="flex flex-col md:px-4">
-              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">{{ facilityCountKor }}만</strong>
-              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">등록 시설</span>
-            </div>
-            <div class="flex flex-col md:px-4">
-              <strong class="text-white font-display font-extrabold text-lg md:text-xl tracking-tight tabular-nums">
-                {{ newlyListedToday.toLocaleString('ko-KR') }}<span v-if="newlyListedToday > 0" class="text-[10px] md:text-xs font-bold text-[#7EE3B8] ml-1 align-middle"><span class="md:hidden">오늘</span><span class="hidden md:inline">오늘 신규</span></span>
-              </strong>
-              <span class="text-[11px] md:text-xs text-[#AEC0F7] font-semibold mt-0.5">오늘 업데이트</span>
-            </div>
+            <p class="mt-3 text-sm text-muted">아파트 · 빌라 · 오피스텔 실거래가</p>
           </div>
+          <nav class="lg:border-l lg:border-line lg:pl-8" aria-label="주요 목적지">
+            <div class="divide-y divide-line">
+              <HardLink
+                v-for="link in purposeLinks"
+                :key="link.to"
+                :to="link.to"
+                class="group flex items-center gap-4 py-4 text-strong hover:text-primary transition-colors"
+              >
+                <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">{{ link.icon }}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-extrabold">{{ link.label }}</span>
+                  <span class="block text-xs text-muted mt-1 leading-relaxed">{{ link.description }}</span>
+                </span>
+                <span class="material-symbols-outlined text-[18px] text-faint group-hover:text-primary" aria-hidden="true">chevron_right</span>
+              </HardLink>
+            </div>
+          </nav>
         </div>
       </div>
     </section>
 
-    <!-- 오늘의 부동산 시장 통계 -->
-    <HomeHotspotSignals :hotspots="hotspots" />
-
-    <!-- 이번 주 인기 단지 -->
-    <HomeTrendingBuildings :buildings="trendingBuildings" />
+    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <HomeMarketSection />
+    </section>
 
     <!-- Ad: fold 아래 첫 섹션 경계 (히어로 검색은 홈의 핵심 기능이라 그 위/안에는 두지 않는다) -->
     <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -300,8 +278,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
-import HomeHotspotSignals from '~/components/home/HomeHotspotSignals.vue'
-import HomeTrendingBuildings from '~/components/home/HomeTrendingBuildings.vue'
+import HomeMarketSection from '~/components/home/HomeMarketSection.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import type { ArticleSummary } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -309,10 +286,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import type { HomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
-import { toRealEstateUrl } from '~/utils/realEstateUrl'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { useSyncStatus } from '~/composables/useSyncStatus'
-import { isSyncStale, formatDotDate, RE_STALE_DAYS } from '~/utils/syncFreshness'
 
 const config = useRuntimeConfig()
 const apiBase = useApiBase()
@@ -326,7 +300,7 @@ const { setHomeMeta } = useFacilityMeta()
 setHomeMeta()
 
 // JSON-LD 구조화된 데이터 - 기존 유지
-const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema, setItemListSchema } = useStructuredData()
+const { setWebsiteSchema, setOrganizationSchema, setDatasetSchema } = useStructuredData()
 setWebsiteSchema()
 setOrganizationSchema()
 setDatasetSchema({
@@ -402,77 +376,14 @@ if (import.meta.server && !pageData.value?.dashboard) {
   throw createError({ statusCode: 503, statusMessage: 'Home data temporarily unavailable' })
 }
 
-const dashboard = computed(() => pageData.value?.dashboard ?? null)
-const trends = computed(() => dashboard.value?.realEstateTrends ?? [])
-const hotspots = computed(() => dashboard.value?.realEstateHotspots ?? {})
-const trendingBuildings = computed(() => dashboard.value?.trendingBuildings ?? { sale: [], jeonse: [], wolse: [] })
-const newlyListedToday = computed(() => dashboard.value?.newlyListedToday ?? 0)
-
-const RE_SYNC_KEYS = ['aptSale', 'aptRent', 'villaSale', 'villaRent', 'offitelSale', 'offitelRent'] as const
-const { syncStatus } = useSyncStatus()
-// 실거래 6개 테이블 중 가장 최근 동기화 시각(ISO 사전순 = 시간순)
-const reSyncedAt = computed<string | null>(() => {
-  const s = syncStatus.value
-  if (!s) return null
-  const dates = RE_SYNC_KEYS.map((k) => s[k]).filter((v): v is string => !!v)
-  return dates.length ? [...dates].sort().at(-1) ?? null : null
-})
-// stale/null이면 날짜 생략(fail-open). "매일 자동 동기화" 라벨은 항상 노출.
-const stampDate = computed<string | null>(() => {
-  const iso = reSyncedAt.value
-  return iso && !isSyncStale(iso, RE_STALE_DAYS) ? formatDotDate(iso) : null
-})
-
-// 히어로 4칸 스탯 패널에서 사용하는 필드(subscriptionActiveCount)만 추림. total/buildingCount는
-// buildingCountKor/facilityCountKor 계산에 별도로 쓰임.
-const stats = computed(() => ({
-  total: dashboard.value?.total ?? 0,
-  buildingCount: dashboard.value?.buildingCount ?? 0,
-  subscriptionActiveCount: dashboard.value?.subscriptionActiveCount ?? 0,
-}))
-
-// ItemList JSON-LD — 트렌딩 단지 TOP 15 (매매 5 + 전세 5 + 월세 5)
-if (dashboard.value) {
-  const buildings = dashboard.value.trendingBuildings
-  const buildItems = (
-    list: typeof buildings.sale,
-    txnLabel: string,
-    type: 'apt-sale' | 'apt-rent',
-    posOffset: number,
-  ) => list.map((b, i) => ({
-    name: `${b.buildingName} (${txnLabel})`,
-    url: toRealEstateUrl({ type, city: b.city, district: b.district, buildingName: b.buildingName }),
-    position: posOffset + i + 1,
-    type: 'Apartment' as const,
-    address: {
-      addressLocality: b.district,
-      addressRegion: b.city,
-    },
-  }))
-
-  const allItems = [
-    ...buildItems(buildings.sale, '매매', 'apt-sale', 0),
-    ...buildItems(buildings.jeonse, '전세', 'apt-rent', 5),
-    ...buildItems(buildings.wolse, '월세', 'apt-rent', 10),
-  ]
-
-  if (allItems.length > 0) {
-    setItemListSchema(allItems, {
-      name: '이번 주 인기 아파트 단지',
-      description: '최근 7일 매매·전세·월세 거래가 가장 많은 아파트 단지',
-      key: 'jsonld-trending-buildings',
-    })
-  }
-}
-
 const recentGuides = computed(() => pageData.value?.recentGuides ?? [])
 const recentArticles = computed(() => pageData.value?.recentArticles ?? [])
 
-// 등록 부동산 건물 수 (만 단위, 소수점 1자리)
-const buildingCountKor = computed(() => (stats.value.buildingCount / 10000).toFixed(1))
-
-// 시설 수 만 단위
-const facilityCountKor = computed(() => Math.floor(stats.value.total / 10000))
+const purposeLinks = [
+  { label: '실거래가 찾아보기', to: '/real-estate', icon: 'apartment', description: '최근 거래와 가격 흐름 확인' },
+  { label: '청약 일정', to: '/subscription', icon: 'calendar_month', description: '다가오는 접수 일정 확인' },
+  { label: '공공임대', to: '/subscription/rent', icon: 'home', description: '내게 맞는 모집 유형 살펴보기' },
+]
 
 // 빠른 생활시설 찾기 (전 시설 카테고리 15개 + 지하철 = 16개, 8-col 2줄)
 const quickFacilities: { id: string; label: string }[] = [

@@ -235,6 +235,9 @@ describe('사이트맵 라우트 — 게이트 통합', () => {
     if (path.includes('/api/sitemap/waste-schedule-regions')) {
       return Promise.resolve({ success: true, data: { regions: wasteRegions } })
     }
+    if (path.includes('/api/sitemap/waste-areas')) {
+      return Promise.resolve({ success: true, data: { areas: [] } })
+    }
     if (path.includes('/api/auction/sitemap') || path.includes('/api/auction')) {
       return Promise.resolve({
         success: true,
@@ -529,6 +532,9 @@ describe('인덱스가 광고하는 청크는 전부 핸들러가 200 으로 서
         success: true,
         data: { regions: [{ city: '서울특별시', district: '강남구', updatedAt: '2026-09-01T00:00:00Z' }] },
       })
+    }
+    if (path.includes('/api/sitemap/waste-areas')) {
+      return Promise.resolve({ success: true, data: { areas: [] } })
     }
     if (path.includes('/api/sitemap/page-counts')) {
       return Promise.reject(new Error('mock: page-counts unavailable'))

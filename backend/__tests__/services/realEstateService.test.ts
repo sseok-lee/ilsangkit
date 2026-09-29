@@ -27,6 +27,7 @@ const {
   mockOffitelSaleFindFirst,
   mockOffitelRentFindFirst,
   mockQueryRawUnsafe,
+  mockGetLatestDeals,
   mockSummaryFindMany,
   mockSummaryCount,
 } = vi.hoisted(() => ({
@@ -55,6 +56,7 @@ const {
   mockOffitelRentGroupBy: vi.fn(),
   mockOffitelRentFindFirst: vi.fn(),
   mockQueryRawUnsafe: vi.fn(),
+  mockGetLatestDeals: vi.fn(),
   mockSummaryFindMany: vi.fn(),
   mockSummaryCount: vi.fn(),
 }));
@@ -116,6 +118,14 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
   return {
     ...actual,
     getRegionIndex: async () => actual.buildRegionIndex([{ city: '서울특별시', district: '강남구' }]),
+  };
+});
+
+vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/realEstateLatestDeals.js');
+  return {
+    ...actual,
+    getLatestDeals: mockGetLatestDeals,
   };
 });
 
@@ -183,6 +193,20 @@ const sampleRentRecord = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetLatestDeals.mockImplementation((keys: Array<{
+    propertyType: string;
+    buildingName: string;
+    bjdCode: string;
+  }>) => {
+    const bundles = new Map();
+    for (const key of keys) {
+      bundles.set(
+        JSON.stringify([key.propertyType, key.buildingName, key.bjdCode]),
+        { sale: null, jeonse: null, wolse: null },
+      );
+    }
+    return Promise.resolve(bundles);
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -993,7 +1017,7 @@ describe('searchAll', () => {
     const distinctCalls = rawCalls('COUNT(DISTINCT');
     expect(distinctCalls).toHaveLength(3);
     const sql = String(distinctCalls[0][0]);
-    expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
+    expect(sql).toContain('COUNT(DISTINCT buildingKey)');
     expect(sql).toContain('FROM RealEstateBuildingSummary');
     expect(sql).toContain('buildingName NOT REGEXP');
     expect(sql).toContain('type IN (?, ?)');

@@ -1,4 +1,5 @@
 // backend/__tests__/services/auctionService.test.ts
+import { Prisma } from '@prisma/client';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockPrisma } = vi.hoisted(() => ({
@@ -113,4 +114,51 @@ describe('getRanking', () => {
     const r = await getRanking({ usage: 'residential', order: 'high', limit: 20 });
     expect(r[0].avgBidRate).toBe(82);
   });
+});
+
+describe('auction search parity', () => {
+  beforeEach(() => {
+    mockPrisma.auctionItem.count.mockResolvedValue(0);
+    mockPrisma.$queryRaw.mockResolvedValue([]);
+    mockPrisma.auctionItem.findMany.mockResolvedValue([]);
+  });
+  function rawStatement() {
+    const [strings, ...values] = mockPrisma.$queryRaw.mock.calls[0];
+    return Prisma.sql(strings, ...values);
+  }
+  it.each(['ongoing', 'scheduled', 'negotiable', 'closed', 'sold', 'failed', 'cancelled'] as const)('exact %s matches only raw status', async (status) => {
+    await getItems({ status, statusMode: 'exact', page: 1, limit: 20 });
+    expect(mockPrisma.auctionItem.count).toHaveBeenCalledWith({ where: { status } });
+    expect(rawStatement().sql).toContain('status = ?');
+    expect(rawStatement().values).toContain(status);
+  });
+  it('keeps legacy ongoing and scheduled together', async () => {
+    await getItems({ status: 'ongoing', page: 1, limit: 20 });
+    expect(mockPrisma.auctionItem.count).toHaveBeenCalledWith({ where: { status: { in: ['ongoing', 'scheduled'] } } });
+    expect(rawStatement().sql).toContain("status IN ('ongoing', 'scheduled')");
+  });
+  it('ANDs legacy closed with keyword OR rather than broadening the result', async () => {
+    await getItems({ status: 'closed', keyword: 'CLTR', city: '서울특별시', district: '강남구', usage: 'land', page: 2, limit: 20 });
+    const where = mockPrisma.auctionItem.count.mock.calls[0][0].where;
+    expect(where).toMatchObject({ district: '강남구', usageGroup: 'land', AND: [{ OR: [{ isClosed: true }, { status: 'closed' }] }, { OR: [{ address: { contains: 'CLTR' } }, { usage: { contains: 'CLTR' } }, { cltrMngNo: { contains: 'CLTR' } }] }] });
+    const raw = rawStatement();
+    expect(raw.sql).toContain("(isClosed = true OR status = 'closed')");
+    expect(raw.sql).toContain('address LIKE');
+    expect(raw.sql).toContain('`usage` LIKE');
+    expect(raw.sql).toContain('cltrMngNo LIKE');
+    expect(raw.values).toEqual(expect.arrayContaining(['강남구', 'land', '%CLTR%', 20]));
+  });
+  it('treats SQL wildcard characters literally in ORM and raw conditions', async () => {
+    await getItems({ keyword: '50%_', status: 'scheduled', statusMode: 'exact', page: 1, limit: 20 });
+    expect(mockPrisma.auctionItem.count.mock.calls[0][0].where.OR[0]).toEqual({ address: { contains: String.raw`50\%\_` } });
+    expect(rawStatement().values).toContain(String.raw`%50\%\_%`);
+    expect(rawStatement().sql).not.toContain('50%_');
+  });
+});
+
+
+it('ranking filters all server regions before sorting and limiting', async () => {
+  mockPrisma.auctionAreaSummary.findMany.mockResolvedValue([]);
+  await getRanking({ keyword: '강남', usage: 'land', order: 'count', limit: 50 });
+  expect(mockPrisma.auctionAreaSummary.findMany).toHaveBeenCalledWith({ where: { isIndexable: true, soldCount: { gte: 3 }, avgBidRate: { not: null }, usageGroup: 'land', OR: [{ city: { contains: '강남' } }, { district: { contains: '강남' } }] }, orderBy: { soldCount: 'desc' }, take: 50 });
 });

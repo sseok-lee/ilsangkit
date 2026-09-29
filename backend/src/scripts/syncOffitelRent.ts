@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { resolve } from 'path';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
+import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 import {
   fetchRealEstateData,
   generateSourceId,
@@ -115,6 +116,7 @@ export async function syncOffitelRentByLawd(lawdCd: string, dealYmd: string, ser
   // SyncHistory 카운터가 영원히 0으로 남는다 — baseSyncService.runSync 주석 참조.
   stats: SyncStats = createSyncStats(),
 ): Promise<void> {
+  return withRealEstateWriteLock('syncOffitelRentByLawd', async () => {
   const items = await fetchRealEstateData(API_ENDPOINT, lawdCd, dealYmd, serviceKey);
 
   if (items.length === 0) return;
@@ -152,6 +154,8 @@ export async function syncOffitelRentByLawd(lawdCd: string, dealYmd: string, ser
 
   stats.newRecords += newCount;
   stats.updatedRecords += updateCount;
+
+  });
 }
 
 async function main(): Promise<void> {
@@ -223,7 +227,7 @@ async function main(): Promise<void> {
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
   installRuntimeGuard({ maxMinutes: 20, name: 'syncOffitelRent', prisma });
-  main().catch((error) => {
+  withRealEstateWriteLock('syncOffitelRent', main).catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

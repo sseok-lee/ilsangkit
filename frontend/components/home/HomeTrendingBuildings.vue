@@ -29,7 +29,7 @@
         <template v-else>
           <a
             v-for="(b, i) in col.items"
-            :key="b.slug"
+            :key="b.buildingKey ?? b.slug"
             :href="buildUrl(col.type, b)"
             :class="['flex items-center gap-3 px-4 py-3 border-b border-line last:border-b-0 transition-colors', col.hoverBg]"
           >
@@ -40,7 +40,7 @@
             <!-- Name + region -->
             <div class="flex-1 min-w-0">
               <div class="text-sm font-semibold text-strong truncate">{{ b.buildingName }}</div>
-              <div class="text-[11px] text-faint">{{ shortRegion(b.city, b.district) }}</div>
+              <div class="text-[11px] text-faint">{{ shortRegion(b) }}</div>
             </div>
             <!-- Txn count + price -->
             <div class="text-right shrink-0">
@@ -95,8 +95,10 @@ const CITY_SHORT: Record<string, string> = {
   '제주특별자치도': '제주',
 };
 
-function shortRegion(city: string, district: string): string {
-  return `${CITY_SHORT[city] ?? city} ${district}`;
+function shortRegion(building: TrendingBuildingItem): string {
+  return [CITY_SHORT[building.city] ?? building.city, building.district, building.dongName, building.jibun]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function buildUrl(type: ColType, b: TrendingBuildingItem): string {
@@ -106,6 +108,7 @@ function buildUrl(type: ColType, b: TrendingBuildingItem): string {
     city: b.city,
     district: b.district,
     buildingName: b.buildingName,
+    buildingKey: b.buildingKey,
   });
 }
 

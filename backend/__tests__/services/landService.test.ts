@@ -112,6 +112,31 @@ describe('getRegionDetail', () => {
     expect(r.daeSamples[0].shareDeal).toBe(false);
     expect(r.daeSamples[0].pricePerPyeong).toBeGreaterThan(0);
   });
+
+  it('통계 메타데이터는 동 전체 total과 5000건 상한 적용 여부를 반환한다', async () => {
+    const rows = [
+      { id: 1, jibun: '1', jimok: '대', landUse: '제2종일반주거지역', dealArea: 99,
+        shareDeal: false, dealAmount: 300000n, dealType: null, dealYear: 2026, dealMonth: 1, dealDay: 2 },
+    ];
+    mockTxnFindMany.mockResolvedValueOnce(rows).mockResolvedValueOnce(rows).mockResolvedValueOnce([
+      { jimok: '대', landUse: '제2종일반주거지역' },
+    ]);
+    mockTxnCount.mockResolvedValue(6001);
+
+    const r = await getRegionDetail({ bjdCode: '11680', dongName: '역삼동', page: 1, limit: 20 });
+
+    expect(r.statsMeta).toEqual({
+      totalTransactions: 6001,
+      sampleLimit: 5000,
+      sampledTransactions: 1,
+      isSampleCapped: true,
+    });
+    expect(r.filterOptions).toEqual({
+      jimok: ['대'],
+      landUse: ['제2종일반주거지역'],
+    });
+  });
+
 });
 
 describe('getHubSummary', () => {
@@ -161,7 +186,7 @@ describe('getTransactions', () => {
     expect(mockTxnFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { bjdCode: '11680', dongName: '역삼동', cancelDealDay: null },
-        orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }],
+        orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }, { id: 'desc' }],
         skip: 20, // (page 2 - 1) * 20
         take: 20,
       })
@@ -169,6 +194,52 @@ describe('getTransactions', () => {
     expect(mockTxnCount).toHaveBeenCalledWith(
       expect.objectContaining({ where: { bjdCode: '11680', dongName: '역삼동', cancelDealDay: null } })
     );
+  });
+
+  it('keyword + jimok + landUse를 같은 동의 취소 제외 거래에 AND로 적용한다', async () => {
+    mockTxnFindMany.mockResolvedValueOnce([
+      { id: 7, jibun: '123-4', jimok: '대', landUse: '제2종일반주거지역', dealArea: 99,
+        shareDeal: false, dealAmount: 300000n, dealType: '중개거래', dealYear: 2026, dealMonth: 5, dealDay: 3 },
+    ]);
+    mockTxnCount.mockResolvedValueOnce(1);
+    mockTxnFindMany.mockResolvedValueOnce([
+      { jimok: '대', landUse: '제2종일반주거지역' },
+      { jimok: '전', landUse: '계획관리지역' },
+    ]);
+
+    const r = await getTransactions({
+      bjdCode: '11680',
+      dongName: '역삼동',
+      keyword: '123',
+      jimok: '대',
+      landUse: '제2종일반주거지역',
+      page: 2,
+      limit: 20,
+    });
+
+    const expectedWhere = {
+      bjdCode: '11680',
+      dongName: '역삼동',
+      cancelDealDay: null,
+      jimok: '대',
+      landUse: '제2종일반주거지역',
+      OR: [
+        { jibun: { contains: '123' } },
+        { jimok: { contains: '123' } },
+        { landUse: { contains: '123' } },
+      ],
+    };
+    expect(mockTxnFindMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: expectedWhere,
+      skip: 20,
+      take: 20,
+      orderBy: [{ dealYear: 'desc' }, { dealMonth: 'desc' }, { dealDay: 'desc' }, { id: 'desc' }],
+    }));
+    expect(mockTxnCount).toHaveBeenCalledWith(expect.objectContaining({ where: expectedWhere }));
+    expect(r.filterOptions).toEqual({
+      jimok: ['대', '전'],
+      landUse: ['계획관리지역', '제2종일반주거지역'],
+    });
   });
 
   it('total=0 이면 totalPages=0', async () => {

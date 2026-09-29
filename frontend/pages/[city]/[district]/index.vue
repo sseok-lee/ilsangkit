@@ -28,6 +28,21 @@
           :cards="realEstateCards"
         />
 
+        <div class="mb-4 rounded-xl border border-line bg-white p-4 md:p-5">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 class="text-display-2 text-slate-900">생활시설 탐색</h2>
+              <p class="mt-1 text-xs text-slate-500 md:text-sm">카테고리를 고르거나 현재 지역 조건으로 전체 시설을 확인하세요.</p>
+            </div>
+            <NuxtLink
+              :to="{ path: '/facilities', query: { city, district } }"
+              class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-4 text-sm font-semibold text-primary hover:bg-primary/10"
+            >
+              생활시설 전체 보기
+            </NuxtLink>
+          </div>
+        </div>
+
         <!-- ② 생활시설 현황 -->
         <RegionFacilityCategoryGrid
           v-if="areaData.facilities"
@@ -92,8 +107,6 @@ import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
-import { CATEGORY_META } from '~/types/facility'
-import type { FacilityCategory } from '~/types/facility'
 import { staticOgImageUrl } from '~/utils/ogImageUrl'
 import { generateAreaDescription, buildDistrictMetaDescription } from '~/utils/seoHelpers'
 import { useAnalytics } from '~/composables/useAnalytics'

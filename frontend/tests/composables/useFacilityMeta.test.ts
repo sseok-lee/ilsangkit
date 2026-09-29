@@ -687,6 +687,17 @@ describe('useFacilityMeta', () => {
       setWasteScheduleDetailMeta({ id: 1, city: '전북특별자치도', district: '고창군', targetRegion: '흥덕면' })
       expect(titleOf()).toMatchInlineSnapshot(`"전북특별자치도 고창군 흥덕면 쓰레기 배출일 | 재활용·음식물·대형폐기물 | 일상킷"`)
     })
+
+    it('trash source detail meta omits canonical because the page is noindex', () => {
+      const { setWasteScheduleDetailMeta } = useFacilityMeta()
+      setWasteScheduleDetailMeta({ id: 1, city: '전북특별자치도', district: '고창군', targetRegion: '흥덕면' })
+
+      const headCallsWithCanonical = mockUseHead.mock.calls.filter((c: unknown[]) => {
+        const arg = c[0] as { link?: Array<{ rel: string }> }
+        return arg?.link?.some((l) => l.rel === 'canonical')
+      })
+      expect(headCallsWithCanonical).toHaveLength(0)
+    })
   })
 
   describe('buildDetailTitle — intent tail per category (Fix 2)', () => {

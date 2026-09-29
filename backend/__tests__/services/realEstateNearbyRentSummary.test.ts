@@ -15,14 +15,14 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockQueryRaw, mockFindMany } = vi.hoisted(() => ({
+const { mockQueryRaw, mockQueryRawUnsafe } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
-  mockFindMany: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: { $queryRaw: mockQueryRaw, realEstateBuildingSummary: { findMany: mockFindMany } },
-  default: { $queryRaw: mockQueryRaw, realEstateBuildingSummary: { findMany: mockFindMany } },
+  prisma: { $queryRaw: mockQueryRaw, $queryRawUnsafe: mockQueryRawUnsafe },
+  default: { $queryRaw: mockQueryRaw, $queryRawUnsafe: mockQueryRawUnsafe },
 }));
 
 import { getNearbyByBjd } from '../../src/services/realEstateService.js';
@@ -46,47 +46,45 @@ const summaryRow = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
-  mockFindMany.mockReset();
+  mockQueryRawUnsafe.mockReset();
 });
 
 describe('getNearbyByBjd rent — rentType=all (summary 경로)', () => {
   it('raw SQL 이 아니라 summary 를 조회한다', async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getNearbyByBjd('1168010100', 'rent', { rentType: 'all' });
 
-    expect(mockFindMany).toHaveBeenCalledTimes(3);   // apt/villa/offitel
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);   // apt/villa/offitel
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
   it('rentType 을 생략해도 기본이 all 이라 summary 를 탄다 (SSR 경로)', async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getNearbyByBjd('1168010100', 'rent', {});
 
-    expect(mockFindMany).toHaveBeenCalledTimes(3);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
   it('type 을 {key}-rent 로 조회하고 인덱스가 타도록 where/orderBy 를 고정한다', async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getNearbyByBjd('1168010100', 'rent', { rentType: 'all', dongName: '역삼동' });
 
-    const types = mockFindMany.mock.calls.map((c) => c[0].where.type);
+    const types = mockQueryRawUnsafe.mock.calls.map((c) => c[1]);
     expect(types).toEqual(['apt-rent', 'villa-rent', 'offitel-rent']);
 
-    const call = mockFindMany.mock.calls[0][0];
-    expect(call.where).toMatchObject({ bjdCode: '1168010100', dongName: '역삼동' });
-    expect(call.orderBy).toEqual([
-      { latestDealYear: 'desc' },
-      { latestDealMonth: 'desc' },
-      { transactionCount: 'desc' },
-    ]);
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(String(sql)).toContain('FROM RealEstateBuildingSummaryV2');
+    expect(String(sql)).toContain('WHERE type = ? AND bjdCode = ? AND dongName = ?');
+    expect(String(sql)).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC');
+    expect(params).toEqual(['apt-rent', '1168010100', '역삼동', 4]);
   });
 
   it('보증금(latestPrice)과 월세(monthlyRent)를 함께 돌려준다', async () => {
-    mockFindMany.mockResolvedValue([summaryRow()]);
+    mockQueryRawUnsafe.mockResolvedValue([summaryRow()]);
 
     const r = await getNearbyByBjd('1168010100', 'rent', { rentType: 'all' });
 
@@ -98,7 +96,7 @@ describe('getNearbyByBjd rent — rentType=all (summary 경로)', () => {
   });
 
   it('전세(월세 0)와 월세 미기재(NULL)를 구분해 전달한다', async () => {
-    mockFindMany
+    mockQueryRawUnsafe
       .mockResolvedValueOnce([summaryRow({ monthlyRent: 0 })])
       .mockResolvedValueOnce([summaryRow({ monthlyRent: null })])
       .mockResolvedValueOnce([]);
@@ -110,11 +108,13 @@ describe('getNearbyByBjd rent — rentType=all (summary 경로)', () => {
   });
 
   it('excludeBuildingName 을 그대로 넘긴다', async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getNearbyByBjd('1168010100', 'rent', { rentType: 'all', excludeBuildingName: '역삼아이파크' });
 
-    expect(mockFindMany.mock.calls[0][0].where.buildingName).toEqual({ not: '역삼아이파크' });
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(String(sql)).toContain('buildingName != ?');
+    expect(params).toEqual(['apt-rent', '1168010100', '역삼아이파크', 4]);
   });
 
   it('전세/월세 필터는 summary 를 쓰지 않는다 (한 행으로 합쳐져 구분 불가)', async () => {
@@ -123,6 +123,6 @@ describe('getNearbyByBjd rent — rentType=all (summary 경로)', () => {
     await getNearbyByBjd('1168010100', 'rent', { rentType: 'wolse' });
 
     expect(mockQueryRaw).toHaveBeenCalledTimes(3);
-    expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
   });
 });

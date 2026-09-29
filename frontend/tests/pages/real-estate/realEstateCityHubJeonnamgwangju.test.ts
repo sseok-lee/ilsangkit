@@ -43,18 +43,36 @@ vi.mock('~/utils/seoConstants', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
-  ;(globalThis as any).useAsyncData = vi.fn((_k: string, _h: () => Promise<unknown>) => {
-    const data = ref<any>([])
-    return Object.assign(Promise.resolve({ data }), { data, pending: ref(false), error: ref(null), refresh: vi.fn() })
+  ;(globalThis as any).useAsyncData = vi.fn((key: string) => {
+    const data = ref<any>(key.startsWith('re-city-map-center-')
+      ? null
+      : { items: [], total: 0, page: 1, totalPages: 0 })
+    const result = {
+      data,
+      pending: ref(false),
+      error: ref(null),
+      status: ref('success'),
+      refresh: vi.fn(),
+    }
+    return Object.assign(Promise.resolve(result), result)
   })
 })
 
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />' },
-  SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
+  PageHero: {
+    props: ['title', 'description'],
+    template: '<div data-stub="hero"><h1>{{ title }}</h1><p>{{ description }}</p></div>',
+  },
+  SectionBlock: {
+    props: ['heading', 'subtext'],
+    template: '<section><h2 v-if="heading">{{ heading }}</h2><p v-if="subtext">{{ subtext }}</p><slot /><slot name="heading" /></section>',
+  },
   AdBanner: { template: '<div />' },
+  DataSourceSection: { template: '<div />' },
+  ExplorationFilters: { template: '<div data-stub="filters" />' },
+  ExplorationBuildingRow: { template: '<div data-stub="building-row" />' },
 }
 
 describe('real-estate/[realEstateType]/[city]/index.vue — 전남광주통합특별시 (Task A4 suffix-strip 예외)', () => {
@@ -76,7 +94,7 @@ describe('real-estate/[realEstateType]/[city]/index.vue — 전남광주통합�
     await expect(mountPage()).resolves.toBeDefined()
   })
 
-  it('제목/본문에 전남광주통합특별시가 잘리지 않은 형태로 노출되지 않아야 한다 (suffix 예외로 city는 REGIONS 키로만 쓰이고, 화면 표시는 축약되지 않은 원본을 그대로 씀)', async () => {
+  it('제목/본문에 전남광주통합특별시가 잘리지 않고 원본 그대로 노출되어야 한다', async () => {
     const wrapper = await mountPage()
     const text = wrapper.text()
     // suffix-strip 예외가 없다면 cityName='전남광주통합'이 되어 REGIONS 매칭 실패 → 구/군 목록이 비게 된다.

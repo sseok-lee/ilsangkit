@@ -13,6 +13,7 @@ vi.mock('../../src/services/auctionService.js', () => ({
 }));
 
 import app from '../../src/app.js';
+import { getItems, getRanking } from '../../src/services/auctionService.js';
 
 describe('auction routes', () => {
   it('GET /api/auction/items 200', async () => {
@@ -32,4 +33,22 @@ describe('auction routes', () => {
   it('GET /api/auction/ranking 200', async () => {
     expect((await request(app).get('/api/auction/ranking')).status).toBe(200);
   });
+});
+
+describe('auction exact search contract', () => {
+  it('passes trimmed keyword and exact scheduled status', async () => {
+    const result = await request(app).get('/api/auction/items').query({ keyword: '  CLTR-1  ', status: 'scheduled', statusMode: 'exact' });
+    expect(result.status).toBe(200);
+    expect(getItems).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'CLTR-1', status: 'scheduled', statusMode: 'exact' }));
+  });
+  it.each([{ status: 'unknown' }, { statusMode: 'wrong' }, { keyword: 'a'.repeat(101) }])('rejects invalid values %j', async (query) => {
+    expect((await request(app).get('/api/auction/items').query(query)).status).toBe(422);
+  });
+});
+
+
+it('ranking validates and passes trimmed keyword', async () => {
+  expect((await request(app).get('/api/auction/ranking').query({ keyword: '  강남  ', usage: 'land', order: 'count' })).status).toBe(200);
+  expect(getRanking).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: '강남', usage: 'land', order: 'count' }));
+  expect((await request(app).get('/api/auction/ranking').query({ keyword: 'x'.repeat(101) })).status).toBe(422);
 });

@@ -98,6 +98,12 @@ describe('SubscriptionListSchema', () => {
   it('유효하지 않은 sourceType은 실패해야 한다', () => {
     expect(() => SubscriptionListSchema.parse({ sourceType: 'INVALID' })).toThrow();
   });
+
+  it('normalizes a submitted keyword and rejects oversized input', () => {
+    expect(SubscriptionListSchema.parse({ q: '  서울   매입  ' }).q).toBe('서울 매입');
+    expect(SubscriptionListSchema.safeParse({ q: '가'.repeat(101) }).success).toBe(false);
+    expect(SubscriptionListSchema.parse({ q: '%_임대' }).q).toBe('%_임대');
+  });
 });
 
 describe('SubscriptionIdSchema', () => {
@@ -123,6 +129,10 @@ describe('SubscriptionListSchema sort', () => {
     expect(SubscriptionListSchema.parse({ sort: 'deadline' }).sort).toBe('deadline');
     expect(SubscriptionListSchema.parse({ sort: 'startSoon' }).sort).toBe('startSoon');
     expect(SubscriptionListSchema.parse({ sort: 'announcement' }).sort).toBe('announcement');
+  });
+
+  it.each(['priority', 'recent'])('accepts %s sort', sort => {
+    expect(SubscriptionListSchema.parse({ sort }).sort).toBe(sort);
   });
 
   it('잘못된 sort 값은 거부한다', () => {

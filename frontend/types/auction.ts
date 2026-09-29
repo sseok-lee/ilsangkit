@@ -1,5 +1,6 @@
 export const AUCTION_SLUG = 'auction' as const;
 export type UsageGroup = 'residential' | 'land' | 'commercial' | 'industrial' | 'complex' | 'etc';
+export type AuctionStatusMode = 'legacy' | 'exact'
 export type AuctionStatus = 'ongoing' | 'scheduled' | 'negotiable' | 'closed' | 'sold' | 'failed' | 'cancelled';
 
 export interface AuctionItem {

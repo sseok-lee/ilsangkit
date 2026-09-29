@@ -24,12 +24,14 @@
     "sync:toilet": "tsx src/scripts/syncToilet.ts",
     "sync:toilet:geocode": "tsx src/scripts/geocodeToilets.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
+    "waste:publish": "tsx src/scripts/publishWasteGeneration.ts",
     "sync:wifi": "tsx src/scripts/syncWifi.ts",
     "sync:clothes": "tsx src/scripts/syncClothes.ts",
     "sync:parking": "tsx src/scripts/syncParking.ts",
     "sync:aed": "tsx src/scripts/syncAed.ts",
     "sync:library": "tsx src/scripts/syncLibrary.ts",
     "sync:regions": "tsx src/scripts/syncRegion.ts",
+    "sync:public-rental": "tsx src/scripts/syncPublicRental.ts",
     "sync:park": "tsx src/scripts/syncPark.ts",
     "sync:school": "tsx src/scripts/syncSchoolNeis.ts",
     "sync:school:enrollment": "tsx src/scripts/syncSchoolEnrollment.ts",
@@ -61,7 +63,9 @@
     "submit:indexing": "tsx src/scripts/submitIndexing.ts",
     "submit:indexnow-backfill": "tsx src/scripts/submitIndexNowBackfill.ts",
     "report:adsense-coverage": "tsx src/scripts/adsenseCoverageReport.ts",
-    "migrate:news-articles": "tsx src/scripts/migrateNewsGuidesToArticles.ts"
+    "migrate:news-articles": "tsx src/scripts/migrateNewsGuidesToArticles.ts",
+    "summary:prepare-v2": "tsx src/scripts/prepareRealEstateSummaryV2.ts",
+    "summary:verify-v2": "tsx src/scripts/verifyRealEstateSummaryV2.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

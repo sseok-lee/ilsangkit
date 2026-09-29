@@ -6,26 +6,20 @@
 
       <!-- Hero -->
       <PageHero
-        eyebrow="부동산 지역 허브"
+        class="exploration-page-hero"
         :title="heroTitle"
         :description="heroDescription"
         :stats="heroStats"
       />
 
-      <!-- 거래 유형 토글 (매매 ↔ 전월세) -->
-      <SectionBlock heading="거래 유형" subtext="같은 지역에서 매매 시세와 전월세 시세를 바로 비교해 보세요.">
-        <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1 w-fit">
-          <NuxtLink
-            v-for="t in tabOptions"
-            :key="t.type"
-            :to="t.url"
-            :class="[
-              'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
-              t.type === realEstateType
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700',
-            ]"
-          >{{ t.label }}</NuxtLink>
+      <SectionBlock heading="거래 유형과 지역" subtext="건물·거래 유형과 지역을 바꾸면 첫 페이지부터 표시됩니다.">
+        <ExplorationFilters
+          :type="realEstateType"
+          :city="cityName"
+          :district="districtName"
+        />
+        <div class="mt-4 pt-4 border-t border-line flex justify-end">
+          <NuxtLink :to="mapHref" class="map-link">{{ mapLinkLabel }}</NuxtLink>
         </div>
       </SectionBlock>
 
@@ -44,22 +38,32 @@
         </SectionBlock>
       </template>
 
+      <template v-else-if="fetchFailed">
+        <SectionBlock heading="건물 목록">
+          <div class="rounded-lg bg-red-50 px-5 py-8 text-center">
+            <p class="font-semibold text-red-700">건물 목록을 불러오지 못했습니다</p>
+            <p class="mt-1 text-sm text-red-600">잠시 후 다시 시도해 주세요.</p>
+            <button class="retry-button" type="button" @click="retryLoad">다시 시도</button>
+          </div>
+        </SectionBlock>
+      </template>
+
       <template v-else-if="renderableComplexes.length > 0">
         <p v-if="districtSummaryText" class="rounded-xl bg-white border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed">
           {{ districtSummaryText }}
         </p>
 
         <SectionBlock
+          class="exploration-list-section"
           :heading="`${districtName} ${typeLabel} 단지 목록`"
-          :subtext="`유효 단지만 노출. 총 ${totalComplexes.toLocaleString()}곳`"
+          :subtext="`서버 집계 기준 총 ${totalComplexes.toLocaleString()}곳`"
         >
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ComplexCard
-              v-for="complex in renderableComplexes"
-              :key="`${complex.buildingName}-${complex.bjdCode}`"
-              :complex="complex"
-              :property-type="propertyType"
-              :tab="tab"
+          <div class="building-list">
+            <ExplorationBuildingRow
+              v-for="building in renderableComplexes"
+              :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
+              :building="building"
+              :mode="tab"
             />
           </div>
           <AdBanner class="mt-4" />
@@ -101,7 +105,9 @@
             :key="cat.slug"
             :to="`/${citySlug}/${districtSlug}/${cat.slug}`"
             class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-colors"
-          >{{ cat.label }}</NuxtLink>
+          >
+            {{ cat.label }}
+          </NuxtLink>
         </div>
       </SectionBlock>
 
@@ -113,15 +119,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, watchEffect } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
-import { formatKoreanPrice } from '~/utils/formatters'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import EmptyState from '~/components/common/EmptyState.vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
+import { KOREA_BOUNDS } from '~/types/realEstateMap'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import {
   isRealEstateUrlType,
   toRealEstateUrl,
   toRealEstateListUrl,
+  type RealEstateUrlType,
 } from '~/utils/realEstateUrl'
 import { isValidBuildingName } from '~/utils/realEstateBuildingName'
 import { PROPERTY_TYPE_META, buildReRegionDescription } from '~/utils/realEstateMeta'
@@ -135,14 +142,16 @@ import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQ
 import { buildPageHref } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { suppressAds } from '~/composables/useAdsPolicy'
+import { useRegions } from '~/composables/useRegions'
+import { explorationMapHref } from '~/utils/explorationNavigation'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
+import ExplorationBuildingRow from '~/components/realEstate/ExplorationBuildingRow.vue'
 
 const route = useRoute()
-const router = useRouter()
-
 const realEstateType = computed(() => route.params.realEstateType as string)
 const citySlug = computed(() => route.params.city as string)
 const districtSlug = computed(() => route.params.district as string)
@@ -185,8 +194,6 @@ const typeLabel = computed(() => {
 const typeHubPath = computed(() => `/real-estate/${realEstateType.value}`)
 
 const heroTitle = computed(() => `${districtName.value} ${typeLabel.value} 실거래가`)
-// meta description 은 데이터 로드 후의 topComplex/avgLatestPrice 를 참조한다 (아래에서 정의).
-// computed 는 setMeta watch(immediate) 시점(=데이터 세팅 이후)에 평가되므로 참조 순서 문제 없음.
 const heroDescription = computed(() =>
   buildReRegionDescription({
     cityName: cityName.value,
@@ -195,7 +202,6 @@ const heroDescription = computed(() =>
     count: totalComplexes.value,
     topComplexName: topComplex.value?.buildingName,
     topComplexTx: topComplex.value?.transactionCount,
-    avgPriceText: avgLatestPrice.value != null ? formatKoreanPrice(avgLatestPrice.value) : undefined,
   }),
 )
 
@@ -206,19 +212,13 @@ const totalComplexes = ref(0)
 const currentPage = ref(1)
 const totalPages = ref(0)
 const pending = ref(true)
+const clientError = ref(false)
 
 const renderableComplexes = computed<ComplexInfo[]>(() =>
   complexes.value.filter((c) => isValidBuildingName(c.buildingName)),
 )
 
-// 대표 단지(거래 활발 상위) 및 상위 단지 평균 시세 — meta description·요약 문단이 공유한다.
 const topComplex = computed<ComplexInfo | null>(() => renderableComplexes.value[0] ?? null)
-const avgLatestPrice = computed<number | null>(() => {
-  const withPrice = renderableComplexes.value.filter((c) => c.latestPrice !== null && c.latestPrice > 0)
-  return withPrice.length > 0
-    ? Math.round(withPrice.reduce((sum, c) => sum + (c.latestPrice as number), 0) / withPrice.length)
-    : null
-})
 
 const PAGE_SIZE = 24
 
@@ -249,12 +249,13 @@ if (ssrData.value) {
   currentPage.value = ssrData.value.page
 }
 pending.value = false
-const fetchFailed = computed(() => !!error.value)
+const fetchFailed = computed(() => !!error.value || clientError.value)
 
 watchEffect(() => suppressAds(fetchFailed.value || totalComplexes.value === 0))
 
 async function loadPage(page: number) {
   pending.value = true
+  clientError.value = false
   try {
     const res = await getComplexList(
       realEstateType.value as never,
@@ -265,11 +266,18 @@ async function loadPage(page: number) {
       PAGE_SIZE,
     )
     complexes.value = res.items
+    totalComplexes.value = res.total
     currentPage.value = res.page
     totalPages.value = res.totalPages
+  } catch {
+    clientError.value = true
   } finally {
     pending.value = false
   }
+}
+
+function retryLoad(): void {
+  void loadPage(currentPage.value)
 }
 
 // URL `?page=N` 을 갱신한다. page 1 이면 page 키 자체를 제거해 canonical URL 과 동일하게 유지.
@@ -322,7 +330,6 @@ const heroStats = computed(() => {
 const districtSummaryText = computed(() => {
   const count = totalComplexes.value || renderableComplexes.value.length
   if (count === 0) return ''
-  const avgPrice = avgLatestPrice.value
   const top = topComplex.value
   const parts: string[] = [
     `${districtName.value} ${typeLabel.value} 실거래가를 확인할 수 있는 단지는 총 ${count.toLocaleString()}곳입니다.`,
@@ -330,11 +337,7 @@ const districtSummaryText = computed(() => {
   if (top) {
     parts.push(`거래가 가장 활발한 단지는 ${top.buildingName}(${top.transactionCount.toLocaleString()}건)입니다.`)
   }
-  if (avgPrice) {
-    parts.push(`상위 단지 최근 평균 시세는 약 ${formatKoreanPrice(avgPrice)}이며, 국토교통부 실거래가 공개시스템 기반 데이터입니다.`)
-  } else {
-    parts.push('국토교통부 실거래가 공개시스템 기반 데이터입니다.')
-  }
+  parts.push('국토교통부 실거래가 공개시스템 기반 데이터입니다.')
   return parts.join(' ')
 })
 
@@ -346,26 +349,34 @@ const breadcrumbItems = computed(() => [
   { label: districtName.value, current: true },
 ])
 
-const tabOptions = computed(() => [
-  {
-    type: `${propertyType}-sale`,
-    label: '매매',
-    url: toRealEstateListUrl({
-      type: `${propertyType}-sale` as never,
-      city: cityName.value,
-      district: districtName.value,
-    }),
-  },
-  {
-    type: `${propertyType}-rent`,
-    label: '전월세',
-    url: toRealEstateListUrl({
-      type: `${propertyType}-rent` as never,
-      city: cityName.value,
-      district: districtName.value,
-    }),
-  },
-])
+// 구/군 좌표는 지역 메타 API의 실제 좌표만 사용한다. 준비 실패 시 전국 지도 fallback이며,
+// 이 보조 요청의 실패는 위 건물 목록의 오류 상태로 전파하지 않는다.
+const { loadRegions, syncFromHydration, findRegionBySlug } = useRegions()
+const { data: loadedRegions } = await useAsyncData(
+  `re-region-map-center-${citySlug.value}-${districtSlug.value}`,
+  () => loadRegions(),
+  { default: () => [] },
+)
+syncFromHydration(loadedRegions)
+const districtMapCenter = computed(() => {
+  const region = findRegionBySlug(citySlug.value, districtSlug.value)
+  if (
+    !region
+    || !Number.isFinite(region.lat)
+    || !Number.isFinite(region.lng)
+    || region.lat < KOREA_BOUNDS.LAT_MIN
+    || region.lat > KOREA_BOUNDS.LAT_MAX
+    || region.lng < KOREA_BOUNDS.LNG_MIN
+    || region.lng > KOREA_BOUNDS.LNG_MAX
+  ) return null
+  return { lat: region.lat, lng: region.lng, level: 7 }
+})
+const mapHref = computed(() =>
+  explorationMapHref(realEstateType.value as RealEstateUrlType, districtMapCenter.value),
+)
+const mapLinkLabel = computed(() =>
+  districtMapCenter.value ? `${cityName.value} ${districtName.value} 지도에서 보기` : '전국 지도에서 보기',
+)
 
 const crossCategoryLinks = [
   { slug: 'hospital', label: '병원' },
@@ -437,6 +448,7 @@ watch(
             city: cityName.value,
             district: districtName.value,
             buildingName: c.buildingName,
+            buildingKey: c.buildingKey,
           }),
         })),
       )
@@ -447,3 +459,56 @@ watch(
   { immediate: true },
 )
 </script>
+
+<style scoped>
+.exploration-page-hero,
+.exploration-list-section {
+  border-radius: 0;
+  border-right: 0;
+  border-left: 0;
+  box-shadow: none;
+}
+
+.exploration-page-hero :deep(h1) {
+  font-size: 27px;
+}
+
+@media (min-width: 768px) {
+  .exploration-page-hero :deep(h1) {
+    font-size: 36px;
+  }
+}
+
+.map-link,
+.retry-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.map-link {
+  color: #2450dc;
+  text-decoration: none;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  background: #2450dc;
+  padding: 0.5rem 1rem;
+  color: #fff;
+}
+
+.map-link:focus-visible,
+.retry-button:focus-visible {
+  outline: 2px solid #2450dc;
+  outline-offset: 2px;
+}
+
+.building-list {
+  border-top: 1px solid #e6e9f0;
+}
+</style>

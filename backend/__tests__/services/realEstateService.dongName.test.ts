@@ -78,10 +78,9 @@ describe('getBuildingInfo dongName', () => {
     await prisma.aptSaleTransaction.deleteMany({ where: { bjdCode: fixtureBjd } })
   })
 
-  it('returns dongName with the highest transaction count for the building', async () => {
+  it('does not choose the most frequent dong when a name spans different addresses', async () => {
     const info = await getBuildingInfo('apt-sale', fixtureBjd, fixtureBuilding)
-    expect(info).toBeTruthy()
-    expect(info?.dongName).toBe('동A')
+    expect(info).toBeNull()
   })
 
   it('returns dongName=null when no transactions exist', async () => {

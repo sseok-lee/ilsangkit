@@ -23,15 +23,22 @@ import path from 'node:path'
   query: {},
 }))
 
+const routerPush = vi.fn()
+const routerReplace = vi.fn()
+
 ;(globalThis as any).useRouter = vi.fn(() => ({
-  replace: vi.fn(),
-  push: vi.fn(),
+  replace: routerReplace,
+  push: routerPush,
 }))
 
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetItemListSchema = vi.fn()
 const mockSetBuildingPlaceSchema = vi.fn()
 const mockSetRealEstateListingSchema = vi.fn()
+const mockSetFilters = vi.fn()
+const mockGoToPage = vi.fn()
+const mockRefresh = vi.fn()
+const mockRefreshOverview = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
@@ -52,6 +59,40 @@ vi.mock('~/composables/useRealEstate', () => ({
     getComplexList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 }),
   }),
 }))
+
+vi.mock('~/composables/useRealEstateDetail', async () => {
+  const { ref } = await import('vue')
+  return {
+    useRealEstateDetail: () => ({
+      overview: ref(null),
+      snapshot: ref({
+        filters: {
+          bjdCode: '1168010100',
+          buildingName: '반포자이',
+          mode: 'sale',
+          months: 6,
+          area: '84.90',
+          deposit: null,
+        },
+        options: { areas: ['84.90'], deposits: [] },
+        points: [],
+        window: { from: '2026-04-01', to: '2026-09-29' },
+        table: { items: [], total: 0, page: 1, totalPages: 0 },
+      }),
+      table: ref({ items: [], total: 0, page: 1, totalPages: 0 }),
+      pending: ref(false),
+      tablePending: ref(false),
+      error: ref(null),
+      overviewError: ref(null),
+      tableError: ref(null),
+      announcement: ref(''),
+      setFilters: mockSetFilters,
+      goToPage: mockGoToPage,
+      refresh: mockRefresh,
+      refreshOverview: mockRefreshOverview,
+    }),
+  }
+})
 
 vi.mock('~/composables/useApiBase', () => ({
   useApiBase: () => '',
@@ -84,7 +125,9 @@ vi.mock('~/utils/seoConstants', () => ({
 
 vi.mock('~/utils/realEstateUrl', () => ({
   isRealEstateUrlType: vi.fn(() => true),
-  toRealEstateUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`),
+  toRealEstateUrl: vi.fn((p: any) =>
+    `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}${p.buildingKey ? `/${p.buildingKey}` : ''}`
+  ),
   toRealEstateListUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}`),
 }))
 
@@ -105,6 +148,16 @@ beforeEach(() => {
   mockSetItemListSchema.mockClear()
   mockSetBuildingPlaceSchema.mockClear()
   mockSetRealEstateListingSchema.mockClear()
+  mockSetFilters.mockClear()
+  mockGoToPage.mockClear()
+  mockRefresh.mockClear()
+  mockRefreshOverview.mockClear()
+  routerPush.mockClear()
+  routerReplace.mockClear()
+  vi.mocked((globalThis as any).useRoute).mockReturnValue({
+    params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
+    query: {},
+  })
 })
 
 async function mountSuspended(component: any, options?: any) {
@@ -130,6 +183,11 @@ async function mountSuspended(component: any, options?: any) {
           RelatedGuides: { template: '<div />' },
           FacilityMap: { template: '<div />' },
           TransactionModeTab: { template: '<div />' },
+          ExactDealFilters: {
+            template: '<button data-testid="emit-wolse" @click="$emit(\'patch\', { mode: \'wolse\' })">월세</button>',
+            props: ['filters', 'options', 'pending'],
+            emits: ['patch'],
+          },
         },
         ...options?.global,
       },
@@ -259,13 +317,13 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(sec.classes()).toContain('md:order-4')
   })
 
-  it('거래 내역 섹션이 데스크톱 md:order-9 를 가진다 (위치보다 아래는 아님: 위치는 md:order-7)', async () => {
+  it('거래 내역 섹션이 데스크톱 md:order-7 를 가진다 (승인된 차트→광고→표 순서)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
-    // 거래 내역 SectionBlock은 order-6 md:order-9 (유일한 order-6 section)
+    // 거래 내역 flat section은 order-6 md:order-7 (유일한 order-6 section)
     const sec = sectionByOrderClass(wrapper, 'order-6')
     expect(sec, '거래 내역 섹션(order-6)이 렌더되어야 한다').toBeTruthy()
-    expect(sec.classes()).toContain('md:order-9')
+    expect(sec.classes()).toContain('md:order-7')
   })
 
   it('재배치 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
@@ -274,37 +332,25 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
-  // ---------------- 건축년도 칩 '(N년차)' 병기 (PR ⑪ Task 1) ----------------
-  // 이 페이지의 heroStats.건축년도는 buildingInfo(useAsyncData 경유 SSR fetch, 없으면
-  // import.meta.client 게이트의 client-side loadData() fallback)에 의존한다. 이 테스트
-  // 하네스의 전역 useAsyncData mock(tests/setup.ts)은 fetcher를 호출하지 않고, 이 vitest
-  // 환경(plain @vitejs/plugin-vue, Nuxt 빌드 파이프라인 없음)에선 import.meta.client도
-  // falsy라 client fallback도 트리거되지 않는다 — 즉 마운트로는 buildingInfo.value를
-  // 실제 채울 수 없다(실측: mock 오버라이드해도 getBuildingInfo 호출 0회).
-  // 형제 가드(buildingDetailHeroEmpty.test.ts)가 동일한 이유로 채택한 소스 텍스트 계약
-  // 고정 방식을 따른다 — "페이지 마운트는 과도하므로 소스 가드 채택".
-  it('건축년도 heroStats 항목이 buildYearLabel(...) ?? PLACEHOLDER 계약을 사용한다', () => {
+  it('상단 요약은 승인된 overview 필드와 flat section anchor를 사용한다', () => {
     const targetPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
     )
     const src = readFileSync(targetPath, 'utf-8')
 
-    // import: buildYearLabel(~/utils/formatters), getCurrentYear(~/utils/seoConstants)
-    expect(src).toMatch(/import\s*\{[^}]*buildYearLabel[^}]*\}\s*from\s*'~\/utils\/formatters'/)
-    expect(src).toMatch(/import\s*\{[^}]*getCurrentYear[^}]*\}\s*from\s*'~\/utils\/seoConstants'/)
-
-    // heroStats 건축년도 라인: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER
-    expect(src).toContain(
-      "{ label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },",
-    )
-
-    // 다른 heroStats 항목(최근 거래가/거래일/전·월세비중/전용면적)은 이 PR에서 손대지 않는다
-    expect(src).toContain("{ label: '최근 거래가', value: recent }")
-    expect(src).toContain("{ label: '전·월세 비중', value: rentRatioLabel.value }")
+    expect(src).toContain('latestSaleAmountLabel')
+    expect(src).toContain('latestSaleDetailLine')
+    expect(src).toContain('overviewBuildYearLabel')
+    expect(src).toContain('overviewAreaRangeLabel')
+    expect(src).toContain('overviewSaleCount6mLabel')
+    expect(src).toContain('detailOverview.value?.latestSale')
+    expect(src).toContain('<nav class="estate-section-nav"')
+    expect(src).toContain('href="#transactions"')
+    expect(src).not.toContain('heroStats')
+    expect(src).not.toContain('MobileDetailHeader')
+    expect(src).not.toContain('PageHero')
   })
-
-  // buildYearLabel 자체의 '(N년차)' 병기 행동은 tests/utils/formatters.test.ts에서 결정적으로 검증됨.
 
   it('재배치·건축년도 병기 변경 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
@@ -312,13 +358,47 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
-  it('기간 필터 버튼은 선택 상태를 aria-pressed로 노출한다', () => {
+  it('정확 조건 필터·차트·표는 새 상세 스냅샷 계약에 연결된다', () => {
     const targetPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
     )
     const src = readFileSync(targetPath, 'utf-8')
 
-    expect(src).toContain(':aria-pressed="selectedMonths === opt.value"')
+    expect(src).toContain('<ExactDealFilters')
+    expect(src).toContain('@patch="handleExactFilterPatch"')
+    expect(src).toContain('<DealPriceChart')
+    expect(src).toContain(':points="snapshot.points"')
+    expect(src).toContain(':window="snapshot.window"')
+    expect(src).toContain(':transactions="table.items"')
+    expect(src).toContain('@page-change="goToExactPage"')
+    expect(src).not.toContain('getTransactionStats')
+    expect(src).not.toContain('searchTransactions')
+    expect(src).not.toContain('getAreaGroups')
+  })
+
+  it('매매 상세에서 월세로 이동할 때 같은 buildingKey 경로와 mode=wolse query를 한 번에 push한다', async () => {
+    const buildingKey = 'a'.repeat(64)
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: {
+        realEstateType: 'apt-sale',
+        city: 'seoul',
+        district: 'gangnam',
+        buildingName: '반포자이',
+        buildingKey,
+      },
+      query: {},
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    await wrapper.get('[data-testid="emit-wolse"]').trigger('click')
+    await flushPromises()
+
+    expect(routerPush).toHaveBeenCalledWith({
+      path: expect.stringContaining(`/real-estate/apt-rent/서울/강남구/반포자이/${buildingKey}`),
+      query: { mode: 'wolse' },
+    })
+    expect(routerPush).toHaveBeenCalledTimes(1)
   })
 })

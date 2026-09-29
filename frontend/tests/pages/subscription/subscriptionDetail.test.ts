@@ -3,6 +3,14 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref, computed, watch, watchEffect, onMounted, onUnmounted, defineComponent, h, Suspense } from 'vue'
 import SubscriptionDetail from '~/pages/subscription/[id].vue'
 
+const { setMetaMock, setBreadcrumbSchemaMock, setEventSchemaMock, setDetailProvenanceMock, trackSubscriptionViewMock } = vi.hoisted(() => ({
+  setMetaMock: vi.fn(),
+  setBreadcrumbSchemaMock: vi.fn(),
+  setEventSchemaMock: vi.fn(),
+  setDetailProvenanceMock: vi.fn(),
+  trackSubscriptionViewMock: vi.fn(),
+}))
+
 // Nuxt auto-import shims (ref/computed/watch are auto-imported in Nuxt but not in vitest)
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
@@ -24,13 +32,17 @@ vi.mock('~/composables/useSubscription', () => ({
   useSubscription: () => ({ getSubscriptionDetail: vi.fn() }),
 }))
 vi.mock('~/composables/useStructuredData', () => ({
-  useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setEventSchema: vi.fn(), setDetailProvenance: vi.fn() }),
+  useStructuredData: () => ({
+    setBreadcrumbSchema: setBreadcrumbSchemaMock,
+    setEventSchema: setEventSchemaMock,
+    setDetailProvenance: setDetailProvenanceMock,
+  }),
 }))
 vi.mock('~/composables/useAnalytics', () => ({
-  useAnalytics: () => ({ trackSubscriptionView: vi.fn() }),
+  useAnalytics: () => ({ trackSubscriptionView: trackSubscriptionViewMock }),
 }))
 vi.mock('~/composables/useFacilityMeta', () => ({
-  useFacilityMeta: () => ({ setMeta: vi.fn() }),
+  useFacilityMeta: () => ({ setMeta: setMetaMock }),
 }))
 
 vi.stubGlobal('definePageMeta', vi.fn())
@@ -83,7 +95,7 @@ const stubs = {
   FacilityRoadview: { template: '<div data-testid="roadview">Roadview</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
   SubscriptionScheduleTimeline: { template: '<div data-testid="schedule">Schedule</div>', props: ['subscription'] },
-  RentalPriceStatsBox: { template: '<div />', props: ['subscriptionId', 'regionName'] },
+  RentalPriceStatsBox: { template: '<div data-testid="rental-price-stats" />', props: ['subscriptionId', 'regionName'] },
   RelatedGuides: { template: '<div data-testid="related-guides" />', props: ['categories', 'limit'] },
   DataSourceSection: { template: '<div data-testid="data-source" />', props: ['domain', 'lastSyncDate'] },
   AdBanner: { template: '<div data-testid="ad-banner" />' },
@@ -95,7 +107,7 @@ const stubs = {
   },
   // PageHero: title-tag로 제목 태그 결정(상세는 div 강등 → h1 아님)
   PageHero: {
-    template: '<section class="hidden md:block"><component :is="titleTag || \'h1\'">{{ title }}</component></section>',
+    template: '<section class="hidden md:block"><component :is="titleTag || \'h1\'">{{ title }}</component><dl><template v-for="stat in stats" :key="stat.label"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></template></dl></section>',
     props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
   },
 }
@@ -135,6 +147,7 @@ function adAdjacencyViolations(wrapper: Awaited<ReturnType<typeof mountSuspended
 
 describe('subscription/[id].vue 섹션 재배치', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mockUseAsyncDataWith({ ...mockSubscription, unitTypes: mockUnitTypes, competitions: [], scores: [], specialStatuses: [] })
   })
 
@@ -211,6 +224,189 @@ describe('subscription/[id].vue 섹션 재배치', () => {
     const ds = wrapper.find('[data-testid="data-source"]')
     expect(ds.exists()).toBe(true)
   })
+
+  it('분양 상세는 분양가 헤더와 평당가를 유지한다', async () => {
+    const wrapper = await mountSuspended()
+    const text = wrapper.text()
+    expect(text).toContain('분양가')
+    expect(text).toContain('분양최고가')
+    expect(text).toContain('평당가')
+    expect(text).toContain('12억')
+    expect(setMetaMock).toHaveBeenCalledWith(expect.objectContaining({
+      description: expect.stringContaining('분양가'),
+    }))
+  })
+
+  it('정규화된 공공임대 상세는 가격을 지어내지 않고 임대 시세와 임대 breadcrumb를 유지한다', async () => {
+    mockUseAsyncDataWith({
+      ...mockSubscription,
+      rentType: '임대주택',
+      unitTypes: [{ ...mockUnitTypes[0], topAmount: 5000 }],
+      competitions: [],
+      scores: [],
+      specialStatuses: [],
+    })
+    const wrapper = await mountSuspended()
+    const text = wrapper.text()
+
+    expect(text).toContain('임대 · 마감')
+    expect(text).toContain('공공임대')
+    expect(text).toContain('임대 조건')
+    expect(text).toContain('원문 확인')
+    expect(text).not.toContain('분양가')
+    expect(text).not.toContain('분양최고가')
+    expect(text).not.toContain('평당가')
+    expect(text).not.toContain('5,000만원')
+    expect(wrapper.find('[data-testid="rental-price-stats"]').exists()).toBe(true)
+    expect(setBreadcrumbSchemaMock).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ name: '임대', url: expect.stringContaining('/subscription/rent') }),
+    ]))
+    expect(setMetaMock).toHaveBeenCalledWith(expect.objectContaining({
+      description: expect.not.stringContaining('분양가'),
+    }))
+  })
+
+  it('공급 표에서 0세대와 미제공을 구분하고 같은 unitTypes로 모바일 요약과 전체표를 렌더한다', async () => {
+    mockUseAsyncDataWith({
+      ...mockSubscription,
+      totalSupplyCount: 0,
+      unitTypes: [
+        {
+          ...mockUnitTypes[0],
+          generalCount: 0,
+          specialCount: null,
+          topAmount: null,
+          newlywedsCount: 0,
+          multiChildCount: 2,
+        },
+      ],
+      competitions: [],
+      scores: [],
+      specialStatuses: [],
+    })
+    const wrapper = await mountSuspended()
+    const text = wrapper.text()
+
+    expect(text).toContain('0호')
+    expect(text).toContain('0세대')
+    expect(text).toContain('미제공')
+    expect(wrapper.find('[aria-label="면적별 공급정보 전체 표"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="unit-summary-list"]').exists()).toBe(true)
+  })
+
+
+
+  it('다중 주택형 합계에서 전부 미제공인 공급수는 0으로 만들지 않고 일부 알려진 값은 합산한다', async () => {
+    mockUseAsyncDataWith({
+      ...mockSubscription,
+      unitTypes: [
+        {
+          ...mockUnitTypes[0],
+          id: 1,
+          houseType: '059.0000A',
+          generalCount: null,
+          specialCount: null,
+          topAmount: null,
+        },
+        {
+          ...mockUnitTypes[0],
+          id: 2,
+          houseType: '084.0000A',
+          generalCount: null,
+          specialCount: 0,
+          topAmount: null,
+        },
+      ],
+      competitions: [],
+      scores: [],
+      specialStatuses: [],
+    })
+    const wrapper = await mountSuspended()
+    const footer = wrapper.find('tfoot')
+
+    expect(footer.exists()).toBe(true)
+    expect(footer.text()).toContain('미제공')
+    expect(footer.text()).toContain('0호')
+    expect(footer.text()).not.toContain('0호0호0호')
+  })
+
+  it('다중 주택형 합계에서 일반·특별 공급이 모두 미제공이면 합계도 미제공으로 남긴다', async () => {
+    mockUseAsyncDataWith({
+      ...mockSubscription,
+      unitTypes: [
+        { ...mockUnitTypes[0], id: 1, houseType: '059.0000A', generalCount: null, specialCount: null, topAmount: null },
+        { ...mockUnitTypes[0], id: 2, houseType: '084.0000A', generalCount: null, specialCount: null, topAmount: null },
+      ],
+      competitions: [],
+      scores: [],
+      specialStatuses: [],
+    })
+    const wrapper = await mountSuspended()
+    const footerText = wrapper.find('tfoot').text()
+
+    expect((footerText.match(/미제공/g) || []).length).toBeGreaterThanOrEqual(3)
+    expect(footerText).not.toContain('0호')
+  })
+
+  it('PUBLIC_RENT 상세는 공급지역별 조건을 렌더하고 다지역 지도와 시세 연동을 막는다', async () => {
+    mockUseAsyncDataWith({
+      ...mockSubscription,
+      sourceType: 'PUBLIC_RENT',
+      status: 'unknown',
+      houseName: 'LH 국민임대 전국 모집',
+      houseType: '공공임대',
+      rentType: '국민임대',
+      regionName: '전국',
+      supplyLocation: '전국',
+      totalSupplyCount: null,
+      developerName: '한국토지주택공사',
+      pblancUrl: 'https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do',
+      lat: 37.5,
+      lng: 127.0,
+      publicRental: {
+        provider: '한국토지주택공사',
+        sources: ['MYHOME', 'LH'],
+        sourceIds: { myhome: ['M-1'], lh: ['L-1'] },
+        sourceStatus: null,
+        lastSyncedAt: '2026-09-21T00:00:00.000Z',
+        isCorrection: false,
+        supplies: [
+          { key: 'a', name: '강남권 국민임대', region: '서울 강남구', address: '서울 강남구 자곡동', supplyCount: 24, deposit: 12000000, monthlyRent: 180000, receptionStartDate: '2026-10-01', receptionEndDate: '2026-10-08' },
+          { key: 'b', name: '수원 매입임대', region: '경기 수원시', address: null, supplyCount: null, deposit: null, monthlyRent: null, receptionStartDate: null, receptionEndDate: null },
+        ],
+      },
+      unitTypes: [],
+      competitions: [],
+      scores: [],
+      specialStatuses: [],
+    })
+
+    const wrapper = await mountSuspended()
+    const text = wrapper.text()
+
+    expect(text).toContain('공공임대 · 일정 확인 필요')
+    expect(text).toContain('공공임대 공급정보')
+    expect(text).toContain('한국토지주택공사')
+    expect(text).toContain('마이홈')
+    expect(text).toContain('LH')
+    expect(text).toContain('강남권 국민임대')
+    expect(text).toContain('서울 강남구')
+    expect(text).toContain('24호')
+    expect(text).toContain('최소 보증금')
+    expect(text).toContain('최소 월임대료')
+    expect(text).toContain('1,200만원')
+    expect(text).toContain('18만원')
+    expect(text).toContain('2026-10-01 ~ 2026-10-08')
+    expect(text).toContain('원문 확인')
+    expect(wrapper.find('[data-testid="facility-map"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="rental-price-stats"]').exists()).toBe(false)
+    expect(text).not.toContain('면적별 공급정보')
+    expect(text).not.toContain('면적별 경쟁률')
+    expect(setBreadcrumbSchemaMock).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ name: '임대', url: expect.stringContaining('/subscription/rent') }),
+    ]))
+  })
+
 
   it('렌더 중 콘솔 에러가 없다', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})

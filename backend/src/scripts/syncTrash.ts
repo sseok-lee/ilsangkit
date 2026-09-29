@@ -6,8 +6,18 @@ import { PublicApiClient } from '../services/publicApiClient.js';
 import prisma from '../lib/prisma.js';
 import type { Prisma } from '@prisma/client';
 import crypto from 'crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { SYNC } from '../constants/index.js';
 import { normalizeRegionName } from '../lib/normalizeRegionName.js';
+import {
+  assertWasteAreaDiscoveryWriteEnabled,
+  prepareWasteGeneration,
+} from '../services/wastePublicationService.js';
+import type { ReferenceBundle } from '../types/wasteArea.js';
+import { loadValidatedWasteReferences, type WasteReferenceInput, type WasteReferenceMetadata } from '../services/wasteReferenceLoader.js';
+import { resolveWasteSyncCliOptions } from './wasteSyncOptions.js';
 
 /**
  * 공공데이터 API 응답 타입 (생활쓰레기 배출정보)
@@ -142,17 +152,47 @@ interface SyncOptions {
   dryRun?: boolean;
   /** 페이지 크기 (기본값: 100) */
   pageSize?: number;
+  /** @deprecated Use npm run waste:publish instead. */
+  approvalReportHash?: string;
+  /** @deprecated Use npm run waste:publish instead. */
+  expectedBaseGenerationId?: string | null;
+  references?: ReferenceBundle;
+  referenceMetadata?: WasteReferenceMetadata;
+  referenceInput?: WasteReferenceInput;
+  reportOut?: string;
 }
 
 /**
  * 동기화 결과
  */
 interface SyncResult {
+  status?: 'dry-run' | 'prepared';
   totalRecords: number;
   newRecords: number;
   updatedRecords: number;
   skippedRecords: number;
+  generationId?: string | null;
+  reportHash?: string;
+  canPublish?: boolean;
+  reviewReport?: unknown;
 }
+
+interface PageEvidence<T> {
+  pageNo: number;
+  numOfRows: number;
+  totalCount: number;
+  itemCount: number;
+  fingerprint: string;
+  items: T[];
+}
+
+interface CompleteTrashPages {
+  items: TrashApiResponse[];
+  pages: PageEvidence<TrashApiResponse>[];
+  totalCount: number;
+}
+
+type ErrnoException = Error & { code?: string };
 
 /**
  * API 응답 데이터를 WasteSchedule 모델로 변환
@@ -250,39 +290,99 @@ export function transformTrashData(row: TrashApiResponse): TransformedWasteSched
   };
 }
 
+export async function fetchCompleteTrashPages(
+  serviceKey: string,
+  pageSize: number = SYNC.PAGE_SIZE
+): Promise<CompleteTrashPages> {
+  const client = new PublicApiClient(
+    'https://apis.data.go.kr/1741000/household_waste_info/info',
+    serviceKey,
+    { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
+  );
+  const pages: PageEvidence<TrashApiResponse>[] = [];
+  const seenPageNumbers = new Set<number>();
+  let expectedTotalCount: number | null = null;
+  let totalPages = 1;
+
+  for (let pageNo = 1; pageNo <= totalPages; pageNo += 1) {
+    const response = await client.fetchData<TrashApiResponse>({
+      pageNo,
+      numOfRows: pageSize,
+    });
+    const body = response.response.body;
+    const items = normalizeApiItems(body.items);
+
+    if (body.pageNo !== pageNo) {
+      throw new Error(`Trash page index mismatch: expected ${pageNo}, got ${body.pageNo}`);
+    }
+    if (seenPageNumbers.has(body.pageNo)) {
+      throw new Error(`Trash duplicate page index: ${body.pageNo}`);
+    }
+    seenPageNumbers.add(body.pageNo);
+    if (body.numOfRows !== pageSize && pageNo !== Math.ceil(body.totalCount / pageSize || 1)) {
+      throw new Error(`Trash page size mismatch on page ${pageNo}`);
+    }
+    if (expectedTotalCount === null) {
+      expectedTotalCount = body.totalCount;
+      totalPages = Math.max(1, Math.ceil(body.totalCount / pageSize));
+    } else if (expectedTotalCount !== body.totalCount) {
+      throw new Error('Trash totalCount changed across pages');
+    }
+
+    pages.push({
+      pageNo: body.pageNo,
+      numOfRows: body.numOfRows,
+      totalCount: body.totalCount,
+      itemCount: items.length,
+      fingerprint: createHash('sha256').update(JSON.stringify(response)).digest('hex'),
+      items,
+    });
+  }
+
+  const items = pages.flatMap((page) => page.items);
+  const totalCount = expectedTotalCount ?? 0;
+  if (items.length !== totalCount) {
+    throw new Error(`Trash incomplete page collection: expected ${totalCount}, got ${items.length}`);
+  }
+
+  return { items, pages, totalCount };
+}
+
 /**
  * 쓰레기 배출 일정 데이터 동기화 실행
  * @param options - 동기화 옵션
  * @returns 동기화 결과
  */
 export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
-  const { serviceKey, dryRun = false, pageSize = SYNC.PAGE_SIZE } = options;
+  const {
+    serviceKey,
+    dryRun = false,
+    pageSize = SYNC.PAGE_SIZE,
+  } = options;
+
+  rejectLegacyPublicationOptions(options);
 
   const result: SyncResult = {
+    status: dryRun ? 'dry-run' : 'prepared',
     totalRecords: 0,
     newRecords: 0,
     updatedRecords: 0,
     skippedRecords: 0,
   };
 
-  // SyncHistory 생성
-  const syncHistory = await prisma.syncHistory.create({
-    data: {
-      category: 'waste_schedule',
-      status: 'running',
-    },
-  });
+  if (!dryRun) {
+    assertWasteAreaDiscoveryWriteEnabled();
+  }
 
   try {
-    // API 클라이언트 생성
-    const client = new PublicApiClient(
-      'https://apis.data.go.kr/1741000/household_waste_info/info',
-      serviceKey,
-      { maxRetries: SYNC.MAX_RETRIES, retryDelay: SYNC.RETRY_BASE_DELAY_MS }
-    );
+    const loadedReferences = await resolveWasteReferences(options, dryRun);
+    if (options.reportOut) {
+      await verifyReviewReportDestination(options.reportOut);
+    }
 
-    // 모든 페이지 데이터 조회
-    const allItems = await client.fetchAllPages<TrashApiResponse>(pageSize);
+    // 모든 페이지 데이터 조회 + 페이지 증거 검증
+    const collection = await fetchCompleteTrashPages(serviceKey, pageSize);
+    const allItems = collection.items;
 
     console.info(`[syncTrashData] Fetched ${allItems.length} items from API`);
 
@@ -294,132 +394,215 @@ export async function syncTrashData(options: SyncOptions): Promise<SyncResult> {
       if (transformed) {
         transformedItems.push(transformed);
       } else {
-        result.skippedRecords++;
+        throw new Error('Trash parse failed for a source row');
       }
     }
     result.totalRecords = transformedItems.length;
     console.info(`Transformed ${transformedItems.length} items, skipped ${result.skippedRecords}`);
 
-    if (dryRun) {
-      result.newRecords = transformedItems.length;
-    } else {
-      // 배치 upsert (트랜잭션 래핑)
-      console.info('Upserting to database...');
-      const BATCH_SIZE = SYNC.BATCH_SIZE;
-      for (let i = 0; i < transformedItems.length; i += BATCH_SIZE) {
-        const batch = transformedItems.slice(i, i + BATCH_SIZE);
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(transformedItems.length / BATCH_SIZE);
-
-        try {
-          // 각 배치를 트랜잭션으로 래핑
-          await prisma.$transaction(async (tx) => {
-            for (const transformed of batch) {
-              const existing = await tx.wasteSchedule.findUnique({
-                where: {
-                  city_district_sourceId: {
-                    city: transformed.city,
-                    district: transformed.district,
-                    sourceId: transformed.sourceId,
-                  },
-                },
-              });
-
-              const detailsJson = transformed.details as unknown as Prisma.InputJsonValue;
-              await tx.wasteSchedule.upsert({
-                where: {
-                  city_district_sourceId: {
-                    city: transformed.city,
-                    district: transformed.district,
-                    sourceId: transformed.sourceId,
-                  },
-                },
-                create: {
-                  ...transformed,
-                  details: detailsJson,
-                  syncedAt: new Date(),
-                },
-                update: {
-                  targetRegion: transformed.targetRegion,
-                  emissionPlace: transformed.emissionPlace,
-                  details: detailsJson,
-                  govCode: transformed.govCode,
-                  syncedAt: new Date(),
-                },
-              });
-
-              if (existing) {
-                result.updatedRecords++;
-              } else {
-                result.newRecords++;
-              }
-            }
-          });
-
-          // 배치 완료마다 SyncHistory 진행 상황 업데이트
-          await prisma.syncHistory.update({
-            where: { id: syncHistory.id },
-            data: {
-              newRecords: result.newRecords,
-              updatedRecords: result.updatedRecords,
-            },
-          });
-
-          console.info(`Batch ${batchNumber}/${totalBatches} completed: ${Math.min(i + BATCH_SIZE, transformedItems.length)}/${transformedItems.length}`);
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          console.error(`Batch ${batchNumber}/${totalBatches} failed: ${errorMsg}`);
-          throw new Error(`Batch ${batchNumber} upsert failed: ${errorMsg}. Processed: ${i}/${transformedItems.length}`);
-        }
-      }
-    }
-
-    // SyncHistory 업데이트 (성공)
-    await prisma.syncHistory.update({
-      where: { id: syncHistory.id },
-      data: {
-        status: 'success',
-        totalRecords: result.totalRecords,
-        newRecords: result.newRecords,
-        updatedRecords: result.updatedRecords,
-        completedAt: new Date(),
+    const preparedRows = dryRun
+      ? transformedItems.map((item, index) => ({ ...item, scheduleId: -(index + 1), rawPayload: allItems[index] }))
+      : await reserveRawWasteSchedules(transformedItems, allItems);
+    const baseGenerationId = dryRun ? null : await readActiveWasteGenerationId();
+    const prepared = await prepareWasteGeneration({
+      baseGenerationId,
+      references: loadedReferences.references,
+      rows: preparedRows,
+      provenance: 'raw',
+      sourceComplete: true,
+      dryRun,
+      evidence: {
+        collection: buildCollectionEvidence(collection, transformedItems.length),
+        reference: loadedReferences.metadata,
       },
     });
+    result.generationId = prepared.generationId;
+    result.reportHash = prepared.reportHash;
+    result.canPublish = prepared.canPublish;
+    result.reviewReport = prepared.reviewReport;
+    if (options.reportOut) {
+      await writeReviewReport(options.reportOut, prepared.reviewReport);
+    }
+    if (dryRun) {
+      result.newRecords = transformedItems.length;
+      return result;
+    }
 
-    console.info(`[syncTrashData] Sync completed:`, result);
+    const loggedResult: SyncResult = { ...result };
+    delete loggedResult.reviewReport;
+    console.info(`[syncTrashData] Sync completed:`, loggedResult);
 
     return result;
   } catch (error) {
-    // SyncHistory 업데이트 (실패)
-    await prisma.syncHistory.update({
-      where: { id: syncHistory.id },
-      data: {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-        completedAt: new Date(),
-      },
-    });
+    if (!dryRun) {
+      await recordFailedWasteSyncAttempt(error);
+    }
 
     throw error;
   }
 }
 
+function rejectLegacyPublicationOptions(options: SyncOptions): void {
+  if (options.approvalReportHash !== undefined || options.expectedBaseGenerationId !== undefined) {
+    throw new Error('Trash sync now prepares candidates only. Publish with npm run waste:publish after reviewing the report.');
+  }
+}
+
+async function readActiveWasteGenerationId(): Promise<string | null> {
+  const publication = await prisma.wastePublication.findUnique({
+    where: { id: 1 },
+    select: { activeGenerationId: true },
+  });
+  return publication?.activeGenerationId ?? null;
+}
+
+export async function reserveRawWasteSchedules(
+  items: TransformedWasteSchedule[],
+  rawRows: TrashApiResponse[]
+): Promise<Array<TransformedWasteSchedule & { scheduleId: number; rawPayload: TrashApiResponse }>> {
+  const reserved: Array<TransformedWasteSchedule & { scheduleId: number; rawPayload: TrashApiResponse }> = [];
+  const BATCH_SIZE = SYNC.BATCH_SIZE;
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    const rawBatch = rawRows.slice(i, i + BATCH_SIZE);
+    const batchReserved = await prisma.$transaction(async (tx) => {
+      const rows: Array<TransformedWasteSchedule & { scheduleId: number; rawPayload: TrashApiResponse }> = [];
+      for (let j = 0; j < batch.length; j += 1) {
+        const transformed = batch[j];
+        const existing = await tx.wasteSchedule.findUnique({
+          where: {
+            city_district_sourceId: {
+              city: transformed.city,
+              district: transformed.district,
+              sourceId: transformed.sourceId,
+            },
+          },
+          select: { id: true },
+        });
+        if (existing) {
+          rows.push({ ...transformed, scheduleId: existing.id, rawPayload: rawBatch[j] });
+          continue;
+        }
+        const schedule = await tx.wasteSchedule.create({
+          data: {
+            ...transformed,
+            details: transformed.details as unknown as Prisma.InputJsonValue,
+            syncedAt: new Date(),
+          },
+          select: { id: true },
+        });
+        await tx.wasteStagedSchedule.create({
+          data: { scheduleId: schedule.id },
+        });
+        rows.push({ ...transformed, scheduleId: schedule.id, rawPayload: rawBatch[j] });
+      }
+      return rows;
+    });
+    reserved.push(...batchReserved);
+  }
+  return reserved;
+}
+
+async function recordFailedWasteSyncAttempt(error: unknown): Promise<void> {
+  await prisma.syncHistory.create({
+    data: {
+      category: 'waste_schedule',
+      status: 'failed',
+      errorMessage: error instanceof Error ? error.message : String(error),
+      completedAt: new Date(),
+    },
+  });
+}
+
+async function resolveWasteReferences(
+  options: Pick<SyncOptions, 'references' | 'referenceMetadata' | 'referenceInput'>,
+  dryRun: boolean
+): Promise<{ references: ReferenceBundle; metadata?: WasteReferenceMetadata }> {
+  if (options.references) {
+    return { references: options.references, metadata: options.referenceMetadata };
+  }
+  if (!options.referenceInput) {
+    if (dryRun) {
+      return { references: { version: 'dry-run-empty-reference', areas: [], relations: [], sourceAreaKinds: {} } };
+    }
+    throw new Error('Explicit validated reference input is required before waste collection writes');
+  }
+  return loadValidatedWasteReferences(options.referenceInput);
+}
+
+function buildCollectionEvidence(collection: CompleteTrashPages, transformedCount: number) {
+  return {
+    pageCount: collection.pages.length,
+    totalCount: collection.totalCount,
+    pageFingerprints: collection.pages.map((page) => page.fingerprint),
+    parseFailureCount: collection.totalCount - transformedCount,
+    rawSourceRowCount: collection.items.length,
+  };
+}
+
+
+export function redactSyncResultForLog(result: SyncResult): Omit<SyncResult, 'reviewReport'> {
+  const loggedResult: SyncResult = { ...result };
+  delete loggedResult.reviewReport;
+  return loggedResult;
+}
+
+async function writeReviewReport(reportOut: string, report: unknown): Promise<void> {
+  const resolved = path.resolve(reportOut);
+  const dir = path.dirname(resolved);
+  await mkdir(dir, { recursive: true });
+  const tempPath = path.join(dir, `.${path.basename(resolved)}.${process.pid}.${randomUUID()}.tmp`);
+  await writeFile(tempPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  await rename(tempPath, resolved);
+}
+
+async function verifyReviewReportDestination(reportOut: string): Promise<void> {
+  const resolved = path.resolve(reportOut);
+  const dir = path.dirname(resolved);
+  try {
+    const existing = await stat(resolved).catch((error: ErrnoException) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (existing?.isDirectory()) {
+      throw new Error('path is a directory');
+    }
+    await mkdir(dir, { recursive: true });
+    const tempPath = path.join(dir, `.${path.basename(resolved)}.preflight.${process.pid}.${randomUUID()}.tmp`);
+    await writeFile(tempPath, '', 'utf8');
+    await rm(tempPath, { force: true });
+  } catch (error) {
+    throw new Error(`Waste report destination is not writable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function normalizeApiItems<T>(items: T[] | { item: T | T[] } | null | undefined): T[] {
+  if (!items) return [];
+  if (Array.isArray(items)) return items;
+  if (typeof items === 'object' && 'item' in items) {
+    return Array.isArray(items.item) ? items.item : [items.item];
+  }
+  return [];
+}
+
 // CLI 실행 지원
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const serviceKey = process.env.OPENAPI_SERVICE_KEY;
-
-  if (!serviceKey) {
-    console.error('OPENAPI_SERVICE_KEY environment variable is required');
+  const legacyPublishArg = process.argv
+    .slice(2)
+    .find((arg) => arg.startsWith('--approval-report-hash=') || arg.startsWith('--expected-base='));
+  if (legacyPublishArg) {
+    console.error('[syncTrash] Approval flags moved to npm run waste:publish. This command only prepares a generation.');
     process.exit(1);
   }
+  const cliOptions = resolveWasteSyncCliOptions(process.argv.slice(2), process.env);
 
-  const dryRun = process.argv.includes('--dry-run');
+  console.info(`[syncTrash] Starting sync... (dryRun: ${cliOptions.dryRun})`);
 
-  console.info(`[syncTrash] Starting sync... (dryRun: ${dryRun})`);
-
-  syncTrashData({ serviceKey, dryRun })
+  syncTrashData({
+    ...cliOptions,
+  })
     .then((result) => {
-      console.info('[syncTrash] Sync completed:', result);
+      console.info('[syncTrash] Sync completed:', redactSyncResultForLog(result));
       process.exit(0);
     })
     .catch((error) => {

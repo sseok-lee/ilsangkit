@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="bg-white min-h-screen text-[#15213B]">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">
@@ -9,12 +9,27 @@
     </div>
 
     <!-- Article -->
-    <article v-else-if="guide" class="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
+    <article v-else-if="guide" class="content-reading mx-auto max-w-[1024px] px-5 md:px-8 pt-6 pb-14 md:pb-20">
       <!-- Breadcrumb -->
       <Breadcrumb :items="breadcrumbItems" />
 
       <!-- 히어로 카드 (썸네일 + eyebrow + title + meta) -->
-      <section class="bg-white border border-line rounded-xl shadow-card overflow-hidden">
+      <section class="overflow-hidden border-b border-line py-6 md:py-8">
+        <div class="py-4">
+          <span class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
+            {{ categoryLabel }}
+          </span>
+          <h1 class="text-[28px] md:text-[36px] leading-tight font-bold text-[#15213B] mb-5">
+            {{ guide.title }}
+          </h1>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+            <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
+            <span v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">visibility</span>
+              {{ guide.viewCount.toLocaleString() }}
+            </span>
+          </div>
+        </div>
         <div v-if="guide.thumbnailUrl" class="w-full aspect-video bg-background-light">
           <img
             :src="`${publicApiBase}${guide.thumbnailUrl}`"
@@ -25,32 +40,14 @@
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 800px"
           />
         </div>
-        <div class="p-4 md:p-5">
-          <span class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
-            {{ categoryLabel }}
-          </span>
-          <h1 class="text-2xl md:text-[32px] leading-tight font-bold text-strong mb-2">
-            {{ guide.title }}
-          </h1>
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-            <span class="inline-flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">edit_note</span>
-              {{ CONTENT_AUTHOR }}
-            </span>
-            <span class="inline-flex items-center gap-1 font-semibold text-success">
-              <span aria-hidden="true">✓</span> 공공데이터 원문 대조 검수
-            </span>
-            <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
-            <span v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]">visibility</span>
-              {{ guide.viewCount.toLocaleString() }}
-            </span>
-          </div>
-        </div>
       </section>
 
+      <div class="mt-8 grid min-w-0 gap-7" :class="readingDocument.toc.length ? 'md:grid-cols-[190px_minmax(0,1fr)] md:gap-10' : ''">
+        <ContentToc :items="readingDocument.toc" />
+        <div class="min-w-0 space-y-7">
       <!-- "본문" SectionBlock -->
-      <SectionBlock>
+      <SectionBlock class="reading-body">
+        <p v-if="guide.summary" class="mb-7 rounded-md bg-[#F0F4FD] p-5 text-sm leading-7 text-muted">{{ guide.summary }}</p>
         <div
           class="
             prose prose-slate max-w-none
@@ -144,6 +141,8 @@
           목록으로 돌아가기
         </NuxtLink>
       </div>
+        </div>
+      </div>
     </article>
 
     <!-- fail-open: 일시 장애(503)면 guide 가 null 이다. 빈 본문 대신 재시도 안내를 그린다. -->
@@ -158,9 +157,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { marked } from 'marked'
+import { buildReadingDocument } from '~/utils/contentReading'
+import ContentToc from '~/components/guide/ContentToc.vue'
 import { UI_MESSAGES } from '~/utils/uiMessages'
-import DOMPurify from 'isomorphic-dompurify'
 import { useGuides } from '~/composables/useGuides'
 import { useArticles } from '~/composables/useArticles'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -169,7 +168,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { CATEGORY_META } from '~/types/facility'
 import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
-import { SITE_URL, RELATED_CATEGORIES, CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
+import { SITE_URL, RELATED_CATEGORIES, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import type { FacilityCategory } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -234,27 +233,8 @@ const categoryLabel = computed(() => {
   return getContentCategoryLabel(guide.value.category)
 })
 
-const renderedContent = computed(() => {
-  if (!guide.value?.content) return ''
-  const rawHtml = marked(guide.value.content) as string
-  return DOMPurify.sanitize(rawHtml)
-})
-
-// 본문을 3번째 <h2> 기준으로 분할하여 중간 광고 삽입
-const contentParts = computed<[string, string?]>(() => {
-  const html = renderedContent.value
-  if (!html) return ['']
-  const h2Regex = /<h2[\s>]/gi
-  let match: RegExpExecArray | null
-  let count = 0
-  while ((match = h2Regex.exec(html)) !== null) {
-    count++
-    if (count === 3) {
-      return [html.slice(0, match.index), html.slice(match.index)]
-    }
-  }
-  return [html]
-})
+const readingDocument = computed(() => buildReadingDocument(guide.value?.content ?? ''))
+const contentParts = computed(() => readingDocument.value.parts)
 
 const keywordList = computed(() => {
   if (!guide.value?.keywords) return []
@@ -361,3 +341,13 @@ if (guide.value) {
   }
 }
 </script>
+
+<style scoped>
+.reading-body { border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+.content-reading :deep(.prose) { color: #15213b; overflow-wrap: anywhere; }
+.content-reading :deep(.prose h2), .content-reading :deep(.prose h3) { scroll-margin-top: 100px; }
+.content-reading :deep(.prose h2) { font-size: 22px; border: 0; margin-top: 32px; }
+.content-reading :deep(.prose p) { line-height: 1.9; }
+.content-reading :deep(.prose pre) { overflow-x: auto; }
+.content-reading :deep(.prose table) { display: block; max-width: 100%; overflow-x: auto; }
+</style>

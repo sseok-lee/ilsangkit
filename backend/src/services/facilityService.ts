@@ -2,7 +2,9 @@
 // @SPEC docs/planning/02-trd.md#API-설계
 
 import { prisma } from '../lib/prisma.js';
+import { ValidationError } from '../lib/errors.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
+import type { BrowseCategory, BrowseItem } from '../schemas/facilityBrowse.js';
 import { PAGINATION, SEARCH_DEFAULTS, NEARBY_SUMMARY } from '../constants/index.js';
 
 // --- Re-exports from sub-modules ---
@@ -38,6 +40,9 @@ import { evChargerStationSearch } from './evChargerService.js';
 import { wifiGroupSearch } from './wifiService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRecovery, type Recovery } from './search/searchRecovery.js';
+import { escapeSqlLikeKeyword } from './search/sqlLike.js';
+import { isWasteAreaDiscoveryEnabled, listWasteAreas } from './wasteAreaService.js';
+import type { AreaSummary } from '../types/wasteArea.js';
 import {
   buildStratifiedIdsSql,
   buildDedupedIdsSql,
@@ -66,6 +71,13 @@ const NAME_SORT_TABLES: Record<string, string> = {
   park: 'Park', school: 'School', market: 'Market', childcare: 'Childcare',
   sports: 'Sports',
 };
+
+const VISIBLE_LEGACY_WASTE_WHERE = { stagedMarker: null } as const;
+const EXCLUDE_STAGED_WASTE_SQL = 'NOT EXISTS (SELECT 1 FROM `WasteStagedSchedule` ws WHERE ws.`scheduleId` = `WasteSchedule`.`id`)';
+
+function visibleLegacyWasteWhere<T extends Record<string, unknown>>(where: T): T & typeof VISIBLE_LEGACY_WASTE_WHERE {
+  return { ...where, ...VISIBLE_LEGACY_WASTE_WHERE };
+}
 
 // --- Haversine 거리 계산 ---
 
@@ -181,16 +193,17 @@ function buildListSelect(category: FacilityCategory): Record<string, boolean> {
 // 응답 타입 정의
 interface FacilityItem {
   id: string;
-  category: FacilityCategory;
+  category: FacilityCategory | 'trash';
   name: string;
   address: string | null;
   roadAddress: string | null;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   city: string;
   district: string;
   distance?: number;
   extras?: Record<string, unknown>;
+  destination?: { kind: 'waste-area'; href: string };
 }
 
 interface SearchResult {
@@ -198,6 +211,12 @@ interface SearchResult {
   total: number;
   page: number;
   totalPages: number;
+}
+
+type LocatedFacilityItem = FacilityItem & { lat: number; lng: number };
+
+function hasCoordinates(item: FacilityItem): item is LocatedFacilityItem {
+  return item.lat !== null && item.lng !== null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -294,6 +313,68 @@ function mapWasteScheduleToFacilityItem(r: any): FacilityItem {
   };
 }
 
+function assertWasteAreaHref(area: AreaSummary): string {
+  const expected = `/trash/areas/${area.areaId}`;
+  if (area.href !== expected) {
+    throw new Error(`Invalid waste area href for area ${area.areaId}`);
+  }
+  return area.href;
+}
+
+function mapWasteAreaToFacilityItem(area: AreaSummary): FacilityItem {
+  return {
+    id: String(area.areaId),
+    category: 'trash',
+    name: area.name,
+    address: `${area.city} ${area.district}`,
+    roadAddress: null,
+    lat: null,
+    lng: null,
+    city: area.city,
+    district: area.district,
+    extras: {
+      matchReason: area.matchReason,
+      scheduleCount: area.scheduleCount,
+      conditionalCount: area.conditionalCount,
+      summary: area.summary,
+      dataDate: area.dataDate,
+    },
+    destination: { kind: 'waste-area', href: assertWasteAreaHref(area) },
+  };
+}
+
+function toBrowseItem(item: FacilityItem): BrowseItem {
+  return {
+    id: item.id,
+    category: item.category as BrowseCategory,
+    name: item.name,
+    address: item.address,
+    roadAddress: item.roadAddress,
+    lat: item.lat,
+    lng: item.lng,
+    extras: item.extras ?? {},
+    ...(item.destination ? { destination: item.destination } : {}),
+  };
+}
+
+export function mapWasteAreaToBrowseItem(area: AreaSummary): BrowseItem {
+  return toBrowseItem(mapWasteAreaToFacilityItem(area));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapWasteScheduleToBrowseItem(r: any): BrowseItem {
+  return {
+    id: String(r.id),
+    category: 'trash',
+    name: r.targetRegion || `${r.district} 쓰레기 배출`,
+    address: r.emissionPlace || null,
+    roadAddress: null,
+    lat: null,
+    lng: null,
+    extras: r.details && typeof r.details === 'object' ? r.details as Record<string, unknown> : {},
+  };
+}
+
 /**
  * 동일 시설이 서로 다른 id/sourceId로 중복 유입되는 경우를 name+좌표로 병합.
  * - FacilityItem에는 sourceId가 실려오지 않으므로 id로는 dedup 불가.
@@ -304,6 +385,10 @@ function dedupeByLocation(items: FacilityItem[]): FacilityItem[] {
   const seen = new Set<string>();
   const out: FacilityItem[] = [];
   for (const item of items) {
+    if (item.lat === null || item.lng === null) {
+      out.push(item);
+      continue;
+    }
     const key = `${item.category}|${item.name}|${item.lat.toFixed(5)}|${item.lng.toFixed(5)}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -317,11 +402,12 @@ function dedupeByLocation(items: FacilityItem[]): FacilityItem[] {
  */
 function buildKeywordFilter(keyword?: string): Record<string, unknown> {
   if (!keyword) return {};
+  const contains = escapeSqlLikeKeyword(keyword);
   return {
     OR: [
-      { name: { contains: keyword } },
-      { address: { contains: keyword } },
-      { roadAddress: { contains: keyword } },
+      { name: { contains } },
+      { address: { contains } },
+      { roadAddress: { contains } },
     ],
   };
 }
@@ -352,9 +438,10 @@ function buildDepartmentFilter(category: string | undefined, departments?: strin
 
 // 그룹별 검색 응답 타입
 interface GroupedCategoryResult {
-  category: FacilityCategory;
+  category: FacilityCategory | 'trash';
   label: string;
   count: number;
+  unit?: '시설' | '충전소' | '장소' | '역' | '지역';
   items: FacilityItem[];
 }
 
@@ -518,7 +605,7 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   );
 
   // Phase 2: count > 0인 카테고리만 findMany — N개 병렬 (보통 5~8개)
-  const results = await Promise.all(
+  const results: GroupedCategoryResult[] = await Promise.all(
     countResults.map(async (cr) => {
       if (cr.items !== null) {
         // ev-charger: 이미 Phase 1에서 items 포함
@@ -551,40 +638,58 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
 
   const categories = results.filter((r) => r.count > 0);
 
-  // trash(WasteSchedule) 별도 조회 — 좌표 없는 일정 데이터이므로 ALL_CATEGORIES와 분리
+  // trash(WasteArea) 별도 조회 — 좌표 없는 지역 단위 데이터이므로 ALL_CATEGORIES와 분리
   // categoryToken이 trash이거나 미특정일 때만 조회
   if (shouldSearchTrash) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trashWhere: any = {
-      ...buildRegionFilter(effectiveCity, effectiveDistrict),
-    };
-    if (nameText) {
-      if (useFt) {
-        // FULLTEXT 경로: 컬럼이 달라(targetRegion/emissionPlace) 공용 헬퍼 대신 인라인 raw.
-        // LIMIT 500은 in-절 폭주 방지 안전캡 (region 필터는 trashWhere에서 결합).
-        const trashIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
-          'SELECT id FROM `WasteSchedule` WHERE MATCH(targetRegion, emissionPlace) AGAINST (? IN BOOLEAN MODE) LIMIT 500',
-          toBooleanPhrase(nameText),
-        );
-        trashWhere.id = { in: trashIds.map((r) => Number(r.id)) };
-      } else {
-        trashWhere.OR = [
-          { targetRegion: { contains: nameText } },
-          { emissionPlace: { contains: nameText } },
-        ];
-      }
-    }
-    const [trashCount, trashRecords] = await Promise.all([
-      prisma.wasteSchedule.count({ where: trashWhere }),
-      prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
-    ]);
-    if (trashCount > 0) {
-      categories.push({
-        category: 'trash' as FacilityCategory,
-        label: '쓰레기배출',
-        count: trashCount,
-        items: trashRecords.map(mapWasteScheduleToFacilityItem),
+    if (isWasteAreaDiscoveryEnabled()) {
+      const trash = await listWasteAreas({
+        city: effectiveCity,
+        district: effectiveDistrict,
+        keyword: nameText,
+        page: 1,
+        limit: 3,
       });
+      if (trash.total > 0) {
+        categories.push({
+          category: 'trash',
+          label: '쓰레기배출',
+          count: trash.total,
+          unit: '지역',
+          items: trash.items.map(mapWasteAreaToFacilityItem),
+        });
+      }
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trashWhere: any = visibleLegacyWasteWhere({
+        ...buildRegionFilter(effectiveCity, effectiveDistrict),
+      });
+      if (nameText) {
+        if (useFt) {
+          const trashIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+            `SELECT id FROM \`WasteSchedule\` WHERE ${EXCLUDE_STAGED_WASTE_SQL} AND MATCH(targetRegion, emissionPlace) AGAINST (? IN BOOLEAN MODE) LIMIT 500`,
+            toBooleanPhrase(nameText),
+          );
+          trashWhere.id = { in: trashIds.map((r) => Number(r.id)) };
+        } else {
+          const contains = escapeSqlLikeKeyword(nameText);
+          trashWhere.OR = [
+            { targetRegion: { contains } },
+            { emissionPlace: { contains } },
+          ];
+        }
+      }
+      const [trashCount, trashRecords] = await Promise.all([
+        prisma.wasteSchedule.count({ where: trashWhere }),
+        prisma.wasteSchedule.findMany({ where: trashWhere, take: 3, orderBy: { targetRegion: 'asc' } }),
+      ]);
+      if (trashCount > 0) {
+        categories.push({
+          category: 'trash',
+          label: '쓰레기배출',
+          count: trashCount,
+          items: trashRecords.map(mapWasteScheduleToFacilityItem),
+        });
+      }
     }
   }
 
@@ -592,6 +697,114 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   const recovery = totalCount === 0 ? buildRecovery(parsed) : null;
 
   return { categories, totalCount, parsed, recovery };
+}
+
+export async function searchInExplicitRegion(input: {
+  category: BrowseCategory;
+  city: string;
+  district: string;
+  keyword?: string;
+  page: number;
+  limit: number;
+  departments?: string[];
+}): Promise<{ items: BrowseItem[]; total: number; page: number; totalPages: number }> {
+  const { category, city, district, keyword, page, limit, departments } = input;
+  const skip = (page - 1) * limit;
+
+  if (category === 'subway') {
+    throw new ValidationError('subway browse is handled separately');
+  }
+
+  if (category === 'wifi') {
+    const result = await wifiGroupSearch({ keyword, city, district, page, limit });
+    return {
+      items: result.items.map(toBrowseItem),
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
+  }
+
+  if (category === 'ev-charger') {
+    const result = await evChargerStationSearch({ keyword, city, district, page, limit });
+    return {
+      items: result.items.map(toBrowseItem),
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
+  }
+
+  if (category === 'trash') {
+    if (!isWasteAreaDiscoveryEnabled()) {
+      const trashWhere: Record<string, unknown> = visibleLegacyWasteWhere({ ...buildRegionFilter(city, district) });
+      if (keyword) {
+        const contains = escapeSqlLikeKeyword(keyword);
+        trashWhere.OR = [
+          { targetRegion: { contains } },
+          { emissionPlace: { contains } },
+        ];
+      }
+      const [records, total] = await Promise.all([
+        prisma.wasteSchedule.findMany({
+          where: trashWhere,
+          skip,
+          take: limit,
+          orderBy: [{ targetRegion: 'asc' }, { id: 'asc' }],
+        }),
+        prisma.wasteSchedule.count({ where: trashWhere }),
+      ]);
+      return {
+        items: records.map(mapWasteScheduleToBrowseItem),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      };
+    }
+    const result = await listWasteAreas({ city, district, keyword, page, limit });
+    return {
+      items: result.items.map(mapWasteAreaToBrowseItem),
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
+  }
+
+  const where = {
+    ...buildKeywordFilter(keyword),
+    ...buildRegionFilter(city, district),
+    ...buildDepartmentFilter(category, departments),
+  };
+  const model = CATEGORY_REGISTRY[category].model();
+
+  if (canUseFulltext(keyword) && FULLTEXT_TABLES[category] && !departments?.length) {
+    const ftRegion = { cityVariants: cityVariantList(city), district };
+    const [ids, total] = await Promise.all([
+      fulltextIds(FULLTEXT_TABLES[category], keyword!, ftRegion, limit, skip),
+      fulltextCount(FULLTEXT_TABLES[category], keyword!, ftRegion),
+    ]);
+    const items = await fetchByIdsInOrder(model, ids, category);
+    return { items: items.map(toBrowseItem), total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  const [records, total] = await Promise.all([
+    model.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: buildListSelect(category),
+    }),
+    model.count({ where }),
+  ]);
+
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items: records.map((r: any) => toBrowseItem(toFacilityItem(r, category))),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
 /**
@@ -627,23 +840,39 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     return wifiGroupSearch({ keyword: scopedKeyword, city: effectiveCity, district: effectiveDistrict, lat, lng, radius, swLat, swLng, neLat, neLng, page, limit });
   }
 
-  // trash: WasteSchedule 별도 처리 (좌표 없는 일정 데이터)
+  // trash: WasteArea 별도 처리 (좌표 없는 지역 단위 데이터)
   if (category === 'trash') {
-    const skip = (page - 1) * limit;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trashWhere: any = { ...buildRegionFilter(effectiveCity, effectiveDistrict) };
-    if (scopedKeyword) {
-      trashWhere.OR = [
-        { targetRegion: { contains: scopedKeyword } },
-        { emissionPlace: { contains: scopedKeyword } },
-      ];
+    if (!isWasteAreaDiscoveryEnabled()) {
+      const skip = (page - 1) * limit;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trashWhere: any = visibleLegacyWasteWhere({ ...buildRegionFilter(effectiveCity, effectiveDistrict) });
+      if (scopedKeyword) {
+        const contains = escapeSqlLikeKeyword(scopedKeyword);
+        trashWhere.OR = [
+          { targetRegion: { contains } },
+          { emissionPlace: { contains } },
+        ];
+      }
+      const [records, total] = await Promise.all([
+        prisma.wasteSchedule.findMany({ where: trashWhere, skip, take: limit, orderBy: { targetRegion: 'asc' } }),
+        prisma.wasteSchedule.count({ where: trashWhere }),
+      ]);
+      const items: FacilityItem[] = records.map(mapWasteScheduleToFacilityItem);
+      return { items, total, page, totalPages: Math.ceil(total / limit) };
     }
-    const [records, total] = await Promise.all([
-      prisma.wasteSchedule.findMany({ where: trashWhere, skip, take: limit, orderBy: { targetRegion: 'asc' } }),
-      prisma.wasteSchedule.count({ where: trashWhere }),
-    ]);
-    const items: FacilityItem[] = records.map(mapWasteScheduleToFacilityItem);
-    return { items, total, page, totalPages: Math.ceil(total / limit) };
+    const result = await listWasteAreas({
+      city: effectiveCity,
+      district: effectiveDistrict,
+      keyword: scopedKeyword,
+      page,
+      limit,
+    });
+    return {
+      items: result.items.map(mapWasteAreaToFacilityItem),
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
   }
 
   // --- 좌표 기반 검색: Haversine 거리 계산 ---
@@ -699,6 +928,7 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
     // 동일 시설(다른 id) 중복 노출/지도 핀 제거를 위해 정렬 직후 dedup → total/totalPages도 dedup 정합.
     const withDistance = dedupeByLocation(
       allItems
+        .filter(hasCoordinates)
         .map((item) => item.distance !== undefined ? item : ({
           ...item,
           distance: Math.round(haversineDistance(lat, lng, item.lat, item.lng) * 1000),
@@ -1260,43 +1490,60 @@ export async function getByRegion(
     ...buildDepartmentFilter(category, departments),
   };
 
-  // trash: WasteSchedule 테이블 조회 (좌표 없는 일정 데이터)
+  // trash: WasteArea 조회 (좌표 없는 지역 단위 데이터)
   if (category === 'trash') {
-    const cityVariants = [
-      resolved.city,
-      CITY_SLUG_TO_FULL[city],
-      CITY_SLUG_TO_SHORT[city],
-    ].filter((v): v is string => !!v);
-    const uniqueCities = [...new Set(cityVariants)];
+    if (!isWasteAreaDiscoveryEnabled()) {
+      const cityVariants = [
+        resolved.city,
+        CITY_SLUG_TO_FULL[city],
+        CITY_SLUG_TO_SHORT[city],
+      ].filter((v): v is string => !!v);
+      const uniqueCities = [...new Set(cityVariants)];
 
-    const wasteWhere = {
-      city: uniqueCities.length > 1 ? { in: uniqueCities } : uniqueCities[0],
+      const wasteWhere = visibleLegacyWasteWhere({
+        city: uniqueCities.length > 1 ? { in: uniqueCities } : uniqueCities[0],
+        district: resolved.district,
+      });
+
+      const [records, total] = await Promise.all([
+        prisma.wasteSchedule.findMany({
+          where: wasteWhere,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: [{ targetRegion: 'asc' }],
+        }),
+        prisma.wasteSchedule.count({ where: wasteWhere }),
+      ]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items = records.map((r: any) => ({
+        ...mapWasteScheduleToFacilityItem(r),
+        ...(r.details ? { extras: r.details as Record<string, unknown> } : {}),
+      }));
+
+      return {
+        region: { city: resolved.city, district: resolved.district, bjdCode: resolved.bjdCode },
+        category: 'trash',
+        items,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      };
+    }
+    const result = await listWasteAreas({
+      city: resolved.city,
       district: resolved.district,
-    };
-
-    const [records, total] = await Promise.all([
-      prisma.wasteSchedule.findMany({
-        where: wasteWhere,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: [{ targetRegion: 'asc' }],
-      }),
-      prisma.wasteSchedule.count({ where: wasteWhere }),
-    ]);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = records.map((r: any) => ({
-      ...mapWasteScheduleToFacilityItem(r),
-      ...(r.details ? { extras: r.details as Record<string, unknown> } : {}),
-    }));
+      page,
+      limit,
+    });
 
     return {
       region: { city: resolved.city, district: resolved.district, bjdCode: resolved.bjdCode },
       category: 'trash',
-      items,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      items: result.items.map(mapWasteAreaToFacilityItem),
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
     };
   }
 
@@ -1397,12 +1644,18 @@ export async function getByRegionAll(
     district: resolved.district,
   };
 
-  // 전체 카테고리 카운트 (trash 포함)
-  const trashWhere = { city: cityCondition, district: resolved.district };
-  const [counts, trashCount] = await Promise.all([
+  const wasteAreaEnabled = isWasteAreaDiscoveryEnabled();
+  const trashWhere = visibleLegacyWasteWhere({ city: cityCondition, district: resolved.district });
+  // 전체 카테고리 카운트 (flag-on은 trash 지역, flag-off는 legacy source 일정)
+  const [counts, trashRead] = await Promise.all([
     Promise.all(ALL_CATEGORIES.map((cat) => CATEGORY_REGISTRY[cat].model().count({ where }))),
-    prisma.wasteSchedule.count({ where: trashWhere }),
+    wasteAreaEnabled
+      ? listWasteAreas({ city: resolved.city, district: resolved.district, page: 1, limit })
+      : prisma.wasteSchedule.count({ where: trashWhere }),
   ]);
+  const trashCount = wasteAreaEnabled
+    ? (trashRead as Awaited<ReturnType<typeof listWasteAreas>>).total
+    : (trashRead as number);
   const total = counts.reduce((sum, c) => sum + c, 0) + trashCount;
 
   // skip/take 계산 → 필요한 카테고리만 병렬 fetch
@@ -1439,18 +1692,32 @@ export async function getByRegionAll(
 
   const allItems = fetchResults.flat();
 
-  // trash(WasteSchedule) 페이지네이션 처리
+  // trash(WasteArea) 페이지네이션 처리
   if (remainingTake > 0 && trashCount > 0) {
     if (remainingSkip < trashCount) {
       const trashSkip = remainingSkip;
       const trashTake = Math.min(remainingTake, trashCount - trashSkip);
-      const trashRecords = await prisma.wasteSchedule.findMany({
-        where: trashWhere,
-        skip: trashSkip,
-        take: trashTake,
-        orderBy: { targetRegion: 'asc' },
-      });
-      allItems.push(...trashRecords.map(mapWasteScheduleToFacilityItem));
+      if (wasteAreaEnabled) {
+        const trash = trashRead as Awaited<ReturnType<typeof listWasteAreas>>;
+        const trashResult = trashSkip === 0 && trash.items.length >= trashTake
+          ? trash
+          : await listWasteAreas({
+              city: resolved.city,
+              district: resolved.district,
+              page: Math.floor(trashSkip / remainingTake) + 1,
+              limit: remainingTake,
+            });
+        const pageOffset = trashSkip % remainingTake;
+        allItems.push(...trashResult.items.slice(pageOffset, pageOffset + trashTake).map(mapWasteAreaToFacilityItem));
+      } else {
+        const trashRecords = await prisma.wasteSchedule.findMany({
+          where: trashWhere,
+          skip: trashSkip,
+          take: trashTake,
+          orderBy: { targetRegion: 'asc' },
+        });
+        allItems.push(...trashRecords.map(mapWasteScheduleToFacilityItem));
+      }
     }
   }
 
@@ -1533,6 +1800,7 @@ export async function getRegionCategoryCombinations(): Promise<
     where: {
       city: { not: '' },
       district: { not: '' },
+      ...VISIBLE_LEGACY_WASTE_WHERE,
     },
   });
 

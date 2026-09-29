@@ -1,227 +1,76 @@
 <template>
-  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
-
-    <!-- Hero -->
-    <PageHero
-      eyebrow="실시간 브리핑"
-      title="오늘의 이슈"
-      description="부동산·청약·생활시설 관련 최신 소식과 정책 변화를 정리해 드립니다."
-      :stats="heroStats"
-    />
-
-    <!-- 카테고리 -->
-    <SectionBlock heading="카테고리" subtext="관심 있는 주제로 이슈를 좁혀 보세요.">
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="chip in CATEGORY_CHIPS"
-          :key="chip.key ?? 'all'"
-          :class="[
-            'px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border',
-            activeChip === chip.key
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-ink border-line hover:border-primary hover:text-primary'
-          ]"
-          @click="selectChip(chip.key)"
-        >
-          {{ chip.label }}
-        </button>
-      </div>
-    </SectionBlock>
-
-    <!-- 최근 이슈 -->
-    <SectionBlock heading="최근 이슈" subtext="카드에는 카테고리·제목·요약·발행일·조회수를 표시합니다.">
-      <template v-if="totalCount > 0" #right>
-        <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-          {{ totalCount.toLocaleString('ko-KR') }}건
-        </span>
-      </template>
-
-      <!-- Loading -->
-      <div v-if="loading" class="flex items-center justify-center py-16">
-        <div class="text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p class="text-muted text-sm">{{ UI_MESSAGES.loading }}</p>
+  <div class="min-h-screen bg-white text-strong">
+    <main class="mx-auto max-w-[1200px] px-5 pb-16 pt-6 md:px-8">
+      <Breadcrumb :items="breadcrumbItems" />
+      <header class="pb-8 pt-7 md:pb-10">
+        <p class="mb-3 text-sm font-semibold text-primary">생활 정보</p>
+        <h1 class="text-[28px] font-bold leading-tight md:text-[36px]">오늘의 이슈</h1>
+        <p class="mt-4 text-sm leading-6 text-muted">부동산·청약·생활시설의 최신 소식과 정책 변화를 확인하세요.</p>
+      </header>
+      <nav aria-label="주제 선택" class="flex flex-wrap gap-2 border-b border-line pb-6">
+        <button v-for="topic in CONTENT_TOPICS" :key="topic.key" type="button" :aria-pressed="filters.topic === topic.key" class="min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" :class="filters.topic === topic.key ? 'border-primary bg-primary text-white' : 'border-line text-muted hover:border-primary hover:text-primary'" @click="selectTopic(topic.key)">{{ topic.label }}</button>
+      </nav>
+      <section aria-label="이슈 목록" class="min-w-0 pt-7">
+        <div v-if="loading" role="status" class="py-16 text-center text-muted">불러오는 중입니다.</div>
+        <div v-else-if="listError" role="alert" class="py-16 text-center">
+          <p class="text-muted">이슈를 불러오지 못했습니다. 다시 시도해 주세요.</p>
+          <button type="button" class="mt-4 min-h-11 rounded-md border border-line px-5 text-sm font-semibold text-primary" @click="refresh()">다시 시도</button>
         </div>
-      </div>
+        <template v-else>
+          <p class="mb-4 text-sm text-muted">전체 {{ totalCount.toLocaleString('ko-KR') }}건 · 최신순</p>
 
-      <!-- Article Cards Grid -->
-      <div v-else-if="articles.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <NuxtLink
-          v-for="article in articles"
-          :key="article.id"
-          :to="`/article/${article.slug}`"
-          :prefetch="false"
-          class="group bg-white rounded-xl border border-line overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-        >
-          <div class="aspect-video bg-background-light overflow-hidden">
-            <img
-              v-if="article.thumbnailUrl"
-              :src="`${publicApiBase}${article.thumbnailUrl}`"
-              :alt="article.title"
-              width="400"
-              height="225"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-[48px] text-faint">article</span>
-            </div>
+          <div v-if="items.length" class="min-w-0">
+            <ContentListRow v-for="item in presentation.rows" :key="item.id" kind="article" :item="item" />
           </div>
-          <div class="p-4">
-            <span class="inline-block px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">
-              {{ getContentCategoryLabel(article.category) }}
-            </span>
-            <h2 class="text-base font-bold text-strong mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-              {{ article.title }}
-            </h2>
-            <p class="text-sm text-muted line-clamp-2 mb-3">
-              {{ article.summary }}
-            </p>
-            <p class="mt-2 text-[11px] text-faint">
-              {{ CONTENT_AUTHOR }} · <span class="tabular-nums">{{ formatDotDate(displayDate(article)) }}</span>
-            </p>
-            <div v-if="article.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center justify-end text-xs text-muted">
-              <span class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">visibility</span>
-                {{ article.viewCount.toLocaleString() }}
-              </span>
-            </div>
-          </div>
-        </NuxtLink>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else class="py-16 text-center">
-        <span class="material-symbols-outlined text-[48px] text-faint mb-4 block">article</span>
-        <p class="text-muted font-medium">{{ emptyFiltered('오늘의 이슈') }}</p>
-        <p class="text-muted text-sm mt-1">다른 카테고리를 선택해 보세요.</p>
-      </div>
-
-      <!-- 광고: 첫 그리드 이후 -->
-      <AdBanner class="mt-4" />
-
-      <!-- Pagination -->
-      <Pagination
-        :current-page="currentPage"
-        :total-pages="totalPages"
-        @page-change="goToPage"
-      />
-    </SectionBlock>
+          <div v-else class="py-16 text-center text-muted">해당 주제의 이슈가 아직 없습니다.</div>
+          <AdBanner class="mt-6" />
+          <Pagination class="flex-wrap" :current-page="filters.page" :total-pages="totalPages" :href-for="pageHref" @page-change="goToPage" />
+        </template>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { computed, watchEffect } from 'vue'
 import { useArticles } from '~/composables/useArticles'
-import type { ArticleSummary } from '~/composables/useArticles'
-import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
+import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
-import { CONTENT_AUTHOR, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
-import { formatDotDate } from '~/utils/syncFreshness'
+import { CONTENT_TOPICS, normalizeContentListQuery, contentListQuery, contentListRequest, contentListHref, type ContentTopic } from '~/utils/contentListQuery'
+import { splitFeatured } from '~/utils/contentListPresentation'
+import { SITE_URL } from '~/utils/seoConstants'
+import ContentListRow from '~/components/guide/ContentListRow.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
-import SectionBlock from '~/components/common/SectionBlock.vue'
 import Pagination from '~/components/common/Pagination.vue'
 
-// 카테고리 칩: 콘텐츠 주제별 묶음 (backend categories 배열 필터 사용) — guide/index.vue와 동일한 분류 체계
-const CATEGORY_CHIPS: { key: string | null; label: string; categories?: string[] }[] = [
-  { key: null, label: '전체' },
-  { key: 'real-estate', label: '부동산', categories: ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'] },
-  { key: 'subscription', label: '청약', categories: ['subscription', 'sale', 'rent'] },
-  { key: 'health', label: '병원·약국', categories: ['hospital', 'pharmacy', 'aed'] },
-  { key: 'parking', label: '주차·충전', categories: ['parking', 'ev-charger'] },
-  { key: 'env', label: '쓰레기배출', categories: ['trash', 'clothes'] },
-]
-
-// SEO
-const { setMeta } = useFacilityMeta()
-setMeta({
-  title: '오늘의 이슈 | 일상킷',
-  description: '부동산, 청약, 병원, 약국, 주차장 등 생활 관련 오늘의 이슈를 확인하세요.',
-  path: '/article',
-})
-
-const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
-setBreadcrumbSchema([
-  { name: '홈', url: '/' },
-  { name: '오늘의 이슈', url: '/article' },
-])
-
-const config = useRuntimeConfig()
-// Image src URLs must use the public base (not loopback) so browsers can load them.
-// eslint-disable-next-line no-restricted-syntax
-const publicApiBase = config.public.apiBase
+const route = useRoute()
+const router = useRouter()
+const filters = computed(() => normalizeContentListQuery(route.query))
+const key = computed(() => `article-list:${filters.value.topic}:${filters.value.page}`)
 const { fetchArticles } = useArticles()
-
-const currentPage = ref(1)
-const activeChip = ref<string | null>(null)
-
-const chipCategories = computed(() => {
-  if (!activeChip.value) return undefined
-  return CATEGORY_CHIPS.find(c => c.key === activeChip.value)?.categories
-})
-
-// SSR: useAsyncData로 첫 페이지 데이터 서버에서 로드 (기본: 전체)
-const { data: articlesData, status, error: articlesError } = await useAsyncData(
-  'article-list',
-  () => fetchArticles({ page: currentPage.value, limit: 12 }),
-)
-
-// 상류 조회 실패를 색인 신호로 굳히지 않는다 (#467 / #674). 이 페이지들은 정상 상태에서
-// 색인 대상이므로 noindex 를 걸지 않고, 서버에서만 503 + no-store 로 알린다. 종전엔 error 를
-// 보지도 않아 백엔드가 죽으면 스켈레톤(또는 빈 목록·빨간 알림)만 든 문서가 HTTP 200 +
-// index, follow + self-canonical 로 나갔다 — 가장 내부링크가 많은 페이지들에서 소프트 404 다.
-if (import.meta.server && articlesError.value) markDegradedResponse()
-
-const articles = computed(() => articlesData.value?.items ?? [])
-setItemListSchema(
-  articles.value.map((a, i) => ({ name: a.title, url: `/article/${a.slug}`, position: i + 1 })),
-)
-const totalCount = computed(() => articlesData.value?.total ?? 0)
-const totalPages = computed(() => articlesData.value?.totalPages ?? 1)
+const { data, status, error: listError, refresh } = await useAsyncData(key, () => fetchArticles(contentListRequest(filters.value)))
+if (import.meta.server && listError.value) markDegradedResponse()
 const loading = computed(() => status.value === 'pending')
+const items = computed(() => data.value?.items ?? [])
+const totalCount = computed(() => data.value?.total ?? 0)
+const totalPages = computed(() => data.value?.totalPages ?? 1)
+const presentation = computed(() => splitFeatured(items.value, filters.value.page, false))
+const filtered = computed(() => !!filters.value.topic || filters.value.page > 1)
+const { setMeta } = useFacilityMeta()
+setMeta({ title: '오늘의 이슈 | 일상킷', description: '부동산, 청약, 병원, 약국, 주차장 등 생활 관련 오늘의 이슈를 확인하세요.', path: '/article', canonical: false })
+useHead(() => ({
+  meta: [{ name: 'robots', content: filtered.value ? 'noindex, follow' : 'index, follow' }],
+  link: filtered.value ? [] : [{ rel: 'canonical', key: 'canonical', href: `${SITE_URL}/article` }],
+}))
+watchEffect(() => suppressAds(filtered.value || !!listError.value || loading.value))
+const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
+setBreadcrumbSchema([{ name: '홈', url: '/' }, { name: '오늘의 이슈', url: '/article' }])
+watchEffect(() => setItemListSchema(items.value.map((item, index) => ({ name: item.title, url: `/article/${item.slug}`, position: (filters.value.page - 1) * 12 + index + 1 }))))
+const breadcrumbItems = [{ label: '홈', href: '/', current: false }, { label: '오늘의 이슈', href: '/article', current: true }]
+function selectTopic(topic: ContentTopic) { return router.push({ query: contentListQuery({ topic, page: 1 }) }) }
+function goToPage(page: number) { return router.push({ query: contentListQuery({ ...filters.value, page }) }) }
+function pageHref(page: number) { return contentListHref('article', { ...filters.value, page }) }
 
-const breadcrumbItems = computed(() => [
-  { label: '홈', href: '/', current: false },
-  { label: '오늘의 이슈', href: '/article', current: true },
-])
-
-const heroStats = computed(() => [
-  { label: '게시글', value: totalCount.value > 0 ? `${totalCount.value.toLocaleString('ko-KR')}개` : '—' },
-  { label: '주요 주제', value: '부동산 · 청약' },
-  { label: '보기', value: '최신순' },
-])
-
-// 카테고리 필터는 client-side로만 동작한다 (?category= 같은 라우트 쿼리를 만들지 않음 —
-// 크롤 가능한 facet URL 증식 방지, guide/index.vue와 동일한 결정).
-async function selectChip(key: string | null) {
-  if (activeChip.value === key) return
-  activeChip.value = key
-  currentPage.value = 1
-  articlesData.value = await fetchArticles({
-    page: 1,
-    limit: 12,
-    categories: chipCategories.value,
-  })
-}
-
-// publishedAt은 published 상태에서 항상 채워지지만(발행 시 1회 부여) 타입상 nullable이라
-// 방어적으로 createdAt을 폴백으로 둔다 (article/[slug].vue의 displayPublishedAt과 동일 패턴).
-function displayDate(article: ArticleSummary): string {
-  return article.publishedAt ?? article.createdAt
-}
-
-async function goToPage(page: number) {
-  currentPage.value = page
-  articlesData.value = await fetchArticles({ page, limit: 12, categories: chipCategories.value })
-  if (import.meta.client) {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
 </script>

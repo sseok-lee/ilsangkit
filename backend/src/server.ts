@@ -4,6 +4,7 @@
 import dotenv from 'dotenv';
 import app from './app.js';
 import prisma from './lib/prisma.js';
+import { assertActiveSummaryReady } from './services/realEstateSummaryReadiness.js';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,8 @@ const PORT = Number(process.env.PORT) || 8000;
 // Prisma/MySQL 풀 고갈(P2024) → SSR 실패 → 색인제외 사고를 재유발할 수 있어 fail-closed.
 // 컨테이너 등 외부 바인딩이 필요한 환경은 HOST=0.0.0.0 로 명시 override.
 const HOST = process.env.HOST || '127.0.0.1';
+
+await assertActiveSummaryReady();
 
 const server = app.listen(PORT, HOST, () => {
   console.info(`Server is running on http://${HOST}:${PORT}`);

@@ -26,4 +26,21 @@ describe('SearchResultGroup', () => {
     await btn.trigger('click')
     expect(w.emitted('more')).toBeTruthy()
   })
+
+  it('rows 레이아웃과 사용자 지정 전체 보기 문구를 제공한다', () => {
+    const w = mount(SearchResultGroup, {
+      props: {
+        label: '약국',
+        count: 3256,
+        layout: 'rows',
+        moreLabel: '전체 보기',
+        moreHref: '/pharmacy?keyword=강남',
+      },
+      slots: { default: '<div class="row">row</div>' },
+      global: { stubs },
+    })
+
+    expect(w.get('[data-layout="rows"]').classes()).toContain('search-result-group__items--rows')
+    expect(w.get('a').text()).toContain('전체 보기')
+  })
 })

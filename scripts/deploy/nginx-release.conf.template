@@ -1,0 +1,7 @@
+# Generated release include. Values must come from a validated manifest.
+upstream ilsangkit_release_web { server 127.0.0.1:{{FRONTEND_PORT}}; }
+upstream ilsangkit_release_api { server 127.0.0.1:{{BACKEND_PORT}}; }
+map $host $ilsangkit_release { default "{{RELEASE_ID}}"; }
+
+proxy_cache_path {{CACHE_PATH}} levels=1:2 keys_zone={{CACHE_ZONE}}:50m inactive=30m max_size=512m;
+proxy_cache_key "$scheme$request_method$host$request_uri$ilsangkit_release";

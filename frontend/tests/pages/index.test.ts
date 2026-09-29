@@ -1,20 +1,38 @@
+/* eslint-disable vue/one-component-per-file */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { Mock } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import type { MountingOptions } from '@vue/test-utils'
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted, readonly } from 'vue'
+import type { Component } from 'vue'
 import IndexPage from '~/pages/index.vue'
 
+type NuxtTestGlobal = typeof globalThis & {
+  ref: typeof ref
+  computed: typeof computed
+  watch: typeof watch
+  watchEffect: typeof watchEffect
+  onMounted: typeof onMounted
+  onUnmounted: typeof onUnmounted
+  readonly: typeof readonly
+  navigateTo: Mock
+  useAsyncData: Mock
+}
+
+const testGlobal = globalThis as NuxtTestGlobal
+
 // Stub Vue auto-imports that Nuxt provides but vitest doesn't
-;(globalThis as any).ref = ref
-;(globalThis as any).computed = computed
-;(globalThis as any).watch = watch
-;(globalThis as any).watchEffect = watchEffect
-;(globalThis as any).onMounted = onMounted
-;(globalThis as any).onUnmounted = onUnmounted
-;(globalThis as any).readonly = readonly
+testGlobal.ref = ref
+testGlobal.computed = computed
+testGlobal.watch = watch
+testGlobal.watchEffect = watchEffect
+testGlobal.onMounted = onMounted
+testGlobal.onUnmounted = onUnmounted
+testGlobal.readonly = readonly
 
 // Mock navigateTo
 const mockNavigateTo = vi.fn()
-;(globalThis as any).navigateTo = mockNavigateTo
+testGlobal.navigateTo = mockNavigateTo
 
 // Mock composables
 const mockSetWebsiteSchema = vi.fn()
@@ -33,6 +51,15 @@ vi.mock('~/composables/useFacilityMeta', () => ({
   useFacilityMeta: () => ({
     setHomeMeta: vi.fn(),
     setMeta: vi.fn(),
+  }),
+}))
+
+vi.mock('~/components/home/HomeMarketSection.vue', () => ({
+  default: defineComponent({
+    name: 'HomeMarketSection',
+    setup() {
+      return () => h('section', { 'data-testid': 'home-market' }, '우리 동네 실거래 흐름')
+    },
   }),
 }))
 
@@ -59,7 +86,7 @@ const homePagePayload = {
   recentGuides: [],
 }
 
-;(globalThis as any).useAsyncData = vi.fn((key?: string, _fetcher?: () => unknown) => {
+testGlobal.useAsyncData = vi.fn((key?: string) => {
   const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
   const result = {
     data,
@@ -72,7 +99,7 @@ const homePagePayload = {
 })
 
 // Helper to mount async components with Suspense
-async function mountSuspended(component: any, options?: any) {
+async function mountSuspended(component: Component, options?: MountingOptions<Record<string, unknown>>) {
   const wrapper = mount(
     defineComponent({
       render() {
@@ -97,8 +124,8 @@ describe('Index Page', () => {
   it('renders hero title and subtitle', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.text()).toContain('우리 동네 정보')
-    expect(wrapper.text()).toContain('한번에')
+    expect(wrapper.text()).toContain('집값부터')
+    expect(wrapper.text()).toContain('청약 일정까지')
   })
 
   it('renders search input', async () => {
@@ -125,8 +152,7 @@ describe('Index Page', () => {
   it('renders the home sections and exactly 2 ad banners', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    // HomeHotspotSignals replaces HomeMarketStats — check for its heading text (requires hotspot data)
-    expect(wrapper.text()).toContain('오늘의 부동산 시장')
+    expect(wrapper.text()).toContain('우리 동네 실거래 흐름')
     // HomeSubscriptionSection is present
     expect(wrapper.find('section').exists()).toBe(true)
     // 홈 광고는 2개 — fold 아래 첫 섹션 경계 + 데이터 출처 위(구 쿠팡 자리).
@@ -138,10 +164,10 @@ describe('Index Page', () => {
     const wrapper = await mountSuspended(IndexPage)
     const html = wrapper.html()
     const firstAd = html.indexOf('stub-ad-banner')
-    const hero = html.indexOf('오늘의 부동산 시장')
+    const hero = html.indexOf('우리 동네 실거래 흐름')
     expect(firstAd).toBeGreaterThan(-1)
     expect(hero).toBeGreaterThan(-1)
-    // 첫 광고는 첫 콘텐츠 섹션(오늘의 부동산 시장) 뒤에 나와야 한다.
+    // 첫 광고는 첫 콘텐츠 섹션(우리 동네 실거래 흐름) 뒤에 나와야 한다.
     expect(firstAd).toBeGreaterThan(hero)
   })
 
@@ -202,7 +228,7 @@ describe('Index Page', () => {
 describe('오늘의 이슈 (recentArticles) section', () => {
   afterEach(() => {
     // 다른 테스트에 영향 없도록 기본 mock(recentArticles 없음)으로 복원
-    ;(globalThis as any).useAsyncData = vi.fn((key?: string, _fetcher?: () => unknown) => {
+    testGlobal.useAsyncData = vi.fn((key?: string) => {
       const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
       const result = {
         data,
@@ -216,7 +242,7 @@ describe('오늘의 이슈 (recentArticles) section', () => {
   })
 
   it('renders "오늘의 이슈" section with article links when recentArticles has items', async () => {
-    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+    testGlobal.useAsyncData = vi.fn((key?: string) => {
       const payload = {
         ...homePagePayload,
         recentArticles: [
@@ -244,22 +270,24 @@ describe('오늘의 이슈 (recentArticles) section', () => {
   })
 })
 
-describe('히어로 코발트 패널', () => {
+describe('홈 흰색 2컬럼 히어로', () => {
   it('흐릿한 배경 사진(hero-bg webp)을 제거한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
     expect(wrapper.findAll('img[src*="hero-bg"]').length).toBe(0)
   })
 
-  it('단색 코발트 패널(bg-primary-press)로 렌더한다', async () => {
+  it('기존 단색 코발트 패널을 쓰지 않고 흰색 hero shell로 렌더한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
-    expect(wrapper.find('.bg-primary-press').exists()).toBe(true)
+    expect(wrapper.find('.home-hero-shell').exists()).toBe(true)
+    expect(wrapper.find('.bg-primary-press').exists()).toBe(false)
   })
 
-  it('출처 배지와 "매일 자동 동기화" 스탬프 라벨을 SSR 텍스트로 노출한다', async () => {
+  it('승인된 짧은 홈 히어로 카피를 렌더한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
     const text = wrapper.text()
-    expect(text).toContain('국토교통부 실거래가')
-    expect(text).toContain('매일 자동 동기화')
+    expect(text).toContain('집값부터')
+    expect(text).toContain('청약 일정까지')
+    expect(text).toContain('궁금한 동네의 집값과 새로운 입주 기회')
   })
 
   it('단일 h1을 유지한다', async () => {
@@ -269,48 +297,23 @@ describe('히어로 코발트 패널', () => {
   })
 })
 
-describe('히어로 4칸 스탯', () => {
-  it('4개 스탯 라벨을 렌더한다(진행중 청약 포함)', async () => {
+describe('히어로 목적지 링크', () => {
+  it('실거래가·청약·생활시설 목적지 링크를 렌더한다', async () => {
     const wrapper = await mountSuspended(IndexPage)
     const t = wrapper.text()
-    for (const label of ['실거래 부동산', '진행중 청약', '등록 시설', '오늘 업데이트']) {
+    for (const label of ['실거래가', '청약', '공공임대']) {
       expect(t).toContain(label)
     }
+    expect(wrapper.find('a[href="/real-estate"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/subscription"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/subscription/rent"]').exists()).toBe(true)
   })
 
-  it('오늘 업데이트 수치를 렌더하고, newlyListedToday>0이면 "오늘 신규" 배지를 노출한다(mock fixture=12)', async () => {
+  it('기존 글로벌 스탯 라벨은 렌더하지 않는다', async () => {
     const wrapper = await mountSuspended(IndexPage)
     const t = wrapper.text()
-    expect(t).toContain('12')
-    expect(t).toContain('오늘 신규')
-  })
-
-  it('스탯 값에 tabular-nums를 적용한다(4개 이상)', async () => {
-    const wrapper = await mountSuspended(IndexPage)
-    expect(wrapper.findAll('strong.tabular-nums').length).toBeGreaterThanOrEqual(4)
-  })
-
-  it('newlyListedToday=0이면 배지 없이 숫자만 렌더한다(zero-state, 셀은 항상 렌더)', async () => {
-    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
-      const payload = {
-        ...homePagePayload,
-        dashboard: { ...homePagePayload.dashboard, newlyListedToday: 0 },
-      }
-      const data = key === 'home-page' ? ref(payload) : ref(null)
-      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
-      return Object.assign(Promise.resolve(result), result)
-    })
-
-    const wrapper = await mountSuspended(IndexPage)
-    const t = wrapper.text()
-    expect(t).toContain('오늘 업데이트')
+    expect(t).not.toContain('실거래 부동산')
+    expect(t).not.toContain('등록 시설')
     expect(t).not.toContain('오늘 신규')
-
-    // 다른 테스트에 영향 없도록 기본 mock으로 복원
-    ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
-      const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
-      const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
-      return Object.assign(Promise.resolve(result), result)
-    })
   })
 })

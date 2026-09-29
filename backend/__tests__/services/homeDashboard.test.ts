@@ -8,6 +8,7 @@ const {
   mockOffitelSaleCount,
   mockOffitelRentCount,
   mockQueryRaw,
+  mockQueryRawUnsafe,
   mockSubscriptionCount,
   mockSubscriptionUnitTypeAggregate,
   mockSubscriptionFindMany,
@@ -21,6 +22,7 @@ const {
   mockOffitelSaleCount: vi.fn(),
   mockOffitelRentCount: vi.fn(),
   mockQueryRaw: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
   mockSubscriptionCount: vi.fn(),
   mockSubscriptionUnitTypeAggregate: vi.fn(),
   mockSubscriptionFindMany: vi.fn(),
@@ -58,6 +60,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
     subscription: { count: mockSubscriptionCount, findMany: mockSubscriptionFindMany },
     subscriptionUnitType: { aggregate: mockSubscriptionUnitTypeAggregate },
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRawUnsafe,
   },
   prisma: {
     toilet: { count: mockGenericCount },
@@ -84,6 +87,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
     subscription: { count: mockSubscriptionCount, findMany: mockSubscriptionFindMany },
     subscriptionUnitType: { aggregate: mockSubscriptionUnitTypeAggregate },
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRawUnsafe,
   },
 }));
 
@@ -93,6 +97,7 @@ vi.mock('../../src/services/subscriptionService.js', () => ({
 }));
 
 import {
+  getStats,
   getNewlyListedToday,
   getRealEstateTrends,
   getTrendingBuildings,
@@ -100,6 +105,33 @@ import {
   getHomeDashboard,
   clearHomeDashboardCache,
 } from '../../src/services/metaService.js';
+
+describe('getStats', () => {
+  beforeEach(() => {
+    clearHomeDashboardCache();
+    mockGenericCount.mockReset();
+    mockGenericCount.mockResolvedValue(0);
+    mockAptSaleCount.mockResolvedValue(0);
+    mockAptRentCount.mockResolvedValue(0);
+    mockVillaSaleCount.mockResolvedValue(0);
+    mockVillaRentCount.mockResolvedValue(0);
+    mockOffitelSaleCount.mockResolvedValue(0);
+    mockOffitelRentCount.mockResolvedValue(0);
+    mockSubscriptionCount.mockResolvedValue(0);
+    mockQueryRaw
+      .mockReset()
+      .mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+    mockQueryRawUnsafe
+      .mockReset()
+      .mockResolvedValueOnce([{ apt: BigInt(0), villa: BigInt(0), offitel: BigInt(0) }]);
+  });
+
+  it('excludes staged trash candidates from public homepage totals', async () => {
+    await getStats();
+
+    expect(mockGenericCount.mock.calls).toContainEqual([{ where: { stagedMarker: null } }]);
+  });
+});
 
 // ─────────────────────────────────────────────
 // Task 2: getNewlyListedToday
@@ -371,7 +403,8 @@ describe('getSubscriptionSummary', () => {
 //   - prisma.toilet/wifi/.../sports/region.count() → mockGenericCount (already always resolves 0)
 //   - prisma.aptSaleTransaction/aptRentTransaction/... count → specific mocks
 //   - prisma.subscription.count() → mockSubscriptionCount (once, for subscriptionActiveCount)
-//   - prisma.$queryRaw x2 (evCharger cnt, buildingCountResult)
+//   - prisma.$queryRaw x1 (evCharger cnt)
+//   - prisma.$queryRawUnsafe x1 (active summary table buildingCountResult)
 // getNewlyListedToday uses count mocks (already set by getStats, uses .mockResolvedValue so shared)
 // getRealEstateTrends uses $queryRaw x6
 // getTrendingBuildings uses $queryRaw x3
@@ -389,12 +422,12 @@ function setupFullMocks() {
   // subscription.count called 3 times total: 1 (getStats) + 2 (getSubscriptionSummary)
   mockSubscriptionCount.mockResolvedValue(5);
 
-  // $queryRaw sequence: 2 (stats) + 18 (trends) + 3 (buildings) = 23 total
+  // $queryRaw sequence: 1 (stats) + 18 (trends) + 3 (buildings) = 22 total
   const sumRow = (sumPrice: number | null, cnt: number) =>
     ({ sumPrice, sumArea: sumPrice === null ? null : 1, cnt: BigInt(cnt) });
+  mockQueryRawUnsafe.mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]); // stats: buildingCount
   mockQueryRaw
     .mockResolvedValueOnce([{ cnt: BigInt(500) }])                                            // stats: evCharger
-    .mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]) // stats: buildingCount
     .mockResolvedValueOnce([sumRow(54000, 100)])  // trends: aptCurr
     .mockResolvedValueOnce([sumRow(52000, 90)])   // trends: aptPrev
     .mockResolvedValueOnce([sumRow(30000, 80)])   // trends: aptJeonseCurr
@@ -431,6 +464,7 @@ describe('getHomeDashboard', () => {
     mockOffitelSaleCount.mockReset();
     mockOffitelRentCount.mockReset();
     mockQueryRaw.mockReset();
+    mockQueryRawUnsafe.mockReset();
     mockSubscriptionCount.mockReset();
     mockSubscriptionUnitTypeAggregate.mockReset();
     mockSubscriptionFindMany.mockReset();
@@ -566,6 +600,8 @@ describe('getHomeDashboard', () => {
     mockSubscriptionFindMany.mockRejectedValue(new Error('pool timeout'));
     mockQueryRaw.mockReset();
     mockQueryRaw.mockRejectedValue(new Error('pool timeout'));
+    mockQueryRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockRejectedValue(new Error('pool timeout'));
     mockGetPropertyHotspots.mockReset();
     mockGetPropertyHotspots.mockRejectedValue(new Error('pool timeout'));
     // mockGenericCount는 항상 0 반환 — getStats의 facility count들은 성공 (toilet, wifi 등)

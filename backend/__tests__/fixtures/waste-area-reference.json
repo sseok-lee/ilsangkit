@@ -1,0 +1,346 @@
+{
+  "version": "fixture-reference-w2",
+  "areas": [
+    {
+      "key": "administrative:1168000000",
+      "kind": "administrative",
+      "level": "district",
+      "code": "1168000000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "강남구",
+      "evidence": {
+        "url": "https://example.test/administrative-district",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic district parent fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168064000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168064000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "역삼1동",
+      "evidence": {
+        "url": "https://example.test/administrative-yeoksam1",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168065000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168065000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "역삼2동",
+      "evidence": {
+        "url": "https://example.test/administrative-yeoksam2",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168065100",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168065100",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "역삼10동",
+      "evidence": {
+        "url": "https://example.test/administrative-yeoksam10",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic numbered administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168066000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168066000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "개포1동",
+      "evidence": {
+        "url": "https://example.test/administrative-expired-alias-target",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic administrative dong fixture for expired alias tests only."
+      }
+    },
+    {
+      "key": "administrative:1168067000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168067000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "폐지동",
+      "evidence": {
+        "url": "https://example.test/administrative-expired",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": "2021-01-01",
+        "note": "Synthetic expired administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168068000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168068000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "경계동",
+      "evidence": {
+        "url": "https://example.test/administrative-old-boundary",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": "2026-01-01",
+        "note": "Synthetic old boundary fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:1168068000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "1168068000",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "경계동",
+      "evidence": {
+        "url": "https://example.test/administrative-new-boundary",
+        "version": "fixture",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic new boundary fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:2814055100",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "2814055100",
+      "city": "인천광역시",
+      "district": "남동구",
+      "districtCode": "28140",
+      "name": "논현1동",
+      "evidence": {
+        "url": "https://example.test/administrative-incheon-nonhyeon1",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic other-district administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:3611056000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "3611056000",
+      "city": "세종특별자치시",
+      "district": "",
+      "districtCode": "36110",
+      "name": "해밀동",
+      "evidence": {
+        "url": "https://example.test/administrative-sejong-haemil",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic special-city administrative dong fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:4182000000",
+      "kind": "administrative",
+      "level": "district",
+      "code": "4182000000",
+      "city": "경기도",
+      "district": "가평군",
+      "districtCode": "41820",
+      "name": "가평군",
+      "evidence": {
+        "url": "https://example.test/administrative-gapyeong-district",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic district parent fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:4182025000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "4182025000",
+      "city": "경기도",
+      "district": "가평군",
+      "districtCode": "41820",
+      "name": "가평읍",
+      "evidence": {
+        "url": "https://example.test/administrative-gapyeong-eup",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic administrative eup fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "administrative:4182031000",
+      "kind": "administrative",
+      "level": "dong",
+      "code": "4182031000",
+      "city": "경기도",
+      "district": "가평군",
+      "districtCode": "41820",
+      "name": "설악면",
+      "evidence": {
+        "url": "https://example.test/administrative-seorak-myeon",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic administrative myeon fixture for resolver tests only."
+      }
+    },
+    {
+      "key": "legal:1168010100",
+      "kind": "legal",
+      "level": "dong",
+      "code": "1168010100",
+      "city": "서울특별시",
+      "district": "강남구",
+      "districtCode": "11680",
+      "name": "역삼동",
+      "evidence": {
+        "url": "https://example.test/legal-yeoksam",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic legal dong fixture for resolver tests only."
+      }
+    }
+  ],
+  "relations": [
+    {
+      "fromKey": "legal:1168010100",
+      "alias": null,
+      "toKey": "administrative:1168064000",
+      "evidence": {
+        "url": "https://example.test/legal-to-admin-yeoksam1",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic legal-to-administrative relation fixture for resolver tests only."
+      }
+    },
+    {
+      "fromKey": "legal:1168010100",
+      "alias": null,
+      "toKey": "administrative:1168065000",
+      "evidence": {
+        "url": "https://example.test/legal-to-admin-yeoksam2",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic legal-to-administrative relation fixture for resolver tests only."
+      }
+    },
+    {
+      "fromKey": null,
+      "alias": "역삼일동",
+      "toKey": "administrative:1168064000",
+      "evidence": {
+        "url": "https://example.test/alias-yeoksam1",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic alias fixture for resolver tests only."
+      }
+    },
+    {
+      "fromKey": null,
+      "alias": "개포본동",
+      "toKey": "administrative:1168066000",
+      "evidence": {
+        "url": "https://example.test/alias-expired",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": "2021-01-01",
+        "note": "Synthetic expired alias fixture for resolver tests only."
+      }
+    }
+  ],
+  "sourceAreaKinds": {
+    "fixture:administrative": {
+      "kind": "administrative",
+      "evidence": {
+        "url": "https://example.test/source-kind-administrative",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic source-kind fixture for resolver tests only."
+      }
+    },
+    "fixture:legal": {
+      "kind": "legal",
+      "evidence": {
+        "url": "https://example.test/source-kind-legal",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic source-kind fixture for resolver tests only."
+      }
+    },
+    "fixture:administrative-hashed": {
+      "kind": "administrative",
+      "targetRegionHash": "52b602cd5bacb5e66cddf3f4d4f3eac49c4007ee55efc372448c32c075fff8e0",
+      "evidence": {
+        "url": "https://example.test/source-kind-administrative-hashed",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic hash-bound source-kind fixture for resolver tests only."
+      }
+    },
+    "fixture:administrative-expired": {
+      "kind": "administrative",
+      "evidence": {
+        "url": "https://example.test/source-kind-administrative-expired",
+        "version": "fixture",
+        "effectiveFrom": "2020-01-01",
+        "effectiveTo": "2021-01-01",
+        "note": "Synthetic expired source-kind fixture for resolver tests only."
+      }
+    },
+    "fixture:administrative-future": {
+      "kind": "administrative",
+      "evidence": {
+        "url": "https://example.test/source-kind-administrative-future",
+        "version": "fixture",
+        "effectiveFrom": "2027-01-01",
+        "effectiveTo": null,
+        "note": "Synthetic future source-kind fixture for resolver tests only."
+      }
+    }
+  }
+}

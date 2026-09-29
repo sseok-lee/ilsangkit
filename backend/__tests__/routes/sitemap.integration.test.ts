@@ -7,8 +7,10 @@ const getRealEstateBuildingCountMock = vi.fn();
 const getFacilityIdsMock = vi.fn();
 const getWasteScheduleIdsMock = vi.fn();
 const getWasteScheduleRegionsMock = vi.fn();
+const getWasteAreaIdsForSitemapMock = vi.fn();
 const getRegionCategoryCombinationsMock = vi.fn();
 const getSubscriptionIdsMock = vi.fn();
+const getSitemapPageCountsMock = vi.fn();
 // isValidCategory 는 테스트별로 override 가능한 mock 으로 둔다 (invalid category → 400 검증).
 const isValidCategoryMock = vi.fn<(c: string) => boolean>();
 
@@ -17,10 +19,12 @@ vi.mock('../../src/services/sitemapService.js', () => ({
   getFacilityIds: (...args: unknown[]) => getFacilityIdsMock(...args),
   getWasteScheduleIds: () => getWasteScheduleIdsMock(),
   getWasteScheduleRegions: () => getWasteScheduleRegionsMock(),
+  getWasteAreaIdsForSitemap: () => getWasteAreaIdsForSitemapMock(),
   getRegionCategoryCombinations: () => getRegionCategoryCombinationsMock(),
   getRealEstateBuildings: (opts?: unknown) => getRealEstateBuildingsMock(opts),
   getRealEstateBuildingCount: () => getRealEstateBuildingCountMock(),
   getSubscriptionIds: () => getSubscriptionIdsMock(),
+  getSitemapPageCounts: () => getSitemapPageCountsMock(),
 }));
 
 const sitemapRouter = (await import('../../src/routes/sitemap.js')).default;
@@ -38,9 +42,33 @@ beforeEach(() => {
   getFacilityIdsMock.mockReset().mockResolvedValue([]);
   getWasteScheduleIdsMock.mockReset().mockResolvedValue([]);
   getWasteScheduleRegionsMock.mockReset().mockResolvedValue([]);
+  getWasteAreaIdsForSitemapMock.mockReset().mockResolvedValue([]);
   getRegionCategoryCombinationsMock.mockReset().mockResolvedValue([]);
   getSubscriptionIdsMock.mockReset().mockResolvedValue([]);
+  getSitemapPageCountsMock.mockReset().mockResolvedValue({
+    facilities: [],
+    waste: { count: 0, maxUpdatedAt: null },
+    subscriptions: { count: 0, maxUpdatedAt: null },
+    realEstateBuildings: { count: 0, maxUpdatedAt: null },
+  });
   isValidCategoryMock.mockReset().mockReturnValue(true);
+});
+
+describe('GET /api/sitemap/waste-areas', () => {
+  it('returns only indexable waste areas from the W9 service contract', async () => {
+    getWasteAreaIdsForSitemapMock.mockResolvedValue([
+      { areaId: 101, contentUpdatedAt: '2026-09-20T00:00:00.000Z' },
+    ]);
+
+    const res = await request(app).get('/api/sitemap/waste-areas');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      data: { areas: [{ areaId: 101, contentUpdatedAt: '2026-09-20T00:00:00.000Z' }] },
+    });
+    expect(getWasteAreaIdsForSitemapMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('GET /api/sitemap/facilities/:category', () => {
