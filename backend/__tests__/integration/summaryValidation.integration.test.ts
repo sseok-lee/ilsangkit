@@ -273,6 +273,23 @@ describe('summary V2 preparation and validation integration', () => {
     await prisma.$disconnect();
   });
 
+  it('prepares and verifies state timestamps without database timestamp defaults', async () => {
+    mysqlInDatabase('ALTER TABLE RealEstateSummaryState MODIFY updatedAt DATETIME(3) NOT NULL');
+    try {
+      const prepared = runScript('summary:prepare-v2', join(reportDir, 'no-default.json'));
+      expect(prepared.exitCode, prepared.stderr).toBe(0);
+      const rows = await prisma.$queryRawUnsafe<Array<{ status: string; updatedAt: Date }>>(
+        'SELECT status, updatedAt FROM RealEstateSummaryState WHERE id = 1',
+      );
+      expect(rows[0]?.status).toBe('ready');
+      expect(rows[0]?.updatedAt).toBeInstanceOf(Date);
+      const verified = runScript('summary:verify-v2', join(reportDir, 'no-default-verify.json'));
+      expect(verified.exitCode, verified.stderr).toBe(0);
+    } finally {
+      mysqlInDatabase('ALTER TABLE RealEstateSummaryState MODIFY updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)');
+    }
+  });
+
   it('prepares all six transaction types, preserves source and legacy rows, and verifies ready reruns without rebuilding', async () => {
     const legacyBefore = await digest('RealEstateBuildingSummary');
     const sourceBefore = await digest('AptSaleTransaction');

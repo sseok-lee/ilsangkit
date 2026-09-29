@@ -115,14 +115,15 @@ async function readState(): Promise<SummaryStateRow | null> {
 
 async function writeState(status: SummaryStateRow['status'], runId: string, sourceFingerprint: string, report: unknown, validated: boolean): Promise<void> {
   await prisma.$executeRawUnsafe(
-    `INSERT INTO RealEstateSummaryState (id, status, runId, sourceFingerprint, report, validatedAt)
-     VALUES (1, ?, ?, ?, CAST(? AS JSON), ${validated ? 'NOW(3)' : 'NULL'})
+    `INSERT INTO RealEstateSummaryState (id, status, runId, sourceFingerprint, report, validatedAt, updatedAt)
+     VALUES (1, ?, ?, ?, CAST(? AS JSON), ${validated ? 'NOW(3)' : 'NULL'}, NOW(3))
      ON DUPLICATE KEY UPDATE
        status = VALUES(status),
        runId = VALUES(runId),
        sourceFingerprint = VALUES(sourceFingerprint),
        report = VALUES(report),
-       validatedAt = VALUES(validatedAt)`,
+       validatedAt = VALUES(validatedAt),
+       updatedAt = NOW(3)`,
     status,
     runId,
     sourceFingerprint,
@@ -160,14 +161,15 @@ function rejectedDirectValidationReport(runId: string, state: SummaryStateRow | 
 
 async function markPreparing(runId: string, sourceFingerprint: string): Promise<void> {
   await prisma.$executeRawUnsafe(
-    `INSERT INTO RealEstateSummaryState (id, status, runId, sourceFingerprint, report, validatedAt)
-     VALUES (1, 'preparing', ?, ?, CAST(? AS JSON), NULL)
+    `INSERT INTO RealEstateSummaryState (id, status, runId, sourceFingerprint, report, validatedAt, updatedAt)
+     VALUES (1, 'preparing', ?, ?, CAST(? AS JSON), NULL, NOW(3))
      ON DUPLICATE KEY UPDATE
        status = 'preparing',
        runId = VALUES(runId),
        sourceFingerprint = VALUES(sourceFingerprint),
        report = VALUES(report),
-       validatedAt = NULL`,
+       validatedAt = NULL,
+       updatedAt = NOW(3)`,
     runId,
     sourceFingerprint,
     JSON.stringify({ runId, status: 'preparing', lifecycle: { everReady: false } }),
