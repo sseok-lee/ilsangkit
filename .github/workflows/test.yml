@@ -15,10 +15,10 @@ jobs:
           MYSQL_ROOT_PASSWORD: testpassword
           MYSQL_DATABASE: ilsangkit_test
         ports:
-          - 3306:3306
+          - 3307:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     env:
-      DATABASE_URL: mysql://root:testpassword@localhost:3306/ilsangkit_test
+      DATABASE_URL: mysql://root:testpassword@localhost:3307/ilsangkit_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

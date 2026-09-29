@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makeBuildingKey } from '../../src/lib/realEstateBuildingIdentity.js';
 import {
   buildBaselineSql,
@@ -9,6 +9,22 @@ import {
   RELEASE_REHEARSAL_TYPES,
   validateSeedDatabaseUrl,
 } from '../../src/scripts/seedReleaseRehearsal.js';
+
+// Unit tests exercise the real Prisma-to-DDL conversion against a pinned old schema.
+// The rehearsal CLI still reads origin/main; tests must also work in shallow CI clones.
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  const { readFileSync } = await import('node:fs');
+  return {
+    ...actual,
+    execFileSync: (command: string, args: string[], options: import('node:child_process').ExecFileSyncOptionsWithStringEncoding) => {
+      if (command === 'git' && args[0] === 'show' && args[1] === 'origin/main:backend/prisma/schema.prisma') {
+        return readFileSync(new URL('../fixtures/release-baseline.prisma', import.meta.url), 'utf8');
+      }
+      return actual.execFileSync(command, args, options);
+    },
+  };
+});
 
 describe('seedReleaseRehearsal fixture contract', () => {
   it('guards writes to a dedicated localhost *_test database', () => {
