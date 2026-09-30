@@ -1,14 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { defineComponent, h, reactive, ref } from 'vue'
+import { defineComponent, h, nextTick, reactive, ref } from 'vue'
 import { mount } from '@vue/test-utils'
-import { isBotSignature, useAdsEnabled, useAdsPolicy, suppressAds, markAdsBlocked, isAdFreePath } from '~/composables/useAdsPolicy'
+import { isBotSignature, useAdsEnabled, useAdsPolicy, suppressAds, markAdsBlocked, isAdFreePath, canLoadAdScript } from '~/composables/useAdsPolicy'
 
 const realConfig = (globalThis as any).useRuntimeConfig
 const realRoute = (globalThis as any).useRoute
+const realNavigatorUserAgent = navigator.userAgent
+const realNavigatorWebdriver = navigator.webdriver
 
 afterEach(() => {
   ;(globalThis as any).useRuntimeConfig = realConfig
   ;(globalThis as any).useRoute = realRoute
+  Object.defineProperty(navigator, 'userAgent', { value: realNavigatorUserAgent, configurable: true })
+  Object.defineProperty(navigator, 'webdriver', { value: realNavigatorWebdriver, configurable: true })
   ;(globalThis as any).__resetUseState?.()
   sessionStorage.clear()
 })
@@ -48,6 +52,15 @@ describe('useAdsEnabled', () => {
   })
 })
 
+describe('canLoadAdScript', () => {
+  it('webdriver 봇 환경에서는 AdSense 스크립트를 즉시 싣지 않는다', () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 Chrome/146', configurable: true })
+    Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true })
+
+    expect(canLoadAdScript()).toBe(false)
+  })
+})
+
 describe('useAdsPolicy.shouldServeAds', () => {
   it('기본은 true', () => {
     expect(useAdsPolicy().shouldServeAds.value).toBe(true)
@@ -79,6 +92,24 @@ describe('useAdsPolicy.shouldServeAds', () => {
     expect(wrapper.find('.ad-slot').exists()).toBe(true)
     route.path = '/trash/areas/101'
     await wrapper.vm.$nextTick()
+    expect(wrapper.find('.ad-slot').exists()).toBe(false)
+  })
+  it('webdriver 봇 판정은 mounted 이후 반영해 hydration 첫 렌더를 안정화한다', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 HeadlessChrome/146', configurable: true })
+    Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true })
+
+    // 컴포넌트 mounted 전에는 SSR과 같은 값(true)을 유지해야 hydration mismatch가 나지 않는다.
+    expect(useAdsPolicy().shouldServeAds.value).toBe(true)
+
+    const RuntimeAdSlot = defineComponent({
+      setup() {
+        const { shouldServeAds } = useAdsPolicy()
+        return () => shouldServeAds.value ? h('div', { class: 'ad-slot' }, 'ad') : null
+      },
+    })
+    const wrapper = mount(RuntimeAdSlot)
+    await nextTick()
+
     expect(wrapper.find('.ad-slot').exists()).toBe(false)
   })
   it('suppressAds(true)면 false', () => {

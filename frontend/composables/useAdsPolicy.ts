@@ -1,4 +1,4 @@
-import { computed, type ComputedRef, type Ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, type ComputedRef, type Ref } from 'vue'
 
 // 광고를 발화하면 안 되는 비인간/자동화 UA. 'Headless'는 구·신 헤드리스 모두 커버.
 const BOT_UA = /Headless|playwright|puppeteer|lighthouse|bot|crawl|spider|slurp|bingbot|googlebot|yeti|yandex|amazonbot|bytespider|ahrefs|semrush/i
@@ -13,9 +13,9 @@ export function isBotSignature(userAgent: string, webdriver: boolean): boolean {
   return BOT_UA.test(userAgent)
 }
 
-/** 클라이언트에서만 평가. SSR/단위테스트(import.meta.client falsy)에선 false로 클라이언트에 위임. */
+/** 클라이언트에서만 평가. SSR(navigator 없음)에선 false로 클라이언트에 위임. */
 export function isLikelyBot(): boolean {
-  if (!import.meta.client) return false
+  if (typeof navigator === 'undefined') return false
   const nav = navigator as Navigator & { webdriver?: boolean }
   return isBotSignature(nav.userAgent || '', nav.webdriver === true)
 }
@@ -75,11 +75,22 @@ export function useAdsPolicy(): { shouldServeAds: ComputedRef<boolean> } {
   const adsEnabled = useAdsEnabled()
   const suppressed = useState<boolean>('ads:suppressed', () => false)
   const blocked = useState<boolean>('ads:blocked', () => false)
+  const botDetected = useState<boolean>('ads:bot-detected', () => false)
   const route = useRoute()
+
+  // SSR은 navigator.webdriver/UA를 알 수 없다. 이를 setup 중 클라이언트에서 즉시 평가하면
+  // SSR은 광고 컨테이너를 렌더하고 hydration 첫 렌더는 제거해 Vue hydration mismatch가 난다.
+  // 봇 판정은 mounted 이후 반영해 최초 hydration DOM을 안정화한다.
+  if (typeof navigator !== 'undefined' && getCurrentInstance()) {
+    onMounted(() => {
+      botDetected.value = isLikelyBot()
+    })
+  }
+
   const shouldServeAds = computed(() => {
     const currentPath = typeof route.path === 'string' ? route.path : ''
     return adsEnabled
-      && !isLikelyBot()
+      && !botDetected.value
       && !suppressed.value
       && !blocked.value
       && !isAdFreePath(currentPath)

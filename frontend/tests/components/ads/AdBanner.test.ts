@@ -37,6 +37,8 @@ const sourcePath = resolve(frontendRoot, 'components/ads/AdBanner.vue')
 const source = () => readFileSync(sourcePath, 'utf8')
 const requestSourcePath = resolve(frontendRoot, 'components/ads/useDeferredAdSenseRequest.ts')
 const requestSource = () => readFileSync(requestSourcePath, 'utf8')
+const realNavigatorUserAgent = navigator.userAgent
+const realNavigatorWebdriver = navigator.webdriver
 
 describe('AdBanner', () => {
   beforeEach(() => {
@@ -46,6 +48,8 @@ describe('AdBanner', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    Object.defineProperty(navigator, 'userAgent', { value: realNavigatorUserAgent, configurable: true })
+    Object.defineProperty(navigator, 'webdriver', { value: realNavigatorWebdriver, configurable: true })
     delete (window as unknown as { adsbygoogle?: unknown }).adsbygoogle
     ;(globalThis as any).__resetUseState?.()
   })
@@ -63,6 +67,24 @@ describe('AdBanner', () => {
     expect(requestSource()).not.toContain('AD_REQUEST_DELAY_MS')
     expect(requestSource()).not.toContain('AD_REQUEST_ROOT_MARGIN')
     expect(requestSource()).not.toContain('requestAnimationFrame')
+  })
+
+  it('webdriver 봇 환경에서는 mounted 이후 슬롯을 숨기고 광고 요청을 push 하지 않는다', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 Chrome/146', configurable: true })
+    Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true })
+
+    const wrapper = mount(AdBanner, {
+      global: {
+        stubs: { ClientOnly: clientOnlyStub },
+      },
+    })
+
+    await flushAdMount()
+    vi.advanceTimersByTime(2000)
+    await nextTick()
+
+    expect(wrapper.find('.ad-banner').exists()).toBe(false)
+    expect((window as unknown as { adsbygoogle?: unknown }).adsbygoogle).toBeUndefined()
   })
 
   it('does not fabricate data-ad-status=unfilled when AdSense has not responded yet', async () => {

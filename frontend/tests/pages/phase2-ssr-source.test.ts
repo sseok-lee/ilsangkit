@@ -17,6 +17,12 @@ describe('Phase 2 — SSR 워터폴 병렬화 source assertions', () => {
       expect(src).toContain('Promise.allSettled')
     })
 
+    it('critical facility fetch는 SSR loopback apiBase를 사용한다', () => {
+      expect(src).toContain('const apiBase = useApiBase()')
+      expect(src).toContain('`${apiBase}/api/facilities/${category.value}/${id.value}`')
+      expect(src).not.toContain('`/api/facilities/${category.value}/${id.value}`')
+    })
+
     it('secondary $fetch에 AbortSignal.timeout(8000)이 적용돼 있다', () => {
       expect(src).toContain('AbortSignal.timeout(8000)')
     })
