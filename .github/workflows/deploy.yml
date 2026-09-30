@@ -60,7 +60,7 @@ jobs:
           mkdir -p release-out/backend release-out/frontend release-out/scripts/deploy
           cp -R backend/dist backend/package*.json backend/prisma release-out/backend/
           cp -R frontend/.output release-out/frontend/
-          cp scripts/deploy/release.mjs scripts/deploy/nginx-release.conf.template release-out/scripts/deploy/
+          cp scripts/deploy/release.mjs scripts/deploy/deployment-state.mjs scripts/deploy/sync-runtime.mjs scripts/deploy/nginx-release.conf.template release-out/scripts/deploy/
           cp ecosystem.release.config.cjs release-out/
           node - "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs')
@@ -75,9 +75,11 @@ jobs:
               const full = path.join(dir, entry.name)
               if (entry.isDirectory()) walk(full)
               else if (entry.isFile()) {
+                const relativePath = path.relative(nuxtDir, full).split(path.sep).join('/')
+                if (relativePath === 'builds/latest.json') continue
                 assets.push({
-                  path: `/home/project2/deploy/releases/${releaseId}/frontend/.output/public/_nuxt/${entry.name}`,
-                  fileName: entry.name,
+                  path: `/home/project2/deploy/releases/${releaseId}/frontend/.output/public/_nuxt/${relativePath}`,
+                  fileName: relativePath,
                   sha256: crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex'),
                 })
               }
@@ -145,64 +147,8 @@ jobs:
             )"
             SUMMARY_READINESS="$(curl -fsS "$SUMMARY_READY")"
 
-            node - "$INVENTORY" "$MANIFEST" "$HASHED_ASSETS" "$SUMMARY_READINESS" <<'NODE'
-            const fs = require('node:fs')
-            const [inventoryPath, manifestPath, hashedAssetsPath, readinessJson] = process.argv.slice(2)
-            const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'))
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-            const hashedAssets = JSON.parse(fs.readFileSync(hashedAssetsPath, 'utf8'))
-            const summaryReadiness = JSON.parse(readinessJson)
-            const runtime = inventory.runtime || {}
-            const rollbackReleaseId = inventory.active?.releaseId || inventory.active?.backend?.releaseId || inventory.rollback?.releaseId
-            const rollbackFrontendPort = inventory.active?.frontend?.port || inventory.rollback?.frontendPort
-            const rollbackBackendPort = inventory.active?.backend?.port || inventory.rollback?.backendPort
-            const ports = inventory.candidate?.ports || inventory.nextCandidate?.ports || {
-              frontend: inventory.reservePorts?.[1],
-              backend: inventory.reservePorts?.[3],
-              proxy: inventory.reservePorts?.[4],
-            }
-            const probes = inventory.businessProbes?.candidate || inventory.businessProbes
-            const rollbackProbes = inventory.businessProbes?.rollback || inventory.rollback?.probes
-            const publicSmokeProbes = inventory.publicSmokeProbes
-            const activePointers = inventory.activePointers || {
-              backend: inventory.activeBackendLink,
-              frontend: inventory.activeFrontendLink,
-            }
-            const backendEnvFile = runtime.backendEnvFile || inventory.envFile
-            const realEstateWriteLockDir = runtime.realEstateWriteLockDir || inventory.realEstateWriteLockDir
-            const sitemapDir = runtime.sitemapDir || inventory.sitemap?.releaseDir
-            if (!summaryReadiness.ready || !summaryReadiness.summary?.runId) throw new Error('summaryReadiness must be ready with runId')
-            if (summaryReadiness.summary.mode !== 'address') throw new Error('summaryReadiness must be address mode')
-            if (!rollbackReleaseId || !rollbackFrontendPort || !rollbackBackendPort) throw new Error('inventory rollback release/ports are required')
-            if (!backendEnvFile || !realEstateWriteLockDir || !sitemapDir) throw new Error('inventory runtime backendEnvFile, realEstateWriteLockDir, and sitemapDir are required')
-            if (!activePointers.backend || !activePointers.frontend) throw new Error('inventory activePointers backend/frontend are required')
-            if (!Array.isArray(probes) || probes.length === 0) throw new Error('inventory business probes are required')
-            if (!probes.some((probe) => probe.name === 'release-readiness' && probe.path === '/api/internal/release-readiness')) throw new Error('inventory release-readiness probe is required')
-            if (!Array.isArray(rollbackProbes) || rollbackProbes.length === 0) throw new Error('inventory rollback probes are required')
-            if (!Array.isArray(publicSmokeProbes) || publicSmokeProbes.length === 0) throw new Error('inventory publicSmokeProbes are required')
-            Object.assign(manifest, {
-              ports,
-              rollbackReleaseId,
-              rollback: {
-                releaseId: rollbackReleaseId,
-                frontendPort: rollbackFrontendPort,
-                backendPort: rollbackBackendPort,
-                proxyPort: inventory.active?.proxy?.port || inventory.rollback?.proxyPort,
-                retained: true,
-                supportsKeyedUrls: true,
-                businessProbesPass: true,
-                probes: rollbackProbes,
-              },
-              summary: { mode: 'address', runId: summaryReadiness.summary.runId, expectedRunId: summaryReadiness.summary.runId, state: 'ready' },
-              runtime: { backendEnvFile, realEstateWriteLockDir, sitemapDir },
-              activePointers,
-              publicOrigin: inventory.publicOrigin || inventory.proxyOrigin,
-              probes,
-              publicSmokeProbes,
-              hashedAssets,
-            })
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
-            NODE
+            printf '%s' "$SUMMARY_READINESS" > "$INBOX/readiness.json"
+            node "$INBOX/scripts/deploy/deployment-state.mjs" "$INVENTORY" "$MANIFEST" "$HASHED_ASSETS" "$INBOX/readiness.json"
 
             node "$RELEASE_SCRIPT" deploy --inventory "$INVENTORY" --manifest "$MANIFEST"
             node "$RELEASE_SCRIPT" reconcile --inventory "$INVENTORY" --manifest "$MANIFEST"
