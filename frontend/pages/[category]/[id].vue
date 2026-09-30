@@ -290,7 +290,7 @@ const apiBase = useApiBase()
 const { data: facilityResponse, status, error: fetchError } = await useAsyncData(
   `facility-${category.value}-${id.value}`,
   () => $fetch<{ success: boolean; data: FacilityDetail }>(
-    `/api/facilities/${category.value}/${id.value}`
+    `${apiBase}/api/facilities/${category.value}/${id.value}`
   ),
   { lazy: true }
 )

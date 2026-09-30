@@ -19,7 +19,7 @@ import { getRegionList, getRegionDetail, getHubSummary, getSitemapEntries, getTr
 describe('getRegionList', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('동 목록을 transactionCount 내림차순으로 반환 + 페이지네이션', async () => {
+  it('동 목록을 안정적인 transactionCount 내림차순으로 반환 + 페이지네이션', async () => {
     mockSummaryFindMany.mockResolvedValue([
       { bjdCode: '11680', dongName: '역삼동', city: '서울특별시', district: '강남구',
         transactionCount: 12, avgPricePerPyeong: '25000', latestDealDate: new Date('2026-03-15'), isIndexable: true },
@@ -34,7 +34,13 @@ describe('getRegionList', () => {
     expect(mockSummaryFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { city: { in: expect.arrayContaining(['서울특별시', '서울']) }, district: '강남구' },
-        orderBy: { transactionCount: 'desc' },
+        orderBy: [
+          { transactionCount: 'desc' },
+          { city: 'asc' },
+          { district: 'asc' },
+          { dongName: 'asc' },
+          { bjdCode: 'asc' },
+        ],
         skip: 0,
         take: 20,
       })

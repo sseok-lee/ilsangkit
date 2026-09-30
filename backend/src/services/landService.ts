@@ -25,6 +25,14 @@ const transactionOrderBy = [
   { id: 'desc' as const },
 ];
 
+const regionListOrderBy = [
+  { transactionCount: 'desc' as const },
+  { city: 'asc' as const },
+  { district: 'asc' as const },
+  { dongName: 'asc' as const },
+  { bjdCode: 'asc' as const },
+];
+
 function pricePerPyeong(dealAmount: number, dealArea: number | null): number | null {
   if (!dealArea || dealArea <= 0) return null;
   return Math.round((dealAmount / (dealArea / PYEONG_PER_SQM)) * 100) / 100;
@@ -195,7 +203,7 @@ export async function getRegionList(params: RegionListParams): Promise<RegionLis
   const [rows, total] = await Promise.all([
     prisma.landAreaSummary.findMany({
       where,
-      orderBy: { transactionCount: 'desc' },
+      orderBy: regionListOrderBy,
       skip,
       take: limit,
     }),

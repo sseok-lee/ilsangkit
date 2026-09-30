@@ -24,6 +24,21 @@ test('second deployment binds new identity/runId and rolls back to actual active
  assert.equal(inventory.businessProbes.active[0].expectedJson['summary.runId'], 'old-run')
  assert.equal(next.runtime.frontendEnvFile, '/shared/frontend.env')
 })
+test('every release checks facility and region SSR plus the frontend internal API route', async () => {
+ const { inventory, options, readiness } = fixture()
+ const next = await bindDeploymentManifest(inventory, { releaseId: 'second' }, [], readiness, options)
+ for (const path of ['/hospital', '/hospital/hospital-50603de6cc23', '/seoul', '/seoul/gangnam', '/gwangju', '/jeonnam', '/trash', '/subscription/rent', '/auction/list']) {
+  assert.ok(next.probes.some(p => p.path === path && p.target === 'frontend' && p.expectedReleaseId === 'second' && p.expectBodyIncludes.includes('<h1')), path)
+  assert.ok(next.publicSmokeProbes.some(p => p.path === path && p.target === 'proxy' && p.expectedReleaseId === 'second'), path)
+ }
+ assert.ok(next.probes.some(p => p.name === 'frontend-api-runtime' && p.path === '/api/meta/regions' && p.target === 'frontend' && p.expectedReleaseId === 'second'))
+ assert.ok(next.probes.some(p => p.path === '/api/facilities/search' && p.method === 'POST' && p.jsonBody.grouped === true && p.expectedJson.success === true))
+ assert.ok(next.publicSmokeProbes.some(p => p.path === '/api/facilities/search' && p.method === 'POST' && p.jsonBody.grouped === true))
+ assert.ok(next.probes.some(p => p.path === '/real-estate/apt-sale/gyeongnam/_payload.json' && p.expectedHeaders['content-type'] === 'application/json;charset=utf-8'))
+ assert.ok(next.publicSmokeProbes.some(p => p.path === '/real-estate/apt-sale/gyeongnam/_payload.json' && p.expectedHeaders['content-type'] === 'application/json;charset=utf-8'))
+ const again = await bindDeploymentManifest({ ...inventory, businessProbes: { active: next.probes }, publicSmokeProbes: next.publicSmokeProbes }, { releaseId: 'third' }, [], readiness, options)
+ assert.equal(new Set(again.probes.map(p => p.name)).size, again.probes.length)
+})
 test('occupied retained ports are skipped; no capacity fails without choosing active ports', async () => {
  const {inventory,options,readiness} = fixture()
  options.portAvailable = async p => p === 13002 || p === 18002

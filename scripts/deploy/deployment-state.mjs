@@ -13,6 +13,41 @@ export function rebindProbes(probes, releaseId, summary) {
   })
 }
 
+function withPublicPageProbes(probes, releaseId, target) {
+  const pages = [
+    ['facility-list', '/hospital', '병원'],
+    ['facility-detail', '/hospital/hospital-50603de6cc23', '가가성형외과의원'],
+    ['region-city', '/seoul', '생활 정보'],
+    ['region-district', '/seoul/gangnam', '강남구'],
+    ['legacy-gwangju', '/gwangju', '전남광주'],
+    ['legacy-jeonnam', '/jeonnam', '전남광주'],
+    ['waste-list', '/trash', '배출'],
+    ['rental-list', '/subscription/rent', '임대'],
+    ['auction-list', '/auction/list', '공매'],
+    ['property-city', '/real-estate/apt-sale/gyeongnam', '경남'],
+  ].map(([name, path, text]) => ({
+    name: `${target}-page-${name}`, path, target, expectedReleaseId: releaseId,
+    expectBodyIncludes: ['<h1', text], requestTimeoutMs: 10000,
+  }))
+  pages.push({
+    name: `${target}-city-payload`, path: '/real-estate/apt-sale/gyeongnam/_payload.json',
+    target, expectedReleaseId: releaseId,
+    expectedHeaders: { 'content-type': 'application/json;charset=utf-8' },
+  })
+  pages.push({
+    name: `${target}-grouped-search`, path: '/api/facilities/search',
+    target, method: 'POST', jsonBody: { keyword: '성원', limit: 3, grouped: true },
+    expectedReleaseId: releaseId, expectedJson: { success: true }, requestTimeoutMs: 10000,
+  })
+  if (target === 'frontend') pages.push({
+    name: 'frontend-api-runtime', path: '/api/meta/regions', target,
+    expectedReleaseId: releaseId, expectedJson: { success: true },
+  })
+  const byName = new Map(probes.map(probe => [probe.name, probe]))
+  for (const probe of pages) byName.set(probe.name, probe)
+  return [...byName.values()]
+}
+
 export function inventoryForRelease(inventory, manifest) {
   if (!manifest.releaseId || !manifest.runtime || !manifest.summary || !manifest.probes?.length) throw new Error('complete active manifest required')
   const releaseRoot = join(inventory.releasesRoot, manifest.releaseId)
@@ -80,8 +115,8 @@ export async function bindDeploymentManifest(inventory, manifest, hashedAssets, 
     runtime: structuredClone(inventory.runtime),
     activePointers: inventory.activePointers,
     publicOrigin: inventory.publicOrigin,
-    probes: rebindProbes(probes, manifest.releaseId, summary),
-    publicSmokeProbes: rebindProbes(inventory.publicSmokeProbes, manifest.releaseId, summary),
+    probes: withPublicPageProbes(rebindProbes(probes, manifest.releaseId, summary), manifest.releaseId, 'frontend'),
+    publicSmokeProbes: withPublicPageProbes(rebindProbes(inventory.publicSmokeProbes, manifest.releaseId, summary), manifest.releaseId, 'proxy'),
     hashedAssets,
   }
 }

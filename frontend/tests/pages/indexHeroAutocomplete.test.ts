@@ -16,6 +16,7 @@ type NuxtAutocompleteTestGlobal = typeof globalThis & {
   onUnmounted: typeof onUnmounted
   readonly: typeof readonly
   useAsyncData: Mock
+  navigateTo: Mock
 }
 
 const testGlobal = globalThis as NuxtAutocompleteTestGlobal
@@ -46,7 +47,18 @@ const homePagePayload = {
   recentArticles: [],
 };
 
+function resetLocalStorageMock() {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn((key: string) => storage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => storage.set(key, String(value))),
+    removeItem: vi.fn((key: string) => storage.delete(key)),
+    clear: vi.fn(() => storage.clear()),
+  });
+}
+
 beforeEach(() => {
+  resetLocalStorageMock();
   localStorage.clear();
   vi.stubGlobal('$fetch', vi.fn(async () => ({ success: true, data: { items: [] } })));
   testGlobal.useAsyncData = vi.fn((key?: string) => {
@@ -116,6 +128,34 @@ describe('메인 히어로 자동완성', () => {
     expect(ac.props('modelValue')).toBe('');
     // 그러나 @input → setQuery 경로로 자동완성은 실시간 값 '강남'으로 동작한다
     expect(wrapper.text()).toContain('"강남"');
+  });
+
+  it('IME 조합 중 검색 버튼 클릭도 실제 입력값으로 검색한다', async () => {
+    const wrapper = await mountSuspended(IndexPage);
+    const input = wrapper.find('input[aria-label="단지명·동네·시설 검색"]');
+    const button = wrapper.find('button[aria-label="검색"]');
+
+    await input.trigger('focus');
+    await input.trigger('compositionstart');
+    (input.element as HTMLInputElement).value = '성원';
+    await input.trigger('input');
+    await flushPromises();
+
+    (button.element as HTMLButtonElement).click();
+    await flushPromises();
+
+    expect(testGlobal.navigateTo).toHaveBeenCalledWith('/search?keyword=%EC%84%B1%EC%9B%90');
+  });
+
+  it('Enter 검색은 입력값으로 검색 결과 페이지로 이동한다', async () => {
+    const wrapper = await mountSuspended(IndexPage);
+    const input = wrapper.find('input[aria-label="단지명·동네·시설 검색"]');
+
+    await input.setValue('성원');
+    await input.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+
+    expect(testGlobal.navigateTo).toHaveBeenCalledWith('/search?keyword=%EC%84%B1%EC%9B%90');
   });
 
   it('히어로 입력과 자동완성 listbox를 combobox ARIA로 연결한다', async () => {

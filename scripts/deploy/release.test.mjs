@@ -580,6 +580,29 @@ test('runReleaseCommand deploy executes safe release sequence and retains previo
   assert.ok(existsSync(join(inventory.deployRoot, 'journal', `${manifest.releaseId}.json`)))
 })
 
+test('business probes send the real JSON search request instead of a bodyless POST', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const jsonBody = { keyword: '성원', limit: 3, grouped: true }
+  manifest.probes.push({ name: 'facility-search', path: '/api/facilities/search', target: 'frontend', method: 'POST', jsonBody, expectedReleaseId: manifest.releaseId, expectedJson: { success: true } })
+  let checked = false
+  await runReleaseCommand('check', {
+    inventory, manifest, runner: createRunner([]),
+    fetch: async (url, options) => {
+      if (new URL(url).pathname === '/api/facilities/search') {
+        assert.equal(options.method, 'POST')
+        assert.equal(options.headers['content-type'], 'application/json')
+        assert.deepEqual(JSON.parse(options.body), jsonBody)
+        checked = true
+      }
+      return okFetch()(url)
+    },
+  })
+  assert.equal(checked, true)
+})
+
 test('runReleaseCommand stops before switch and leaves traffic unchanged when business checks fail', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
