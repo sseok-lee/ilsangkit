@@ -238,7 +238,7 @@ Targeted cache handling for waste routes should preserve the production no-store
 
 ## Real estate summary V2 preparation and validation
 
-Address-level summary V2 preparation is a guarded write path. Operators must set `REAL_ESTATE_WRITE_LOCK_DIR` to a local writable lock directory before running any summary writer or verification command. Batch knobs are optional: `SUMMARY_BATCH_PAUSE_MS` accepts `0..10000`, and `SUMMARY_BATCH_TIMEOUT_MS` accepts `1000..1800000`.
+Address-level summary V2 preparation is a guarded write path. Operators must set `REAL_ESTATE_WRITE_LOCK_DIR` to a local writable lock directory before running any summary writer or verification command. Batch knobs are optional: `SUMMARY_BATCH_PAUSE_MS` accepts `0..10000`, and `SUMMARY_BATCH_TIMEOUT_MS` accepts `1000..1800000`. `SUMMARY_BATCH_MAX_ROWS` accepts `1..50000` (default `25000`) and targets the source rows in each city/bjdCode batch. A single bjdCode stays together even when it exceeds this target, preserving complete building histories; inspect the logged `sourceRows` and elapsed time on production before raising limits. Summary-only codes are also processed to remove stale rows. Each batch publishes its summary, rent split, and URL mappings atomically. A failed city result can contain committed rows from its successful batches; failed batches retain their previous rows.
 
 Prepare V2 once and review the JSON report before switching readers:
 

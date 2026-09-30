@@ -389,6 +389,15 @@ describe('getRealEstateCanonicalPath', () => {
 });
 
 describe('appendRealEstateUrlsForSummaryBatch', () => {
+  it('does not widen an explicitly empty scope to the entire city', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    const tx = { $queryRawUnsafe: vi.fn(), $executeRawUnsafe: vi.fn() };
+    await expect(appendRealEstateUrlsForSummaryBatch(tx, 'apt-sale', '서울', process.env, { bjdCodes: [] }))
+      .resolves.toEqual({ scanned: 0, inserted: 0, blockers: [] });
+    expect(tx.$queryRawUnsafe).not.toHaveBeenCalled();
+    expect(tx.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+
   it('no-ops outside preserved mode', async () => {
     const tx = { $queryRawUnsafe: vi.fn(), $executeRawUnsafe: vi.fn() };
     await appendRealEstateUrlsForSummaryBatch(tx, 'apt-sale', '서울특별시');
@@ -425,6 +434,27 @@ describe('appendRealEstateUrlsForSummaryBatch', () => {
     expect(sql).toContain('INSERT INTO `RealEstatePublicUrl`');
     expect(params).toHaveLength(14);
     expect(params.slice(0, 4)).toEqual(['apt-sale', 'new-key', '1168010100', '새아파트']);
+  });
+
+
+  it('limits URL append scan to provided bjdCode scope for bounded summary refresh batches', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    const tx = {
+      $queryRawUnsafe: vi.fn()
+        .mockResolvedValueOnce([
+          { status: 'ready', sourceFingerprint: 'f'.repeat(64), baselineProvenance: 'production-snapshot', validatedAt: new Date() },
+        ])
+        .mockResolvedValueOnce([]),
+      $executeRawUnsafe: vi.fn(),
+    };
+
+    await appendRealEstateUrlsForSummaryBatch(tx, 'apt-sale', '서울특별시', process.env, {
+      bjdCodes: ['1168010100', '1168010200'],
+    });
+
+    const [sql, ...params] = tx.$queryRawUnsafe.mock.calls[1];
+    expect(String(sql)).toContain('s.bjdCode IN (?, ?)');
+    expect(params).toEqual(['apt-sale', '서울특별시', '1168010100', '1168010200']);
   });
 
   it('throws for a new ambiguous base so the summary city transaction can roll back', async () => {

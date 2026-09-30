@@ -21,6 +21,12 @@ vi.mock('../../src/lib/prisma.js', () => {
 import { refreshSummary, refreshAllSummaries, refreshAddressSummaries, refreshSummariesForActiveMode } from '../../src/services/realEstateSummaryService.js';
 import { TABLE_NAME_MAP } from '../../src/services/realEstateService.js';
 
+function inventoryResult(sql: string) {
+  return sql.includes('code_inventory')
+    ? [{ bjdCode: '11110', sourceCount: 1 }]
+    : [{ city: '서울' }];
+}
+
 // 기본 동작: $transaction은 콜백을 그대로 실행하고 결과를 반환.
 // 내부 tx는 $executeRawUnsafe만 mock.
 function setupTransactionPassthrough() {
@@ -38,6 +44,7 @@ describe('refreshSummary (city-chunked)', () => {
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();
     mockQueryRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
     mockTransaction.mockReset();
     setupTransactionPassthrough();
   });
@@ -45,6 +52,7 @@ describe('refreshSummary (city-chunked)', () => {
   afterEach(() => {
     delete process.env.REAL_ESTATE_SUMMARY_MODE;
     delete process.env.REAL_ESTATE_URL_MODE;
+    delete process.env.SUMMARY_BATCH_MAX_ROWS;
     delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
     delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
     rmSync(lockDir, { recursive: true, force: true });
@@ -117,6 +125,87 @@ describe('refreshSummary (city-chunked)', () => {
     expect(mockExecuteRawUnsafe.mock.calls[4][2]).toBe('부산'); // DELETE 두번째 city
   });
 
+
+  it('city 안에서 bjdCode source row budget 기준으로 bounded transaction을 나누고 city 결과는 합산한다', async () => {
+    process.env.SUMMARY_BATCH_MAX_ROWS = '4';
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ city: '서울' }])
+      .mockResolvedValueOnce([
+        { bjdCode: '1111010100', sourceCount: 3 },
+        { bjdCode: '1111010200', sourceCount: 2 },
+        { bjdCode: '1111010300', sourceCount: 1 },
+      ]);
+    const insertReturns = [10, 20];
+    let insertCall = 0;
+    mockExecuteRawUnsafe.mockImplementation(async (sql: string) => {
+      if (String(sql).trim().startsWith('INSERT')) return insertReturns[insertCall++] ?? 0;
+      return 0;
+    });
+
+    const result = await refreshAddressSummaries(['apt-sale']);
+
+    expect(result.complete).toBe(true);
+    expect(result.batches).toEqual([
+      expect.objectContaining({ type: 'apt-sale', city: '서울', status: 'complete', rowCount: 30 }),
+    ]);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(2);
+    expect(String(mockQueryRawUnsafe.mock.calls[1][0])).toContain('RealEstateBuildingSummaryV2');
+    expect(String(mockQueryRawUnsafe.mock.calls[1][0])).toMatch(/GROUP BY\s+bjdCode/i);
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
+
+    const deleteParams = mockExecuteRawUnsafe.mock.calls
+      .filter((call) => String(call[0]).includes('DELETE FROM RealEstateBuildingSummaryV2'))
+      .map((call) => call.slice(1));
+    expect(deleteParams).toEqual([
+      ['apt-sale', '서울', '1111010100'],
+      ['apt-sale', '서울', '1111010200', '1111010300'],
+    ]);
+  });
+
+  it('keeps successful code batches visible and reports a later failure in the same city', async () => {
+    process.env.SUMMARY_BATCH_MAX_ROWS = '4';
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]).mockResolvedValueOnce([
+      { bjdCode: '11110', sourceCount: 4 },
+      { bjdCode: '11140', sourceCount: 4 },
+      { bjdCode: '11170', sourceCount: 4 },
+    ]);
+    mockExecuteRawUnsafe.mockResolvedValue(2);
+    mockTransaction.mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => cb({ $executeRawUnsafe: mockExecuteRawUnsafe }))
+      .mockRejectedValueOnce(new Error('forced code failure'));
+    const result = await refreshAddressSummaries(['apt-rent']);
+    expect(result.complete).toBe(false);
+    expect(result.batches).toEqual([expect.objectContaining({ city: '서울', rowCount: 4, status: 'failed', error: expect.stringContaining('11140') })]);
+    expect(mockTransaction).toHaveBeenCalledTimes(3);
+    const updateCalls = mockExecuteRawUnsafe.mock.calls.filter(([sql]) => sql.startsWith('UPDATE'));
+    expect(updateCalls.map(call => call.slice(1))).toEqual([
+      ['서울', '11110', 'apt-rent', '서울', '11110'],
+      ['서울', '11170', 'apt-rent', '서울', '11170'],
+    ]);
+  });
+
+  it('isolates an oversized code and retains summary-only and blank codes for cleanup', async () => {
+    process.env.SUMMARY_BATCH_MAX_ROWS = '4';
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]).mockResolvedValueOnce([
+      { bjdCode: '', sourceCount: 0 },
+      { bjdCode: '11110', sourceCount: 9 },
+      { bjdCode: '11140', sourceCount: 1 },
+      { bjdCode: '11170', sourceCount: 0 },
+    ]);
+    mockExecuteRawUnsafe.mockResolvedValue(0);
+    expect((await refreshAddressSummaries(['apt-sale'])).complete).toBe(true);
+    const deletes = mockExecuteRawUnsafe.mock.calls.filter(([sql]) => sql.startsWith('DELETE'));
+    expect(deletes.map(call => call.slice(1))).toEqual([
+      ['apt-sale', '서울', ''], ['apt-sale', '서울', '11110'], ['apt-sale', '서울', '11140', '11170'],
+    ]);
+  });
+
+  it('rejects an invalid row budget before changing summaries', async () => {
+    process.env.SUMMARY_BATCH_MAX_ROWS = '0';
+    const result = await refreshAddressSummaries(['apt-sale']);
+    expect(result.complete).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
   it('윈도우 함수(COUNT/MAX)는 inner 서브쿼리에 위치 — _rn=1 필터 전에 평가되어야 함', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(1);
@@ -152,6 +241,7 @@ describe('refreshSummary (city-chunked)', () => {
     await refreshSummary('villa-sale');
 
     const insertSql = String(mockExecuteRawUnsafe.mock.calls[2][0]);
+    expect(insertSql).not.toMatch(/SELECT\s+\*/i);
     expect(insertSql).toContain('buildingKey');
     expect(insertSql).toContain('jibun');
     expect(insertSql).toContain('SHA2(CONCAT_WS(CHAR(31)');
@@ -329,7 +419,7 @@ describe('refreshSummary (city-chunked)', () => {
 
   it('compatibility mode refreshes V2 and legacy summaries under one service entrypoint', async () => {
     process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
-    mockQueryRawUnsafe.mockResolvedValue([{ city: '서울' }]);
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
     mockExecuteRawUnsafe.mockResolvedValue(2);
 
     const result = await refreshSummariesForActiveMode(['apt-rent']);
@@ -339,7 +429,7 @@ describe('refreshSummary (city-chunked)', () => {
       expect.objectContaining({ type: 'apt-rent', city: '서울', status: 'complete' }),
       expect.objectContaining({ type: 'apt-rent', city: '서울', status: 'complete' }),
     ]);
-    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(2);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
     expect(mockTransaction).toHaveBeenCalledTimes(2);
     const executed = mockExecuteRawUnsafe.mock.calls.map((call) => String(call[0]));
     expect(executed.some((sql) => sql.includes('INSERT INTO RealEstateBuildingSummaryV2'))).toBe(true);
@@ -356,6 +446,7 @@ describe('refreshAllSummaries', () => {
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();
     mockQueryRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
     mockTransaction.mockReset();
     setupTransactionPassthrough();
   });
@@ -369,14 +460,14 @@ describe('refreshAllSummaries', () => {
 
   it('TABLE_NAME_MAP의 모든 타입에 대해 refreshSummary를 호출', async () => {
     // 각 타입당 city 1개
-    mockQueryRawUnsafe.mockResolvedValue([{ city: '서울' }]);
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
     mockExecuteRawUnsafe.mockResolvedValue(3);
 
     await refreshAllSummaries();
 
     const types = Object.keys(TABLE_NAME_MAP);
     // 타입 수만큼 DISTINCT city 쿼리
-    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length * 2);
     // V2 refresh keeps DELETE+INSERT+rent UPDATE atomic in one transaction per type/city.
     expect(mockTransaction).toHaveBeenCalledTimes(types.length);
   });
@@ -386,17 +477,17 @@ describe('refreshAllSummaries', () => {
 
     const types = Object.keys(TABLE_NAME_MAP);
     let queryCall = 0;
-    mockQueryRawUnsafe.mockImplementation(async () => {
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => {
       queryCall++;
       if (queryCall === 1) throw new Error('apt-sale query failed');
-      return [{ city: '서울' }];
+      return inventoryResult(sql);
     });
     mockExecuteRawUnsafe.mockResolvedValue(1);
 
     await refreshAllSummaries();
 
     // 모든 타입에 대해 DISTINCT city 시도
-    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length * 2 - 1);
     // 첫 타입(쿼리 실패)은 트랜잭션 없음, 나머지 타입은 처리됨.
     expect(mockTransaction).toHaveBeenCalledTimes(types.length - 1);
     expect(errorSpy).toHaveBeenCalled();
@@ -408,7 +499,7 @@ describe('refreshAllSummaries', () => {
   // 뒤쪽 타입이 안 돌았는데 워크플로가 두 번 다 success 로 끝난 사고의 감시 구멍이다.
   describe('완주 결과 보고', () => {
     it('전부 성공하면 done 이 전 타입, failed 는 비어 있다', async () => {
-      mockQueryRawUnsafe.mockResolvedValue([{ city: '서울' }]);
+      mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
       mockExecuteRawUnsafe.mockResolvedValue(3);
 
       const r = await refreshAllSummaries();
@@ -424,10 +515,10 @@ describe('refreshAllSummaries', () => {
       const types = Object.keys(TABLE_NAME_MAP);
 
       let call = 0;
-      mockQueryRawUnsafe.mockImplementation(async () => {
+      mockQueryRawUnsafe.mockImplementation(async (sql: string) => {
         call++;
         if (call === 1) throw new Error('boom');
-        return [{ city: '서울' }];
+        return inventoryResult(sql);
       });
       mockExecuteRawUnsafe.mockResolvedValue(1);
 
@@ -447,6 +538,7 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
   beforeEach(() => {
     mockExecuteRawUnsafe.mockReset();
     mockQueryRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockImplementation(async (sql: string) => inventoryResult(sql));
     mockTransaction.mockReset();
     setupTransactionPassthrough();
   });
@@ -510,7 +602,7 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     // 매칭 0건(동일 행 미변경)이 되는 사일런트 버그. toContain 은 멤버쉽만 보므로 실제로
     // 파라미터를 바꿔도 테스트가 통과한다. toEqual로 정렬 순서까지 검증한다.
     // buildRentSplitUpdate(table) 에서: WHERE city = ? (inner) → WHERE s.type = ? AND s.city = ? (outer)
-    expect(params).toEqual(['서울', 'apt-rent', '서울']);
+    expect(params).toEqual(['서울', '11110', 'apt-rent', '서울', '11110']);
   });
 
   it('UPDATE 가 실패해도 다음 city 로 계속한다 — 한 배치 실패가 전체를 멈추지 않는다', async () => {
@@ -526,7 +618,7 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     });
 
     await expect(refreshSummary('apt-rent')).resolves.toBeTypeOf('number');
-    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(1);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(3);
     // 서울 UPDATE 실패 후에도 경기 UPDATE 까지 시도됐다 — 루프가 멈추지 않았다는 뜻.
     expect(updateCalls).toBe(2);
 
@@ -552,7 +644,7 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     expect(total).toBe(0);
     expect(mockTransaction).toHaveBeenCalledTimes(2);
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/apt-rent\/(서울|경기) 실패:/),
+      expect.stringMatching(/apt-rent\/(서울|경기)\/11110\.\.11110 실패:/),
       expect.any(Error),
     );
 
