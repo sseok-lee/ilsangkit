@@ -101,7 +101,7 @@ describe('MapSidebar', () => {
     expect(w.text()).toContain('16억 8,340')
   })
 
-  it('buildingKey 주소 식별 경로와 지번을 렌더한다', () => {
+  it('buildingKey가 있어도 기존 공개 경로와 지번을 렌더한다', () => {
     const buildingKey = 'a'.repeat(64)
     const keyedBuilding: MapItem = {
       ...(BUILDINGS[0] as MapBuildingItem),
@@ -113,7 +113,7 @@ describe('MapSidebar', () => {
 
     expect(w.text()).toContain('개포동 1280')
     expect(link.attributes('href')).toBe(
-      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안블레스티지')}/${buildingKey}`,
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안블레스티지')}`,
     )
   })
 

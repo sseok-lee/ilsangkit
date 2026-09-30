@@ -1731,6 +1731,43 @@ model RealEstateSummaryState {
   updatedAt         DateTime  @updatedAt
 }
 
+model RealEstatePublicUrl {
+  id                 Int      @id @default(autoincrement())
+  type               String   @db.VarChar(20)
+  buildingKey        String   @db.Char(64)
+  bjdCode            String   @db.VarChar(10)
+  buildingName       String   @db.VarChar(200)
+  basePath           String   @db.Text
+  basePathHash       String   @db.Char(64)
+  canonicalPath      String   @db.Text
+  pathHash           String   @db.Char(64)
+  dongName           String?  @db.VarChar(50)
+  jibun              String?  @db.VarChar(20)
+  addressSnapshot    Json
+  evidence           Json
+  sourceFingerprint  String   @db.Char(64)
+  baselineProvenance String?  @db.VarChar(255)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([type, buildingKey])
+  @@index([pathHash])
+  @@index([type, basePathHash])
+  @@index([type, buildingKey, basePathHash])
+  @@index([type, bjdCode, buildingName])
+  @@index([sourceFingerprint])
+}
+
+model RealEstatePublicUrlState {
+  id                 Int       @id
+  status             String    @db.VarChar(20)
+  sourceFingerprint  String    @db.Char(64)
+  baselineProvenance String?   @db.VarChar(255)
+  report             Json
+  validatedAt        DateTime?
+  updatedAt          DateTime  @updatedAt
+}
+
 
 // 청약 분양정보
 model Subscription {

@@ -6,10 +6,14 @@ const {
   mockTransaction,
   mockQueryRaw,
   mockGetBuildingInfo,
+  mockGetCanonicalPath,
+  mockIsPreservedMode,
 } = vi.hoisted(() => ({
   mockTransaction: vi.fn(),
   mockQueryRaw: vi.fn(),
   mockGetBuildingInfo: vi.fn(),
+  mockGetCanonicalPath: vi.fn(),
+  mockIsPreservedMode: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -30,10 +34,18 @@ vi.mock('../../src/services/realEstateService.js', async (importOriginal) => {
     getBuildingInfo: mockGetBuildingInfo,
   };
 });
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  getRealEstateCanonicalPath: mockGetCanonicalPath,
+  isPreservedRealEstateUrlMode: mockIsPreservedMode,
+}));
 
 beforeEach(() => {
   mockGetBuildingInfo.mockReset();
   mockGetBuildingInfo.mockResolvedValue({ bjdCode: '11680', dongName: '역삼동', jibun: '1', regionMatched: true });
+  mockGetCanonicalPath.mockReset();
+  mockGetCanonicalPath.mockResolvedValue(null);
+  mockIsPreservedMode.mockReset();
+  mockIsPreservedMode.mockReturnValue(false);
 });
 
 import {
@@ -279,6 +291,35 @@ describe('getDetailSnapshot exact filters', () => {
     expect(snapshot.adjustment).toBe('area-reset');
   });
 
+  it('months=0 uses the earliest retained exact-filter deal date instead of a 36-month cap', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ area: new Prisma.Decimal('84.90') }])
+      .mockResolvedValueOnce([{ area: new Prisma.Decimal('84.90') }])
+      .mockResolvedValueOnce([{ fromDate: '2010-01-02' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0n }])
+      .mockResolvedValueOnce([]);
+
+    const snapshot = await getDetailSnapshot('apt-sale', {
+      bjdCode: '11680',
+      buildingName: 'A',
+      mode: 'sale',
+      months: 0,
+      area: '84.90',
+    }, new Date('2026-09-21T03:00:00Z'));
+
+    expect(snapshot.filters.months).toBe(0);
+    expect(snapshot.window).toEqual({ from: '2010-01-02', to: '2026-09-21' });
+
+    const retainedWindowSql = sqlText(mockQueryRaw.mock.calls[2][0]);
+    expect(retainedWindowSql).toContain('MIN(');
+    expect(retainedWindowSql).toContain('t.exclusiveArea = ?');
+
+    const issuedValues = mockQueryRaw.mock.calls.flatMap(([query]) => sqlValues(query));
+    expect(issuedValues).toContain('2010-01-02');
+    expect(issuedValues).not.toContain('2023-09-21');
+  });
+
   it('wraps coherent snapshot reads in RepeatableRead transaction', async () => {
     enqueueSnapshotRows();
 
@@ -318,6 +359,27 @@ describe('getDetailPage exact filters', () => {
     expect(tableSql).toContain('LIMIT ? OFFSET ?');
     expect(sqlValues(mockQueryRaw.mock.calls[1][0]).slice(-2)).toEqual([20, 20]);
     expect(page).toMatchObject({ total: 21, page: 2, totalPages: 2 });
+  });
+
+  it('months=0 table pages use the same earliest retained exact-filter window', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ fromDate: '2011-03-04' }])
+      .mockResolvedValueOnce([{ total: 21n }])
+      .mockResolvedValueOnce([{ id: 1, exclusiveArea: new Prisma.Decimal('84.90'), dealAmount: 80000n }]);
+
+    const page = await getDetailPage('apt-sale', {
+      bjdCode: '11680',
+      buildingName: 'A',
+      mode: 'sale',
+      months: 0,
+      area: '84.90',
+      page: 2,
+    }, new Date('2026-09-21T03:00:00Z'));
+
+    expect(page).toMatchObject({ total: 21, page: 2, totalPages: 2 });
+    expect(sqlText(mockQueryRaw.mock.calls[0][0])).toContain('MIN(');
+    expect(sqlValues(mockQueryRaw.mock.calls[1][0])).toContain('2011-03-04');
+    expect(sqlValues(mockQueryRaw.mock.calls[2][0])).toContain('2011-03-04');
   });
 
   it('rejects missing/null wolse deposit instead of querying deposit 0', async () => {
@@ -437,6 +499,36 @@ describe('address-specific detail boundaries', () => {
     for (const [query] of mockQueryRaw.mock.calls.slice(1)) {
       expect(sqlValues(query)).toContain('대치동');
       expect(sqlValues(query)).toContain('934-2');
+    }
+  });
+
+  it('keeps deferred legacy grouped details unfiltered by parcel', async () => {
+    mockGetBuildingInfo.mockResolvedValueOnce({
+      bjdCode: '11680',
+      buildingName: '스톤빌리지',
+      canonicalPath: `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}`,
+      legacyGrouped: true,
+      regionMatched: true,
+    });
+    enqueueSnapshotRows();
+
+    const result = await getDetailSnapshot('villa-rent', {
+      bjdCode: '11680',
+      buildingName: '스톤빌리지',
+      mode: 'wolse',
+      months: 6,
+    }, new Date('2026-09-21T03:00:00Z'));
+
+    expect(result.filters).toMatchObject({
+      bjdCode: '11680',
+      buildingName: '스톤빌리지',
+      legacyGrouped: true,
+    });
+    expect(result.filters.buildingKey).toBeUndefined();
+    for (const [query] of mockQueryRaw.mock.calls) {
+      expect(sqlText(query)).not.toContain('TRIM(t.dongName)');
+      expect(sqlText(query)).not.toContain('TRIM(s.dongName)');
+      expect(sqlText(query)).not.toContain('TRIM(r.dongName)');
     }
   });
 });

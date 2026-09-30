@@ -3,8 +3,11 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 const api = 'http://127.0.0.1:18080'
 const buildingKey = 'a'.repeat(64)
 const otherBuildingKey = 'b'.repeat(64)
-const buildingPath = `/real-estate/apt-sale/seoul/gangnam/회복아파트/${buildingKey}`
-const rentPath = `/real-estate/apt-rent/seoul/gangnam/회복아파트/${buildingKey}`
+const buildingPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('회복아파트')}`
+const rentPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('회복아파트')}`
+const preservedKey = 'c'.repeat(64)
+const preservedSalePath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('보존아파트')}`
+const preservedRentPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('보존아파트')}/${encodeURIComponent('역삼동-1-1')}`
 
 type ModeRequest = {
   endpoint: 'detail' | 'detail-page'
@@ -62,24 +65,24 @@ async function expectRenderedDetailState(
 ) {
   const url = new URL(page.url())
   if (mode === 'sale') {
-    expect(url.pathname).toMatch(new RegExp(`/real-estate/apt-sale/.*/${buildingKey}$`))
+    expect(url.pathname).toBe(buildingPath)
     expect(url.searchParams.has('mode')).toBe(false)
     await expect(page.getByLabel('거래 유형')).toHaveValue('sale')
-    await expect(page.getByText('적용 조건 · 매매 · 전용 84.90㎡ · 6개월')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 매매 · 전용 84.90㎡ · 전체 기간')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('8억 7,000만원')
     await expect(page.getByTestId('detail-transaction-card').first()).toContainText('8억 7,000만원')
   } else if (mode === 'jeonse') {
-    expect(url.pathname).toMatch(new RegExp(`/real-estate/apt-rent/.*/${buildingKey}$`))
+    expect(url.pathname).toBe(rentPath)
     expect(url.searchParams.get('mode')).toBe('jeonse')
     await expect(page.getByLabel('거래 유형')).toHaveValue('jeonse')
-    await expect(page.getByText('적용 조건 · 전세 · 전용 84.90㎡ · 6개월')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 전세 · 전용 84.90㎡ · 전체 기간')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('6억 1,000만원')
     await expect(page.getByTestId('detail-transaction-card').first()).toContainText('6억 1,000만원')
   } else {
-    expect(url.pathname).toMatch(new RegExp(`/real-estate/apt-rent/.*/${buildingKey}$`))
+    expect(url.pathname).toBe(rentPath)
     expect(url.searchParams.get('mode')).toBe('wolse')
     await expect(page.getByLabel('거래 유형')).toHaveValue('wolse')
-    await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 6개월 · 보증금 1억')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('120만원')
     await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 1억')
     await expect(page.getByTestId('detail-transaction-card').first()).toContainText('1억 / 120만원')
@@ -102,7 +105,34 @@ test.beforeEach(async ({ page, request }) => {
   })
 })
 
-test('initial mobile detail hydration does not emit Vue hydration mismatch while preserving keyed sale state', async ({
+test('preserved base stays 200 and an unpublished hash suffix is not accepted', async ({ request }) => {
+  const canonical = await request.get(preservedSalePath)
+  expect(canonical.status()).toBe(200)
+  expect(await canonical.text()).toContain(`rel="canonical" href="https://ilsangkit.co.kr${preservedSalePath}"`)
+  const hashSuffix = await request.get(`${preservedSalePath}/${preservedKey}?area=84.90&months=12`, { maxRedirects: 0 })
+  expect(hashSuffix.status()).toBe(404)
+})
+
+test('preserved transaction tabs use the target address path and keep identity through reload and back', async ({ page, request }) => {
+  await page.goto(preservedSalePath)
+  await hydrated(page)
+  await page.getByLabel('거래 유형').selectOption('wolse')
+  await expect(page).toHaveURL(`http://127.0.0.1:13000${preservedRentPath}?mode=wolse`)
+  await hydrated(page)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://ilsangkit.co.kr${preservedRentPath}`)
+  await page.reload()
+  await hydrated(page)
+  await expect(page.getByLabel('거래 유형')).toHaveValue('wolse')
+  await page.goBack()
+  await hydrated(page)
+  await expect(page).toHaveURL(`http://127.0.0.1:13000${preservedSalePath}`)
+  const requests = (await modeLog(request)).filter(item => item.buildingName === '보존아파트')
+  expect(requests.some(item => item.type === 'apt-sale')).toBe(true)
+  expect(requests.some(item => item.type === 'apt-rent' && item.mode === 'wolse')).toBe(true)
+  expect(new Set(requests.map(item => item.buildingKey))).toEqual(new Set([preservedKey]))
+})
+
+test('initial mobile detail hydration does not emit Vue hydration mismatch while preserving internally keyed sale state', async ({
   page,
 }) => {
   const hydrationMessages: string[] = []
@@ -120,7 +150,7 @@ test('initial mobile detail hydration does not emit Vue hydration mismatch while
   await expectSsrPayloadContains(page, '8억 7,000만원')
 })
 
-test('sale to wolse preserves the same buildingKey, URL mode, browser state, and API mode across reload and back', async ({
+test('sale to wolse preserves the internal buildingKey, URL mode, browser state, and API mode across reload and back', async ({
   page,
   request,
 }) => {
@@ -132,13 +162,13 @@ test('sale to wolse preserves the same buildingKey, URL mode, browser state, and
   await page.getByLabel('전용면적').selectOption('84.91')
   await page.getByLabel('조회 기간').selectOption('12')
   await page.getByLabel('거래 유형').selectOption('wolse')
-  await expect(page).toHaveURL(new RegExp(`/real-estate/apt-rent/.*/${buildingKey}\\?mode=wolse$`))
+  await expect(page).toHaveURL(`http://127.0.0.1:13000${rentPath}?mode=wolse`)
   await hydrated(page)
   await expect(page.getByLabel('거래 유형')).toHaveValue('wolse')
   await expect(page.getByLabel('전용면적')).toHaveValue('84.90')
-  await expect(page.getByLabel('조회 기간')).toHaveValue('6')
+  await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   await latestDetailRequest(request, 'wolse')
-  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 6개월 · 보증금 1억')).toBeVisible()
+  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
   await expect(page.getByTestId('deal-point-row').first()).toContainText('120만원')
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 1억')
   await expect(page.getByTestId('detail-transaction-card').first()).toContainText('1억 / 120만원')
@@ -156,7 +186,7 @@ test('sale to wolse preserves the same buildingKey, URL mode, browser state, and
   expect(keys).not.toContain(otherBuildingKey)
 })
 
-test('jeonse to sale removes rent mode query while keeping the exact buildingKey', async ({
+test('jeonse to sale removes rent mode query while keeping the internal buildingKey', async ({
   page,
   request,
 }) => {
@@ -165,12 +195,15 @@ test('jeonse to sale removes rent mode query while keeping the exact buildingKey
   await expectRenderedDetailState(page, 'jeonse')
 
   await page.getByLabel('거래 유형').selectOption('sale')
-  await expect(page).toHaveURL(new RegExp(`/real-estate/apt-sale/.*/${buildingKey}$`))
+  await expect(page).toHaveURL(`http://127.0.0.1:13000${buildingPath}`)
   await hydrated(page)
 
   const url = new URL(page.url())
-  expect(url.pathname).toMatch(new RegExp(`/real-estate/apt-sale/.*/${buildingKey}$`))
+  expect(url.pathname).toBe(buildingPath)
   expect(url.searchParams.has('mode')).toBe(false)
   await expectRenderedDetailState(page, 'sale')
+  // The sale route can hydrate its prerendered payload without another API call.
+  // Change a filter to verify that subsequent requests use the sale identity.
+  await page.getByLabel('조회 기간').selectOption('12')
   await latestDetailRequest(request, 'sale')
 })

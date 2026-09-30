@@ -14,6 +14,7 @@ const {
   mockSubscriptionFindMany,
   mockGenericCount,
   mockGetPropertyHotspots,
+  mockAttachCanonicalPaths,
 } = vi.hoisted(() => ({
   mockAptSaleCount: vi.fn(),
   mockAptRentCount: vi.fn(),
@@ -28,10 +29,14 @@ const {
   mockSubscriptionFindMany: vi.fn(),
   mockGenericCount: vi.fn().mockResolvedValue(0),
   mockGetPropertyHotspots: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 
 vi.mock('../../src/services/realEstateHotspotService.js', () => ({
   getPropertyHotspots: mockGetPropertyHotspots,
+}));
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -179,6 +184,8 @@ describe('getNewlyListedToday', () => {
 describe('getRealEstateTrends', () => {
   beforeEach(() => {
     mockQueryRaw.mockReset();
+    mockAttachCanonicalPaths.mockReset();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
   });
 
   // 평당가 = (sumPrice/sumArea) × 3.3058. 테스트 값은 sumArea=1로 두어 sumPrice 자체가 곧 (만원/㎡)이 되도록 단순화.
@@ -286,6 +293,7 @@ describe('getTrendingBuildings', () => {
     monthlies?: number[],
   ) {
     return prices.map((p, i) => ({
+      buildingKey: `${buildingName}-${district}`.padEnd(64, '0').slice(0, 64),
       buildingName, city, district,
       txnCount: BigInt(txnCount),
       representativeArea,
@@ -335,6 +343,22 @@ describe('getTrendingBuildings', () => {
       medianPrice: 20000,
       medianMonthlyRent: 120,
     });
+  });
+
+  it('adds canonicalPath to trending buildings through registry batch', async () => {
+    const key = 'h'.repeat(64);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ buildingKey: key, buildingName: '헬리오시티', city: '서울특별시', district: '송파구', txnCount: 17n, representativeArea: 85, price: 184000, monthlyRent: null }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>, type?: string) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${type}/${row.buildingKey}` }))),
+    );
+
+    const result = await getTrendingBuildings();
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith([expect.objectContaining({ buildingKey: key })], 'apt-sale');
+    expect(result.sale[0]).toMatchObject({ buildingKey: key, canonicalPath: `/registered/apt-sale/${key}` });
   });
 
   it('returns empty arrays when no data', async () => {

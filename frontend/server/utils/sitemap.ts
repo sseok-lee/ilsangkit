@@ -346,6 +346,7 @@ export interface SitemapRealEstateBuilding {
   district: string
   buildingName: string
   buildingKey?: string | null
+  canonicalPath?: string | null
   bjdCode: string
   // 건물별 가장 최근 실거래월('YYYY-MM-DD'). 백엔드 미배포 시점 대비 optional — 없으면 weekStart 폴백.
   lastmod?: string

@@ -164,10 +164,45 @@ describe('전남광주통합특별시 flat jeonnamgwangju (backend, 사이트맵
   });
 });
 
-it('keeps different parcel keys in distinct canonical paths', () => {
+it('ignores parcel keys unless a registry canonical path is provided', () => {
   const parts = { type: 'villa-sale' as const, city: '서울특별시', district: '강남구', buildingName: '스톤빌리지' };
   const a = toRealEstateUrl({ ...parts, buildingKey: 'a'.repeat(64) });
   const b = toRealEstateUrl({ ...parts, buildingKey: 'b'.repeat(64) });
-  expect(a).toBe(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${'a'.repeat(64)}`);
-  expect(a).not.toBe(b);
+  expect(a).toBe(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}`);
+  expect(b).toBe(a);
+});
+
+it('prefers registry canonicalPath over keyed fallback when provided', () => {
+  expect(toRealEstateUrl({
+    type: 'villa-sale',
+    city: '서울특별시',
+    district: '강남구',
+    buildingName: '스톤빌리지',
+    buildingKey: 'a'.repeat(64),
+    canonicalPath: '/real-estate/villa-sale/seoul/gangnam/%EC%8A%A4%ED%86%A4%EB%B9%8C%EB%A6%AC%EC%A7%80/%EB%8C%80%EC%B9%98%EB%8F%99-934-2',
+  })).toBe('/real-estate/villa-sale/seoul/gangnam/%EC%8A%A4%ED%86%A4%EB%B9%8C%EB%A6%AC%EC%A7%80/%EB%8C%80%EC%B9%98%EB%8F%99-934-2');
+});
+
+it('ignores a stale hash canonicalPath and falls back to the original public URL', () => {
+  const buildingKey = 'A'.repeat(64);
+  expect(toRealEstateUrl({
+    type: 'villa-sale',
+    city: '서울특별시',
+    district: '강남구',
+    buildingName: '스톤빌리지',
+    buildingKey,
+    canonicalPath: `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${buildingKey}`,
+  })).toBe(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}`);
+});
+
+it('does not reject a base URL whose building name happens to be 64 hex characters', () => {
+  const hexName = 'a'.repeat(64);
+  const canonicalPath = `/real-estate/apt-sale/seoul/gangnam/${hexName}`;
+  expect(toRealEstateUrl({
+    type: 'apt-sale',
+    city: '서울특별시',
+    district: '강남구',
+    buildingName: hexName,
+    canonicalPath,
+  })).toBe(canonicalPath);
 });

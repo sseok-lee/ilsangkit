@@ -119,7 +119,7 @@ describe('HomeMarketSection', () => {
     expect(wrapper.text()).toContain('오피스텔')
     expect(wrapper.text()).toContain('면적 미제공')
     expect(wrapper.text()).toContain('대치동 934-2')
-    expect(wrapper.find(`a[href="/real-estate/apt-sale/seoul/gangnam/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%95%84%ED%8C%8C%ED%8A%B8/${'a'.repeat(64)}"]`).exists()).toBe(true)
+    expect(wrapper.find('a[href="/real-estate/apt-sale/seoul/gangnam/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%95%84%ED%8C%8C%ED%8A%B8"]').exists()).toBe(true)
   })
 
   it('native select 변경으로 지역 변경을 요청하고 live status를 노출한다', async () => {

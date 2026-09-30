@@ -284,6 +284,7 @@ function select(it: SuggestItem) {
         district: it.district,
         buildingName: it.buildingName,
         buildingKey: it.buildingKey,
+        canonicalPath: it.canonicalPath,
       }),
     )
   } else {

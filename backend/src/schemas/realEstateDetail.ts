@@ -13,10 +13,12 @@ const IdentitySchema = z.object({
   buildingName: z.string().trim().min(1).max(100),
 });
 
-const months = z.preprocess(
-  (value) => (value === undefined ? undefined : Number(value)),
-  z.union([z.literal(6), z.literal(12), z.literal(36)]),
-).default(6);
+const months = z.preprocess((value) => {
+  if (value === undefined) return undefined;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && /^(0|6|12|36)$/.test(value)) return Number(value);
+  return value;
+}, z.union([z.literal(0), z.literal(6), z.literal(12), z.literal(36)])).default(0);
 
 const deposit = z.union([
   z.number(),

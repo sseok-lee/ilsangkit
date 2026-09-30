@@ -276,6 +276,7 @@ const rows = computed<Row[]>(() => {
           district: b.district,
           buildingName: b.buildingName,
           buildingKey: b.buildingKey,
+          canonicalPath: b.canonicalPath,
         }),
         item: i,
       }

@@ -3,6 +3,7 @@ import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/real
 import { TABLE_NAME_MAP, serializeRow } from './realEstateService.js';
 import { recentMonthsCondition } from '../lib/sargableDate.js';
 import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
+import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
 
 /** 건물 마커 상한. 카카오 CustomOverlay 는 DOM 노드라 이 이상은 렌더가 무겁다. */
@@ -17,6 +18,7 @@ export interface Bounds {
 
 export interface MapBuildingItem {
   buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   city: string;
@@ -179,7 +181,7 @@ export async function fetchBuildings(
     params,
   );
 
-  const items = rows.map((r) => {
+  const items = await attachRealEstateCanonicalPaths(rows.map((r) => {
     const s = serializeRow(r) as Record<string, unknown>;
     return {
       ...s,
@@ -187,7 +189,7 @@ export async function fetchBuildings(
       lng: s.lng == null ? null : Number(s.lng),
       latestDeals: { sale: null, jeonse: null, wolse: null },
     } as MapBuildingItem;
-  });
+  }), type);
 
   return { items: await enrichMapBuildings(type, items), total, exact: total <= BUILDING_LIMIT };
 }

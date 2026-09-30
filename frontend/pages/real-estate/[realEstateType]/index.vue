@@ -76,6 +76,7 @@
             v-for="building in renderableComplexes"
             :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
             :building="building"
+            :real-estate-type="apiSlug"
             :mode="currentTab"
           />
         </div>
@@ -394,6 +395,7 @@ watch(
             district: c.district,
             buildingName: c.buildingName,
             buildingKey: c.buildingKey,
+            canonicalPath: c.canonicalPath,
           }),
         })),
       )

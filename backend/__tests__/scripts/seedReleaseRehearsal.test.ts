@@ -130,9 +130,10 @@ describe('seedReleaseRehearsal fixture contract', () => {
     const aptSaleDetails = report.urls.realEstateDetails['apt-sale'];
     expect(aptSaleDetails).toHaveLength(2);
     expect(aptSaleDetails[0].buildingKey).toBe(expectedAptKeyA);
-    expect(aptSaleDetails[0].currentUrl).toContain(expectedAptKeyA);
+    expect(aptSaleDetails[0].currentUrl).toBe(aptSaleDetails[0].oldReleaseUrl);
+    expect(aptSaleDetails[0].currentUrl).not.toContain(expectedAptKeyA);
     expect(aptSaleDetails[0].oldReleaseUrl).not.toContain(expectedAptKeyA);
-    expect(aptSaleDetails[0].currentUrl).not.toBe(aptSaleDetails[1].currentUrl);
+    expect(aptSaleDetails[0].currentUrl).toBe(aptSaleDetails[1].currentUrl);
     expect(report.urls.retention.oldUnkeyedUrl).toContain('C3%EA%B8%B0%EC%A1%B4%EB%8B%A8%EC%9D%BC%EC%A3%BC%ED%83%9D');
     expect(report.urls.retention.oldUnkeyedUrl).not.toContain(expectedAptKeyA);
 

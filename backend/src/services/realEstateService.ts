@@ -5,6 +5,7 @@ import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/real
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRegionFilter } from './cityMapping.js';
 import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
+import { attachRealEstateCanonicalPaths, getDeferredRealEstateIdentity } from './realEstateUrlRegistry.js';
 import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
 
 // ─────────────────────────────────────────────
@@ -68,6 +69,7 @@ export interface StatsResponse {
 export interface ComplexItem {
   type?: RealEstateType;
   buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   city: string;
@@ -96,6 +98,7 @@ export interface SearchAllResult {
 interface SearchAllPreviewItem {
   type: RealEstateType;
   buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   dongName?: string | null;
@@ -558,6 +561,15 @@ async function enrichComplexItems<T extends ComplexItem>(
   }));
 }
 
+async function attachAndEnrichComplexItems<T extends ComplexItem>(
+  items: T[],
+  scope: DealScope,
+  fallbackType?: string,
+): Promise<T[]> {
+  const withCanonicalPaths = await attachRealEstateCanonicalPaths(items, fallbackType);
+  return enrichComplexItems(withCanonicalPaths, scope, fallbackType);
+}
+
 /**
  * 건물 목록 조회 — RealEstateBuildingSummary 테이블.
  * 유효 단지명 필터(사이트맵 getRealEstateCityDistrictHubs와 동일 조건)를 적용하여
@@ -597,7 +609,7 @@ export async function getComplexList(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: await enrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -654,7 +666,7 @@ export async function searchComplexesByKeyword(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: await enrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -718,7 +730,7 @@ export async function searchPropertyComplexesByKeyword(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: await enrichComplexItems(rows.map(toComplexItem), 'all'),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), 'all'),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -731,6 +743,8 @@ export async function searchPropertyComplexesByKeyword(
 
 export interface BuildingInfo {
   buildingKey?: string;
+  canonicalPath?: string;
+  legacyGrouped?: boolean;
   bjdCode: string;
   buildingName: string;
   city: string;
@@ -760,6 +774,13 @@ export interface BuildingInfo {
    * null 로 되돌리지 않는 이유: 프론트가 "어디로 합칠지"를 알려면 실제 지역이 필요하다.
    */
   regionMatched?: boolean;
+}
+
+async function attachBuildingCanonicalPath(type: string, building: BuildingInfo | null): Promise<BuildingInfo | null> {
+  if (!building) return null;
+  if (!building.buildingKey && building.canonicalPath) return building;
+  const [withCanonicalPath] = await attachRealEstateCanonicalPaths([building], type);
+  return withCanonicalPath;
 }
 
 /** 법정동코드의 시군구 부분(시도 2 + 시군구 3 = 앞 5자리). 근거가 없으면 null. */
@@ -806,6 +827,7 @@ export async function getBuildingInfo(
 ): Promise<BuildingInfo | null> {
   const model = getModel(type);
   let ambiguousAddress = false;
+  const deferredIdentity = buildingKey ? null : await getDeferredRealEstateIdentity(type, bjdCode, buildingName);
   let parcelRows: Array<{ dongName: string; jibun: string | null }> | undefined;
   if (buildingKey) {
     if (bjdCode && !/^(\d{5}|\d{10})$/.test(bjdCode)) return null;
@@ -848,6 +870,7 @@ export async function getBuildingInfo(
     effectiveBjdCode: string,
     regionMatched: boolean
   ): Promise<BuildingInfo | null> => {
+    const groupedIdentity = deferredIdentity?.bjdCode === effectiveBjdCode ? deferredIdentity : null;
     // sale 은 취소거래(cancelDealDay)를 제외 — searchTransactions/getTransactionStats 와 정렬.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = { bjdCode: effectiveBjdCode, buildingName };
@@ -875,7 +898,7 @@ export async function getBuildingInfo(
     if (!latest) return null;
     const parcelKeys = new Set(dongGroups.map((row: { dongName: string; jibun?: string | null }) =>
       JSON.stringify([row.dongName?.trim() ?? '', row.jibun?.trim() ?? ''])));
-    if (!buildingKey && parcelKeys.size > 1) {
+    if (!buildingKey && !groupedIdentity && parcelKeys.size > 1) {
       ambiguousAddress = true;
       return null;
     }
@@ -889,7 +912,7 @@ export async function getBuildingInfo(
       ])
     }
 
-    const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
+    const representativeDongName: string | null = groupedIdentity ? null : dongGroups[0]?.dongName ?? null;
 
     let lat = latest.lat;
     let lng = latest.lng;
@@ -913,14 +936,17 @@ export async function getBuildingInfo(
     }
 
     return {
-      buildingKey: buildingKey ?? makeBuildingKey({ propertyType: type.split('-')[0], bjdCode: effectiveBjdCode, buildingName: latest.buildingName, dongName: latest.dongName ?? '', jibun: latest.jibun ?? null }),
+      ...(buildingKey ? { buildingKey } : groupedIdentity ? {} : {
+        buildingKey: makeBuildingKey({ propertyType: type.split('-')[0], bjdCode: effectiveBjdCode, buildingName: latest.buildingName, dongName: latest.dongName ?? '', jibun: latest.jibun ?? null }),
+      }),
+      ...(groupedIdentity ? { canonicalPath: groupedIdentity.canonicalPath, legacyGrouped: true as const } : {}),
       bjdCode: effectiveBjdCode,
       buildingName: latest.buildingName,
       city: latest.city,
       district: latest.district,
       dongName: representativeDongName,
-      roadName: latest.roadName ?? null,
-      jibun: latest.jibun ?? null,
+      roadName: groupedIdentity ? null : latest.roadName ?? null,
+      jibun: groupedIdentity ? null : latest.jibun ?? null,
       buildYear: latest.buildYear ?? null,
       minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
       maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
@@ -930,8 +956,8 @@ export async function getBuildingInfo(
         : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
       latestDealYear: latest.dealYear,
       latestDealMonth: latest.dealMonth,
-      lat: lat !== null ? Number(lat) : null,
-      lng: lng !== null ? Number(lng) : null,
+      lat: groupedIdentity || lat === null ? null : Number(lat),
+      lng: groupedIdentity || lng === null ? null : Number(lng),
       jeonseCount,
       wolseCount,
       regionMatched,
@@ -946,14 +972,14 @@ export async function getBuildingInfo(
   if (bjdCode) {
     // 힌트가 그대로 통했으면 요청 지역 그대로다 — 추가 쿼리도, 지역 비교도 필요 없다.
     const fromHint = await buildForBjdCode(bjdCode, true);
-    if (fromHint) return fromHint;
-    if (buildingKey || ambiguousAddress) return null;
+    if (fromHint) return attachBuildingCanonicalPath(type, fromHint);
+    if (buildingKey || deferredIdentity || ambiguousAddress) return null;
   }
 
   const resolvedBjdCode = await resolveBjdCodeByName();
   if (!resolvedBjdCode || resolvedBjdCode === bjdCode) return null;
   // 재해석 결과가 요청 시군구를 벗어났으면 regionMatched=false 로 드러낸다(호출부가 301/noindex 결정).
-  return buildForBjdCode(resolvedBjdCode, isSameSigunguBjdCode(bjdCode, resolvedBjdCode));
+  return attachBuildingCanonicalPath(type, await buildForBjdCode(resolvedBjdCode, isSameSigunguBjdCode(bjdCode, resolvedBjdCode)));
 }
 
 // ─────────────────────────────────────────────
@@ -1105,7 +1131,7 @@ export async function searchAll(
         ),
       ]);
 
-      const items = rows.map((r) => serializeRow({
+      const items = await attachRealEstateCanonicalPaths(rows.map((r) => serializeRow({
         type,
         buildingKey: r.buildingKey,
         buildingName: r.buildingName,
@@ -1120,7 +1146,7 @@ export async function searchAll(
         dealAmount: isSale ? r.latestPrice : null,
         deposit: !isSale ? r.latestPrice : null,
         transactionCount: r.transactionCount,
-      }));
+      }) as SearchAllPreviewItem), type);
 
       return { type, count: Number(buildingCount[0]?.total ?? 0), items };
     })
@@ -1166,6 +1192,7 @@ export type NearbyPropertyKey = 'apt' | 'villa' | 'offitel';
 
 export interface NearbyComplex {
   buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   city: string;
@@ -1235,7 +1262,7 @@ async function fetchNearbyFromSummary(
     opts.limitPerType,
   );
 
-  return rows.map((r) => ({
+  return attachRealEstateCanonicalPaths(rows.map((r) => ({
     buildingKey: r.buildingKey ?? null,
     buildingName: r.buildingName,
     bjdCode: r.bjdCode,
@@ -1251,7 +1278,7 @@ async function fetchNearbyFromSummary(
     latestDealMonth: r.latestDealMonth ?? null,
     lat: r.lat != null ? Number(r.lat) : null,
     lng: r.lng != null ? Number(r.lng) : null,
-  }));
+  })), type);
 }
 
 export async function getNearbyByBjd(

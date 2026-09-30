@@ -29,6 +29,16 @@ describe('DetailQuerySchema', () => {
     expect(DetailQuerySchema.safeParse({ ...baseQuery, bjdCode: '1168' }).success).toBe(false);
     expect(DetailQuerySchema.safeParse({ ...baseQuery, bjdCode: '11680a' }).success).toBe(false);
     expect(DetailQuerySchema.safeParse({ ...baseQuery, months: '24' }).success).toBe(false);
+    expect(DetailQuerySchema.safeParse({ ...baseQuery, months: '' }).success).toBe(false);
+    expect(DetailQuerySchema.safeParse({ ...baseQuery, months: null }).success).toBe(false);
+    expect(DetailQuerySchema.parse({ ...baseQuery, months: '0' }).months).toBe(0);
+    expect(DetailPageQuerySchema.parse({ ...baseQuery, months: '0', page: '1' }).months).toBe(0);
+  });
+
+  it('기간을 생략하면 전체 기간(0)을 기본값으로 쓴다', () => {
+    const { months, ...withoutMonths } = baseQuery;
+    expect(DetailQuerySchema.parse(withoutMonths).months).toBe(0);
+    expect(DetailPageQuerySchema.parse({ ...withoutMonths, page: '1' }).months).toBe(0);
   });
 
   it('identity 누락과 빈 문자열을 거부한다', () => {

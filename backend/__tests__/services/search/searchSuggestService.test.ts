@@ -1,19 +1,31 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+
+const { mockGroupBy, mockAttachCanonicalPaths } = vi.hoisted(() => ({
+  mockGroupBy: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn((rows: unknown[]) => Promise.resolve(rows)),
+}));
 
 vi.mock('../../../src/services/search/searchRegionIndex.js', async (orig) => {
   const actual = await orig() as typeof import('../../../src/services/search/searchRegionIndex.js');
   return { ...actual, getRegionIndex: async () => actual.buildRegionIndex([{ city: '서울특별시', district: '강남구' }]) };
 });
 
-const mockGroupBy = vi.fn();
 vi.mock('../../../src/lib/prisma.js', () => ({
   prisma: { $queryRawUnsafe: (...a: unknown[]) => mockGroupBy(...a) },
   default: { $queryRawUnsafe: (...a: unknown[]) => mockGroupBy(...a) },
+}));
+vi.mock('../../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
 }));
 
 import { suggest } from '../../../src/services/search/searchSuggestService.js';
 
 describe('suggest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
+  });
+
   it('keeps same-name suggestions tied to their individual addresses', async () => {
     const rows = [
       { buildingKey: 'a'.repeat(64), dongName: '대치동', jibun: '934-2' },
@@ -26,7 +38,23 @@ describe('suggest', () => {
     expect(buildings[0].sublabel).toContain('대치동 934-2');
     expect(buildings[1].sublabel).toContain('역삼동 785-10');
     expect(String(mockGroupBy.mock.lastCall?.[0])).toContain('buildingKey, dongName, jibun');
-    mockGroupBy.mockClear();
+  });
+
+  it('returns canonicalPath for building suggestions from the registry batch', async () => {
+    const key = 'c'.repeat(64);
+    mockGroupBy.mockResolvedValue([
+      { buildingKey: key, buildingName: '캐슬타워', type: 'apt-sale', city: '서울', district: '강남구', dongName: '역삼동', jibun: '10', bjdCode: '11680', transactionCount: 7 },
+    ]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${row.buildingKey}` }))),
+    );
+
+    const result = await suggest('캐슬', 'realestate');
+
+    expect(result.items.find(item => item.type === 'building')).toMatchObject({
+      buildingKey: key,
+      canonicalPath: `/registered/${key}`,
+    });
   });
 
   it('"강남" → 지역 추천(강남구) 포함, 건물 조회는 startsWith로 호출', async () => {

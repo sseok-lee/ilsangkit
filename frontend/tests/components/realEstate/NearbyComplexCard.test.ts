@@ -37,7 +37,7 @@ describe('NearbyComplexCard', () => {
     const wrapper = mount(NearbyComplexCard, { props: { item: baseItem, propertyType: 'villa', mode: 'sale', rentType: 'all' } })
     const link = wrapper.find('a')
     expect(link.attributes('href')).toBe(
-      `/real-estate/villa-sale/seoul/mapo/${encodeURIComponent('래미안')}/${baseItem.buildingKey}`,
+      `/real-estate/villa-sale/seoul/mapo/${encodeURIComponent('래미안')}`,
     )
   })
 

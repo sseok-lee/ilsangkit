@@ -51,7 +51,7 @@ describe('SearchAutocomplete', () => {
     expect(navigateTo).toHaveBeenCalledWith('/seoul/gangnam');
   });
 
-  it('건물 추천은 buildingKey가 포함된 상세 경로로 이동한다', async () => {
+  it('건물 추천은 buildingKey가 있어도 기존 상세 경로로 이동한다', async () => {
     const buildingKey = 'a'.repeat(64);
     vi.mocked($fetch).mockImplementation(async (url: string) => {
       if (url.includes('/popular')) return { success: true, data: { items: [] } };
@@ -67,7 +67,7 @@ describe('SearchAutocomplete', () => {
     await wrapper.find('[data-suggest-type="building"]').trigger('click');
 
     expect(navigateTo).toHaveBeenCalledWith(
-      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('은마')}/${buildingKey}`,
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('은마')}`,
     );
   });
 

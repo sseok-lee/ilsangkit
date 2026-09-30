@@ -153,7 +153,9 @@ describe('CITY_SLUGS_SET — jeonnamgwangju 수용(A4 pass-through)', () => {
 
 describe('resolveIncheonReorgRedirect — 인천 개편 소멸구(서구/중구/동구) → 신설구', () => {
   const mkFetcher = (items: Array<{ district: string; buildingName: string }>) =>
-    async () => ({ success: true, data: { items } })
+    async (path: string) => path.startsWith('/api/real-estate/resolve-url')
+      ? { success: true, data: { mode: 'keyed' } }
+      : { success: true, data: { items } }
 
   it('구 허브(단지 없음): /incheon/seo → 시 허브', async () => {
     expect(await resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seo', mkFetcher([])))
@@ -181,9 +183,11 @@ describe('resolveIncheonReorgRedirect — 인천 개편 소멸구(서구/중구/
     )).toEqual({ redirect: '/real-estate/apt-sale/incheon/geomdan/당하푸르지오' })
   })
 
-  it('buildingKey가 있는 단지 상세는 building-info exact lookup으로 신설구를 찾고 key를 보존한다', async () => {
+  it('해시 suffix가 있는 단지 상세는 공개 URL로 재조립하지 않고 notFound로 둔다', async () => {
     const key = 'b'.repeat(64)
-    const fetcher = vi.fn(async () => ({
+    const fetcher = vi.fn(async (path: string) => path.startsWith('/api/real-estate/resolve-url')
+      ? { success: true, data: { mode: 'keyed' } }
+      : ({
       success: true,
       data: {
         buildingName: '청라푸르지오',
@@ -196,17 +200,15 @@ describe('resolveIncheonReorgRedirect — 인천 개편 소멸구(서구/중구/
     expect(await resolveIncheonReorgRedirect(
       `/real-estate/apt-sale/incheon/seo/${encodeURIComponent('청라푸르지오')}/${key}`,
       fetcher,
-    )).toEqual({
-      redirect: `/real-estate/apt-sale/incheon/geomdan/${encodeURIComponent('청라푸르지오')}/${key}`,
-    })
-    expect(fetcher).toHaveBeenCalledWith(
-      `/api/real-estate/apt-sale/building-info?bjdCode=&buildingName=${encodeURIComponent('청라푸르지오')}&buildingKey=${key}`,
-    )
+    )).toEqual({ notFound: true })
+    expect(fetcher).toHaveBeenCalledTimes(1)
   })
 
   it('buildingKey가 있는 단지 상세는 building-info가 key를 확정하지 못하면 notFound로 둔다', async () => {
     const key = 'c'.repeat(64)
-    const fetcher = vi.fn(async () => ({
+    const fetcher = vi.fn(async (path: string) => path.startsWith('/api/real-estate/resolve-url')
+      ? { success: true, data: { mode: 'keyed' } }
+      : ({
       success: true,
       data: {
         buildingName: '청라푸르지오',

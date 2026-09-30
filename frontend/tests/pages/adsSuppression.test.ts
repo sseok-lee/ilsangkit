@@ -9,7 +9,6 @@ const root = process.cwd().endsWith('/frontend') ? process.cwd() : join(process.
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8')
 
 const pages: [string, RegExp][] = [
-  ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', /suppressAds\(\s*fetchFailed\.value\s*\|\|\s*noindex\.value\s*\)/],
   ['pages/[city]/index.vue', /suppressAds\(\s*fetchFailed\.value\s*\|\|\s*isNoindex\.value\s*\)/],
   ['pages/[city]/[district]/index.vue', /suppressAds\(\s*fetchFailed\.value\s*\|\|\s*isNoindex\.value\s*\)/],
   ['pages/real-estate/[realEstateType]/[city]/[district]/index.vue', /suppressAds\(\s*fetchFailed\.value\s*\|\|\s*totalComplexes\.value === 0\s*\)/],
@@ -17,6 +16,14 @@ const pages: [string, RegExp][] = [
 ]
 
 describe('degraded/noindex 페이지는 reactive로 광고를 억제한다', () => {
+  it('real-estate detail은 setup에서 캡처한 ads suppression ref를 reactive로 갱신한다', () => {
+    const src = read('pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    expect(src).toContain("const adsSuppressed = useState<boolean>('ads:suppressed', () => false)")
+    expect(src).toContain('watchEffect(')
+    expect(src).toContain('adsSuppressed.value = fetchFailed.value || noindex.value')
+    expect(src).not.toContain("import { suppressAds } from '~/composables/useAdsPolicy'")
+  })
+
   it.each(pages)('%s', (p, re) => {
     const src = read(p)
     expect(src).toContain("import { suppressAds } from '~/composables/useAdsPolicy'")

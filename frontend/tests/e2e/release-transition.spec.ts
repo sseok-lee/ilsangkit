@@ -75,6 +75,10 @@ function sameName(seedReport: SeedReport, label: 'a' | 'b'): SameNameSeed {
   return identity
 }
 
+function addressSuffix(identity: SameNameSeed): string {
+  return encodedPathPart(`${identity.dongName.trim()}-${identity.jibun.trim()}`)
+}
+
 function buildingKey(identity: SameNameSeed): string {
   if (identity.buildingKey) return identity.buildingKey
   const propertyType = identity.propertyType ?? (identity.type?.startsWith('apt') ? 'apt' : identity.type ?? 'apt')
@@ -92,9 +96,9 @@ function encodedPathPart(value: string): string {
 }
 
 function detailPath(identity: SameNameSeed): string {
-  if (identity.url && /\/[a-f0-9]{64}$/.test(identity.url)) return identity.url
+  if (identity.url && !/\/[a-f0-9]{64}$/i.test(identity.url)) return identity.url
   const type = identity.type ?? 'apt-sale'
-  return `/real-estate/${type}/${identity.citySlug}/${identity.districtSlug}/${encodedPathPart(identity.buildingName)}/${buildingKey(identity)}`
+  return `/real-estate/${type}/${identity.citySlug}/${identity.districtSlug}/${encodedPathPart(identity.buildingName)}/${addressSuffix(identity)}`
 }
 
 
@@ -210,7 +214,7 @@ test.describe('release transition browser probes', () => {
     }
   })
 
-  test('same-name keyed details A and B remain distinct and expose retained assets', async ({ page, request }) => {
+  test('same-name readable detail URLs A and B remain distinct and expose retained assets', async ({ page, request }) => {
     const seedReport = readSeedReport()
     const addressA = sameName(seedReport, 'a')
     const addressB = sameName(seedReport, 'b')
@@ -241,7 +245,7 @@ test.describe('release transition browser probes', () => {
 
     const backResponse = await page.goBack({ waitUntil: 'domcontentloaded' })
     expectNavigationResponseWhenPresent(backResponse, marker)
-    await expect(page).toHaveURL(new RegExp(buildingKey(addressA)))
+    await expect(page).toHaveURL(expectedBrowserUrl(pathA))
     const restoredBodyA = await visibleBody(page)
     expectVisibleSameNameBody(restoredBodyA, infoA)
     expect(restoredBodyA).not.toBe(bodyB)

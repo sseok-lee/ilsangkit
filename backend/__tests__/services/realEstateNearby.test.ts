@@ -1,10 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '../../src/lib/prisma.js';
+import { makeBuildingKey } from '../../src/lib/realEstateBuildingIdentity.js';
 import { assertLocalTestDatabaseUrl } from '../../src/utils/testDatabaseGuard.js';
 import { getNearbyByBjd } from '../../src/services/realEstateService.js';
 
 const TEST_BJD = '1144012700';
 const guardedDatabaseUrl = assertLocalTestDatabaseUrl(process.env.HOUSING_TEST_DATABASE_URL ?? process.env.DATABASE_URL);
+
+function testBuildingKey(type: string, buildingName: string, jibun: string, bjdCode: string = TEST_BJD): string {
+  return makeBuildingKey({
+    propertyType: type.split('-')[0],
+    bjdCode,
+    buildingName,
+    dongName: bjdCode === TEST_BJD ? '한강로동' : 'z',
+    jibun,
+  });
+}
 
 async function seedSummary(rows: Array<{ buildingName: string; type: string; latestPrice: number; transactionCount?: number }>) {
   let index = 0;
@@ -13,7 +24,7 @@ async function seedSummary(rows: Array<{ buildingName: string; type: string; lat
     await prisma.realEstateBuildingSummaryV2.create({
       data: {
         type: r.type,
-        buildingKey: `${r.type}-${TEST_BJD}-${index}`.padEnd(64, '0').slice(0, 64),
+        buildingKey: testBuildingKey(r.type, r.buildingName, `${index}-1`),
         buildingName: r.buildingName,
         bjdCode: TEST_BJD,
         city: '서울특별시',
@@ -86,7 +97,7 @@ describe('getNearbyByBjd', () => {
     await prisma.realEstateBuildingSummaryV2.create({
       data: {
         type: 'apt-sale',
-        buildingKey: 'out'.padEnd(64, '0'),
+        buildingKey: testBuildingKey('apt-sale', 'Out', '1', '9999999999'),
         buildingName: 'Out',
         bjdCode: '9999999999',
         city: 'x',

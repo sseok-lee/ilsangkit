@@ -408,7 +408,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row')).toHaveCount(21)
   await expect(page.getByTestId('detail-transaction-card')).toHaveCount(20)
   await expect(page.getByLabel('전용면적')).toHaveValue('84.90')
-  await expect(page.getByLabel('조회 기간')).toHaveValue('6')
+  await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   const selectedSameDay = `${kstDateLabel(-2)} · 21건`
   await expect(page.getByText(selectedSameDay)).toBeVisible()
   await expect(page.getByTestId('deal-point-row').nth(0)).toContainText('8억 7,000만원')
@@ -418,7 +418,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row')).toHaveText([
     ...Array.from({ length: 21 }, () => /전용 84\.90㎡/),
   ])
-  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=84.90&months=6&buildingName=회복아파트')
+  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=84.90&months=0&buildingName=회복아파트')
   expect(detailWireResponse.ok()).toBe(true)
   const detailWire = await detailWireResponse.json()
   expect(detailWire.data.points).toHaveLength(21)
@@ -619,10 +619,10 @@ test('월세 보증금 0 필터는 무보증 월세 거래와 차트 보증금 �
   await page.getByLabel('거래 유형').selectOption('wolse')
   await expect(page.getByLabel('보증금')).toBeVisible()
   await page.getByLabel('보증금').selectOption('0')
-  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 6개월 · 보증금 0')).toBeVisible()
+  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 0')).toBeVisible()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(6)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 0')
-  await expect(page.getByText('최근 6개월 거래').locator('..').getByText('6건')).toBeVisible()
+  await expect(page.getByText('전체 기간 거래').locator('..').getByText('6건')).toBeVisible()
   await attachCapture(testInfo, capture)
 })
 

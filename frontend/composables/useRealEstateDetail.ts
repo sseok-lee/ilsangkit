@@ -64,7 +64,7 @@ function routeTypeForMode(type: RealEstateType, mode: DealMode): RealEstateType 
 function defaultQuery(type: RealEstateType, initialMode?: DealMode): DetailRequestQuery {
   return {
     mode: defaultMode(type, initialMode),
-    months: 6,
+    months: 0,
     area: undefined,
     deposit: undefined,
   }

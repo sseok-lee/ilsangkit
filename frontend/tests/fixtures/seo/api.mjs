@@ -44,6 +44,12 @@ const pageRetryFailures = new Map()
 const nearbyRequests = []
 const modeNavigationRequests = []
 let failNextRegions = 0
+const modeNavigationBuildingKey = 'a'.repeat(64)
+const modeNavigationSalePath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('회복아파트')}`
+const modeNavigationRentPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('회복아파트')}`
+const preservedBuildingKey = 'c'.repeat(64)
+const preservedSalePath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('보존아파트')}`
+const preservedRentPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('보존아파트')}/${encodeURIComponent('역삼동-1-1')}`
 
 function decrementFailure(map, key) {
   const remaining = map.get(key) ?? 0
@@ -151,6 +157,37 @@ function delayedSubscriptionList(res, searchParams) {
     return undefined
   }
   return send()
+}
+
+function resolveRealEstatePublicUrl(path) {
+  const type = path.includes('/apt-rent/') ? 'apt-rent' : 'apt-sale'
+  if (path.includes(`/${preservedBuildingKey}`)) {
+    return { mode: 'keyed', canonicalPath: null }
+  }
+  const buildingName = decodeURIComponent(path.split('/')[5] ?? '')
+  if (buildingName === '회복아파트') {
+    return {
+      mode: 'preserved',
+      type,
+      buildingKey: modeNavigationBuildingKey,
+      bjdCode: '1168010100',
+      buildingName: '회복아파트',
+      canonicalPath: type === 'apt-rent' ? modeNavigationRentPath : modeNavigationSalePath,
+      redirect: false,
+    }
+  }
+  if (buildingName === '보존아파트') {
+    return {
+      mode: 'preserved',
+      type,
+      buildingKey: preservedBuildingKey,
+      bjdCode: '1168010100',
+      buildingName: '보존아파트',
+      canonicalPath: type === 'apt-rent' ? preservedRentPath : preservedSalePath,
+      redirect: false,
+    }
+  }
+  return { mode: 'keyed', canonicalPath: null }
 }
 
 const remainingPages = { domain: null, failNext: 0, delayMs: 0 }
@@ -296,6 +333,28 @@ createServer(async (req, res) => {
     if (!url.searchParams.get('city') && url.searchParams.get('district'))
       return fail(res, 422, 'city is required with district')
     return ok(res, homeMarket(url.searchParams.get('city'), url.searchParams.get('district')))
+  }
+
+  if (path === '/api/real-estate/resolve-url') {
+    return ok(res, resolveRealEstatePublicUrl(url.searchParams.get('path') ?? ''))
+  }
+
+  if (path === '/api/real-estate/canonical-url') {
+    const canonicalKey = url.searchParams.get('buildingKey')
+    const type = url.searchParams.get('type') || 'apt-sale'
+    if (canonicalKey === modeNavigationBuildingKey) {
+      return ok(res, {
+        mode: 'preserved',
+        canonicalPath: type === 'apt-rent' ? modeNavigationRentPath : modeNavigationSalePath,
+      })
+    }
+    if (canonicalKey === preservedBuildingKey) {
+      return ok(res, {
+        mode: 'preserved',
+        canonicalPath: type === 'apt-rent' ? preservedRentPath : preservedSalePath,
+      })
+    }
+    return ok(res, { mode: 'keyed', canonicalPath: null })
   }
 
   const overviewMatch = path.match(/^\/api\/real-estate\/([^/]+)\/detail-overview$/)

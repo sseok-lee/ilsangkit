@@ -4,6 +4,7 @@ import { readSummaryMode, summaryTableFor } from '../../lib/realEstateSummarySto
 import { parseSearchQueryCached } from './searchQueryParser.js';
 import { getRegionIndex } from './searchRegionIndex.js';
 import { CATEGORY_SYNONYM_MAP } from './searchCategorySynonyms.js';
+import { attachRealEstateCanonicalPaths } from '../realEstateUrlRegistry.js';
 import type { FacilityCategory } from '../../schemas/facility.js';
 
 export interface SuggestItem {
@@ -15,6 +16,7 @@ export interface SuggestItem {
   category?: FacilityCategory;
   buildingName?: string;
   buildingKey?: string;
+  canonicalPath?: string;
   dongName?: string;
   jibun?: string | null;
   bjdCode?: string;
@@ -98,7 +100,10 @@ export async function suggest(q: string, scope?: SuggestScope): Promise<SuggestR
         nameForBuilding,
         SECTION_LIMIT,
       );
-      for (const r of rows) {
+      const buildingRows = await attachRealEstateCanonicalPaths(
+        rows.map((r) => ({ ...r, buildingKey: r.buildingKey ?? undefined })),
+      );
+      for (const r of buildingRows) {
         const sublabel = mode === 'address'
           ? `${[r.district, r.dongName, r.jibun].filter(Boolean).join(' ')} · 거래 ${Number(r.transactionCount)}건`
           : `${r.district} · 거래 ${Number(r.transactionCount)}건`;
@@ -108,6 +113,7 @@ export async function suggest(q: string, scope?: SuggestScope): Promise<SuggestR
           sublabel,
           buildingName: r.buildingName,
           buildingKey: r.buildingKey ?? undefined,
+          canonicalPath: r.canonicalPath,
           dongName: r.dongName,
           jibun: r.jibun,
           bjdCode: r.bjdCode,

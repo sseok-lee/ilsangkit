@@ -46,6 +46,7 @@
           <option value="6">6개월</option>
           <option value="12">1년</option>
           <option value="36">3년</option>
+          <option value="0">전체</option>
         </select>
       </label>
 
@@ -133,6 +134,7 @@ function modeLabel(mode: DealMode): string {
 }
 
 function periodLabel(months: PeriodMonths): string {
+  if (months === 0) return '전체 기간'
   if (months === 6) return '6개월'
   if (months === 12) return '1년'
   return '3년'

@@ -12,6 +12,7 @@ describe('Express App', () => {
     delete process.env.REAL_ESTATE_SUMMARY_RUN_ID;
     setReleaseReadinessDbCheckForTests(undefined);
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
   describe('GET /api/health', () => {
     it('should return status ok', async () => {
@@ -60,6 +61,7 @@ describe('Express App', () => {
       process.env.ILSK_RELEASE_ID = 'address-20260929-abc123';
       process.env.REAL_ESTATE_SUMMARY_MODE = 'address';
       process.env.REAL_ESTATE_SUMMARY_RUN_ID = 'summary-run-1';
+      vi.stubEnv('REAL_ESTATE_URL_MODE', 'preserved');
       setReleaseReadinessDbCheckForTests(
         vi.fn(async () => ({
           mode: 'address',
@@ -79,7 +81,30 @@ describe('Express App', () => {
         ready: true,
         releaseId: 'address-20260929-abc123',
         summary: { mode: 'address', runId: 'summary-run-1', table: 'RealEstateBuildingSummaryV2', rowCount: 123 },
+        realEstateUrls: { mode: 'preserved', ready: true },
         db: { ok: true },
+      });
+    });
+
+    it.each([undefined, '', 'keyed'])('rejects address releases without preserved URLs (%s)', async (urlMode) => {
+      process.env.ILSK_RELEASE_ID = 'address-20260929-abc123';
+      vi.stubEnv('REAL_ESTATE_URL_MODE', urlMode);
+      setReleaseReadinessDbCheckForTests(
+        vi.fn(async () => ({
+          mode: 'address',
+          table: 'RealEstateBuildingSummaryV2',
+          ready: true,
+          runId: 'summary-run-1',
+          rowCount: 123,
+        }))
+      );
+
+      const response = await request(app).get('/api/internal/release-readiness');
+
+      expect(response.status).toBe(503);
+      expect(response.body).toMatchObject({
+        ready: false,
+        realEstateUrls: { mode: 'keyed', ready: false, reason: 'preserved-url-mode-required' },
       });
     });
 

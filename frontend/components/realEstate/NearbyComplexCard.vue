@@ -105,6 +105,7 @@ const linkUrl = computed(() => {
     district: props.item.district,
     buildingName: props.item.buildingName,
     buildingKey: props.item.buildingKey,
+    canonicalPath: props.item.canonicalPath,
   })
 })
 </script>

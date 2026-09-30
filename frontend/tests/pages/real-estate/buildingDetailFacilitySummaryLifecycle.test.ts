@@ -44,6 +44,10 @@ vi.mock('~/composables/useRealEstate', () => ({
   }),
 }))
 
+function mockResolverResponse() {
+  return { success: true, data: { mode: 'keyed', canonicalPath: null } }
+}
+
 const building: BuildingInfo = {
   bjdCode: '1165010700',
   buildingName: '반포자이',
@@ -134,6 +138,8 @@ beforeEach(() => {
   }
 
   fetchMock = vi.fn(async (url: string) => {
+    if (url.includes('/api/real-estate/resolve-url')) return mockResolverResponse()
+    if (url.includes('/api/real-estate/canonical-url')) return mockResolverResponse()
     if (url.includes('/api/facilities/nearby-counts')) {
       markNearbyCountsStarted?.()
       return await new Promise(resolve => {
@@ -158,6 +164,13 @@ beforeEach(() => {
     if (typeof input === 'function') headFactories.push(input as () => Record<string, unknown>)
   }))
   vi.stubGlobal('useAsyncData', vi.fn(async (key: string, handler?: () => Promise<unknown>) => {
+    if (key.startsWith('re-public-url-resolution-')) {
+      return {
+        data: ref(handler ? await handler() : { mode: 'keyed', canonicalPath: null }),
+        error: ref(null),
+        status: ref('success'),
+      }
+    }
     if (key.startsWith('re-detail-new-')) {
       return {
         data: ref({

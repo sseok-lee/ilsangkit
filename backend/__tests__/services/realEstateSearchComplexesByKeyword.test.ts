@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Prisma mock ────────────────────────────────────────────────────────────
-const { mockQueryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
+const { mockQueryRawUnsafe, mockGetLatestDeals, mockAttachCanonicalPaths } = vi.hoisted(() => ({
   mockQueryRawUnsafe: vi.fn(),
   mockGetLatestDeals: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -35,6 +36,10 @@ vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
   };
 });
 
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
+}));
+
 import { searchComplexesByKeyword, searchPropertyComplexesByKeyword } from '../../src/services/realEstateService.js';
 import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
 import type { BuildingKey, LatestDeals } from '../../src/types/realEstateExploration.js';
@@ -53,6 +58,7 @@ function selectCall() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
   // COUNT은 total 0, SELECT는 빈 배열이 기본값 — 명시 안 하면 DB-free.
   mockQueryRawUnsafe.mockImplementation((sql: string) => {
     if (String(sql).includes('COUNT(*)')) return Promise.resolve([{ total: 0n }]);

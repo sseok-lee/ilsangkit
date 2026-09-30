@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Prisma mock ────────────────────────────────────────────────────────────
-const { mockGroupBy, mockCount, mockSummaryFindMany, mockQueryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
+const { mockGroupBy, mockCount, mockSummaryFindMany, mockQueryRawUnsafe, mockGetLatestDeals, mockAttachCanonicalPaths } = vi.hoisted(() => ({
   mockGroupBy: vi.fn(),
   mockCount: vi.fn(),
   mockSummaryFindMany: vi.fn(),
   mockQueryRawUnsafe: vi.fn(),
   mockGetLatestDeals: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -46,6 +47,9 @@ vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
     getLatestDeals: mockGetLatestDeals,
   };
 });
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
+}));
 
 import { searchAll } from '../../src/services/realEstateService.js';
 import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
@@ -60,6 +64,7 @@ beforeEach(() => {
   mockGroupBy.mockResolvedValue([]);
   mockCount.mockResolvedValue(0);
   mockSummaryFindMany.mockResolvedValue([]);
+  mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
   mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
     const bundles = new Map<string, LatestDeals>();
     for (const key of keys) bundles.set(latestDealsKey(key), emptyLatestDeals());

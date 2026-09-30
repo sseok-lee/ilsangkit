@@ -1,5 +1,5 @@
 export type DealMode = 'sale' | 'jeonse' | 'wolse';
-export type PeriodMonths = 6 | 12 | 36;
+export type PeriodMonths = 0 | 6 | 12 | 36;
 export type PropertyType = 'apt' | 'villa' | 'offitel';
 
 export interface DateWindow {
@@ -9,6 +9,8 @@ export interface DateWindow {
 
 export interface DetailIdentity {
   buildingKey?: string;
+  canonicalPath?: string;
+  legacyGrouped?: boolean;
   dongName?: string;
   jibun?: string | null;
   bjdCode: string;
@@ -138,6 +140,7 @@ export interface MarketCount {
 
 export interface RecentBuilding {
   buildingKey?: string;
+  canonicalPath?: string;
   dongName?: string;
   type: PropertyType;
   transactionId: number;

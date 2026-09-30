@@ -10,6 +10,7 @@ import {
 import type { FacilityCategory } from './facilityService.js';
 import { ALL_CATEGORIES } from './categoryRegistry.js';
 import { toKstDateString } from '../lib/dateUtils.js';
+import { attachRealEstateCanonicalPaths, isPreservedRealEstateUrlMode } from './realEstateUrlRegistry.js';
 
 const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
   'toilet', 'clothes', 'parking', 'library', 'hospital', 'pharmacy',
@@ -21,6 +22,7 @@ const SITEMAP_FACILITY_CATS: FacilityCategory[] = [
 // 실제 콘텐츠 변경 신호(실거래 발생)를 반영해 Google lastmod 신뢰(consistently/verifiably accurate)를 확보한다.
 type RealEstateRow = {
   buildingKey?: string | null;
+  canonicalPath?: string;
   realEstateType: string;
   city: string;
   district: string;
@@ -60,6 +62,10 @@ function activeSummaryTable(): SummaryTable {
   return summaryTableFor('list', readSummaryMode(process.env));
 }
 
+function activeSitemapSummaryTable(): SummaryTable {
+  return isPreservedRealEstateUrlMode() ? 'RealEstateBuildingSummaryV2' : activeSummaryTable();
+}
+
 function realEstateBuildingProjection(table: SummaryTable): string {
   const key = table === 'RealEstateBuildingSummaryV2' ? 'buildingKey' : 'NULL AS buildingKey';
   return `type AS realEstateType, city, district, buildingName, bjdCode, ${key},
@@ -70,7 +76,23 @@ export async function getRealEstateBuildingCount(): Promise<number> {
   // 종전에는 사이트맵 본문과 똑같은 6-way UNION 집계를 한 번 더 돌렸다.
   // /api/sitemap/page-counts 가 무거웠던 이유이고, 배포 워밍업이 이 엔드포인트를
   // 폴링하던 것도 그 때문이다. Summary 에서 세면 인덱스 스캔 한 번이다.
-  const table = activeSummaryTable();
+  const table = activeSitemapSummaryTable();
+  if (isPreservedRealEstateUrlMode()) {
+    const result = await prisma.$queryRawUnsafe<[{ cnt: bigint }]>(
+      `SELECT COUNT(DISTINCT u.pathHash) AS cnt
+       FROM ${table} s
+       INNER JOIN RealEstatePublicUrl u
+         ON u.type = s.type
+        AND u.buildingKey = s.buildingKey
+       WHERE s.buildingName IS NOT NULL
+         AND s.buildingName != ''
+         AND CHAR_LENGTH(s.buildingName) >= 2
+         AND s.buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+         AND s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'`,
+    );
+    return Number(result[0]?.cnt ?? 0);
+  }
+
   const result = await prisma.$queryRawUnsafe<[{ cnt: bigint }]>(
     `SELECT COUNT(*) AS cnt
      FROM ${table}
@@ -227,7 +249,48 @@ export async function getRealEstateBuildings(opts?: { page?: number; limit?: num
   // 그 상주 메모리가 애초에 문제의 원인이었다.
   const limit = Math.max(1, Math.min(50_000, opts?.limit ?? 10_000));
   const offset = Math.max(0, ((opts?.page ?? 1) - 1) * limit);
-  const table = activeSummaryTable();
+  const table = activeSitemapSummaryTable();
+
+  if (isPreservedRealEstateUrlMode()) {
+    const rows = await prisma.$queryRawUnsafe<RealEstateRawRow[]>(
+      `SELECT
+         s.type AS realEstateType,
+         s.city,
+         s.district,
+         s.buildingName,
+         s.bjdCode,
+         s.buildingKey,
+         u.canonicalPath,
+         grouped.lastDealKey
+       FROM (
+         SELECT
+           u.pathHash,
+           MIN(s.id) AS representativeId,
+           MAX(s.latestDealYear * 10000 + s.latestDealMonth * 100 + COALESCE(s.latestDealDay, 1)) AS lastDealKey
+         FROM ${table} s
+         INNER JOIN RealEstatePublicUrl u
+           ON u.type = s.type
+          AND u.buildingKey = s.buildingKey
+         WHERE s.buildingName IS NOT NULL
+           AND s.buildingName != ''
+           AND CHAR_LENGTH(s.buildingName) >= 2
+           AND s.buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
+           AND s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
+         GROUP BY u.pathHash
+         ORDER BY lastDealKey DESC, u.pathHash ASC
+         LIMIT ? OFFSET ?
+       ) grouped
+       JOIN ${table} s ON s.id = grouped.representativeId
+       JOIN RealEstatePublicUrl u
+         ON u.type = s.type
+        AND u.buildingKey = s.buildingKey
+       ORDER BY grouped.lastDealKey DESC, grouped.pathHash ASC`,
+      limit,
+      offset,
+    );
+    return rows.map(realEstateSitemapRow);
+  }
+
   const rows = await prisma.$queryRawUnsafe<RealEstateRawRow[]>(
     `SELECT ${realEstateBuildingProjection(table)}
      FROM ${table}
@@ -242,15 +305,30 @@ export async function getRealEstateBuildings(opts?: { page?: number; limit?: num
     offset,
   );
   // BigInt(lastDealKey)를 API 경계 전에 'YYYY-MM-DD' 문자열로 변환 (res.json BigInt 직렬화 오류 방지)
-  return rows.map((r) => ({
+  const rowsWithCanonicalPaths = await attachRealEstateCanonicalPaths(
+    rows.map((r) => ({ ...r, type: r.realEstateType })),
+  );
+  const seenCanonicalPaths = new Set<string>();
+  const uniqueRows = rowsWithCanonicalPaths.filter((row) => {
+    if (!row.canonicalPath) return true;
+    if (seenCanonicalPaths.has(row.canonicalPath)) return false;
+    seenCanonicalPaths.add(row.canonicalPath);
+    return true;
+  });
+  return uniqueRows.map(realEstateSitemapRow);
+}
+
+function realEstateSitemapRow(r: RealEstateRawRow): RealEstateRow {
+  return {
     realEstateType: r.realEstateType,
     city: r.city,
     district: r.district,
     buildingName: r.buildingName,
     bjdCode: r.bjdCode,
     buildingKey: r.buildingKey,
+    canonicalPath: r.canonicalPath,
     lastmod: r.lastDealKey == null ? '' : dealKeyToDateString(Number(r.lastDealKey)),
-  }));
+  };
 }
 
 /**

@@ -28,6 +28,7 @@ export interface MapRegionItem {
 
 export interface MapBuildingItem {
   buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
   bjdCode: string
   city: string

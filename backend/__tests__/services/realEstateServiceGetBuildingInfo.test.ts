@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const {
   mockQueryRawUnsafe, mockAptSaleFindFirst, mockAptSaleAggregate, mockAptSaleGroupBy, mockAptSaleCount,
   mockAptRentFindFirst, mockAptRentAggregate, mockAptRentGroupBy, mockAptRentCount,
+  mockGetDeferredIdentity,
 } = vi.hoisted(() => ({
   mockQueryRawUnsafe: vi.fn(), mockAptSaleFindFirst: vi.fn(), mockAptSaleAggregate: vi.fn(), mockAptSaleGroupBy: vi.fn(), mockAptSaleCount: vi.fn(),
   mockAptRentFindFirst: vi.fn(), mockAptRentAggregate: vi.fn(), mockAptRentGroupBy: vi.fn(), mockAptRentCount: vi.fn(),
+  mockGetDeferredIdentity: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -46,6 +48,11 @@ vi.mock('../../src/lib/prisma.js', () => {
   return { prisma: models, default: models };
 });
 
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: (rows: unknown[]) => Promise.resolve(rows),
+  getDeferredRealEstateIdentity: mockGetDeferredIdentity,
+}));
+
 import { getBuildingInfo } from '../../src/services/realEstateService.js';
 
 const sampleRecord = {
@@ -80,6 +87,7 @@ const sampleCoordsOnly = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetDeferredIdentity.mockResolvedValue(null);
 });
 
 describe('getBuildingInfo - bjdCode fallback', () => {
@@ -342,6 +350,57 @@ describe('getBuildingInfo address identity', () => {
     ]);
     expect(await getBuildingInfo('apt-sale', '11680', '래미안에든')).toBeNull();
   });
+
+  it('keeps an explicitly deferred legacy URL grouped instead of choosing one parcel', async () => {
+    const basePath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안에든')}`;
+    mockGetDeferredIdentity.mockResolvedValueOnce({
+      type: 'apt-sale',
+      bjdCode: '11680',
+      buildingName: '래미안에든',
+      canonicalPath: basePath,
+      legacyGrouped: true,
+    });
+    mockAptSaleFindFirst.mockResolvedValue(sampleRecord);
+    mockAptSaleAggregate.mockResolvedValue(sampleAgg);
+    mockAptSaleGroupBy.mockResolvedValue([
+      { dongName: '역삼동', jibun: '123', _count: { dongName: 10 } },
+      { dongName: '역삼동', jibun: '124', _count: { dongName: 5 } },
+    ]);
+
+    const result = await getBuildingInfo('apt-sale', '11680', '래미안에든');
+
+    expect(result).toMatchObject({
+      bjdCode: '11680',
+      buildingName: '래미안에든',
+      canonicalPath: basePath,
+      legacyGrouped: true,
+      dongName: null,
+      jibun: null,
+      roadName: null,
+      lat: null,
+      lng: null,
+    });
+    expect(result?.buildingKey).toBeUndefined();
+  });
+
+  it('does not recover a deferred legacy URL from another region when its reserved bjd has no rows', async () => {
+    mockGetDeferredIdentity.mockResolvedValueOnce({
+      type: 'apt-sale',
+      bjdCode: '11680',
+      buildingName: '래미안에든',
+      canonicalPath: `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안에든')}`,
+      legacyGrouped: true,
+    });
+    mockAptSaleFindFirst.mockResolvedValue(null);
+    mockAptSaleAggregate.mockResolvedValue({ _min: { exclusiveArea: null }, _max: { exclusiveArea: null } });
+    mockAptSaleGroupBy
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ bjdCode: '50130', _count: { _all: 9 } }]);
+
+    expect(await getBuildingInfo('apt-sale', '11680', '래미안에든')).toBeNull();
+    expect(mockAptSaleFindFirst).toHaveBeenCalledTimes(1);
+  });
+
   it('restricts keyed building information and coordinate fallback to its original parcel rows', async () => {
     mockQueryRawUnsafe
       .mockResolvedValueOnce([{ bjdCode: '11680', buildingName: '래미안에든', dongName: '역삼동', jibun: '123' }])

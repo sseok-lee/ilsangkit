@@ -20,6 +20,10 @@ vi.mock('~/composables/useRealEstate', () => ({
   }),
 }))
 
+function mockResolverResponse() {
+  return { success: true, data: { mode: 'keyed', canonicalPath: null } }
+}
+
 const building: BuildingInfo = {
   bjdCode: '1168010100', buildingName: '테스트아파트', city: '서울', district: '강남구',
   dongName: '역삼동', roadName: null, jibun: null, buildYear: null,
@@ -35,11 +39,20 @@ let payload: DetailPayload | null | undefined
 let fetchError: Error | null
 let wrapper: VueWrapper | undefined
 const setupError = vi.fn()
-const readAsyncData = vi.fn(async (key: string) => ({
-  data: ref(key.startsWith('re-detail-new-') ? payload : null),
-  error: ref(fetchError),
-  status: ref(fetchError ? 'error' : 'success'),
-}))
+const readAsyncData = vi.fn(async (key: string, handler?: () => Promise<unknown>) => {
+  if (key.startsWith('re-public-url-resolution-')) {
+    return {
+      data: ref(handler ? await handler() : { mode: 'keyed', canonicalPath: null }),
+      error: ref(null),
+      status: ref('success'),
+    }
+  }
+  return {
+    data: ref(key.startsWith('re-detail-new-') ? payload : null),
+    error: ref(fetchError),
+    status: ref(fetchError ? 'error' : 'success'),
+  }
+})
 
 beforeEach(() => {
   setupError.mockClear()
@@ -51,6 +64,10 @@ beforeEach(() => {
     transactions: { items: [], total: 0, page: 1, totalPages: 0 },
     areaGroups: [],
   }
+  vi.stubGlobal('$fetch', vi.fn(async (url: string) => {
+    if (url.includes('/api/real-estate/resolve-url')) return mockResolverResponse()
+    throw new Error(`unexpected fetch: ${url}`)
+  }))
   vi.stubGlobal('useRouter', () => ({ push: vi.fn(), replace: vi.fn() }))
   vi.stubGlobal('createError', (options: { statusCode: number; statusMessage: string }) =>
     Object.assign(new Error(options.statusMessage), options))

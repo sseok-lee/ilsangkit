@@ -4,9 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   mockQueryRaw,
   mockGetBuildingInfo,
+  mockGetCanonicalPath,
+  mockIsPreservedMode,
 } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
   mockGetBuildingInfo: vi.fn(),
+  mockGetCanonicalPath: vi.fn(),
+  mockIsPreservedMode: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -23,6 +27,10 @@ vi.mock('../../src/services/realEstateService.js', async (importOriginal) => {
     getBuildingInfo: mockGetBuildingInfo,
   };
 });
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  getRealEstateCanonicalPath: mockGetCanonicalPath,
+  isPreservedRealEstateUrlMode: mockIsPreservedMode,
+}));
 
 import { getDetailOverview } from '../../src/services/realEstateDetailService.js';
 
@@ -34,6 +42,10 @@ function sqlText(query: unknown): string {
 beforeEach(() => {
   mockQueryRaw.mockReset();
   mockGetBuildingInfo.mockReset();
+  mockGetCanonicalPath.mockReset();
+  mockGetCanonicalPath.mockResolvedValue(null);
+  mockIsPreservedMode.mockReset();
+  mockIsPreservedMode.mockReturnValue(false);
   mockGetBuildingInfo.mockResolvedValue({
     bjdCode: '11680',
     buildingName: 'A',
@@ -152,6 +164,43 @@ describe('getDetailOverview', () => {
       expect(sql.values).toContain('대치동');
       expect(sql.values).toContain('934-2');
     }
+  });
+
+  it('keyed mode skips canonical registry lookup for buildingKey detail pages', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2', roadName: null }])
+      .mockResolvedValueOnce([]);
+
+    await getDetailOverview('villa-sale', {
+      bjdCode: '11680', buildingName: '스톤빌리지', buildingKey: 'a'.repeat(64),
+    });
+
+    expect(mockIsPreservedMode).toHaveBeenCalled();
+    expect(mockGetCanonicalPath).not.toHaveBeenCalled();
+  });
+
+  it('preserved mode resolves and returns the registered canonicalPath', async () => {
+    const key = 'c'.repeat(64);
+    mockIsPreservedMode.mockReturnValue(true);
+    mockGetCanonicalPath.mockResolvedValue('/real-estate/villa-sale/seoul/gangnam/%EC%8A%A4%ED%86%A4%EB%B9%8C%EB%A6%AC%EC%A7%80');
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2', roadName: null }])
+      .mockResolvedValueOnce([]);
+
+    const overview = await getDetailOverview('villa-sale', {
+      bjdCode: '11680', buildingName: '스톤빌리지', buildingKey: key,
+    });
+
+    expect(mockGetCanonicalPath).toHaveBeenCalledWith('villa-sale', key);
+    expect(overview?.identity.canonicalPath).toBe('/real-estate/villa-sale/seoul/gangnam/%EC%8A%A4%ED%86%A4%EB%B9%8C%EB%A6%AC%EC%A7%80');
   });
 
   it('rejects an unknown key instead of querying other same-name addresses', async () => {
