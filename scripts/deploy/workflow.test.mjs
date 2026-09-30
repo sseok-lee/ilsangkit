@@ -5,6 +5,7 @@ import test from 'node:test'
 
 const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8')
 const sync = readFileSync('.github/workflows/sync-real-estate.yml', 'utf8')
+const regen = readFileSync('.github/workflows/regen-sitemaps.yml', 'utf8')
 
 test('deploy workflow is pinned to tested SHA and uses release commands instead of mutable production writes', () => {
   assert.match(deploy, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/)
@@ -38,9 +39,28 @@ test('scheduled sync binds release runtime before node script calls', () => {
   assert.doesNotMatch(sync, /SITEMAP_REGEN_BASE="http:\/\/127\.0\.0\.1:3000"\n\s*set \+x\n\s*export SITEMAP_REGEN_TOKEN[\s\S]*node "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/generateSitemaps\.js"/)
 })
 
+test('sitemap generation workflows use active release runtime with a 20 minute generation budget', () => {
+  assert.match(sync, /run_backend_node_timed 20m "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/generateSitemaps\.js"/)
+  assert.doesNotMatch(sync, /timeout --kill-after=30s 10m node "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/generateSitemaps\.js"/)
+
+  assert.doesNotMatch(regen, /SYNC_RUNTIME_SCRIPT="\/home\/project2\/deploy\/scripts\/sync-runtime\.mjs"/)
+  assert.match(regen, /command_timeout: 25m/)
+  assert.match(regen, /ACTIVE_BACKEND_LINK="\$\{ILSK_ACTIVE_BACKEND_LINK:-\/home\/project2\/backend\}"/)
+  assert.match(regen, /ACTIVE_BACKEND_DIR="\$\(cd "\$ACTIVE_BACKEND_LINK" && pwd -P\)"/)
+  assert.match(regen, /ACTIVE_RELEASE_ROOT="\$\(dirname "\$ACTIVE_BACKEND_DIR"\)"/)
+  assert.match(regen, /SYNC_RUNTIME_SCRIPT="\$ACTIVE_RELEASE_ROOT\/scripts\/deploy\/sync-runtime\.mjs"/)
+  assert.match(regen, /node "\$SYNC_RUNTIME_SCRIPT" print --active-backend-link "\$ACTIVE_BACKEND_LINK" --inventory "\$INVENTORY"/)
+  assert.match(regen, /node "\$SYNC_RUNTIME_SCRIPT" run --active-backend-link "\$ACTIVE_BACKEND_LINK" --inventory "\$INVENTORY" -- node "\$@"/)
+  assert.match(regen, /current-backend is active but sync runtime helper was not found/)
+  assert.match(regen, /run_backend_node_timed 20m "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/generateSitemaps\.js"/)
+  assert.doesNotMatch(regen, /cd \/home\/project2\/backend/)
+  assert.doesNotMatch(regen, /SITEMAP_REGEN_BASE="http:\/\/127\.0\.0\.1:3000"[\s\S]*node dist\/scripts\/generateSitemaps\.js/)
+  assert.doesNotMatch(regen, /timeout --kill-after=30s 10m node dist\/scripts\/generateSitemaps\.js/)
+})
+
 
 test('workflow YAML files parse with a real YAML parser', () => {
-  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml']) {
+  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml', '.github/workflows/regen-sitemaps.yml']) {
     const result = spawnSync('python3', ['-c', 'import sys, yaml; yaml.safe_load(open(sys.argv[1], encoding="utf-8"))', file], { encoding: 'utf8' })
     assert.equal(result.status, 0, `${file} failed YAML parse: ${result.stderr}`)
   }

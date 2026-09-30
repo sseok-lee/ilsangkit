@@ -283,7 +283,6 @@ import type { GuideSummary } from '~/composables/useGuides'
 import type { ArticleSummary } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import type { HomeDashboard } from '~/composables/useHomeDashboard'
 import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 import { useAnalytics } from '~/composables/useAnalytics'
@@ -322,22 +321,14 @@ const heroActiveDescendant = ref<string | undefined>(undefined)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const heroAcRef = ref<any>(null)
 
-// 홈 대시보드 SSR (above-fold, CLS 방지).
-// /api/meta/home-dashboard 응답이 /api/meta/stats 의 superset(total, buildingCount,
-// subscriptionActiveCount 포함) + 시장 트렌드 / 인기 단지 / 청약 요약을 같이 제공하므로
-// 별도 home-stats fetch는 제거함.
-// Home dashboard + recent guides를 단일 useAsyncData 안에서 Promise.allSettled로 병렬화.
-// dashboard는 critical (hero·JSON-LD에 필수) — null이면 503 throw로 빈 hero 색인 차단.
-// recentGuides는 fold-below decorative — null이어도 페이지 정상.
+// 홈 보조 콘텐츠 SSR.
+// 실거래/청약 홈 섹션은 각 컴포넌트가 자체 데이터를 조회하므로,
+// 이 페이지는 fold-below 가이드/기사 실패에 의존하지 않고 렌더한다.
 const { data: pageData } = await useAsyncData(
   'home-page',
   async () => {
     const signal = AbortSignal.timeout(8000)
-    const [dashR, guidesR, articlesR] = await Promise.allSettled([
-      $fetch<{ success: boolean; data: HomeDashboard }>(
-        `${apiBase}/api/meta/home-dashboard`,
-        { signal }
-      ),
+    const [guidesR, articlesR] = await Promise.allSettled([
       $fetch<{ success: boolean; data: GuideSummary[] }>(
         `${apiBase}/api/guides/recent`,
         { query: { limit: 4 }, signal }
@@ -347,34 +338,26 @@ const { data: pageData } = await useAsyncData(
         { query: { limit: 4 }, signal }
       ),
     ])
-    if (dashR.status === 'rejected') {
-      console.warn('[home-page] dashboard failed:', dashR.reason)
-    }
     if (guidesR.status === 'rejected') {
+      // eslint-disable-next-line no-console
       console.warn('[home-page] recent-guides failed:', guidesR.reason)
     }
     if (articlesR.status === 'rejected') {
+      // eslint-disable-next-line no-console
       console.warn('[home-page] recent-articles failed:', articlesR.reason)
     }
     return {
-      dashboard: dashR.status === 'fulfilled' ? dashR.value.data : null,
       recentGuides: guidesR.status === 'fulfilled' ? guidesR.value.data : ([] as GuideSummary[]),
       recentArticles: articlesR.status === 'fulfilled' ? articlesR.value.data : ([] as ArticleSummary[]),
     }
   },
   {
     default: () => ({
-      dashboard: null as HomeDashboard | null,
       recentGuides: [] as GuideSummary[],
       recentArticles: [] as ArticleSummary[],
     }),
   }
 )
-
-// 빈 hero 색인 차단 — dashboard 없으면 503 (봇 retry 유도)
-if (import.meta.server && !pageData.value?.dashboard) {
-  throw createError({ statusCode: 503, statusMessage: 'Home data temporarily unavailable' })
-}
 
 const recentGuides = computed(() => pageData.value?.recentGuides ?? [])
 const recentArticles = computed(() => pageData.value?.recentArticles ?? [])
