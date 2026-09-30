@@ -42,17 +42,8 @@ vi.mock('~/components/home/HomeMarketSection.vue', () => ({
 }))
 
 const homePagePayload = {
-  dashboard: {
-    total: 100000,
-    buildingCount: 50000,
-    subscriptionActiveCount: 5,
-    newlyListedToday: 0,
-    realEstateTrends: [],
-    trendingBuildings: { sale: [], jeonse: [], wolse: [] },
-    subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
-    realEstateHotspots: {},
-  },
   recentGuides: [],
+  recentArticles: [],
 };
 
 beforeEach(() => {
