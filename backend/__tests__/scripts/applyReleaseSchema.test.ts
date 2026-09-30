@@ -3,6 +3,7 @@ import {
   applyReleaseSchema,
   classifyColumn,
   normalizeCheckClause,
+  REAL_ESTATE_PUBLIC_URL_TABLES,
   rejectDangerousSql,
   validateExistingTable,
   type ExpectedTable,
@@ -69,6 +70,16 @@ describe('applyReleaseSchema allowlist validation', () => {
     expect(result.ok).toBe(true);
     expect(result.checksum).toMatch(/^[a-f0-9]{64}$/);
     expect(result.errors).toEqual([]);
+  });
+
+  it('includes the public URL registry tables in the additive release schema contract', () => {
+    expect(REAL_ESTATE_PUBLIC_URL_TABLES.map(table => table.name)).toEqual([
+      'RealEstatePublicUrl',
+      'RealEstatePublicUrlState',
+    ]);
+    for (const table of REAL_ESTATE_PUBLIC_URL_TABLES) {
+      expect(table.createSql).toMatch(new RegExp(`CREATE TABLE \\\`${table.name}\\\``));
+    }
   });
 
   it('rejects drift in column type, index order, and missing CHECK without auto-fixing', () => {

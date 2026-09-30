@@ -106,7 +106,8 @@ async function writeFullReleaseFixtures(dir: string): Promise<{
       buildingInfoProbe('same-name-address-b', sameBKey, '202-2'),
       detailProbe('sale-mode', 'apt-sale', 'sale'),
       detailProbe('rent-mode', 'apt-rent', 'wolse'),
-      { name: 'sitemap', path: '/sitemap.xml', target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: '<loc>' },
+      { name: 'sitemap', path: '/sitemap.xml', target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: '<loc>', expectedHeaders: { 'x-sitemap-source': 'static' } },
+      { name: 'frontend-ssr', path: '/', target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: '일상킷' },
       {
         name: 'waste',
         path: '/api/waste-schedules?city=서울특별시&district=강남구&limit=1',
@@ -152,7 +153,10 @@ async function writeFullReleaseFixtures(dir: string): Promise<{
       retained: true,
       supportsKeyedUrls: false,
       businessProbesPass: false,
-      probes: [{ name: 'rollback-readiness', path: '/api/internal/release-readiness', target: 'backend', expectedJson: { 'summary.runId': staleRun } }],
+      probes: [
+        { name: 'rollback-readiness', path: '/api/internal/release-readiness', target: 'backend', expectedJson: { 'summary.runId': staleRun } },
+        { name: 'rollback-frontend-ssr', path: '/', target: 'frontend', expectedReleaseId: 'old-release', expectBodyIncludes: '일상킷' },
+      ],
     },
     summary: { mode: 'compatibility', runId: staleRun, expectedRunId: staleRun, state: 'ready' },
     probes: baseProbes('compat-release', 'compatibility', staleRun),
@@ -173,7 +177,10 @@ async function writeFullReleaseFixtures(dir: string): Promise<{
       retained: true,
       supportsKeyedUrls: true,
       businessProbesPass: true,
-      probes: [{ name: 'rollback-readiness', path: '/api/internal/release-readiness', target: 'backend', expectedJson: { 'summary.runId': staleRun } }],
+      probes: [
+        { name: 'rollback-readiness', path: '/api/internal/release-readiness', target: 'backend', expectedJson: { 'summary.runId': staleRun } },
+        { name: 'rollback-frontend-ssr', path: '/', target: 'frontend', expectedReleaseId: 'compat-release', expectBodyIncludes: '일상킷' },
+      ],
     },
     summary: { mode: 'address', runId: staleRun, expectedRunId: staleRun, state: 'ready' },
     probes: baseProbes('address-release', 'address', staleRun),
@@ -236,6 +243,10 @@ function deps(
       events.push('schema');
       return { applied: true };
     }),
+    prepareUrls: vi.fn(async () => {
+      events.push('urls');
+      return { applied: true, blockers: [] };
+    }),
     runReleaseCommand: vi.fn(async (command) => {
       events.push(command);
       return { command };
@@ -266,12 +277,15 @@ describe('runSummaryTransition', () => {
         manifestPath,
         releaseScriptPath: join(dir, 'release.mjs'),
         compatibilityManifestPath,
+        urlBaselinePath: join(dir, 'url-baseline.json'),
+        expectedUrlFingerprint: 'f'.repeat(64),
+        expectedUrlPlanFingerprint: 'p'.repeat(64),
         reportOut,
       },
       deps(events)
     );
 
-    expect(events).toEqual(['lock-start', 'deploy-lock-start', 'schema', 'prepare', 'verify', 'check', 'check', 'switch', 'deploy-lock-end', 'lock-end']);
+    expect(events).toEqual(['lock-start', 'deploy-lock-start', 'schema', 'prepare', 'verify', 'urls', 'check', 'check', 'switch', 'deploy-lock-end', 'lock-end']);
     expect(report).toMatchObject({
       releaseId: 'address-20260929-abc123',
       expectedRunId: 'summary-run-1',
@@ -279,6 +293,68 @@ describe('runSummaryTransition', () => {
     expect(JSON.parse(await readFile(reportOut, 'utf8'))).toMatchObject({
       releaseId: 'address-20260929-abc123',
     });
+  });
+
+
+  it('uses keyed URL mode only while preparing the initial URL registry and restores the runtime mode before checks', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'c2-summary-transition-'));
+    const manifestPath = await writeManifest(dir);
+    const compatibilityManifestPath = await writeManifest(dir, { mode: 'compatibility' }, 'compatibility-manifest.json');
+    const events: string[] = [];
+    const previous = process.env.REAL_ESTATE_URL_MODE;
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+
+    try {
+      await runSummaryTransition(
+        {
+          inventoryPath: join(dir, 'inventory.json'),
+          manifestPath,
+          releaseScriptPath: join(dir, 'release.mjs'),
+          compatibilityManifestPath,
+          urlBaselinePath: join(dir, 'url-baseline.json'),
+          expectedUrlFingerprint: 'f'.repeat(64),
+          expectedUrlPlanFingerprint: 'p'.repeat(64),
+        },
+        deps(events, {
+          prepare: vi.fn(async () => {
+            events.push(`prepare:${process.env.REAL_ESTATE_URL_MODE}`);
+            return readyReport();
+          }),
+          verify: vi.fn(async () => {
+            events.push(`verify:${process.env.REAL_ESTATE_URL_MODE}`);
+            return readyReport();
+          }),
+          prepareUrls: vi.fn(async () => {
+            events.push(`urls:${process.env.REAL_ESTATE_URL_MODE}`);
+            return { applied: true, blockers: [] };
+          }),
+          runReleaseCommand: vi.fn(async (command) => {
+            events.push(`${command}:${process.env.REAL_ESTATE_URL_MODE}`);
+            return { command };
+          }),
+        })
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.REAL_ESTATE_URL_MODE;
+      } else {
+        process.env.REAL_ESTATE_URL_MODE = previous;
+      }
+    }
+
+    expect(events).toEqual([
+      'lock-start',
+      'deploy-lock-start',
+      'schema',
+      'prepare:keyed',
+      'verify:keyed',
+      'urls:keyed',
+      'check:preserved',
+      'check:preserved',
+      'switch:preserved',
+      'deploy-lock-end',
+      'lock-end',
+    ]);
   });
 
 
@@ -296,6 +372,9 @@ describe('runSummaryTransition', () => {
         manifestPath,
         releaseScriptPath: join(dir, 'release.mjs'),
         compatibilityManifestPath,
+        urlBaselinePath: join(dir, 'url-baseline.json'),
+        expectedUrlFingerprint: 'f'.repeat(64),
+        expectedUrlPlanFingerprint: 'p'.repeat(64),
       },
       deps(events, {
         prepare: vi.fn(async () => {
@@ -322,6 +401,7 @@ describe('runSummaryTransition', () => {
       'schema',
       'prepare',
       'verify',
+      'urls',
       `check:compat:${generatedRunId}:bootstrap`,
       `check:address:${generatedRunId}:strict`,
       `switch:address:${generatedRunId}:strict`,
@@ -349,6 +429,9 @@ describe('runSummaryTransition', () => {
         manifestPath,
         releaseScriptPath: join(dir, 'release.mjs'),
         compatibilityManifestPath,
+        urlBaselinePath: join(dir, 'url-baseline.json'),
+        expectedUrlFingerprint: 'f'.repeat(64),
+        expectedUrlPlanFingerprint: 'p'.repeat(64),
       },
       deps(events, {
         runReleaseCommand: vi.fn(async (command, opts) => {
@@ -364,6 +447,7 @@ describe('runSummaryTransition', () => {
       'schema',
       'prepare',
       'verify',
+      'urls',
       'check:compat:bootstrap',
       'check:address:strict',
       'switch:address:strict',
@@ -385,6 +469,9 @@ describe('runSummaryTransition', () => {
         manifestPath: addressManifestPath,
         releaseScriptPath: join(dir, 'release.mjs'),
         compatibilityManifestPath,
+        urlBaselinePath: join(dir, 'url-baseline.json'),
+        expectedUrlFingerprint: 'f'.repeat(64),
+        expectedUrlPlanFingerprint: 'p'.repeat(64),
       },
       deps(events, {
         prepare: vi.fn(async () => {
@@ -411,6 +498,7 @@ describe('runSummaryTransition', () => {
       'schema',
       'prepare',
       'verify',
+      'urls',
       `check:compat:${generatedRunId}:${generatedRunId}:bootstrap`,
       `check:address:${generatedRunId}:${generatedRunId}:strict`,
       `switch:address:${generatedRunId}:${generatedRunId}:strict`,
@@ -444,6 +532,26 @@ describe('runSummaryTransition', () => {
     expect(events).toEqual([]);
   });
 
+  it('requires reviewed URL registry inputs before any first-transition writes', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'c2-summary-transition-'));
+    const manifestPath = await writeManifest(dir, { mode: 'address' });
+    const compatibilityManifestPath = await writeManifest(dir, { mode: 'compatibility' }, 'compatibility-manifest.json');
+    const events: string[] = [];
+
+    await expect(
+      runSummaryTransition(
+        {
+          inventoryPath: join(dir, 'inventory.json'),
+          manifestPath,
+          releaseScriptPath: join(dir, 'release.mjs'),
+          compatibilityManifestPath,
+        },
+        deps(events)
+      )
+    ).rejects.toThrow(/URL baseline, source fingerprint, and plan fingerprint are required/);
+    expect(events).toEqual([]);
+  });
+
   it('rejects wrong first-transition manifest modes before schema or prepare writes', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'c2-summary-transition-'));
     const manifestPath = await writeManifest(dir, { mode: 'compatibility' });
@@ -457,6 +565,9 @@ describe('runSummaryTransition', () => {
           manifestPath,
           releaseScriptPath: join(dir, 'release.mjs'),
           compatibilityManifestPath,
+          urlBaselinePath: join(dir, 'url-baseline.json'),
+          expectedUrlFingerprint: 'f'.repeat(64),
+          expectedUrlPlanFingerprint: 'p'.repeat(64),
         },
         deps(events)
       )
@@ -481,6 +592,9 @@ describe('runSummaryTransition', () => {
           manifestPath,
           releaseScriptPath: join(dir, 'release.mjs'),
           compatibilityManifestPath,
+          urlBaselinePath: join(dir, 'url-baseline.json'),
+          expectedUrlFingerprint: 'f'.repeat(64),
+          expectedUrlPlanFingerprint: 'p'.repeat(64),
         },
         deps(events)
       )
@@ -503,6 +617,9 @@ describe('runSummaryTransition', () => {
           manifestPath,
           releaseScriptPath: join(dir, 'release.mjs'),
           compatibilityManifestPath,
+          urlBaselinePath: join(dir, 'url-baseline.json'),
+          expectedUrlFingerprint: 'f'.repeat(64),
+          expectedUrlPlanFingerprint: 'p'.repeat(64),
         },
         dependencies
       )
@@ -555,6 +672,12 @@ describe('runSummaryTransition', () => {
       'scripts/deploy/release.mjs',
       '--compatibility-manifest',
       'compat.json',
+      '--url-baseline',
+      'url-baseline.json',
+      '--expected-url-fingerprint',
+      'f'.repeat(64),
+      '--expected-url-plan-fingerprint',
+      'p'.repeat(64),
       '--skip-prepare',
     ]);
 
@@ -562,6 +685,9 @@ describe('runSummaryTransition', () => {
     expect(parsed.manifestPath.endsWith('manifest.json')).toBe(true);
     expect(parsed.releaseScriptPath.endsWith('scripts/deploy/release.mjs')).toBe(true);
     expect(parsed.compatibilityManifestPath?.endsWith('compat.json')).toBe(true);
+    expect(parsed.urlBaselinePath?.endsWith('url-baseline.json')).toBe(true);
+    expect(parsed.expectedUrlFingerprint).toBe('f'.repeat(64));
+    expect(parsed.expectedUrlPlanFingerprint).toBe('p'.repeat(64));
     expect(parsed.skipPrepare).toBe(true);
   });
 });

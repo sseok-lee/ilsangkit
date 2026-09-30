@@ -30,6 +30,7 @@ const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_ATTEMPTS = 5
 const DEFAULT_PUBLIC_CONVERGENCE_DELAY_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_REQUEST_TIMEOUT_MS = 1000
+const FRONTEND_PROCESS_READINESS_PATH = '/favicon.ico'
 
 const LIST_PROBE_TYPES = new Map([
   ['apt-sale-list', 'apt-sale'],
@@ -124,12 +125,47 @@ function validateModeBusinessProbe(probe, expectedType, expectedMode, manifest) 
   assertProbeExpectedJson(probe, 'data.filters.buildingKey', value => value === queryKey, label)
 }
 
+function expectedHeaderValue(probe, headerName) {
+  const headers = probe?.expectedHeaders
+  if (!headers || typeof headers !== 'object' || Array.isArray(headers)) return undefined
+  const normalized = String(headerName).toLowerCase()
+  for (const [name, value] of Object.entries(headers)) {
+    if (String(name).toLowerCase() === normalized) return value
+  }
+  return undefined
+}
+
+function probeTarget(probe) {
+  return probe?.target ?? (String(probe?.path ?? '/').startsWith('/api/') ? 'backend' : 'frontend')
+}
+
+function hasNonemptyBodyAssertions(probe) {
+  const includes = Array.isArray(probe?.expectBodyIncludes) ? probe.expectBodyIncludes : [probe?.expectBodyIncludes]
+  return includes.some(value => typeof value === 'string' && value.length > 0)
+}
+
+function isFrontendSsrBusinessProbe(probe, expectedReleaseId) {
+  if (!probe || probeTarget(probe) !== 'frontend' || probe.expectedReleaseId !== expectedReleaseId || !hasNonemptyBodyAssertions(probe)) return false
+  const pathname = parseProbeUrl(probe).pathname
+  if (pathname.startsWith('/api/') || pathname.startsWith('/sitemap') || pathname.startsWith('/_nuxt/') || pathname === '/favicon.ico') return false
+  if (/\.[a-z0-9]+$/i.test(pathname)) return false
+  if (pathname === '/') return true
+  return /^\/real-estate\/(apt|villa|offitel)-(sale|rent)\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname)
+}
+
+function assertFrontendSsrBusinessProbe(probes, expectedReleaseId, label) {
+  if (!asArray(probes).some(probe => isFrontendSsrBusinessProbe(probe, expectedReleaseId))) {
+    throw new Error(`${label} probes must include a frontend SSR business probe`)
+  }
+}
+
 function validateSitemapBusinessProbe(probe, manifest) {
   if (probe.expectedReleaseId !== manifest.releaseId) throw new Error('sitemap probe must assert release id')
   assertProbePath(probe, '/sitemap.xml', 'sitemap')
   if (probe.target && probe.target !== 'frontend') throw new Error('sitemap probe must target frontend')
   const includes = Array.isArray(probe.expectBodyIncludes) ? probe.expectBodyIncludes : [probe.expectBodyIncludes]
   if (!includes.includes('<loc>')) throw new Error('sitemap probe must assert XML loc marker')
+  if (expectedHeaderValue(probe, 'x-sitemap-source') !== 'static') throw new Error('sitemap probe must assert x-sitemap-source static header')
 }
 
 function validateWasteBusinessProbe(probe, manifest) {
@@ -301,6 +337,7 @@ export function validateManifest(manifest, inventory, options = {}) {
     if (!rollback.supportsKeyedUrls) throw new Error('rollback release must support keyed URLs')
     if (!rollback.businessProbesPass) throw new Error('rollback release business probes must pass')
     if (asArray(rollback.probes).length === 0) throw new Error('rollback release must include live business probes')
+    assertFrontendSsrBusinessProbe(rollback.probes, rollback.releaseId, 'rollback')
   }
   assertPort(rollback.backendPort, 'rollback.backendPort')
   assertPort(rollback.frontendPort, 'rollback.frontendPort')
@@ -334,6 +371,7 @@ export function validateManifest(manifest, inventory, options = {}) {
   if (!releaseHeaderTargets.has('backend') || !releaseHeaderTargets.has('frontend')) {
     throw new Error('candidate probes must assert backend and frontend release ids')
   }
+  assertFrontendSsrBusinessProbe(probes, manifest.releaseId, 'candidate')
   const publicSmokeProbes = asArray(manifest.publicSmokeProbes)
   if (publicSmokeProbes.length === 0 || publicSmokeProbes.some(probe => probe?.expectedReleaseId !== manifest.releaseId)) {
     throw new Error('public smoke probes must assert the active release id')
@@ -460,6 +498,7 @@ export function buildCandidateEnvironment(manifest, inventory = {}) {
     NUXT_PUBLIC_API_BASE: '',
     ILSK_RELEASE_ID: manifest.releaseId,
     REAL_ESTATE_SUMMARY_MODE: manifest.summary.mode,
+    REAL_ESTATE_URL_MODE: 'preserved',
     REAL_ESTATE_SUMMARY_RUN_ID: manifest.summary.runId,
     ILSK_SUMMARY_RUN_ID: manifest.summary.runId,
     REAL_ESTATE_WRITE_LOCK_DIR: runtime.writerLockDir,
@@ -677,7 +716,7 @@ async function waitForReadiness(context, target) {
   )
   const probe = target === 'backend'
     ? { name: 'backend-process-readiness', path: '/api/health', target: 'backend', requestTimeoutMs }
-    : { name: 'frontend-process-readiness', path: '/', target: 'frontend', requestTimeoutMs }
+    : { name: 'frontend-process-readiness', path: FRONTEND_PROCESS_READINESS_PATH, target: 'frontend', requestTimeoutMs }
   const attempts = finitePositiveInteger(context.readinessAttempts, DEFAULT_READINESS_ATTEMPTS, 'readinessAttempts')
   const delayMs = finiteNonnegativeNumber(context.readinessDelayMs, DEFAULT_READINESS_DELAY_MS, 'readinessDelayMs')
   let lastError
@@ -948,6 +987,13 @@ async function runHttpProbes(context, probes, phase) {
       if (response.status !== expectedStatus || !response.ok) {
         await consumeProbeBody(response)
         throw new Error(`${phase} probe failed: ${probe.name ?? url} status ${response.status}`)
+      }
+      for (const [headerName, expected] of Object.entries(probe.expectedHeaders ?? {})) {
+        const actual = response.headers?.get?.(headerName)
+        if (actual !== String(expected)) {
+          await consumeProbeBody(response)
+          throw new Error(`${phase} probe failed: ${probe.name ?? url} header ${headerName} mismatch`)
+        }
       }
       if (probe.expectBodyIncludes) {
         const body = await response.text()

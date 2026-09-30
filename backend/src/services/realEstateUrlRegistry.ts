@@ -50,9 +50,13 @@ export async function attachRealEstateCanonicalPaths<T extends { type?: string; 
   type?: string,
 ): Promise<Array<T & { canonicalPath?: string }>> {
   if (!isPreservedRealEstateUrlMode()) return rows;
-  const missingIdentity = rows.find((row) => !(row.type ?? type) || !row.buildingKey);
-  if (missingIdentity) {
-    throw new Error('REAL_ESTATE_URL_MODE=preserved requires type and buildingKey for real estate rows');
+  const missingType = rows.find((row) => !(row.type ?? type));
+  if (missingType) {
+    throw new Error('REAL_ESTATE_URL_MODE=preserved requires type for real estate rows');
+  }
+  const missingKey = rows.find((row) => !row.buildingKey);
+  if (missingKey && process.env.REAL_ESTATE_SUMMARY_MODE !== 'compatibility') {
+    throw new Error('REAL_ESTATE_URL_MODE=preserved requires buildingKey for real estate rows outside compatibility mode');
   }
   const keyed = rows
     .map((row, index) => ({ row, index, type: row.type ?? type, buildingKey: row.buildingKey ?? null }))
@@ -144,11 +148,7 @@ export async function getDeferredRealEstateIdentity(
 
 export async function assertRealEstateUrlsReady(env: RealEstateUrlEnv = process.env): Promise<void> {
   if (!isPreservedRealEstateUrlMode(env)) return;
-  if (env.REAL_ESTATE_SUMMARY_MODE === 'compatibility') {
-    throw new Error('REAL_ESTATE_URL_MODE=preserved requires REAL_ESTATE_SUMMARY_MODE=address');
-  }
-
-  await assertReadyWithDb(prisma, env, true);
+  await assertReadyWithDb(prisma, true);
 }
 
 export async function appendRealEstateUrlsForSummaryBatch(
@@ -158,7 +158,7 @@ export async function appendRealEstateUrlsForSummaryBatch(
   env: RealEstateUrlEnv = process.env,
 ): Promise<{ scanned: number; inserted: number; blockers: Array<{ kind: string; basePath: string; buildingKeys: string[] }> }> {
   if (!isPreservedRealEstateUrlMode(env)) return { scanned: 0, inserted: 0, blockers: [] };
-  const state = await assertReadyWithDb(tx, env, false);
+  const state = await assertReadyWithDb(tx, false);
   const current = await tx.$queryRawUnsafe<RealEstateUrlCandidate[]>(
     `SELECT s.type, s.buildingKey, s.bjdCode, s.city, s.district, s.buildingName, s.dongName, s.jibun
        FROM RealEstateBuildingSummaryV2 s
@@ -191,13 +191,10 @@ export async function appendRealEstateUrlsForSummaryBatch(
   return { scanned: current.length, inserted: plan.toCreate.length, blockers: [] };
 }
 
-async function assertReadyWithDb(db: Pick<RegistryDb, '$queryRawUnsafe'>, env: RealEstateUrlEnv, checkMissingMappings: boolean): Promise<{
+async function assertReadyWithDb(db: Pick<RegistryDb, '$queryRawUnsafe'>, checkMissingMappings: boolean): Promise<{
   sourceFingerprint: string;
   baselineProvenance: string;
 }> {
-  if (env.REAL_ESTATE_SUMMARY_MODE === 'compatibility') {
-    throw new Error('REAL_ESTATE_URL_MODE=preserved requires REAL_ESTATE_SUMMARY_MODE=address');
-  }
   const stateRows = await db.$queryRawUnsafe<Array<{
     status: string;
     sourceFingerprint: string;

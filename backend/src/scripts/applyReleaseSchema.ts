@@ -170,6 +170,50 @@ CREATE TABLE RealEstateSummaryState (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 `;
 
+const REAL_ESTATE_PUBLIC_URL_SQL = `
+CREATE TABLE \`RealEstatePublicUrl\` (
+  \`id\` INTEGER NOT NULL AUTO_INCREMENT,
+  \`type\` VARCHAR(20) NOT NULL,
+  \`buildingKey\` CHAR(64) NOT NULL,
+  \`bjdCode\` VARCHAR(10) NOT NULL,
+  \`buildingName\` VARCHAR(200) NOT NULL,
+  \`basePath\` TEXT NOT NULL,
+  \`basePathHash\` CHAR(64) NOT NULL,
+  \`canonicalPath\` TEXT NOT NULL,
+  \`pathHash\` CHAR(64) NOT NULL,
+  \`dongName\` VARCHAR(50) NULL,
+  \`jibun\` VARCHAR(20) NULL,
+  \`addressSnapshot\` JSON NOT NULL,
+  \`evidence\` JSON NOT NULL,
+  \`sourceFingerprint\` CHAR(64) NOT NULL,
+  \`baselineProvenance\` VARCHAR(255) NULL,
+  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+
+  PRIMARY KEY (\`id\`),
+  UNIQUE INDEX \`RealEstatePublicUrl_type_buildingKey_key\`(\`type\`, \`buildingKey\`),
+  INDEX \`RealEstatePublicUrl_pathHash_idx\`(\`pathHash\`),
+  INDEX \`RealEstatePublicUrl_type_basePathHash_idx\`(\`type\`, \`basePathHash\`),
+  INDEX \`RealEstatePublicUrl_type_buildingKey_basePathHash_idx\`(\`type\`, \`buildingKey\`, \`basePathHash\`),
+  INDEX \`RealEstatePublicUrl_type_bjdCode_buildingName_idx\`(\`type\`, \`bjdCode\`, \`buildingName\`),
+  INDEX \`RealEstatePublicUrl_sourceFingerprint_idx\`(\`sourceFingerprint\`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+`;
+
+const REAL_ESTATE_PUBLIC_URL_STATE_SQL = `
+CREATE TABLE \`RealEstatePublicUrlState\` (
+  \`id\` INTEGER NOT NULL,
+  \`status\` VARCHAR(20) NOT NULL,
+  \`sourceFingerprint\` CHAR(64) NOT NULL,
+  \`baselineProvenance\` VARCHAR(255) NULL,
+  \`report\` JSON NOT NULL,
+  \`validatedAt\` DATETIME(3) NULL,
+  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+
+  PRIMARY KEY (\`id\`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+`;
+
 export const SUMMARY_V2_TABLES: ExpectedTable[] = [
   {
     name: 'RealEstateBuildingSummaryV2',
@@ -233,6 +277,59 @@ export const SUMMARY_V2_TABLES: ExpectedTable[] = [
       { name: 'RealEstateSummaryState_status_chk', clause: "status IN ('preparing', 'failed', 'ready')" },
       { name: 'RealEstateSummaryState_sourceFingerprint_hex_chk', clause: "REGEXP_LIKE(sourceFingerprint, '^[a-f0-9]{64}$', 'c')" },
     ],
+  },
+];
+
+export const REAL_ESTATE_PUBLIC_URL_TABLES: ExpectedTable[] = [
+  {
+    name: 'RealEstatePublicUrl',
+    createSql: REAL_ESTATE_PUBLIC_URL_SQL,
+    columns: [
+      { name: 'id', type: 'int', nullable: false, extra: 'auto_increment' },
+      { name: 'type', type: 'varchar(20)', nullable: false },
+      { name: 'buildingKey', type: 'char(64)', nullable: false },
+      { name: 'bjdCode', type: 'varchar(10)', nullable: false },
+      { name: 'buildingName', type: 'varchar(200)', nullable: false },
+      { name: 'basePath', type: 'text', nullable: false },
+      { name: 'basePathHash', type: 'char(64)', nullable: false },
+      { name: 'canonicalPath', type: 'text', nullable: false },
+      { name: 'pathHash', type: 'char(64)', nullable: false },
+      { name: 'dongName', type: 'varchar(50)', nullable: true },
+      { name: 'jibun', type: 'varchar(20)', nullable: true },
+      { name: 'addressSnapshot', type: 'json', nullable: false },
+      { name: 'evidence', type: 'json', nullable: false },
+      { name: 'sourceFingerprint', type: 'char(64)', nullable: false },
+      { name: 'baselineProvenance', type: 'varchar(255)', nullable: true },
+      { name: 'createdAt', type: 'datetime(3)', nullable: false, default: 'CURRENT_TIMESTAMP(3)' },
+      { name: 'updatedAt', type: 'datetime(3)', nullable: false, default: 'CURRENT_TIMESTAMP(3)', extra: 'on update CURRENT_TIMESTAMP(3)' },
+    ],
+    indexes: [
+      { name: 'PRIMARY', unique: true, columns: ['id'] },
+      { name: 'RealEstatePublicUrl_type_buildingKey_key', unique: true, columns: ['type', 'buildingKey'] },
+      { name: 'RealEstatePublicUrl_pathHash_idx', unique: false, columns: ['pathHash'] },
+      { name: 'RealEstatePublicUrl_type_basePathHash_idx', unique: false, columns: ['type', 'basePathHash'] },
+      { name: 'RealEstatePublicUrl_type_buildingKey_basePathHash_idx', unique: false, columns: ['type', 'buildingKey', 'basePathHash'] },
+      { name: 'RealEstatePublicUrl_type_bjdCode_buildingName_idx', unique: false, columns: ['type', 'bjdCode', 'buildingName'] },
+      { name: 'RealEstatePublicUrl_sourceFingerprint_idx', unique: false, columns: ['sourceFingerprint'] },
+    ],
+    checks: [],
+  },
+  {
+    name: 'RealEstatePublicUrlState',
+    createSql: REAL_ESTATE_PUBLIC_URL_STATE_SQL,
+    columns: [
+      { name: 'id', type: 'int', nullable: false },
+      { name: 'status', type: 'varchar(20)', nullable: false },
+      { name: 'sourceFingerprint', type: 'char(64)', nullable: false },
+      { name: 'baselineProvenance', type: 'varchar(255)', nullable: true },
+      { name: 'report', type: 'json', nullable: false },
+      { name: 'validatedAt', type: 'datetime(3)', nullable: true },
+      { name: 'updatedAt', type: 'datetime(3)', nullable: false, default: 'CURRENT_TIMESTAMP(3)', extra: 'on update CURRENT_TIMESTAMP(3)' },
+    ],
+    indexes: [
+      { name: 'PRIMARY', unique: true, columns: ['id'] },
+    ],
+    checks: [],
   },
 ];
 
@@ -914,6 +1011,9 @@ async function planWaste(db: SchemaDatabase, plan: PlannedStep[]): Promise<void>
 async function buildReleaseSchemaPlan(db: SchemaDatabase): Promise<PlannedStep[]> {
   const plan: PlannedStep[] = [];
   for (const expected of SUMMARY_V2_TABLES) {
+    await planExpectedTable(db, expected, plan);
+  }
+  for (const expected of REAL_ESTATE_PUBLIC_URL_TABLES) {
     await planExpectedTable(db, expected, plan);
   }
   await planPublicRental(db, plan);

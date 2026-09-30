@@ -109,10 +109,25 @@ function encodePathPart(value) {
   return encodeURIComponent(String(value).normalize('NFC'))
 }
 
-export function realEstateDetailPath(identity) {
+function isHashDetailPath(path) {
+  const segments = String(path).split(/[?#]/, 1)[0].split('/').filter(Boolean)
+  return segments.length === 6 && segments[0] === 'real-estate' && /^[a-f0-9]{64}$/i.test(segments[5] ?? '')
+}
+
+function realEstateBaseDetailPath(identity) {
+  return `/real-estate/${identity.type}/${identity.citySlug}/${identity.districtSlug}/${encodePathPart(identity.buildingName)}`
+}
+
+function realEstateHashDetailPath(identity) {
   const buildingKey = identity.buildingKey ?? makeRehearsalBuildingKey(identity)
   if (!/^[a-f0-9]{64}$/.test(buildingKey)) throw new Error(`buildingKey must be 64 lowercase hex for ${identity.label ?? identity.buildingName}`)
-  return `/real-estate/${identity.type}/${identity.citySlug}/${identity.districtSlug}/${encodePathPart(identity.buildingName)}/${buildingKey}`
+  return `${realEstateBaseDetailPath(identity)}/${buildingKey}`
+}
+
+export function realEstateDetailPath(identity) {
+  const explicitPath = identity.currentUrl ?? identity.canonicalPath ?? identity.publicUrl
+  if (explicitPath && !isHashDetailPath(explicitPath)) return explicitPath
+  return realEstateBaseDetailPath(identity)
 }
 
 function realEstateBuildingInfoApiPath(identity) {
@@ -379,6 +394,8 @@ function validateProxyProbeCoverage(probes) {
   requireProbe(probes, 'same-name-address-b')
   requireProbe(probes, 'same-name-address-a-html')
   requireProbe(probes, 'same-name-address-b-html')
+  requireProbe(probes, 'same-name-address-a-hash-404')
+  requireProbe(probes, 'same-name-address-b-hash-404')
   requireProbe(probes, 'land-query-a')
   requireProbe(probes, 'land-query-b')
   requireProbe(probes, 'land-query-a-html')
@@ -395,6 +412,11 @@ function validateProxyProbeCoverage(probes) {
     const probe = asArray(probes).find((candidate) => candidate?.name === name)
     const expects = [probe?.expect, ...Object.values(probe?.expectByPhase ?? {})]
     if (!expects.some((expect) => expect?.bodyIncludes)) throw new Error(`${name} must assert bodyIncludes`)
+  }
+  for (const name of ['same-name-address-a-hash-404', 'same-name-address-b-hash-404']) {
+    const probe = asArray(probes).find((candidate) => candidate?.name === name)
+    const expects = [probe?.expect, ...Object.values(probe?.expectByPhase ?? {})]
+    if (!expects.some((expect) => expect?.status === 404)) throw new Error(`${name} must assert hash detail URL 404`)
   }
   const assetProbe = asArray(probes).find((candidate) => candidate?.name === 'hashed-asset')
   const assetExpects = [assetProbe?.expect, ...Object.values(assetProbe?.expectByPhase ?? {})]
@@ -555,8 +577,12 @@ export function generateRehearsalProbes(seedReport, artifactInfo = {}, options =
   })
   const landHtmlExpectByPhase = phaseExpect({ status: 200, bodyIncludes: options.landBodyIncludes ?? '토지' })
   const detailA = seedReport?.urls?.realEstateDetails?.['apt-sale']?.[0]
+  const addressADetailPath = realEstateDetailPath(addressA)
+  const addressBDetailPath = realEstateDetailPath(addressB)
+  const addressAHashPath = realEstateHashDetailPath(addressA)
+  const addressBHashPath = realEstateHashDetailPath(addressB)
   const oldUnkeyedUrl = seedReport?.retention?.oldUnkeyedUrl ?? seedReport?.urls?.retention?.oldUnkeyedUrl ?? detailA?.oldReleaseUrl ?? detailA?.url ?? `/real-estate/${addressA.type}/${addressA.citySlug}/${addressA.districtSlug}/${encodePathPart(addressA.buildingName)}`
-  const newKeyedUrl = seedReport?.retention?.newKeyedUrl ?? detailA?.currentUrl ?? realEstateDetailPath(addressA)
+  const newKeyedUrl = seedReport?.retention?.newKeyedUrl && !isHashDetailPath(seedReport.retention.newKeyedUrl) ? seedReport.retention.newKeyedUrl : detailA?.currentUrl && !isHashDetailPath(detailA.currentUrl) ? detailA.currentUrl : addressADetailPath
   const retainedOldHtmlUrl = options.capturedOldHtmlPath ?? seedReport?.retention?.capturedOldHtmlPath ?? oldUnkeyedUrl
   const longInflightUrl = seedReport?.retention?.longInflightUrl ?? seedReport?.urls?.health ?? '/api/health?release-rehearsal-slow=1'
   return [
@@ -565,8 +591,10 @@ export function generateRehearsalProbes(seedReport, artifactInfo = {}, options =
     { name: 'sitemap', path: '/sitemap.xml', expectByPhase: phaseExpect({ status: 200 }) },
     { name: 'same-name-address-a', path: realEstateBuildingInfoApiPath(addressA), expectByPhase: keyedDetailPhaseExpect({ status: 200, addressKey: addressA.buildingKey }) },
     { name: 'same-name-address-b', path: realEstateBuildingInfoApiPath(addressB), expectByPhase: keyedDetailPhaseExpect({ status: 200, addressKey: addressB.buildingKey }) },
-    { name: 'same-name-address-a-html', path: realEstateDetailPath(addressA), expectByPhase: keyedDetailPhaseExpect({ status: 200, bodyIncludes: addressA.buildingKey }) },
-    { name: 'same-name-address-b-html', path: realEstateDetailPath(addressB), expectByPhase: keyedDetailPhaseExpect({ status: 200, bodyIncludes: addressB.buildingKey }) },
+    { name: 'same-name-address-a-html', path: addressADetailPath, expectByPhase: keyedDetailPhaseExpect({ status: 200, bodyIncludes: addressA.buildingKey }) },
+    { name: 'same-name-address-b-html', path: addressBDetailPath, expectByPhase: keyedDetailPhaseExpect({ status: 200, bodyIncludes: addressB.buildingKey }) },
+    { name: 'same-name-address-a-hash-404', path: addressAHashPath, expectByPhase: keyedDetailPhaseExpect({ status: 404 }) },
+    { name: 'same-name-address-b-hash-404', path: addressBHashPath, expectByPhase: keyedDetailPhaseExpect({ status: 404 }) },
     { name: 'land-query-a', path: landApiProbePath('queryA', 'A'), expectByPhase: landTotalExpectByPhase(landQueryKeyword('queryA', 'A')) },
     { name: 'land-query-b', path: landApiProbePath('queryB', 'B'), expectByPhase: landTotalExpectByPhase(landQueryKeyword('queryB', 'B')) },
     { name: 'land-query-a-html', path: landHtmlPath('queryA', 'A'), expectByPhase: landHtmlExpectByPhase },
@@ -710,6 +738,10 @@ export function validateRehearsalInventory(inventory) {
   if (inventory.rehearsalInventoryPath && !isAbsolute(inventory.rehearsalInventoryPath)) errors.push('rehearsalInventoryPath must be an absolute path')
   if (!inventory.manifestPath) errors.push('manifestPath is required')
   if (inventory.compatibilityManifestPath && !isAbsolute(inventory.compatibilityManifestPath)) errors.push('compatibilityManifestPath must be an absolute path')
+  if (!inventory.urlBaselinePath) errors.push('urlBaselinePath is required')
+  else if (!isAbsolute(inventory.urlBaselinePath)) errors.push('urlBaselinePath must be an absolute path')
+  if (!inventory.expectedUrlFingerprint) errors.push('expectedUrlFingerprint is required')
+  if (!inventory.expectedUrlPlanFingerprint) errors.push('expectedUrlPlanFingerprint is required')
   if (inventory.summaryTransitionReportPath && !isAbsolute(inventory.summaryTransitionReportPath)) errors.push('summaryTransitionReportPath must be an absolute path')
   if (inventory.summaryTransitionCwd && !isAbsolute(inventory.summaryTransitionCwd)) errors.push('summaryTransitionCwd must be an absolute path')
   if (errors.length > 0) throw new Error(errors.join('\n'))
@@ -1212,6 +1244,14 @@ export async function executeRuntimePlan(plan, inventory, options = {}) {
       const transitionReleaseScriptPath = inventory.summaryTransitionCwd ? resolveFromCurrentCwd(inventory.releaseScriptPath) : inventory.releaseScriptPath
       const transitionArgs = [transitionScriptPath, '--inventory', inventory.inventoryPath, '--manifest', inventory.manifestPath, '--release-script', transitionReleaseScriptPath]
       if (inventory.compatibilityManifestPath) transitionArgs.push('--compatibility-manifest', inventory.compatibilityManifestPath)
+      transitionArgs.push(
+        '--url-baseline',
+        inventory.urlBaselinePath,
+        '--expected-url-fingerprint',
+        inventory.expectedUrlFingerprint,
+        '--expected-url-plan-fingerprint',
+        inventory.expectedUrlPlanFingerprint,
+      )
       if (inventory.summaryTransitionReportPath) transitionArgs.push('--report-out', inventory.summaryTransitionReportPath)
       const commandPromise = observePathSwitch(runCommand(process.execPath, transitionArgs, transitionOptions), inventory.nginxIncludePath, transitionOptions)
       results.push({ phase: phase.name, ...await runContinuousProbeWhile(phase, inventory.probes, commandPromise, { ...runtimeOptions, longInflightStartSignalPath: longInflightStartSignalPath(inventory) }) })

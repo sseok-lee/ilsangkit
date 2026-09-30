@@ -22,6 +22,7 @@ import {
 beforeEach(() => {
   vi.resetAllMocks();
   delete process.env.REAL_ESTATE_URL_MODE;
+  delete process.env.REAL_ESTATE_SUMMARY_MODE;
 });
 
 describe('realEstateUrlRegistry mode', () => {
@@ -78,12 +79,71 @@ describe('attachRealEstateCanonicalPaths', () => {
     ).rejects.toThrow(/Missing RealEstatePublicUrl mapping/);
   });
 
-  it('throws in preserved mode when a row has no type or key', async () => {
+  it('throws in preserved address mode when a row has no key', async () => {
     process.env.REAL_ESTATE_URL_MODE = 'preserved';
 
     await expect(
       attachRealEstateCanonicalPaths([{ type: 'apt-sale', buildingKey: null }])
-    ).rejects.toThrow(/requires type and buildingKey/);
+    ).rejects.toThrow(/requires buildingKey/);
+  });
+
+  it('allows keyless legacy list rows only in compatibility mode so callers keep the base URL fallback', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
+
+    await expect(
+      attachRealEstateCanonicalPaths([
+        {
+          type: 'apt-sale',
+          buildingKey: null,
+          buildingName: '래미안',
+          city: '서울특별시',
+          district: '강남구',
+        },
+      ])
+    ).resolves.toEqual([
+      {
+        type: 'apt-sale',
+        buildingKey: null,
+        buildingName: '래미안',
+        city: '서울특별시',
+        district: '강남구',
+      },
+    ]);
+    expect(queryRawUnsafeMock).not.toHaveBeenCalled();
+  });
+
+  it('allows keyless compatibility rows when callers provide the scoped type separately', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
+
+    await expect(
+      attachRealEstateCanonicalPaths([
+        {
+          buildingKey: undefined,
+          buildingName: '잠실엘스',
+          city: '서울특별시',
+          district: '송파구',
+        },
+      ], 'apt-rent')
+    ).resolves.toEqual([
+      {
+        buildingKey: undefined,
+        buildingName: '잠실엘스',
+        city: '서울특별시',
+        district: '송파구',
+      },
+    ]);
+    expect(queryRawUnsafeMock).not.toHaveBeenCalled();
+  });
+
+  it('still requires a type for keyless compatibility rows', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
+
+    await expect(
+      attachRealEstateCanonicalPaths([{ buildingKey: null }])
+    ).rejects.toThrow(/requires type/);
   });
 });
 
@@ -290,14 +350,25 @@ describe('readiness', () => {
     await expect(assertRealEstateUrlsReady()).resolves.toBeUndefined();
   });
 
-  it('blocks preserved mode when summary reads are forced to compatibility mode', async () => {
+  it('allows preserved compatibility mode when the URL registry is ready and all V2 rows are mapped', async () => {
+    queryRawUnsafeMock
+      .mockResolvedValueOnce([
+        {
+          status: 'ready',
+          sourceFingerprint: 'f'.repeat(64),
+          baselineProvenance: 'production-sitemap-2026-09-29',
+          validatedAt: new Date('2026-09-29T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([{ cnt: 0n }]);
+
     await expect(
       assertRealEstateUrlsReady({
         REAL_ESTATE_URL_MODE: 'preserved',
         REAL_ESTATE_SUMMARY_MODE: 'compatibility',
       } as NodeJS.ProcessEnv)
-    ).rejects.toThrow(/REAL_ESTATE_SUMMARY_MODE=address/);
-    expect(queryRawUnsafeMock).not.toHaveBeenCalled();
+    ).resolves.toBeUndefined();
+    expect(queryRawUnsafeMock).toHaveBeenCalledTimes(2);
   });
 
   it('fails readiness when bootstrap provenance is missing even if mappings exist', async () => {
@@ -350,23 +421,10 @@ describe('appendRealEstateUrlsForSummaryBatch', () => {
     const result = await appendRealEstateUrlsForSummaryBatch(tx, 'apt-sale', '서울특별시');
 
     expect(result).toEqual({ scanned: 1, inserted: 1, blockers: [] });
-    expect(tx.$executeRawUnsafe).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO `RealEstatePublicUrl`'),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything()
-    );
+    const [sql, ...params] = tx.$executeRawUnsafe.mock.calls[0];
+    expect(sql).toContain('INSERT INTO `RealEstatePublicUrl`');
+    expect(params).toHaveLength(14);
+    expect(params.slice(0, 4)).toEqual(['apt-sale', 'new-key', '1168010100', '새아파트']);
   });
 
   it('throws for a new ambiguous base so the summary city transaction can roll back', async () => {

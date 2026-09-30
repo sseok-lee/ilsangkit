@@ -63,7 +63,8 @@ export type RealEstateUrlPlanBlockerKind =
   | 'missing-readable-address'
   | 'readable-suffix-clash'
   | 'canonical-path-clash'
-  | 'unresolved-baseline-entry';
+  | 'unresolved-baseline-entry'
+  | 'incomplete-deferred-group';
 
 export interface RealEstateUrlPlanBlocker {
   kind: RealEstateUrlPlanBlockerKind;
@@ -73,6 +74,7 @@ export interface RealEstateUrlPlanBlocker {
 }
 
 export interface RealEstateUrlPlanInput {
+  resolveDeferred?: boolean;
   unresolvedPolicy?: 'block' | 'defer';
   existing: ExistingRealEstateUrlMapping[];
   current: RealEstateUrlCandidate[];
@@ -85,6 +87,7 @@ export interface RealEstateUrlPlanInput {
 export interface RealEstateUrlPlan {
   mappings: PlannedRealEstatePublicUrl[];
   toCreate: PlannedRealEstatePublicUrl[];
+  toUpdate: PlannedRealEstatePublicUrl[];
   blockers: RealEstateUrlPlanBlocker[];
   deferred: RealEstateUrlPlanBlocker[];
 }
@@ -127,9 +130,11 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
   );
   const mappings: PlannedRealEstatePublicUrl[] = [];
   const toCreate: PlannedRealEstatePublicUrl[] = [];
+  const toUpdate: PlannedRealEstatePublicUrl[] = [];
   const blockers: RealEstateUrlPlanBlocker[] = [];
   const deferred: RealEstateUrlPlanBlocker[] = [];
   const usedPaths = new Map<string, string>();
+  const existingPathOwners = groupBy(input.existing, (row) => row.canonicalPath);
   const knownBases = new Set<string>();
 
   for (const existing of input.existing) {
@@ -142,6 +147,26 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
     const basePath = realEstateBasePath(group[0]);
     const baseKey = `${group[0].type}\x1f${basePath}`;
     knownBases.add(baseKey);
+    const existingGroup = existingByBase.get(baseKey) ?? [];
+    const baselines = baselineByBase.get(baseKey) ?? [];
+    const heldGroup = existingGroup.some((row) => isDeferredRealEstateUrlEvidence(row.evidence));
+    if (input.resolveDeferred && heldGroup && baselines.length > 0) {
+      const resolution = resolveDeferredGroup(
+        basePath,
+        group,
+        existingGroup,
+        baselines,
+        input,
+        existingPathOwners
+      );
+      blockers.push(...resolution.blockers);
+      for (const planned of resolution.mappings) {
+        mappings.push(planned);
+        toUpdate.push(planned);
+        usedPaths.set(planned.canonicalPath, mappingKey(planned.type, planned.buildingKey));
+      }
+      continue;
+    }
     const pending = group.filter((candidate) => {
       const existing = existingByKey.get(mappingKey(candidate.type, candidate.buildingKey));
       if (!existing) return true;
@@ -152,8 +177,6 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
     });
     if (pending.length === 0) continue;
 
-    const existingGroup = existingByBase.get(baseKey) ?? [];
-    const heldGroup = existingGroup.some((row) => isDeferredRealEstateUrlEvidence(row.evidence));
     let assignments = assignGroup(
       basePath,
       pending,
@@ -224,7 +247,19 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
 
   for (const baseline of input.legacyBaseline) {
     const key = `${baseline.type}\x1f${normalizePath(baseline.basePath)}`;
-    if (!knownBases.has(key)) {
+    if (
+      input.resolveDeferred &&
+      !candidatesByBase.has(key) &&
+      existingByBase.get(key)?.some((row) => isDeferredRealEstateUrlEvidence(row.evidence))
+    ) {
+      blockers.push({
+        kind: 'incomplete-deferred-group',
+        basePath: normalizePath(baseline.basePath),
+        buildingKeys: (existingByBase.get(key) ?? []).map((row) =>
+          mappingKey(row.type, row.buildingKey)
+        ),
+      });
+    } else if (!knownBases.has(key)) {
       blockers.push({
         kind: 'unresolved-baseline-entry',
         basePath: normalizePath(baseline.basePath),
@@ -242,8 +277,69 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
     toCreate: toCreate.filter(
       (mapping) => !blockedKeys.has(mappingKey(mapping.type, mapping.buildingKey))
     ),
+    toUpdate: toUpdate.filter(
+      (mapping) => !blockedKeys.has(mappingKey(mapping.type, mapping.buildingKey))
+    ),
     blockers,
     deferred,
+  };
+}
+
+// Only explicit, evidenced resolution may replace a grouped mapping.
+// A group is all-or-nothing: never leave a base shared by an owner and deferred peers.
+function resolveDeferredGroup(
+  basePath: string,
+  candidates: RealEstateUrlCandidate[],
+  existing: ExistingRealEstateUrlMapping[],
+  baselines: LegacyRealEstateUrlBaselineEntry[],
+  input: RealEstateUrlPlanInput,
+  existingPathOwners: Map<string, ExistingRealEstateUrlMapping[]>
+): { mappings: PlannedRealEstatePublicUrl[]; blockers: RealEstateUrlPlanBlocker[] } {
+  const keys = new Set(candidates.map((row) => mappingKey(row.type, row.buildingKey)));
+  const fail = (kind: RealEstateUrlPlanBlockerKind): { mappings: PlannedRealEstatePublicUrl[]; blockers: RealEstateUrlPlanBlocker[] } => ({
+    mappings: [],
+    blockers: [{ kind, basePath, buildingKeys: [...keys].sort() }],
+  });
+  if (
+    existing.length !== candidates.length ||
+    !existing.every((row) => {
+      const candidate = candidates.find(
+        (item) => mappingKey(item.type, item.buildingKey) === mappingKey(row.type, row.buildingKey)
+      );
+      return (
+        candidate &&
+        isDeferredRealEstateUrlEvidence(row.evidence) &&
+        normalizePath(row.canonicalPath) === basePath &&
+        row.bjdCode === candidate.bjdCode &&
+        sameAddress(row.dongName, candidate.dongName) &&
+        sameAddress(row.jibun, candidate.jibun)
+      );
+    })
+  )
+    return fail('incomplete-deferred-group');
+
+  const assignments = assignGroup(basePath, candidates, baselines, []);
+  if (assignments.blockers.length > 0) return fail(assignments.blockers[0].kind);
+  const paths = new Set(assignments.paths.map(([, path]) => path));
+  if (
+    [...paths].some((path) =>
+      (existingPathOwners.get(path) ?? []).some(
+        (row) => !keys.has(mappingKey(row.type, row.buildingKey))
+      )
+    )
+  ) {
+    return fail('canonical-path-clash');
+  }
+  return {
+    mappings: assignments.paths.map(([candidate, canonicalPath]) =>
+      plannedFromCandidate(
+        candidate,
+        canonicalPath,
+        input,
+        evidenceForAssignment(canonicalPath, basePath, baselines)
+      )
+    ),
+    blockers: [],
   };
 }
 
@@ -404,7 +500,9 @@ function evidenceForAssignment(
   if (canonicalPath !== basePath) return { source: 'readable-address-suffix' };
   if (baselines.length === 0) return { source: 'single-current-address' };
   return {
-    source: 'legacy-exact-address',
+    source: baselines.some((baseline) =>
+      baseline.provenance.startsWith('approved-fixed-owner-policy-v1 ')
+    ) ? 'approved-fixed-owner-policy' : 'legacy-exact-address',
     baselineProvenance: [...new Set(baselines.map((baseline) => baseline.provenance))],
   };
 }

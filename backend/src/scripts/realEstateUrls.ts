@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import prisma from '../lib/prisma.js';
 import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 import {
+  hashRealEstatePublicPath,
   isDeferredRealEstateUrlEvidence,
   planRealEstatePublicUrls,
   type ExistingRealEstateUrlMapping,
@@ -21,6 +22,7 @@ const INSERT_BATCH_SIZE = 500;
 interface CliOptions {
   unresolvedPolicy: 'block' | 'defer';
   apply: boolean;
+  resolveDeferred: boolean;
   baselinePath: string | null;
   expectedFingerprint: string | null;
   expectedPlanFingerprint: string | null;
@@ -35,6 +37,7 @@ interface BaselineFile {
 
 export interface RealEstateUrlRegistryReport {
   unresolvedPolicy: 'block' | 'defer';
+  resolveDeferred: boolean;
   deferred: Array<{ kind: string; basePath: string; buildingKeys: string[]; detail?: string }>;
   deferredMappings: number;
   deferredGroups: number;
@@ -46,12 +49,20 @@ export interface RealEstateUrlRegistryReport {
   candidates: number;
   mappings: number;
   toCreate: number;
+  toUpdate: number;
   blockers: Array<{ kind: string; basePath: string; buildingKeys: string[]; detail?: string }>;
 }
+
+type PrismaExecutor = Pick<typeof prisma, '$queryRawUnsafe' | '$executeRawUnsafe'>;
+
+type ExistingRegistryRow = ExistingRealEstateUrlMapping & {
+  basePathHash?: string | null;
+};
 
 export function parseRealEstateUrlArgs(args: string[]): CliOptions {
   const apply = args.includes('--apply');
   const dryRun = args.includes('--dry-run') || !apply;
+  const resolveDeferred = args.includes('--resolve-deferred');
   const baselinePath = readValueArg(args, '--baseline');
   const expectedFingerprint = readValueArg(args, '--expected-fingerprint');
   const expectedPlanFingerprint = readValueArg(args, '--expected-plan-fingerprint');
@@ -67,9 +78,12 @@ export function parseRealEstateUrlArgs(args: string[]): CliOptions {
     throw new Error('--expected-fingerprint is required with --apply');
   if (apply && !expectedPlanFingerprint)
     throw new Error('--expected-plan-fingerprint is required with --apply');
+  if (resolveDeferred && !baselinePath)
+    throw new Error('--baseline is required with --resolve-deferred');
   if (!apply && !dryRun) throw new Error('Use --dry-run or --apply');
   return {
     apply,
+    resolveDeferred,
     baselinePath,
     expectedFingerprint,
     expectedPlanFingerprint,
@@ -84,6 +98,9 @@ export async function runRealEstateUrlRegistryCli(
 ): Promise<RealEstateUrlRegistryReport> {
   const options = parseRealEstateUrlArgs(args);
   const baseline = options.baselinePath ? await readBaseline(options.baselinePath) : null;
+  if (options.resolveDeferred && baseline?.entries.some((entry) => !entry.provenance?.trim())) {
+    throw new Error('Every baseline entry must include provenance with --resolve-deferred');
+  }
   if (options.apply) {
     return withRealEstateWriteLock('realEstateUrls:apply', () =>
       runRealEstateUrlRegistryPlan(options, baseline)
@@ -109,6 +126,7 @@ async function runRealEstateUrlRegistryPlan(
 
   const plan = planRealEstatePublicUrls({
     unresolvedPolicy: options.unresolvedPolicy,
+    resolveDeferred: options.resolveDeferred,
     existing,
     current,
     legacyBaseline: baseline?.entries ?? [],
@@ -139,13 +157,35 @@ async function runRealEstateUrlRegistryPlan(
         `Source fingerprint changed before apply: expected ${sourceFingerprint}, got ${beforeWriteFingerprint}`
       );
     }
+    if (plan.toUpdate.length > 0) {
+      await writePreparingState({
+        sourceFingerprint,
+        baselineProvenance: baseline.provenance,
+        report: {
+          unresolvedPolicy: options.unresolvedPolicy,
+          resolveDeferred: options.resolveDeferred,
+          deferred: plan.deferred,
+          deferredMappings: deferredMappings.length,
+          deferredGroups,
+          existing: existing.length,
+          candidates: current.length,
+          mappings: plan.mappings.length,
+          toCreate: plan.toCreate.length,
+          toUpdate: plan.toUpdate.length,
+          blockers: plan.blockers,
+        },
+      });
+    }
+    await updateDeferredMappings(plan.toUpdate, existing);
     await insertMappings(plan.toCreate);
     await verifyPersistedMappings(plan.toCreate);
+    await verifyPersistedMappings(plan.toUpdate, { requireResolved: true });
     await writeReadyState({
       sourceFingerprint,
       baselineProvenance: baseline.provenance,
       report: {
         unresolvedPolicy: options.unresolvedPolicy,
+        resolveDeferred: options.resolveDeferred,
         deferred: plan.deferred,
         deferredMappings: deferredMappings.length,
         deferredGroups,
@@ -153,6 +193,7 @@ async function runRealEstateUrlRegistryPlan(
         candidates: current.length,
         mappings: plan.mappings.length,
         toCreate: plan.toCreate.length,
+        toUpdate: plan.toUpdate.length,
         blockers: plan.blockers,
       },
     });
@@ -160,6 +201,7 @@ async function runRealEstateUrlRegistryPlan(
 
   const report: RealEstateUrlRegistryReport = {
     unresolvedPolicy: options.unresolvedPolicy,
+    resolveDeferred: options.resolveDeferred,
     deferred: plan.deferred,
     deferredMappings: deferredMappings.length,
     deferredGroups,
@@ -171,6 +213,7 @@ async function runRealEstateUrlRegistryPlan(
     candidates: current.length,
     mappings: plan.mappings.length,
     toCreate: plan.toCreate.length,
+    toUpdate: plan.toUpdate.length,
     blockers: plan.blockers,
   };
   if (options.planOut) await writePlanRows(options.planOut, plan.mappings);
@@ -187,15 +230,28 @@ async function readBaseline(path: string): Promise<BaselineFile> {
   return parsed;
 }
 
-async function readExistingMappings(
-  allowMissingTable: boolean
-): Promise<ExistingRealEstateUrlMapping[]> {
+async function readExistingMappings(allowMissingTable: boolean): Promise<ExistingRegistryRow[]> {
+  const rows: ExistingRegistryRow[] = [];
+  let lastId = 0;
   try {
-    return await prisma.$queryRawUnsafe<ExistingRealEstateUrlMapping[]>(
-      'SELECT type, buildingKey, bjdCode, buildingName, canonicalPath, basePath, dongName, jibun, evidence FROM RealEstatePublicUrl ORDER BY id'
-    );
+    // Bound the Prisma result buffer as well as the JS allocations during decoding.
+    for (;;) {
+      const batch = await prisma.$queryRawUnsafe<Array<ExistingRegistryRow & { id: number }>>(
+        `SELECT id, type, buildingKey, bjdCode, buildingName, canonicalPath, basePath, basePathHash, dongName, jibun, evidence
+           FROM RealEstatePublicUrl
+          WHERE id > ?
+          ORDER BY id
+          LIMIT ?`,
+        lastId,
+        READ_BATCH_SIZE
+      );
+      if (batch.length === 0) break;
+      rows.push(...batch.map(({ id: _id, ...row }) => row));
+      lastId = batch[batch.length - 1].id;
+    }
+    return rows;
   } catch (error) {
-    if (allowMissingTable && isMissingTableError(error)) return [];
+    if (allowMissingTable && rows.length === 0 && isMissingTableError(error)) return [];
     throw error;
   }
 }
@@ -252,15 +308,129 @@ async function insertMappings(rows: PlannedRealEstatePublicUrl[]): Promise<void>
   }
 }
 
-async function verifyPersistedMappings(rows: PlannedRealEstatePublicUrl[]): Promise<void> {
+async function updateDeferredMappings(
+  rows: PlannedRealEstatePublicUrl[],
+  existing: ExistingRegistryRow[]
+): Promise<void> {
+  if (rows.length === 0) return;
+  const existingByKey = new Map(existing.map((row) => [`${row.type}\x1f${row.buildingKey}`, row]));
+  const groups = groupRows(rows, (row) => `${row.type}\x1f${row.basePath}`);
+  for (const group of groups.values()) {
+    await prisma.$transaction(async (tx) => {
+      await updateDeferredMappingGroup(tx as PrismaExecutor, group, existingByKey);
+    });
+  }
+}
+
+async function updateDeferredMappingGroup(
+  tx: PrismaExecutor,
+  rows: PlannedRealEstatePublicUrl[],
+  existingByKey: Map<string, ExistingRegistryRow>
+): Promise<void> {
+  const first = rows[0];
+  const expectedKeys = new Set(rows.map((row) => `${row.type}\x1f${row.buildingKey}`));
+  const captured = rows.map((row) => {
+    const existing = existingByKey.get(`${row.type}\x1f${row.buildingKey}`);
+    if (!existing) {
+      throw new Error(
+        `Deferred URL mapping missing from captured registry for ${row.type}:${row.buildingKey}`
+      );
+    }
+    return existing;
+  });
+  const basePathHash = captured[0]?.basePathHash ?? hashRealEstatePublicPath(first.basePath);
+  const locked = await tx.$queryRawUnsafe<Array<ExistingRegistryRow>>(
+    `SELECT type, buildingKey, bjdCode, buildingName, canonicalPath, basePath, basePathHash, dongName, jibun, evidence
+       FROM RealEstatePublicUrl
+      WHERE type = ? AND basePathHash = ?
+      FOR UPDATE`,
+    first.type,
+    basePathHash
+  );
+  if (locked.length !== captured.length) {
+    throw new Error(
+      `Real estate URL group changed before deferred resolution: ${first.type}:${first.basePath}`
+    );
+  }
+  const lockedByKey = new Map(locked.map((row) => [`${row.type}\x1f${row.buildingKey}`, row]));
+  for (const capturedRow of captured) {
+    const key = `${capturedRow.type}\x1f${capturedRow.buildingKey}`;
+    if (!expectedKeys.has(key)) {
+      throw new Error(
+        `Unexpected deferred URL mapping captured for ${capturedRow.type}:${capturedRow.buildingKey}`
+      );
+    }
+    const lockedRow = lockedByKey.get(key);
+    if (!lockedRow || !sameRegistryRow(lockedRow, capturedRow)) {
+      throw new Error(
+        `Real estate URL group changed before deferred resolution: ${capturedRow.type}:${capturedRow.buildingKey}`
+      );
+    }
+    if (!isDeferredRealEstateUrlEvidence(lockedRow.evidence)) {
+      throw new Error(
+        `Real estate URL group is no longer deferred: ${capturedRow.type}:${capturedRow.buildingKey}`
+      );
+    }
+  }
+  for (const row of rows) {
+    const updated = await tx.$executeRawUnsafe(
+      `UPDATE \`RealEstatePublicUrl\`
+          SET bjdCode = ?,
+              buildingName = ?,
+              basePath = ?,
+              basePathHash = ?,
+              canonicalPath = ?,
+              pathHash = ?,
+              dongName = ?,
+              jibun = ?,
+              addressSnapshot = CAST(? AS JSON),
+              evidence = CAST(? AS JSON),
+              sourceFingerprint = ?,
+              baselineProvenance = ?,
+              updatedAt = NOW(3)
+        WHERE type = ? AND buildingKey = ?`,
+      row.bjdCode,
+      row.buildingName,
+      row.basePath,
+      row.basePathHash,
+      row.canonicalPath,
+      row.pathHash,
+      row.dongName,
+      row.jibun,
+      JSON.stringify(row.addressSnapshot),
+      JSON.stringify(row.evidence),
+      row.sourceFingerprint,
+      row.baselineProvenance,
+      row.type,
+      row.buildingKey
+    );
+    if (typeof updated === 'number' && updated !== 1) {
+      throw new Error(
+        `Deferred URL mapping update affected ${updated} rows for ${row.type}:${row.buildingKey}`
+      );
+    }
+  }
+}
+
+async function verifyPersistedMappings(
+  rows: PlannedRealEstatePublicUrl[],
+  options: { requireResolved?: boolean } = {}
+): Promise<void> {
+  if (rows.length === 0) return;
   for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
     const batch = rows.slice(i, i + INSERT_BATCH_SIZE);
     const predicates = batch.map(() => '(type = ? AND buildingKey = ?)').join(' OR ');
     const params = batch.flatMap((row) => [row.type, row.buildingKey]);
     const persisted = await prisma.$queryRawUnsafe<
-      Array<{ type: string; buildingKey: string; canonicalPath: string; basePath: string }>
+      Array<{
+        type: string;
+        buildingKey: string;
+        canonicalPath: string;
+        basePath: string;
+        evidence: unknown;
+      }>
     >(
-      `SELECT type, buildingKey, canonicalPath, basePath FROM RealEstatePublicUrl WHERE ${predicates}`,
+      `SELECT type, buildingKey, canonicalPath, basePath, evidence FROM RealEstatePublicUrl WHERE ${predicates}`,
       ...params
     );
     const persistedByKey = new Map(
@@ -275,8 +445,21 @@ async function verifyPersistedMappings(rows: PlannedRealEstatePublicUrl[]): Prom
       ) {
         throw new Error(`Persisted URL mapping mismatch for ${row.type}:${row.buildingKey}`);
       }
+      if (options.requireResolved && isDeferredRealEstateUrlEvidence(actual.evidence)) {
+        throw new Error(
+          `Persisted URL mapping is still deferred for ${row.type}:${row.buildingKey}`
+        );
+      }
     }
   }
+}
+
+async function writePreparingState(input: {
+  sourceFingerprint: string;
+  baselineProvenance: string;
+  report: Record<string, unknown>;
+}): Promise<void> {
+  await writeUrlState('preparing', input);
 }
 
 async function writeReadyState(input: {
@@ -284,20 +467,71 @@ async function writeReadyState(input: {
   baselineProvenance: string;
   report: Record<string, unknown>;
 }): Promise<void> {
+  await writeUrlState('ready', input);
+}
+
+async function writeUrlState(
+  status: 'preparing' | 'ready',
+  input: {
+    sourceFingerprint: string;
+    baselineProvenance: string;
+    report: Record<string, unknown>;
+  }
+): Promise<void> {
   await prisma.$executeRawUnsafe(
     `INSERT INTO \`RealEstatePublicUrlState\`
        (id, status, sourceFingerprint, baselineProvenance, report, validatedAt)
-     VALUES (1, 'ready', ?, ?, CAST(? AS JSON), NOW(3))
+     VALUES (1, ?, ?, ?, CAST(? AS JSON), ${status === 'ready' ? 'NOW(3)' : 'NULL'})
      ON DUPLICATE KEY UPDATE
        status = VALUES(status),
        sourceFingerprint = VALUES(sourceFingerprint),
        baselineProvenance = VALUES(baselineProvenance),
        report = VALUES(report),
        validatedAt = VALUES(validatedAt)`,
+    status,
     input.sourceFingerprint,
     input.baselineProvenance,
     JSON.stringify(input.report)
   );
+}
+
+function sameRegistryRow(actual: ExistingRegistryRow, expected: ExistingRegistryRow): boolean {
+  return (
+    actual.type === expected.type &&
+    actual.buildingKey === expected.buildingKey &&
+    actual.bjdCode === expected.bjdCode &&
+    actual.buildingName === expected.buildingName &&
+    actual.canonicalPath === expected.canonicalPath &&
+    actual.basePath === expected.basePath &&
+    (actual.basePathHash ?? null) === (expected.basePathHash ?? null) &&
+    sameNullableText(actual.dongName, expected.dongName) &&
+    sameNullableText(actual.jibun, expected.jibun) &&
+    stableJson(actual.evidence) === stableJson(expected.evidence)
+  );
+}
+
+function sameNullableText(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? null) === (b ?? null);
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => stableJson(item)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function groupRows<T>(rows: T[], keyFn: (row: T) => string): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = keyFn(row);
+    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+  }
+  return grouped;
 }
 
 function fingerprintInputs(

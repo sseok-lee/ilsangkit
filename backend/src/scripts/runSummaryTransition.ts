@@ -6,6 +6,10 @@ import { promisify } from 'node:util';
 import { prisma } from '../lib/prisma.js';
 import { applyReleaseSchema, createPrismaSchemaDatabase } from './applyReleaseSchema.js';
 import {
+  runRealEstateUrlRegistryCli,
+  type RealEstateUrlRegistryReport,
+} from './realEstateUrls.js';
+import {
   prepareRealEstateSummaryV2,
   verifyRealEstateSummaryV2,
   type SummaryValidationReport,
@@ -22,6 +26,9 @@ export interface SummaryTransitionOptions {
   skipPrepare?: boolean;
   compatibilityManifestPath?: string;
   bootstrapCompatibilityCheck?: boolean;
+  urlBaselinePath?: string;
+  expectedUrlFingerprint?: string;
+  expectedUrlPlanFingerprint?: string;
 }
 
 export interface SummaryTransitionReport {
@@ -33,6 +40,7 @@ export interface SummaryTransitionReport {
   switched: unknown;
   schema?: unknown;
   compatibilityChecked?: unknown;
+  urls?: RealEstateUrlRegistryReport;
 }
 
 interface SummaryTransitionDependencies {
@@ -41,6 +49,7 @@ interface SummaryTransitionDependencies {
   withWriteLock: typeof withRealEstateWriteLock;
   withDeployLock?: <T>(options: SummaryTransitionOptions, run: () => Promise<T>) => Promise<T>;
   applySchema?: () => Promise<unknown>;
+  prepareUrls?: (options: SummaryTransitionOptions) => Promise<RealEstateUrlRegistryReport>;
   runReleaseCommand: (
     command: 'check' | 'switch',
     options: SummaryTransitionOptions
@@ -73,11 +82,47 @@ export function parseSummaryTransitionArgs(args = process.argv.slice(2)): Summar
     compatibilityManifestPath: parseOptionalArg(args, '--compatibility-manifest')
       ? resolve(parseOptionalArg(args, '--compatibility-manifest') as string)
       : undefined,
+    urlBaselinePath: parseOptionalArg(args, '--url-baseline')
+      ? resolve(parseOptionalArg(args, '--url-baseline') as string)
+      : undefined,
+    expectedUrlFingerprint: parseOptionalArg(args, '--expected-url-fingerprint'),
+    expectedUrlPlanFingerprint: parseOptionalArg(args, '--expected-url-plan-fingerprint'),
   };
 }
 
 async function defaultApplySchema(): Promise<unknown> {
   return applyReleaseSchema(createPrismaSchemaDatabase(prisma));
+}
+
+async function defaultPrepareUrls(options: SummaryTransitionOptions): Promise<RealEstateUrlRegistryReport> {
+  if (!options.urlBaselinePath || !options.expectedUrlFingerprint || !options.expectedUrlPlanFingerprint) {
+    throw new Error('URL baseline, source fingerprint, and plan fingerprint are required before URL registry apply');
+  }
+  return runRealEstateUrlRegistryCli([
+    '--apply',
+    '--unresolved-policy=defer',
+    '--baseline',
+    options.urlBaselinePath,
+    '--expected-fingerprint',
+    options.expectedUrlFingerprint,
+    '--expected-plan-fingerprint',
+    options.expectedUrlPlanFingerprint,
+  ]);
+}
+
+async function withInitialUrlPreparationMode<T>(run: () => Promise<T>): Promise<T> {
+  const previous = process.env.REAL_ESTATE_URL_MODE;
+  const hadPrevious = Object.prototype.hasOwnProperty.call(process.env, 'REAL_ESTATE_URL_MODE');
+  process.env.REAL_ESTATE_URL_MODE = 'keyed';
+  try {
+    return await run();
+  } finally {
+    if (hadPrevious) {
+      process.env.REAL_ESTATE_URL_MODE = previous;
+    } else {
+      delete process.env.REAL_ESTATE_URL_MODE;
+    }
+  }
 }
 
 async function defaultWithDeployLock<T>(
@@ -181,6 +226,12 @@ function assertInitialManifestPair(address: ReleaseManifest, compatibility: Rele
   }
 }
 
+function assertUrlRegistryInputs(options: SummaryTransitionOptions): void {
+  if (!options.urlBaselinePath || !options.expectedUrlFingerprint || !options.expectedUrlPlanFingerprint) {
+    throw new Error('URL baseline, source fingerprint, and plan fingerprint are required before first transition writes');
+  }
+}
+
 async function atomicWriteJson(path: string, value: unknown): Promise<void> {
   await writeFile(`${path}.tmp-${process.pid}`, `${JSON.stringify(value, null, 2)}\n`, {
     flag: 'w',
@@ -205,6 +256,13 @@ function assertReadyReport(
   }
 }
 
+function assertUrlRegistryReport(report: RealEstateUrlRegistryReport): void {
+  if (report.applied !== true) throw new Error('URL registry report must be applied before release checks');
+  if (report.blockers.length > 0) {
+    throw new Error(`URL registry report still has ${report.blockers.length} blockers`);
+  }
+}
+
 export async function runSummaryTransition(
   options: SummaryTransitionOptions,
   dependencies: SummaryTransitionDependencies = {
@@ -213,6 +271,7 @@ export async function runSummaryTransition(
     withWriteLock: withRealEstateWriteLock,
     withDeployLock: defaultWithDeployLock,
     applySchema: defaultApplySchema,
+    prepareUrls: defaultPrepareUrls,
     runReleaseCommand: defaultRunReleaseCommand,
   }
 ): Promise<SummaryTransitionReport> {
@@ -229,19 +288,21 @@ export async function runSummaryTransition(
     }
     const initialCompatibilityManifest = await readManifest(options.compatibilityManifestPath);
     assertInitialManifestPair(manifest, initialCompatibilityManifest);
+    assertUrlRegistryInputs(options);
   }
 
   return dependencies.withWriteLock('runSummaryTransition:first-release', async () => {
     const runTransition = async (): Promise<SummaryTransitionReport> => {
       let schema: unknown;
       let compatibilityChecked: unknown;
+      let urls: RealEstateUrlRegistryReport | undefined;
       if (!options.skipPrepare) {
         if (!dependencies.applySchema) throw new Error('schema apply dependency is required');
         schema = await dependencies.applySchema();
       }
       const prepared = options.skipPrepare
         ? undefined
-        : await dependencies.prepare({ reportOut: undefined });
+        : await withInitialUrlPreparationMode(() => dependencies.prepare({ reportOut: undefined }));
       if (prepared) {
         expectedRunId = prepared.runId;
         assertReadyReport(prepared, expectedRunId, 'prepared');
@@ -255,8 +316,16 @@ export async function runSummaryTransition(
         await stampSummaryManifest(options.manifestPath, expectedRunId, 'address');
       }
 
-      const verified = await dependencies.verify({ reportOut: undefined });
+      const verified = options.skipPrepare
+        ? await dependencies.verify({ reportOut: undefined })
+        : await withInitialUrlPreparationMode(() => dependencies.verify({ reportOut: undefined }));
       assertReadyReport(verified, expectedRunId, 'verified');
+
+      if (!options.skipPrepare) {
+        const prepareUrls = dependencies.prepareUrls ?? defaultPrepareUrls;
+        urls = await withInitialUrlPreparationMode(() => prepareUrls(options));
+        assertUrlRegistryReport(urls);
+      }
 
       if (!options.skipPrepare && options.compatibilityManifestPath) {
         const compatibilityOptions = {
@@ -274,6 +343,7 @@ export async function runSummaryTransition(
         expectedRunId,
         prepared,
         verified,
+        urls,
         schema,
         compatibilityChecked,
         checked,

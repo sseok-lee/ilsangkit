@@ -25,6 +25,7 @@ const releaseEcosystemEnvKeys = [
   'ILSK_BACKEND_ENV_FILE',
   'DATABASE_URL',
   'REAL_ESTATE_SUMMARY_MODE',
+  'REAL_ESTATE_URL_MODE',
   'REAL_ESTATE_SUMMARY_RUN_ID',
   'ILSK_SUMMARY_RUN_ID',
   'REAL_ESTATE_WRITE_LOCK_DIR',
@@ -128,6 +129,7 @@ function createArtifacts(workspace) {
 const SAME_A_KEY = 'a'.repeat(64)
 const SAME_B_KEY = 'b'.repeat(64)
 const MODE_KEY = 'c'.repeat(64)
+const FRONTEND_SSR_PATH = '/real-estate/apt-sale/gyeongnam/changwon-seongsan/%EC%84%B1%EC%9B%90'
 
 function semanticBusinessProbes(releaseId, summaryMode = 'address', runId = 'summary-run-1') {
   const listProbe = (name, type) => ({
@@ -165,7 +167,8 @@ function semanticBusinessProbes(releaseId, summaryMode = 'address', runId = 'sum
     buildingInfoProbe('same-name-address-b', SAME_B_KEY, '202-2'),
     detailProbe('sale-mode', 'apt-sale', 'sale'),
     detailProbe('rent-mode', 'apt-rent', 'wolse'),
-    { name: 'sitemap', path: '/sitemap.xml', target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: '<loc>' },
+    { name: 'frontend-ssr', path: FRONTEND_SSR_PATH, target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: ['<h1', '성원', '매매'] },
+    { name: 'sitemap', path: '/sitemap.xml', target: 'frontend', expectedReleaseId: releaseId, expectBodyIncludes: '<loc>', expectedHeaders: { 'x-sitemap-source': 'static' } },
     {
       name: 'waste',
       path: '/api/waste-schedules?city=서울특별시&district=강남구&limit=1',
@@ -178,8 +181,15 @@ function semanticBusinessProbes(releaseId, summaryMode = 'address', runId = 'sum
   ]
 }
 
-function semanticJsonForUrl(rawUrl, releaseId = 'address-20260929-abc123', summaryMode = 'address') {
+function releaseIdForUrl(rawUrl, fallback = 'address-20260929-abc123') {
   const url = new URL(String(rawUrl), 'http://release-test.local')
+  if (fallback === 'address-20260929-abc123' && (url.port === '13000' || url.port === '18000')) return 'compat-20260929-prev'
+  return fallback
+}
+
+function semanticJsonForUrl(rawUrl, releaseId, summaryMode = 'address') {
+  const url = new URL(String(rawUrl), 'http://release-test.local')
+  releaseId = releaseId ?? releaseIdForUrl(rawUrl)
   const path = url.pathname
   if (path === '/api/internal/release-readiness') return { ready: true, releaseId, summary: { mode: summaryMode, runId: 'summary-run-1' } }
   if (path.endsWith('/complexes')) return { success: true, data: { total: 1, items: [{ buildingName: '테스트단지', buildingKey: SAME_A_KEY }] } }
@@ -209,7 +219,21 @@ function semanticJsonForUrl(rawUrl, releaseId = 'address-20260929-abc123', summa
 
 function semanticTextForUrl(rawUrl) {
   const url = new URL(String(rawUrl), 'http://release-test.local')
-  return url.pathname === '/sitemap.xml' ? '<?xml version="1.0"?><sitemapindex><sitemap><loc>https://ilsangkit.co.kr/sitemap/facilities.xml</loc></sitemap></sitemapindex>' : 'ok'
+  if (url.pathname === '/sitemap.xml') return '<?xml version="1.0"?><sitemapindex><sitemap><loc>https://ilsangkit.co.kr/sitemap/facilities.xml</loc></sitemap></sitemapindex>'
+  if (url.pathname === FRONTEND_SSR_PATH) return '<!doctype html><html><body><main><h1>성원</h1><p>아파트 매매 실거래가</p></main></body></html>'
+  return 'ok'
+}
+
+function semanticHeadersForUrl(rawUrl, releaseId = 'address-20260929-abc123') {
+  const effectiveReleaseId = releaseIdForUrl(rawUrl, releaseId)
+  return {
+    get(name) {
+      const normalized = String(name).toLowerCase()
+      if (normalized === 'x-ilsangkit-release-id') return effectiveReleaseId
+      if (normalized === 'x-sitemap-source' && new URL(String(rawUrl), 'http://release-test.local').pathname === '/sitemap.xml') return 'static'
+      return null
+    },
+  }
 }
 
 function createManifest(workspace, artifacts, extra = {}) {
@@ -228,7 +252,10 @@ function createManifest(workspace, artifacts, extra = {}) {
       retained: true,
       supportsKeyedUrls: true,
       businessProbesPass: true,
-      probes: [{ name: 'rollback-health', path: '/api/health', target: 'backend' }],
+      probes: [
+        { name: 'rollback-readiness', path: '/api/internal/release-readiness', target: 'backend', expectedReleaseId: 'compat-20260929-prev', expectedJson: { ready: true, releaseId: 'compat-20260929-prev', 'summary.mode': 'address', 'summary.runId': 'summary-run-1' } },
+        { name: 'rollback-frontend-ssr', path: FRONTEND_SSR_PATH, target: 'frontend', expectedReleaseId: 'compat-20260929-prev', expectBodyIncludes: ['<h1', '성원', '매매'] },
+      ],
     },
     summary: { mode: 'address', runId: 'summary-run-1', expectedRunId: 'summary-run-1', state: 'ready' },
     runtime: {
@@ -245,7 +272,7 @@ function createManifest(workspace, artifacts, extra = {}) {
     probes: semanticBusinessProbes('address-20260929-abc123'),
     publicSmokeProbes: [
       { name: 'public-health', path: '/api/health', target: 'proxy', expectedReleaseId: 'address-20260929-abc123' },
-      { name: 'public-sitemap', path: '/sitemap.xml', target: 'proxy', expectedReleaseId: 'address-20260929-abc123' },
+      { name: 'public-sitemap', path: '/sitemap.xml', target: 'proxy', expectedReleaseId: 'address-20260929-abc123', expectBodyIncludes: '<loc>', expectedHeaders: { 'x-sitemap-source': 'static' } },
     ],
     ...extra,
   }
@@ -257,7 +284,7 @@ function okFetch(events, status = 200) {
     return {
       ok: status >= 200 && status < 300,
       status,
-      headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null },
+      headers: semanticHeadersForUrl(url),
       text: async () => semanticTextForUrl(url),
       json: async () => semanticJsonForUrl(url),
     }
@@ -270,9 +297,9 @@ function okFetchForRelease(events, releaseId, summaryMode = 'address') {
     return {
       ok: true,
       status: 200,
-      headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? releaseId : null },
+      headers: semanticHeadersForUrl(url, releaseIdForUrl(url, releaseId)),
       text: async () => semanticTextForUrl(url),
-      json: async () => semanticJsonForUrl(url, releaseId, summaryMode),
+      json: async () => semanticJsonForUrl(url, releaseIdForUrl(url, releaseId), summaryMode),
     }
   }
 }
@@ -321,6 +348,53 @@ test('validateManifest rejects health-only required business probes before runti
   assert.throws(() => validateManifest(manifest, inventory), /apt-sale-list probe must not point to \/api\/health/)
 })
 
+test('validateManifest requires a real frontend SSR business probe', () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const base = createManifest(workspace, artifacts)
+  const withoutSsr = createManifest(workspace, artifacts, {
+    probes: base.probes.filter(probe => probe.name !== 'frontend-ssr'),
+  })
+  const staticAssetPretendingToBeSsr = createManifest(workspace, artifacts, {
+    probes: base.probes.map(probe => probe.name === 'frontend-ssr'
+      ? { ...probe, path: '/_nuxt/app.js', expectBodyIncludes: [''] }
+      : probe),
+  })
+
+  assert.throws(() => validateManifest(withoutSsr, inventory), /candidate probes must include a frontend SSR business probe/)
+  assert.throws(() => validateManifest(staticAssetPretendingToBeSsr, inventory), /candidate probes must include a frontend SSR business probe/)
+})
+
+test('validateManifest requires rollback to retain a frontend SSR probe', () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const base = createManifest(workspace, artifacts)
+  const manifest = createManifest(workspace, artifacts, {
+    rollback: {
+      ...base.rollback,
+      probes: base.rollback.probes.filter(probe => probe.name !== 'rollback-frontend-ssr'),
+    },
+  })
+
+  assert.throws(() => validateManifest(manifest, inventory), /rollback probes must include a frontend SSR business probe/)
+})
+
+test('validateManifest requires sitemap business probe to assert the static source header', () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const base = createManifest(workspace, artifacts)
+  const manifest = createManifest(workspace, artifacts, {
+    probes: base.probes.map(probe => probe.name === 'sitemap'
+      ? { ...probe, expectedHeaders: undefined }
+      : probe),
+  })
+
+  assert.throws(() => validateManifest(manifest, inventory), /sitemap probe must assert x-sitemap-source static header/)
+})
+
 
 test('validateManifest requires same-name probes to share one building name and distinct addresses', () => {
   const workspace = makeWorkspace()
@@ -364,6 +438,7 @@ test('buildCandidateEnvironment keeps same-origin public api, summary mode, and 
   assert.equal(env.HOST, '127.0.0.1')
   assert.equal(env.NITRO_HOST, '127.0.0.1')
   assert.equal(env.REAL_ESTATE_SUMMARY_MODE, 'address')
+  assert.equal(env.REAL_ESTATE_URL_MODE, 'preserved')
   assert.equal(env.REAL_ESTATE_SUMMARY_RUN_ID, 'summary-run-1')
   assert.equal(env.SITEMAP_DIR, join(workspace.sharedRoot, 'sitemaps', 'address-20260929-abc123'))
 })
@@ -378,6 +453,7 @@ test('release ecosystem loads backend env file while preserving release runtime 
     'HOST=0.0.0.0',
     'PORT=9999',
     'REAL_ESTATE_SUMMARY_MODE=legacy',
+    'REAL_ESTATE_URL_MODE=keyed',
     'REAL_ESTATE_SUMMARY_RUN_ID=stale-run',
     'ILSK_SUMMARY_RUN_ID=stale-run',
     'SITEMAP_DIR=/stale/sitemap',
@@ -392,6 +468,7 @@ test('release ecosystem loads backend env file while preserving release runtime 
     ILSK_BACKEND_ENV_FILE: envFile,
     DATABASE_URL: 'mysql://parent-stale-db',
     REAL_ESTATE_SUMMARY_MODE: 'address',
+    REAL_ESTATE_URL_MODE: 'preserved',
     REAL_ESTATE_SUMMARY_RUN_ID: 'summary-run-1',
     ILSK_SUMMARY_RUN_ID: 'summary-run-1',
     REAL_ESTATE_WRITE_LOCK_DIR: join(workspace.sharedRoot, 'locks'),
@@ -406,6 +483,7 @@ test('release ecosystem loads backend env file while preserving release runtime 
   assert.equal(backend.env.HOST, '127.0.0.1')
   assert.equal(backend.env.PORT, '18001')
   assert.equal(backend.env.REAL_ESTATE_SUMMARY_MODE, 'address')
+  assert.equal(backend.env.REAL_ESTATE_URL_MODE, 'preserved')
   assert.equal(backend.env.REAL_ESTATE_SUMMARY_RUN_ID, 'summary-run-1')
   assert.equal(backend.env.ILSK_SUMMARY_RUN_ID, 'summary-run-1')
   assert.equal(backend.env.REAL_ESTATE_WRITE_LOCK_DIR, join(workspace.sharedRoot, 'locks'))
@@ -574,7 +652,7 @@ test('runReleaseCommand switch waits through previous active public release id d
       return {
         ok: true,
         status: 200,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? releaseId : null },
+        headers: semanticHeadersForUrl(url, releaseId),
         text: async () => semanticTextForUrl(url),
         json: async () => semanticJsonForUrl(url),
       }
@@ -601,7 +679,7 @@ test('runReleaseCommand switch rejects zero public convergence timeout before fe
     publicConvergenceRequestTimeoutMs: 0,
     fetch: async (url) => {
       if (String(url).includes(':19000')) publicFetchCalls += 1
-      return { ok: true, status: 200, headers: { get: () => manifest.releaseId }, text: async () => 'ok', json: async () => ({}) }
+      return { ok: true, status: 200, headers: semanticHeadersForUrl(url), text: async () => semanticTextForUrl(url), json: async () => semanticJsonForUrl(url) }
     },
   }), /publicConvergenceRequestTimeoutMs must be a positive integer/)
 
@@ -625,7 +703,7 @@ test('runReleaseCommand switch rejects zero public probe timeout before fetching
     runner: createRunner([]),
     fetch: async (url) => {
       if (String(url).includes(':19000')) publicFetchCalls += 1
-      return { ok: true, status: 200, headers: { get: () => manifest.releaseId }, text: async () => 'ok', json: async () => ({}) }
+      return { ok: true, status: 200, headers: semanticHeadersForUrl(url), text: async () => semanticTextForUrl(url), json: async () => semanticJsonForUrl(url) }
     },
   }), /public smoke probe public-health requestTimeoutMs must be a positive integer/)
 
@@ -653,9 +731,9 @@ test('runReleaseCommand switch fails immediately on public status/body failures 
       return {
         ok: status === 200,
         status,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? manifest.rollbackReleaseId : null },
-        text: async () => 'not ready',
-        json: async () => ({}),
+        headers: semanticHeadersForUrl(url, manifest.rollbackReleaseId),
+        text: async () => semanticTextForUrl(url),
+        json: async () => semanticJsonForUrl(url),
       }
     },
   }), /status 503/)
@@ -684,7 +762,7 @@ test('runReleaseCommand switch rejects unknown public release id without converg
       return {
         ok: true,
         status: 200,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'unknown-release' : null },
+        headers: semanticHeadersForUrl(url, new URL(String(url)).port === '19000' ? 'unknown-release' : 'address-20260929-abc123'),
         text: async () => semanticTextForUrl(url),
         json: async () => semanticJsonForUrl(url),
       }
@@ -741,7 +819,7 @@ test('runReleaseCommand check retries spaced readiness until delayed backend sta
       return {
         ok: true,
         status: 200,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null },
+        headers: semanticHeadersForUrl(url, 'address-20260929-abc123'),
         text: async () => semanticTextForUrl(url),
         json: async () => semanticJsonForUrl(url),
       }
@@ -779,7 +857,7 @@ test('runReleaseCommand check reports target readiness and final cause when back
       return {
         ok: true,
         status: 200,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null },
+        headers: semanticHeadersForUrl(url, 'address-20260929-abc123'),
         text: async () => semanticTextForUrl(url),
         json: async () => semanticJsonForUrl(url),
       }
@@ -824,7 +902,7 @@ test('runReleaseCommand check keeps readiness timeout active until response body
       return {
         ok: true,
         status: 200,
-        headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null },
+        headers: semanticHeadersForUrl(url, 'address-20260929-abc123'),
         text: async () => semanticTextForUrl(url),
         json: async () => semanticJsonForUrl(url),
       }
@@ -836,6 +914,38 @@ test('runReleaseCommand check keeps readiness timeout active until response body
   }), /backend readiness failed after 2 attempts: slow readiness body aborted/)
 
   assert.equal(backendReadinessAttempts, 2)
+})
+
+test('runReleaseCommand check uses a static frontend process probe before heavier SSR routes', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const frontendReadinessPaths = []
+
+  await runReleaseCommand('check', {
+    inventory,
+    manifest,
+    runner: createRunner([]),
+    fetch: async (url) => {
+      const parsed = new URL(String(url))
+      if (parsed.port === '13001' && (parsed.pathname === '/' || parsed.pathname === '/favicon.ico')) {
+        frontendReadinessPaths.push(parsed.pathname)
+        if (parsed.pathname === '/') throw new Error('frontend readiness should not hit SSR home')
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: semanticHeadersForUrl(url, manifest.releaseId),
+        text: async () => semanticTextForUrl(url),
+        json: async () => semanticJsonForUrl(url),
+      }
+    },
+    portChecker: async () => true,
+    readinessAttempts: 1,
+  })
+
+  assert.deepEqual(frontendReadinessPaths, ['/favicon.ico'])
 })
 
 test('runReleaseCommand bootstrap compatibility check allows old non-keyed rollback without switching public traffic', async () => {
@@ -915,6 +1025,42 @@ test('runReleaseCommand check fails closed on candidate HTTP probe failure befor
   assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
 })
 
+test('runReleaseCommand check fails closed when static sitemap response header is missing', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const events = []
+
+  await assert.rejects(() => runReleaseCommand('check', {
+    inventory,
+    manifest,
+    runner: createRunner(events),
+    fetch: async (url) => {
+      events.push(`fetch ${url}`)
+      return {
+        ok: true,
+        status: 200,
+        headers: {
+          get(name) {
+            const normalized = String(name).toLowerCase()
+            if (normalized === 'x-ilsangkit-release-id') return releaseIdForUrl(url)
+            if (normalized === 'x-sitemap-source') return null
+            return null
+          },
+        },
+        text: async () => semanticTextForUrl(url),
+        json: async () => semanticJsonForUrl(url),
+      }
+    },
+    portChecker: async () => true,
+    readinessAttempts: 1,
+  }), /candidate probe failed: sitemap header x-sitemap-source mismatch/)
+
+  assert.ok(!events.includes('switch-pointer'))
+  assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
+})
+
 test('runReleaseCommand rollback switches to verified rollbackReleaseId include', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
@@ -946,7 +1092,7 @@ test('runReleaseCommand validates semantic JSON probe fields', async () => {
     fetch: async (url) => ({
       ok: true,
       status: 200,
-      headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null },
+      headers: semanticHeadersForUrl(url, 'address-20260929-abc123'),
       text: async () => semanticTextForUrl(url),
       json: async () => String(url).includes('/complexes')
         ? { success: true, data: { total: -1, items: [] } }
@@ -994,8 +1140,9 @@ test('runReleaseCommand reconcile writes a journal and rolls back when public sm
     runner: createRunner(events),
     fetch: async (url) => {
       events.push(`fetch ${url}`)
-      const status = String(url).includes(':18000') ? 200 : 503
-      return { ok: status === 200, status, headers: { get: (name) => String(name).toLowerCase() === 'x-ilsangkit-release-id' ? 'address-20260929-abc123' : null }, text: async () => 'ok', json: async () => ({}) }
+      const parsed = new URL(String(url))
+      const status = parsed.port === '18000' || parsed.port === '13000' ? 200 : 503
+      return { ok: status === 200, status, headers: semanticHeadersForUrl(url), text: async () => semanticTextForUrl(url), json: async () => semanticJsonForUrl(url) }
     },
   })
 
@@ -1296,4 +1443,11 @@ test('reload failure restores rollback pointer and active backend/frontend links
   assert.match(readFileSync(inventory.nginxIncludePath, 'utf8'), /compat-20260929-prev/)
   assert.equal(readlinkSync(inventory.activeBackendLink), join(inventory.releasesRoot, manifest.rollbackReleaseId, 'backend'))
   assert.equal(readlinkSync(inventory.activeFrontendLink), join(inventory.releasesRoot, manifest.rollbackReleaseId, 'frontend'))
+})
+
+test('compatibility rollback retains preserved public URLs', () => {
+  const workspace = makeWorkspace()
+  const manifest = createManifest(workspace, createArtifacts(workspace))
+  manifest.summary.mode = 'compatibility'
+  assert.equal(buildCandidateEnvironment(manifest, createInventory(workspace)).REAL_ESTATE_URL_MODE, 'preserved')
 })
