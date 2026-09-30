@@ -31,6 +31,10 @@ test('frontend protected configuration survives release startup while release po
 test('configured missing frontend environment fails closed', () => {
   assert.throws(() => load({ '/shared/backend.env': files['/shared/backend.env'] }), /frontend env file/)
 })
+test('migrated region redirect flag survives candidate release startup', () => {
+  const [, frontend] = load({ ...files, '/shared/frontend.env': `${files['/shared/frontend.env']}REGION_REORG_301=1\n` })
+  assert.equal(frontend.env.REGION_REORG_301, '1')
+})
 test('existing deployments can omit frontend env but still receive the release sitemap directory', () => {
   const [, frontend] = load(files, { ILSK_FRONTEND_ENV_FILE: undefined })
   assert.equal(frontend.env.SITEMAP_DIR, '/shared/sitemaps/candidate-1')

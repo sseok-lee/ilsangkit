@@ -30,6 +30,8 @@ jobs:
       - run: cd backend && npx prisma db push --skip-generate
       - run: cd backend && npm run lint
       - run: cd backend && npm run test
+      - name: Verify deployment and release runtime contracts
+        run: node --test scripts/deploy/*.test.mjs
 
   test-frontend:
     runs-on: ubuntu-latest

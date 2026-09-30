@@ -28,6 +28,17 @@ const explorationDistrictNoCacheRules = Object.fromEntries(
   )
 )
 
+// City HTML uses SWR extraction. Its payload is not a district page and must
+// remain cache-enabled so Nuxt handles it as JSON instead of a district slug.
+const realEstateCityPayloadCacheRules = Object.fromEntries(
+  explorationRealEstateTypes.flatMap((type) =>
+    Object.values(CITY_SLUGS).map((city) => [
+      `/real-estate/${type}/${city}/_payload.json`,
+      { swr: 300 },
+    ] as const)
+  )
+)
+
 function isWasteBearingApiRequest({ url }: { url: URL }): boolean {
   if (/^\/api\/(?:waste-areas|waste-schedules)(?:\/|$)/.test(url.pathname)) return true
   if (/^\/api\/facilities\/trash(?:\/|$)/.test(url.pathname)) return true
@@ -154,7 +165,6 @@ export default defineNuxtConfig({
       cache: { driver: 'lruCache', max: 500 },
     },
     routeRules: {
-      '/api/**': { proxy: 'http://localhost:8000/api/**' },
       '/**': {
         headers: {
           'X-Content-Type-Options': 'nosniff',
@@ -209,8 +219,10 @@ export default defineNuxtConfig({
       // 유형·시도는 유효 slug로 고정해 단일 placeholder가 구군 한 단계에만 매치되게 한다.
       // 전국/시도 경로는 위의 기존 5분 SWR을 유지한다.
       ...explorationDistrictNoCacheRules,
-      // 가이드 — 1시간
-      '/guide/**': { swr: 3600 },
+      ...realEstateCityPayloadCacheRules,
+      // 조회수는 HTML과 별도 SWR payload 사이에도 변한다. 동일 응답의
+      // inline payload로 수화해 오래된 조회수/목록으로 DOM을 덮어쓰지 않는다.
+      '/guide/**': { swr: false, cache: false },
       // sitemap은 디스크 정적 파일을 직접 서빙(없으면 동적 폴백)하므로 Nitro SWR 캐시 불필요.
       // SWR 유지 시 재생성 후에도 최대 24h 구버전이 잔존하므로 제거한다.
       '/sitemap.xml': { headers: { 'cache-control': 'public, max-age=3600' } },

@@ -78,6 +78,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import type { HomeSubscriptionItem } from '~/composables/useHomeSubscriptions'
 import { useHomeSubscriptions } from '~/composables/useHomeSubscriptions'
 import { subscriptionTypeBadge } from '~/utils/subscriptionMeta'
+import { formatDotDate } from '~/utils/syncFreshness'
 
 const { sale, publicRent, saleError, publicRentError, refresh } = useHomeSubscriptions()
 
@@ -141,14 +142,19 @@ function supplyLabel(count: number | null): string {
   return count == null ? '공급 미제공' : `${count.toLocaleString()}호`
 }
 
+function scheduleDateLabel(prefix: string, value: string | null, fallback: string): string {
+  const formatted = formatDotDate(value)
+  return formatted ? `${prefix} ${formatted}` : fallback
+}
+
 function dateLabel(item: HomeSubscriptionItem): string {
   if (item.status === 'ongoing') {
-    return item.receptionEndDate ? `마감 ${item.receptionEndDate}` : '마감일 미제공'
+    return scheduleDateLabel('마감', item.receptionEndDate, '마감일 미제공')
   }
   if (item.status === 'upcoming') {
-    return item.receptionStartDate ? `시작 ${item.receptionStartDate}` : '시작일 미제공'
+    return scheduleDateLabel('시작', item.receptionStartDate, '시작일 미제공')
   }
   if (item.status === 'unknown') return '일정 확인 필요'
-  return item.receptionEndDate ? `종료 ${item.receptionEndDate}` : '일정 미제공'
+  return scheduleDateLabel('종료', item.receptionEndDate, '일정 미제공')
 }
 </script>

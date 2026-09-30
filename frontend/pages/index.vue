@@ -16,12 +16,15 @@
 
             <!-- 검색바 -->
             <div class="w-full md:max-w-[680px] mt-7">
-          <label class="relative block">
+          <form class="relative block" @submit.prevent="handleSearch">
+            <label class="sr-only" for="home-hero-search">단지명·동네·시설 검색</label>
             <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-faint">
                 <span class="material-symbols-outlined">search</span>
               </div>
               <input
+                id="home-hero-search"
+                ref="heroInputRef"
                 v-model="searchKeyword"
                 role="combobox"
                 aria-autocomplete="list"
@@ -38,9 +41,10 @@
               />
               <div class="flex items-center pr-2">
                 <button
+                  type="submit"
                   aria-label="검색"
                   class="h-11 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-1.5"
-                  @click="handleSearch"
+                  @click.prevent="handleSearch"
                 >
                   <span class="material-symbols-outlined text-[18px] md:hidden">search</span>
                   <span class="hidden md:inline">검색</span>
@@ -57,7 +61,7 @@
                 @close="heroFocused = false"
               />
             </div>
-          </label>
+          </form>
             </div>
             <p class="mt-3 text-sm text-muted">아파트 · 빌라 · 오피스텔 실거래가</p>
           </div>
@@ -318,6 +322,7 @@ const searchKeyword = ref('')
 const heroFocused = ref(false)
 const heroListboxId = `home-search-${useId()}-listbox`
 const heroActiveDescendant = ref<string | undefined>(undefined)
+const heroInputRef = ref<HTMLInputElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const heroAcRef = ref<any>(null)
 
@@ -389,8 +394,9 @@ const quickFacilities: { id: string; label: string }[] = [
 ]
 
 function handleSearch() {
-  const q = searchKeyword.value.trim()
+  const q = (heroInputRef.value?.value ?? searchKeyword.value).trim()
   if (!q) return
+  searchKeyword.value = q
   trackSearch({ keyword: q })
   navigateTo('/search?keyword=' + encodeURIComponent(q))
 }
@@ -402,7 +408,10 @@ function onHeroInput(e: Event) {
 
 function onHeroKeydown(e: KeyboardEvent) {
   const handled = heroAcRef.value?.onKeydown?.(e)
-  if (!handled && e.key.toLowerCase() === 'enter') handleSearch()
+  if (!handled && e.key.toLowerCase() === 'enter') {
+    e.preventDefault()
+    handleSearch()
+  }
 }
 </script>
 

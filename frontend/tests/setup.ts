@@ -2,6 +2,13 @@ import { config } from '@vue/test-utils'
 import { vi } from 'vitest'
 import { ref } from 'vue'
 
+// happy-dom/Vitest 환경이 자동화 브라우저 시그니처를 노출하면 광고 컴포넌트가
+// 봇 정책으로 숨겨져 일반 렌더 테스트가 전부 다른 경로를 탄다. 기본 테스트 환경은
+// 사람 브라우저로 두고, 봇 정책 테스트만 개별 spec 에서 webdriver 를 명시한다.
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'webdriver', { value: false, configurable: true })
+}
+
 // Mock useAsyncData globally - returns thenable object (same as Nuxt's pattern)
 ;(globalThis as any).useAsyncData = vi.fn((_key?: string, _fetcher?: () => unknown) => {
   const result = {

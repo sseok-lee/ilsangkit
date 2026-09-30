@@ -1000,7 +1000,13 @@ async function runHttpProbes(context, probes, phase) {
     const url = probeUrl(context.manifest, probe, phase)
     const timeout = createProbeTimeout(probe.requestTimeoutMs ?? context.requestTimeoutMs)
     try {
-      const response = await fetchImpl(url, { method: probe.method ?? 'GET', signal: timeout.signal })
+      const response = await fetchImpl(url, {
+        method: probe.method ?? 'GET', signal: timeout.signal,
+        ...(probe.jsonBody !== undefined ? {
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(probe.jsonBody),
+        } : {}),
+      })
       const expectedStatus = probe.expectedStatus ?? 200
       if (response.status !== expectedStatus || !response.ok) {
         await consumeProbeBody(response)
