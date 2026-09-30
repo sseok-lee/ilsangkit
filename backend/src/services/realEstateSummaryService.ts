@@ -9,9 +9,8 @@ const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale']);
 // buildYear 컬럼이 없는 타입
 const NO_BUILD_YEAR_TYPES = new Set<string>();
 
-// 배치당 Prisma 트랜잭션 타임아웃. inner 서브쿼리에 윈도우 함수 4개
-// (ROW_NUMBER + COUNT + MAX(lat) + MAX(lng))를 평가하므로 거래량 많은 시·도
-// (apt-rent 경기 등)는 60초를 넘겨 P2028로 실패하던 사례 → 5분으로 상향.
+// Each address batch has its own transaction; this limit does not cancel MySQL DML.
+// Keep the sorted input small instead of relying on the timeout to bound resource use.
 const BATCH_TX_TIMEOUT_MS = 300_000;
 
 // InnoDB 락 대기 한도(초). 경합이 오래 가지 않도록 짧게 두어 실패 시 다음 city로 바로 넘어감.
@@ -49,6 +48,42 @@ function batchTimeoutMs(): number {
   return value;
 }
 
+interface CodeInventoryRow {
+  bjdCode: string;
+  sourceCount: bigint | number;
+}
+
+function batchMaxRows(): number {
+  const raw = process.env.SUMMARY_BATCH_MAX_ROWS;
+  if (raw === undefined || raw === '') return 25_000;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > 50_000) throw new Error('Invalid SUMMARY_BATCH_MAX_ROWS');
+  return value;
+}
+
+// A code is indivisible: every transaction for a building must enter the same
+// window. One oversized code runs alone; the row target is not a hard SQL limit.
+function groupCodes(rows: CodeInventoryRow[], maxRows: number): CodeInventoryRow[][] {
+  const batches: CodeInventoryRow[][] = [];
+  let current: CodeInventoryRow[] = [];
+  let count = 0;
+  for (const row of rows) {
+    const size = Number(row.sourceCount);
+    if (typeof row.bjdCode !== 'string' || !Number.isSafeInteger(size) || size < 0) {
+      throw new Error('Invalid summary code inventory');
+    }
+    if (current.length > 0 && (count + size > maxRows || current.length >= 200)) {
+      batches.push(current);
+      current = [];
+      count = 0;
+    }
+    current.push(row);
+    count += size;
+  }
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
 /**
  * 전월세 요약 행의 전세/월세 분리 컬럼을 채우는 UPDATE.
  *
@@ -57,12 +92,12 @@ function batchTimeoutMs(): number {
  * 현행 INSERT 3.13s / 통합 8.87s(2.8배) / 이 경량 UPDATE 0.58s. 결과 건수는 셋 다 6,218 로 동일.
  * 배치당 증가분이 2.8배가 아니라 약 18% 로 줄고, 문장이 짧게 둘로 나뉘어 락 점유 시간도
  * 통합안보다 짧다. 2026-04-18 에 단일 INSERT 가 버퍼풀을 10분 점유해 사이트를
- * 무한로딩시킨 이력이 있는 함수라 기존 INSERT 는 그대로 둔다.
+ * 무한로딩시킨 이력이 있어 INSERT와 분리 UPDATE 구조를 유지한다.
  *
  * rn=1 로 rentType 별 최신 1건을 고른 뒤 MAX(CASE ...) 로 건물당 한 행에 접는다.
  * 여기서 MAX 는 크기 비교가 아니라 그룹당 후보가 1개뿐인 상태에서의 접기 용도다.
  */
-function buildRentSplitUpdate(table: string, summaryTable = 'RealEstateBuildingSummary'): string {
+function buildRentSplitUpdate(table: string, summaryTable: string, codePlaceholders: string): string {
   return `UPDATE ${summaryTable} s
     JOIN (
       SELECT buildingName, bjdCode, dongKey, jibunKey,
@@ -80,7 +115,7 @@ function buildRentSplitUpdate(table: string, summaryTable = 'RealEstateBuildingS
             ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
           ) AS rn
         FROM ${table}
-        WHERE city = ?
+        WHERE city = ? AND bjdCode IN (${codePlaceholders})
       ) ranked
       WHERE rn = 1
       GROUP BY buildingName, bjdCode, dongKey, jibunKey
@@ -93,7 +128,7 @@ function buildRentSplitUpdate(table: string, summaryTable = 'RealEstateBuildingS
         s.wolseDeposit     = t.wDeposit,
         s.wolseMonthlyRent = t.wMonthly,
         s.wolseDealKey     = t.wDealKey
-    WHERE s.type = ? AND s.city = ?`;
+    WHERE s.type = ? AND s.city = ? AND s.bjdCode IN (${codePlaceholders})`;
 }
 
 function propertyTypeForSummary(type: string): string {
@@ -101,18 +136,10 @@ function propertyTypeForSummary(type: string): string {
 }
 
 /**
- * 특정 타입의 Summary 테이블을 **시·도 단위 청크**로 재생성.
- *
- * 2026-04-18 사고: 단일 `INSERT INTO RealEstateBuildingSummary ... SELECT`가
- * 전체 트랜잭션 테이블을 스캔하며 10분 넘게 버퍼풀/락을 점유 → 백엔드 Prisma 풀이
- * 전원 대기 → 사이트 무한로딩. MySQL `MAX_EXECUTION_TIME`은 DML에는 효과 없음.
- *
- * 해법: 소스 테이블의 `city` 별로 DELETE+INSERT를 분할. 각 city 배치는 자체
- * `$transaction` + `innodb_lock_wait_timeout` 세션 설정으로 감쌈. 배치 사이
- * 짧은 sleep으로 다른 트랜잭션이 끼어들 공간을 보장.
- *
- * bjdCode(10자리 법정동 코드)는 시·도를 넘지 않으므로 window function의
- * `PARTITION BY buildingName, bjdCode` 은 city 단위로 분할해도 결과 동일.
+ * Refresh city/code batches atomically, including rent splits and URL mappings.
+ * City-wide window sorts exhausted MySQL /tmp on the production apt-rent table.
+ * bjdCode is part of building identity, unlike the display district name, so
+ * partitioning by code preserves complete histories, latest prices and coordinates.
  */
 async function refreshAddressSummaryType(type: string): Promise<SummaryBatchResult[]> {
   const table = TABLE_NAME_MAP[type];
@@ -134,74 +161,107 @@ async function refreshAddressSummaryType(type: string): Promise<SummaryBatchResu
   );
   const cities = rows.map((r) => r.city).filter((c): c is string => typeof c === 'string' && c.length > 0);
   const batches: SummaryBatchResult[] = [];
+  const maxRows = batchMaxRows();
 
   for (const city of cities) {
+    let rowCount = 0;
+    const failures: string[] = [];
     try {
-      const inserted = await prisma.$transaction(
-        async (tx) => {
-          await tx.$executeRawUnsafe(`SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`);
-          await tx.$executeRawUnsafe(
-            `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city = ?`,
-            type,
-            city,
-          );
-          const n = await tx.$executeRawUnsafe(
-            `INSERT INTO RealEstateBuildingSummaryV2
-              (type, buildingKey, buildingName, bjdCode, city, district, dongName, jibun,
-               latestPrice, monthlyRent,
-               latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
-               transactionCount, updatedAt)
-            SELECT
-              ? AS type,
-              SHA2(CONCAT_WS(CHAR(31), ?, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')), 256) AS buildingKey,
-              buildingName, bjdCode, city, district, TRIM(dongName) AS dongName, NULLIF(TRIM(jibun), '') AS jibun,
-              ${priceField} AS latestPrice,
-              ${monthlyRentCol} AS monthlyRent,
-              dealYear AS latestDealYear, dealMonth AS latestDealMonth, dealDay AS latestDealDay,
-              ${buildYearCol} AS buildYear,
-              _lat AS lat,
-              _lng AS lng,
-              _txCount AS transactionCount,
-              NOW()
-            FROM (
-              SELECT *,
-                ROW_NUMBER() OVER (
-                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
-                  ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
-                ) AS _rn,
-                COUNT(*) OVER (PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')) AS _txCount,
-                FIRST_VALUE(lat) OVER (
-                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
-                  ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
-                ) AS _lat,
-                FIRST_VALUE(lng) OVER (
-                  PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
-                  ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
-                ) AS _lng
-              FROM ${table}
-              WHERE city = ?
-            ) ranked
-            WHERE _rn = 1`,
-            type,
-            propertyType,
-            city,
-          );
-          if (!SALE_TYPES.has(type)) {
-            await tx.$executeRawUnsafe(buildRentSplitUpdate(table, 'RealEstateBuildingSummaryV2'), city, type, city);
-          }
-          await appendRealEstateUrlsForSummaryBatch(tx, type, city);
-          return Number(n) || 0;
-        },
-        { timeout: batchTimeoutMs() },
+      const inventory = await prisma.$queryRawUnsafe<CodeInventoryRow[]>(
+        `SELECT bjdCode, SUM(sourceCount) AS sourceCount FROM (
+           SELECT bjdCode, COUNT(*) AS sourceCount FROM ${table} WHERE city = ? GROUP BY bjdCode
+           UNION ALL
+           SELECT DISTINCT bjdCode, 0 AS sourceCount FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city = ?
+         ) code_inventory GROUP BY bjdCode ORDER BY bjdCode`,
+        city, type, city,
       );
-      batches.push({ type, city, rowCount: inserted, status: 'complete' });
+      for (const codeRows of groupCodes(inventory, maxRows)) {
+        const codes = codeRows.map((row) => row.bjdCode);
+        const codePlaceholders = codes.map(() => '?').join(', ');
+        const started = Date.now();
+        const scope = `${type}/${city}/${codes[0]}..${codes[codes.length - 1]}`;
+        const sourceRows = codeRows.reduce((sum, row) => sum + Number(row.sourceCount), 0);
+        console.info(`[SummaryV2] ${scope} start sourceRows=${sourceRows}`);
+        try {
+          const inserted = await prisma.$transaction(
+            async (tx) => {
+              await tx.$executeRawUnsafe(`SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SEC}`);
+              await tx.$executeRawUnsafe(
+                `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city = ? AND bjdCode IN (${codePlaceholders})`,
+                type,
+                city,
+                ...codes,
+              );
+              const n = await tx.$executeRawUnsafe(
+                `INSERT INTO RealEstateBuildingSummaryV2
+                  (type, buildingKey, buildingName, bjdCode, city, district, dongName, jibun,
+                   latestPrice, monthlyRent,
+                   latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng,
+                   transactionCount, updatedAt)
+                SELECT
+                  ? AS type,
+                  SHA2(CONCAT_WS(CHAR(31), ?, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')), 256) AS buildingKey,
+                  buildingName, bjdCode, city, district, TRIM(dongName) AS dongName, NULLIF(TRIM(jibun), '') AS jibun,
+                  ${priceField} AS latestPrice,
+                  ${monthlyRentCol} AS monthlyRent,
+                  dealYear AS latestDealYear, dealMonth AS latestDealMonth, dealDay AS latestDealDay,
+                  ${buildYearCol} AS buildYear,
+                  _lat AS lat,
+                  _lng AS lng,
+                  _txCount AS transactionCount,
+                  NOW()
+                FROM (
+                  SELECT id, buildingName, bjdCode, city, district, dongName, jibun,
+                    ${priceField}, ${SALE_TYPES.has(type) ? '' : 'monthlyRent,'}
+                    dealYear, dealMonth, dealDay, ${buildYearCol} AS buildYear, lat, lng,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                      ORDER BY dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
+                    ) AS _rn,
+                    COUNT(*) OVER (PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')) AS _txCount,
+                    FIRST_VALUE(lat) OVER (
+                      PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                      ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
+                    ) AS _lat,
+                    FIRST_VALUE(lng) OVER (
+                      PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                      ORDER BY (lat IS NULL OR lng IS NULL) ASC, dealYear DESC, dealMonth DESC, dealDay DESC, id DESC
+                    ) AS _lng
+                  FROM ${table}
+                  WHERE city = ? AND bjdCode IN (${codePlaceholders})
+                ) ranked
+                WHERE _rn = 1`,
+                type,
+                propertyType,
+                city,
+                ...codes,
+              );
+              if (!SALE_TYPES.has(type)) {
+                await tx.$executeRawUnsafe(buildRentSplitUpdate(table, 'RealEstateBuildingSummaryV2', codePlaceholders), city, ...codes, type, city, ...codes);
+              }
+              await appendRealEstateUrlsForSummaryBatch(tx, type, city, process.env, { bjdCodes: codes });
+              return Number(n) || 0;
+            },
+            { timeout: batchTimeoutMs() },
+          );
+          rowCount += inserted;
+          console.info(`[SummaryV2] ${scope} complete rows=${inserted} elapsedMs=${Date.now() - started}`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[SummaryV2] ${scope} 실패:`, error);
+          failures.push(`${scope}: ${message}`);
+        }
+        const pause = batchPauseMs();
+        if (pause > 0) await new Promise((resolve) => setTimeout(resolve, pause));
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[SummaryV2] ${type}/${city} 실패:`, error);
-      batches.push({ type, city, rowCount: 0, status: 'failed', error: message });
+      failures.push(message);
     }
-    const pause = batchPauseMs();
-    if (pause > 0) await new Promise((resolve) => setTimeout(resolve, pause));
+    batches.push({ type, city, rowCount, status: failures.length > 0 ? 'failed' : 'complete',
+      ...(failures.length > 0 ? { error: failures.join('; ') } : {}),
+    });
   }
 
   return batches;

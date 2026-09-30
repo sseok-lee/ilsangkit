@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { refreshAddressSummaries } from '../../src/services/realEstateSummaryService.js';
 import { assertLocalTestDatabaseUrl } from '../../src/utils/testDatabaseGuard.js';
 
@@ -114,14 +114,18 @@ async function readCountTimed(): Promise<number> {
 }
 
 describe('summary refresh V2 integration', () => {
-  beforeAll(async () => {
-    resetDatabase();
-  });
-
   beforeEach(() => {
+    resetDatabase();
+    process.env.REAL_ESTATE_URL_MODE = 'keyed';
     lockDir = mkdtempSync(join(tmpdir(), 'summary-refresh-lock-'));
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+  });
+
+  afterEach(() => {
+    delete process.env.SUMMARY_BATCH_MAX_ROWS;
+    delete process.env.REAL_ESTATE_URL_MODE;
+    if (lockDir) rmSync(lockDir, { recursive: true, force: true });
   });
 
   afterAll(async () => {
@@ -172,5 +176,50 @@ describe('summary refresh V2 integration', () => {
     const avgReadMs = readTimings.reduce((sum, value) => sum + value, 0) / readTimings.length;
     console.info(`[summaryRefresh.integration] rollbackMs=${refreshMs.toFixed(1)} readSamples=${readTimings.length} maxReadMs=${maxReadMs.toFixed(1)} avgReadMs=${avgReadMs.toFixed(1)}`);
     expect(maxReadMs).toBeLessThan(1000);
+  });
+
+  it('isolates a failed code batch within one city and preserves complete building histories', async () => {
+    process.env.SUMMARY_BATCH_MAX_ROWS = '4';
+    mysqlInDatabase(`
+      DROP TRIGGER fail_seoul_v2_update;
+      INSERT INTO AptRentTransaction
+        (deposit, monthlyRent, buildYear, dealYear, dealMonth, dealDay, city, district, dongName, buildingName, bjdCode, jibun, lat, lng, rentType)
+      VALUES
+        (71000, 0, 2003, 2026, 8, 1, '서울특별시', '서초구', '서초동', '서울완료아파트', '1165010100', '9-9', 37.3, 127.3, '전세'),
+        (72000, 0, 2003, 2026, 9, 1, '서울특별시', '서초구 변형', '서초동', '서울완료아파트', '1165010100', '9-9', NULL, NULL, '전세'),
+        (14000, 140, 2003, 2026, 9, 2, '서울특별시', '서초구', '서초동', '서울완료아파트', '1165010100', '9-9', NULL, NULL, '월세');
+      INSERT INTO RealEstateBuildingSummaryV2
+        (type, buildingKey, buildingName, bjdCode, city, district, dongName, jibun, latestPrice, latestDealYear, latestDealMonth, latestDealDay, transactionCount)
+      VALUES
+        ('apt-rent', SHA2(CONCAT_WS(CHAR(31), 'apt', '1168010100', '서울롤백아파트', '역삼동', '1-1'), 256),
+         '서울롤백아파트', '1168010100', '서울특별시', '강남구', '역삼동', '1-1', 45000, 2026, 8, 1, 7);
+    `);
+    mysqlInDatabase(`
+      DELIMITER //
+      CREATE TRIGGER fail_seoul_v2_update
+      BEFORE UPDATE ON RealEstateBuildingSummaryV2
+      FOR EACH ROW
+      BEGIN
+        IF NEW.bjdCode = '1168010100' THEN
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced code rollback';
+        END IF;
+      END//
+      DELIMITER ;
+    `);
+    const result = await refreshAddressSummaries(['apt-rent']);
+    expect(result.complete).toBe(false);
+    const rows = await prisma.$queryRawUnsafe<Array<{
+      buildingName: string; latestPrice: bigint; transactionCount: number;
+      jeonseDeposit: bigint | null; wolseMonthlyRent: number | null; lat: unknown; lng: unknown;
+    }>>(`SELECT buildingName, latestPrice, transactionCount, jeonseDeposit, wolseMonthlyRent, lat, lng
+        FROM RealEstateBuildingSummaryV2 WHERE city = '서울특별시' ORDER BY bjdCode`);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ buildingName: '서울완료아파트', transactionCount: 3, wolseMonthlyRent: 140 });
+    expect(Number(rows[0].latestPrice)).toBe(14000);
+    expect(Number(rows[0].jeonseDeposit)).toBe(72000);
+    expect(Number(rows[0].lat)).toBe(37.3);
+    expect(Number(rows[0].lng)).toBe(127.3);
+    expect(rows[1]).toMatchObject({ buildingName: '서울롤백아파트', transactionCount: 7 });
+    expect(Number(rows[1].latestPrice)).toBe(45000);
   });
 });
