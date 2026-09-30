@@ -98,6 +98,25 @@ function mountWith(state: Record<string, unknown>) {
 }
 
 describe('HomeMarketSection', () => {
+  it.each([
+    ['2026-09-30T14:59:00.000Z', '2026. 09. 30. 23:59'],
+    ['2026-09-30T15:00:00.000Z', '2026. 10. 01. 00:00'],
+    ['2026-09-30T15:19:00.000Z', '2026. 10. 01. 00:19'],
+  ])('KST 자정 전후 조회시각 %s를 00~23시로 표시한다', (generatedAt, expected) => {
+    const emptyCount = { status: 'ok', data: { total: 0, daily: [] } }
+    const wrapper = mountWith({
+      data: ref({
+        region: { city: '', district: '', label: '전국' },
+        window: { from: '2026-09-02', to: '2026-10-01' },
+        generatedAt,
+        counts: { apt: emptyCount, villa: emptyCount, offitel: emptyCount },
+        recent: { status: 'ok', data: [] },
+      }),
+    })
+
+    expect(wrapper.text()).toContain(expected)
+  })
+
   it('3유형 total, 30일 건수 sparkline, 최근 거래 5개 목록을 렌더한다', () => {
     const wrapper = mountWith({})
 
