@@ -15,7 +15,7 @@ test('deploy workflow is pinned to tested SHA and uses release commands instead 
   assert.doesNotMatch(deploy, /node "\$RELEASE_SCRIPT" prepare --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
   assert.doesNotMatch(deploy, /node "\$RELEASE_SCRIPT" check --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
   assert.doesNotMatch(deploy, /node "\$RELEASE_SCRIPT" switch --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
-  assert.match(deploy, /inventory business probes are required/)
+  assert.match(deploy, /deployment-state\.mjs/)
   assert.doesNotMatch(deploy, /__FILLED_FROM_INVENTORY__|__SUMMARY_RUN_ID__/)
   assert.match(deploy, /node "\$RELEASE_SCRIPT" reconcile --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
 })
@@ -23,8 +23,19 @@ test('deploy workflow is pinned to tested SHA and uses release commands instead 
 test('scheduled sync resolves the active backend once before running writers', () => {
   assert.match(sync, /ACTIVE_BACKEND_LINK="\$\{ILSK_ACTIVE_BACKEND_LINK:-\/home\/project2\/backend\}"/)
   assert.match(sync, /ACTIVE_BACKEND_DIR="\$\(cd "\$ACTIVE_BACKEND_LINK" && pwd -P\)"/)
-  assert.match(sync, /node "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/\$\{SCRIPT\}\.js"/)
+  assert.match(sync, /run_backend_node_timed 20m "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/\$\{SCRIPT\}\.js"/)
   assert.doesNotMatch(sync, /cd \/home\/project2\/backend\n/)
+})
+
+test('scheduled sync binds release runtime before node script calls', () => {
+  assert.match(sync, /ACTIVE_RELEASE_ROOT="\$\(dirname "\$ACTIVE_BACKEND_DIR"\)"/)
+  assert.match(sync, /SYNC_RUNTIME_SCRIPT="\$ACTIVE_RELEASE_ROOT\/scripts\/deploy\/sync-runtime\.mjs"/)
+  assert.doesNotMatch(sync, /SYNC_RUNTIME_SCRIPT="\/home\/project2\/deploy\/scripts\/sync-runtime\.mjs"/)
+  assert.doesNotMatch(sync, /release-inbox/)
+  assert.match(sync, /node "\$SYNC_RUNTIME_SCRIPT" print --active-backend-link "\$ACTIVE_BACKEND_LINK" --inventory "\$INVENTORY"/)
+  assert.match(sync, /node "\$SYNC_RUNTIME_SCRIPT" run --active-backend-link "\$ACTIVE_BACKEND_LINK" --inventory "\$INVENTORY" -- node "\$@"/)
+  assert.match(sync, /current-backend is active but sync runtime helper was not found/)
+  assert.doesNotMatch(sync, /SITEMAP_REGEN_BASE="http:\/\/127\.0\.0\.1:3000"\n\s*set \+x\n\s*export SITEMAP_REGEN_TOKEN[\s\S]*node "\$ACTIVE_BACKEND_DIR\/dist\/scripts\/generateSitemaps\.js"/)
 })
 
 
@@ -41,13 +52,9 @@ test('normal deploy workflow uses DB-backed readiness inputs instead of full B3 
   assert.match(deploy, /summaryReady|summaryReadiness|release-readiness/)
 })
 
-test('deploy workflow supplies runtime config, public proxy probes, and hashed assets from inventory/artifact', () => {
-  assert.match(deploy, /backendEnvFile/)
-  assert.match(deploy, /realEstateWriteLockDir/)
-  assert.match(deploy, /sitemapDir/)
-  assert.match(deploy, /publicSmokeProbes/)
-  assert.doesNotMatch(deploy, /publicSmokeProbes:\s*inventory\.publicSmokeProbes \|\| probes/)
-  assert.match(deploy, /hashedAssets/)
+test('deploy workflow binds runtime/probes from actual active state and packages its helpers', () => {
+  assert.match(deploy, /node "\$INBOX\/scripts\/deploy\/deployment-state\.mjs" "\$INVENTORY" "\$MANIFEST" "\$HASHED_ASSETS" "\$INBOX\/readiness\.json"/)
+  assert.match(deploy, /cp scripts\/deploy\/release\.mjs scripts\/deploy\/deployment-state\.mjs scripts\/deploy\/sync-runtime\.mjs/)
+  assert.match(deploy, /hashed-assets\.json/)
   assert.match(deploy, /_nuxt/)
-  assert.match(deploy, /activePointers/)
 })

@@ -788,7 +788,7 @@ test('runReleaseCommand check validates candidate nginx through the active inclu
 })
 
 
-test('runReleaseCommand check retries spaced readiness until delayed backend startup succeeds', async () => {
+test('runReleaseCommand check default startup budget tolerates delayed backend binding', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
   const inventory = createInventory(workspace)
@@ -807,7 +807,7 @@ test('runReleaseCommand check retries spaced readiness until delayed backend sta
       if (String(url).includes(':18001/api/health')) {
         assert.ok(options.signal, 'readiness fetch receives an abort signal')
         backendReadinessAttempts += 1
-        if (backendReadinessAttempts < 3) throw new Error('ECONNREFUSED backend port')
+        if (backendReadinessAttempts < 10) throw new Error('ECONNREFUSED backend port')
         return {
           ok: true,
           status: 200,
@@ -830,8 +830,8 @@ test('runReleaseCommand check retries spaced readiness until delayed backend sta
     readinessSleep: async (ms) => { delays.push(ms) },
   })
 
-  assert.equal(backendReadinessAttempts, 3)
-  assert.deepEqual(delays, [25, 25])
+  assert.equal(backendReadinessAttempts, 10)
+  assert.deepEqual(delays, Array(9).fill(25))
   assert.equal(backendReadinessBodyConsumed, true)
   assert.ok(events.includes('check-business-responses'))
 })
@@ -1450,4 +1450,47 @@ test('compatibility rollback retains preserved public URLs', () => {
   const manifest = createManifest(workspace, createArtifacts(workspace))
   manifest.summary.mode = 'compatibility'
   assert.equal(buildCandidateEnvironment(manifest, createInventory(workspace)).REAL_ESTATE_URL_MODE, 'preserved')
+})
+
+test('successful switch persists active inventory and a later reconcile accepts its active ports', async () => {
+  const workspace = makeWorkspace()
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, createArtifacts(workspace))
+  const inventoryPath = join(workspace.deployRoot, 'inventory.json')
+  writeFileSync(inventoryPath, JSON.stringify(inventory))
+  const options = { inventoryPath, inventory, manifest, runner: createRunner([]), fetch: okFetch([]) }
+  await runReleaseCommand('switch', options)
+  const persisted = JSON.parse(readFileSync(inventoryPath))
+  assert.equal(persisted.active.releaseId, manifest.releaseId)
+  assert.equal(persisted.runtime.sitemapDir, manifest.runtime.sitemapDir)
+  await runReleaseCommand('reconcile', { ...options, inventory: persisted })
+})
+
+test('rollback persists the checked rollback manifest runtime instead of the failed candidate', async () => {
+  const workspace = makeWorkspace()
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, createArtifacts(workspace))
+  const inventoryPath = join(workspace.deployRoot, 'inventory.json')
+  writeFileSync(inventoryPath, JSON.stringify(inventory))
+  const rollbackRoot = join(inventory.releasesRoot, manifest.rollbackReleaseId)
+  mkdirSync(rollbackRoot, {recursive: true})
+  const rollback = { ...manifest, releaseId: manifest.rollbackReleaseId, ports: { backend: manifest.rollback.backendPort, frontend: manifest.rollback.frontendPort }, runtime: { ...manifest.runtime, sitemapDir: '/retained/sitemaps' }, probes: manifest.rollback.probes }
+  writeFileSync(join(rollbackRoot, '.release-manifest.json'), JSON.stringify(rollback))
+  await runReleaseCommand('rollback', { inventoryPath, inventory, manifest, runner: createRunner([]), fetch: okFetch([]) })
+  const persisted = JSON.parse(readFileSync(inventoryPath))
+  assert.equal(persisted.active.releaseId, manifest.rollbackReleaseId)
+  assert.equal(persisted.runtime.sitemapDir, '/retained/sitemaps')
+})
+
+test('retained Nuxt build metadata keeps its relative path and refuses traversal or mutable latest metadata', async () => {
+  const workspace = makeWorkspace(); const inventory = createInventory(workspace)
+  const source = join(workspace.root,'build.json'); writeFileSync(source,'{"id":"build-one"}')
+  const asset = { path: source, fileName: 'builds/meta/build-one.json', sha256: sha256(readFileSync(source)) }
+  await retainHashedAssets({hashedAssets:[asset]},inventory)
+  assert.equal(readFileSync(join(inventory.assets.publicDir,'_nuxt/builds/meta/build-one.json'),'utf8'),'{"id":"build-one"}')
+  await retainHashedAssets({hashedAssets:[{...asset,fileName:'-U8MxH1t.js'}]},inventory)
+  assert.equal(readFileSync(join(inventory.assets.publicDir,'_nuxt/-U8MxH1t.js'),'utf8'),'{"id":"build-one"}')
+  for(const fileName of ['../escape.json','builds/../../escape.json','/absolute.json','builds/latest.json']) {
+    await assert.rejects(retainHashedAssets({hashedAssets:[{...asset,fileName}]},inventory), /relative|mutable/)
+  }
 })

@@ -29,6 +29,15 @@ function createReleaseEcosystem(env = process.env) {
   }
 
   const backendEnvFile = loadBackendEnvFile(env)
+  let frontendEnvFile = {}
+  if (env.ILSK_FRONTEND_ENV_FILE) {
+    try {
+      const dotenv = require(join(releaseRoot, 'backend', 'node_modules', 'dotenv'))
+      frontendEnvFile = dotenv.parse(readFileSync(env.ILSK_FRONTEND_ENV_FILE))
+    } catch {
+      throw new Error('Failed to load release frontend env file')
+    }
+  }
   const backendReleaseEnv = {
     NODE_ENV: 'production',
     HOST: '127.0.0.1',
@@ -63,6 +72,7 @@ function createReleaseEcosystem(env = process.env) {
         exec_mode: 'fork',
         instances: 1,
         env: {
+          ...frontendEnvFile,
           NODE_ENV: 'production',
           HOST: '127.0.0.1',
           NITRO_HOST: '127.0.0.1',
@@ -71,6 +81,7 @@ function createReleaseEcosystem(env = process.env) {
           NUXT_INTERNAL_API_BASE: internalApiBase,
           NUXT_PUBLIC_API_BASE: '',
           ILSK_RELEASE_ID: releaseId,
+          SITEMAP_DIR: env.SITEMAP_DIR,
         },
       },
     ],

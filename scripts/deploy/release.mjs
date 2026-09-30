@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { createConnection } from 'node:net'
 import { promisify } from 'node:util'
+import { persistActiveInventory } from './deployment-state.mjs'
 
 const execFileAsync = promisify(execFile)
 const REQUIRED_PROBES = new Set([
@@ -24,7 +25,8 @@ const REQUIRED_PROBES = new Set([
 ])
 
 const READINESS_PROBE_NAME = 'release-readiness'
-const DEFAULT_READINESS_ATTEMPTS = 5
+// Allow startup validation and module loading to finish before probing business requests.
+const DEFAULT_READINESS_ATTEMPTS = 30
 const DEFAULT_READINESS_DELAY_MS = 1000
 const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_ATTEMPTS = 5
@@ -288,7 +290,9 @@ function assertRuntimeConfig(manifest, inventory) {
   if (typeof writerLockDir !== 'string' || !isAbsolute(writerLockDir)) throw new Error('runtime realEstateWriteLockDir must be an absolute path')
   const sitemapDir = runtime.sitemapDir ?? inventory.sitemap?.releaseDir
   if (typeof sitemapDir !== 'string' || !isAbsolute(sitemapDir)) throw new Error('runtime release sitemapDir must be an absolute path')
-  return { envFile, writerLockDir, sitemapDir }
+  const frontendEnvFile = runtime.frontendEnvFile
+  if (frontendEnvFile !== undefined && (typeof frontendEnvFile !== 'string' || !isAbsolute(frontendEnvFile))) throw new Error('runtime frontendEnvFile must be an absolute path')
+  return { envFile, writerLockDir, sitemapDir, frontendEnvFile }
 }
 
 export function validateManifest(manifest, inventory, options = {}) {
@@ -315,8 +319,10 @@ export function validateManifest(manifest, inventory, options = {}) {
   if (!reserved.has(backendPort) || !reserved.has(frontendPort)) {
     throw new Error('candidate ports must come from inventory.reservePorts')
   }
-  if ([inventory.active?.backend?.port, inventory.active?.frontend?.port].map(Number).includes(backendPort)
-    || [inventory.active?.backend?.port, inventory.active?.frontend?.port].map(Number).includes(frontendPort)) {
+  const alreadyActive = inventory.active?.releaseId === manifest.releaseId
+    && inventory.active.backend.port === backendPort && inventory.active.frontend.port === frontendPort
+  if (!alreadyActive && ([inventory.active?.backend?.port, inventory.active?.frontend?.port].map(Number).includes(backendPort)
+    || [inventory.active?.backend?.port, inventory.active?.frontend?.port].map(Number).includes(frontendPort))) {
     throw new Error('candidate ports must not collide with active ports')
   }
 
@@ -446,6 +452,9 @@ export async function installArtifacts(context) {
   await runner.run?.('npm', ['ci', '--omit=dev'], { cwd: backendDir })
   await step(runner, 'generate-prisma-client', { cwd: backendDir })
   await runner.run?.('npx', ['prisma', 'generate'], { cwd: backendDir })
+  const runtimeScripts = join(releaseRoot, 'scripts', 'deploy')
+  mkdirSync(runtimeScripts, { recursive: true })
+  copyFileSync(fileURLToPath(new URL('./sync-runtime.mjs', import.meta.url)), join(runtimeScripts, 'sync-runtime.mjs'))
   atomicWriteJson(markerPath, { commitSha: manifest.commitSha, fingerprint, installedAt: new Date(context.now()).toISOString() })
 
   return { backendDir, frontendDir, reused: false }
@@ -460,9 +469,10 @@ export async function retainHashedAssets(manifest, inventory) {
   const retained = []
   for (const asset of assets) {
     assertAbsolutePath(asset.path, 'hashed asset path')
-    if (!/^[^/]+$/.test(String(asset.fileName ?? ''))) {
-      throw new Error('hashed asset fileName must be a basename')
+    if (!String(asset.fileName ?? '').split('/').every(part => /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/.test(part))) {
+      throw new Error('hashed asset fileName must be a safe relative path')
     }
+    if (asset.fileName === 'builds/latest.json') throw new Error('mutable latest metadata must be served by the active frontend')
     const actual = await sha256File(asset.path)
     if (actual !== asset.sha256) throw new Error(`hashed asset checksum mismatch: ${asset.fileName}`)
     const target = join(nuxtDir, asset.fileName)
@@ -474,6 +484,7 @@ export async function retainHashedAssets(manifest, inventory) {
       retained.push(target)
       continue
     }
+    mkdirSync(dirname(target), { recursive: true })
     copyFileSync(asset.path, target)
     retained.push(target)
   }
@@ -504,6 +515,7 @@ export function buildCandidateEnvironment(manifest, inventory = {}) {
     REAL_ESTATE_WRITE_LOCK_DIR: runtime.writerLockDir,
     SITEMAP_DIR: runtime.sitemapDir,
     ILSK_BACKEND_ENV_FILE: runtime.envFile,
+    ...(runtime.frontendEnvFile ? { ILSK_FRONTEND_ENV_FILE: runtime.frontendEnvFile } : {}),
   }
 }
 
@@ -823,12 +835,18 @@ async function switchPointer(context, includePath) {
 }
 
 async function rollbackPointer(context) {
+  let rollbackManifest
+  if (context.inventoryPath) {
+    rollbackManifest = JSON.parse(readFileSync(join(context.inventory.releasesRoot, context.manifest.rollbackReleaseId, '.release-manifest.json'), 'utf8'))
+    if (rollbackManifest.releaseId !== context.manifest.rollbackReleaseId) throw new Error('retained rollback manifest identity mismatch')
+  }
   const rollbackInclude = writeReleaseInclude(context.inventory, rollbackProxyManifest(context.manifest))
   await step(context.runner, 'rollback-pointer', { releaseId: context.manifest.rollbackReleaseId, includePath: rollbackInclude })
   atomicSymlink(rollbackInclude, context.inventory.nginxIncludePath)
   updateActivePointers(context, { releaseId: context.manifest.rollbackReleaseId })
   await step(context.runner, 'reload-proxy-rollback', { releaseId: context.manifest.rollbackReleaseId })
   await context.runner.run?.(context.inventory.nginxBinary, ['-s', 'reload'])
+  if (rollbackManifest) persistActiveInventory(context.inventoryPath, context.inventory, rollbackManifest)
 }
 
 async function writeJournal(context, stage, extra = {}) {
@@ -1088,6 +1106,7 @@ export async function runReleaseCommand(command, options = {}) {
   const runner = options.runner ?? defaultRunner()
   const context = {
     inventory: options.inventory,
+    inventoryPath: options.inventoryPath,
     manifest: options.manifest,
     runner,
     now: options.now ?? (() => Date.now()),
@@ -1130,6 +1149,7 @@ export async function runReleaseCommand(command, options = {}) {
       await startProcesses(context)
       await checkBusinessResponses(context)
       await validateProxy(context)
+      atomicWriteJson(join(context.releaseRoot, '.release-manifest.json'), context.manifest)
       const journalPath = await writeJournal(context, 'checked')
       updateDeployLockStage(lock, 'checked')
       return { releaseId: context.manifest.releaseId, journalPath }
@@ -1148,6 +1168,7 @@ export async function runReleaseCommand(command, options = {}) {
       try {
         await switchPointer(context, includePath)
         await publicSmoke(context)
+        if (context.inventoryPath) persistActiveInventory(context.inventoryPath, context.inventory, context.manifest)
       } catch (error) {
         await rollbackPointer(context)
         const journalPath = await writeJournal(context, 'rolled-back', { reason: error instanceof Error ? error.message : String(error) })
@@ -1188,11 +1209,13 @@ export async function runReleaseCommand(command, options = {}) {
       await startProcesses(context)
       await checkBusinessResponses(context)
       const includePath = await validateProxy(context)
+      atomicWriteJson(join(context.releaseRoot, '.release-manifest.json'), context.manifest)
       await writeJournal(context, 'validated')
       updateDeployLockStage(lockPath, 'validated')
       try {
         await switchPointer(context, includePath)
         await publicSmoke(context)
+        if (context.inventoryPath) persistActiveInventory(context.inventoryPath, context.inventory, context.manifest)
       } catch (error) {
         await rollbackPointer(context)
         await writeJournal(context, 'rolled-back', { reason: error instanceof Error ? error.message : String(error) })
@@ -1215,6 +1238,7 @@ export async function runReleaseCommand(command, options = {}) {
       await validateAndVerify(context)
       try {
         await publicSmoke(context)
+        if (context.inventoryPath) persistActiveInventory(context.inventoryPath, context.inventory, context.manifest)
         const journalPath = await writeJournal(context, 'reconciled-switched')
         updateDeployLockStage(lockPath, 'switched')
         return { releaseId: context.manifest.releaseId, journalPath }
@@ -1254,10 +1278,14 @@ async function main() {
   const manifest = JSON.parse(readFileSync(args.manifestPath, 'utf8'))
   const report = await runReleaseCommand(args.command, {
     inventory,
+    inventoryPath: args.inventoryPath,
     manifest,
     bootstrapCompatibilityCheck: args.bootstrapCompatibilityCheck,
   })
   console.log(JSON.stringify(report, null, 2))
+  if (args.command === 'reconcile' && report.releaseId !== manifest.releaseId) {
+    throw new Error('reconciliation rolled back; deployment did not complete')
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
