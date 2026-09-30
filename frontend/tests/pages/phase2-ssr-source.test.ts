@@ -30,24 +30,28 @@ describe('Phase 2 — SSR 워터폴 병렬화 source assertions', () => {
   describe('홈 (pages/index.vue)', () => {
     const src = read('pages/index.vue')
 
-    it('home-page useAsyncData가 단일 Promise.allSettled로 dashboard+guides 병렬화한다', () => {
+    it('home-page useAsyncData가 가이드+기사 보조 데이터를 Promise.allSettled로 병렬화한다', () => {
       expect(src).toMatch(/useAsyncData\(\s*\n?\s*'home-page'/)
       expect(src).toContain('Promise.allSettled')
+      expect(src).toContain('/api/guides/recent')
+      expect(src).toContain('/api/articles/recent')
     })
 
     it('secondary $fetch에 AbortSignal.timeout(8000)이 적용돼 있다', () => {
       expect(src).toContain('AbortSignal.timeout(8000)')
     })
 
-    it('dashboard 실패 시 503 throw로 빈 hero 색인을 차단한다', () => {
-      expect(src).toMatch(/createError\(\{\s*statusCode:\s*503/)
-      expect(src).toContain('import.meta.server')
+    it('legacy dashboard 실패가 홈 전체 503으로 이어지지 않는다', () => {
+      expect(src).not.toContain('/api/meta/home-dashboard')
+      expect(src).not.toContain('HomeDashboard')
+      expect(src).not.toMatch(/createError\(\{\s*statusCode:\s*503/)
+      expect(src).not.toContain('Home data temporarily unavailable')
     })
 
     it('옛 dashboardResponse / recentGuidesData / useHomeDashboard() 호출이 모두 제거됐다', () => {
       expect(src).not.toContain('dashboardResponse')
       expect(src).not.toContain('recentGuidesData')
-      // type-only import는 OK, 함수 호출은 제거됐어야 함
+      expect(src).not.toContain('dashboard:')
       expect(src).not.toMatch(/=\s*await\s+useHomeDashboard\s*\(/)
     })
   })

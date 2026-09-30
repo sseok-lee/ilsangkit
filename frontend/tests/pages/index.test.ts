@@ -63,40 +63,28 @@ vi.mock('~/components/home/HomeMarketSection.vue', () => ({
   }),
 }))
 
-const sampleRegion = { citySlug: 'seoul', city: '서울특별시', districtSlug: 'gangnam', district: '강남구', pricePerPyeong: 5000, txnCount: 45, changePct: 3.2, volumeChangePct: 10 }
-const sampleHotspotBundle = {
-  sale: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
-  jeonse: { rising: [sampleRegion], falling: [sampleRegion], active: [sampleRegion] },
-  wolse: { active: [sampleRegion] },
-}
-
-// home-page useAsyncData를 dashboard·recentGuides 페이로드로 가짜 응답.
+// home-page useAsyncData를 보조 콘텐츠 페이로드로 가짜 응답.
 // (index.vue 의 pageData useAsyncData 와 동일한 key 매칭)
 const homePagePayload = {
-  dashboard: {
-    total: 100000,
-    buildingCount: 50000,
-    subscriptionActiveCount: 5,
-    newlyListedToday: 12,
-    realEstateTrends: [],
-    trendingBuildings: { sale: [], jeonse: [], wolse: [] },
-    subscriptionSummary: { closingThisWeek: 0, upcomingNextWeek: 0, avgSupplyPrice: null, imminent: [] },
-    realEstateHotspots: { apt: sampleHotspotBundle },
-  },
   recentGuides: [],
+  recentArticles: [],
 }
 
-testGlobal.useAsyncData = vi.fn((key?: string) => {
-  const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
-  const result = {
-    data,
-    status: ref('idle'),
-    error: ref(null),
-    refresh: vi.fn(),
-    pending: ref(false),
-  }
-  return Object.assign(Promise.resolve(result), result)
-})
+function mockDefaultHomePageUseAsyncData() {
+  testGlobal.useAsyncData = vi.fn((key?: string) => {
+    const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
+    const result = {
+      data,
+      status: ref('idle'),
+      error: ref(null),
+      refresh: vi.fn(),
+      pending: ref(false),
+    }
+    return Object.assign(Promise.resolve(result), result)
+  })
+}
+
+mockDefaultHomePageUseAsyncData()
 
 // Helper to mount async components with Suspense
 async function mountSuspended(component: Component, options?: MountingOptions<Record<string, unknown>>) {
@@ -119,6 +107,7 @@ describe('Index Page', () => {
     mockNavigateTo.mockClear()
     mockSetWebsiteSchema.mockClear()
     mockSetOrganizationSchema.mockClear()
+    mockDefaultHomePageUseAsyncData()
   })
 
   it('renders hero title and subtitle', async () => {
@@ -158,6 +147,68 @@ describe('Index Page', () => {
     // 홈 광고는 2개 — fold 아래 첫 섹션 경계 + 데이터 출처 위(구 쿠팡 자리).
     // 히어로 검색 위/안에는 두지 않는다(홈의 핵심 기능 + 콘텐츠 위 대형 광고 정책 리스크).
     expect(wrapper.findAll('.stub-ad-banner').length).toBe(2)
+  })
+
+  it('legacy dashboard 데이터 없이도 핵심 홈 화면을 렌더한다', async () => {
+    testGlobal.useAsyncData = vi.fn((key?: string) => {
+      const data = key === 'home-page' ? ref({ recentGuides: [], recentArticles: [] }) : ref(null)
+      const result = {
+        data,
+        status: ref('idle'),
+        error: ref(null),
+        refresh: vi.fn(),
+        pending: ref(false),
+      }
+      return Object.assign(Promise.resolve(result), result)
+    })
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.find('.home-hero-shell').exists()).toBe(true)
+    expect(wrapper.text()).toContain('우리 동네 실거래 흐름')
+    expect(wrapper.text()).toContain('빠른 생활시설 찾기')
+    expect(wrapper.text()).toContain('공공데이터 기반 서비스')
+  })
+
+  it('가이드·기사 보조 데이터가 실패해도 dashboard endpoint 없이 홈을 렌더한다', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/api/guides/recent') || url.includes('/api/articles/recent')) {
+        throw new Error('optional content unavailable')
+      }
+      return { success: true, data: [] }
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    testGlobal.useAsyncData = vi.fn((key?: string, handler?: () => Promise<unknown>, options?: { default?: () => unknown }) => {
+      const data = ref(key === 'home-page' ? options?.default?.() : null)
+      const result = {
+        data,
+        status: ref('idle'),
+        error: ref(null),
+        refresh: vi.fn(),
+        pending: ref(false),
+      }
+      const promise = (async () => {
+        if (key === 'home-page' && handler) {
+          data.value = await handler()
+        }
+        return result
+      })()
+      return Object.assign(promise, result)
+    })
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url))
+    expect(requestedUrls.some((url) => url.includes('/api/guides/recent'))).toBe(true)
+    expect(requestedUrls.some((url) => url.includes('/api/articles/recent'))).toBe(true)
+    expect(requestedUrls.some((url) => url.includes('/api/meta/home-dashboard'))).toBe(false)
+    expect(wrapper.find('.home-hero-shell').exists()).toBe(true)
+    expect(wrapper.text()).toContain('우리 동네 실거래 흐름')
+    expect(wrapper.text()).toContain('공공데이터 기반 서비스')
+
+    warnSpy.mockRestore()
   })
 
   it('히어로 검색 영역보다 뒤에만 광고를 둔다 (fold 위 광고 금지)', async () => {
@@ -228,17 +279,7 @@ describe('Index Page', () => {
 describe('오늘의 이슈 (recentArticles) section', () => {
   afterEach(() => {
     // 다른 테스트에 영향 없도록 기본 mock(recentArticles 없음)으로 복원
-    testGlobal.useAsyncData = vi.fn((key?: string) => {
-      const data = key === 'home-page' ? ref(homePagePayload) : ref(null)
-      const result = {
-        data,
-        status: ref('idle'),
-        error: ref(null),
-        refresh: vi.fn(),
-        pending: ref(false),
-      }
-      return Object.assign(Promise.resolve(result), result)
-    })
+    mockDefaultHomePageUseAsyncData()
   })
 
   it('renders "오늘의 이슈" section with article links when recentArticles has items', async () => {
