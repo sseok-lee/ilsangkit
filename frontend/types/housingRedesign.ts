@@ -1,7 +1,8 @@
 import type { RentTransaction, SaleTransaction } from './realEstate'
 
 export type DealMode = 'sale' | 'jeonse' | 'wolse'
-export type PeriodMonths = 6 | 12 | 36
+/** 0 selects all available transaction history. */
+export type PeriodMonths = 0 | 6 | 12 | 36
 export type PropertyType = 'apt' | 'villa' | 'offitel'
 
 export interface DateWindow {
@@ -11,6 +12,8 @@ export interface DateWindow {
 
 export interface DetailIdentity {
   buildingKey?: string
+  canonicalPath?: string | null
+  legacyGrouped?: boolean
   bjdCode: string
   buildingName: string
 }
@@ -101,6 +104,7 @@ export interface MarketCount {
 
 export interface RecentBuilding {
   buildingKey?: string
+  canonicalPath?: string | null
   type: PropertyType
   transactionId: number
   city: string

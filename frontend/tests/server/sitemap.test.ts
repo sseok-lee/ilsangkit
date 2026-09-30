@@ -885,12 +885,13 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     expect(urlCount).toBe(2)
   })
 
-  it('buildingKey가 있으면 부동산 상세 URL 마지막 segment로 방출한다', async () => {
+  it('buildingKey가 있어도 부동산 상세 URL에는 해시 segment를 방출하지 않는다', async () => {
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
     const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
     expect(xml).toContain(
-      `https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안강남')}/${'a'.repeat(64)}`,
+      `https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안강남')}`,
     )
+    expect(xml).not.toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
   })
 
   it('건물별 최근 실거래월(item.lastmod)이 per-URL lastmod로 방출된다', async () => {

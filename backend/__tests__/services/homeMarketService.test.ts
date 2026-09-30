@@ -6,9 +6,10 @@ import {
   getHomeMarket,
 } from '../../src/services/homeMarketService.js';
 
-const { queryRawUnsafe, regionFindMany } = vi.hoisted(() => ({
+const { queryRawUnsafe, regionFindMany, mockAttachCanonicalPaths } = vi.hoisted(() => ({
   queryRawUnsafe: vi.fn(),
   regionFindMany: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -16,6 +17,9 @@ vi.mock('../../src/lib/prisma.js', () => ({
     $queryRawUnsafe: queryRawUnsafe,
     region: { findMany: regionFindMany },
   },
+}));
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
 }));
 
 const seoulRegions = [
@@ -48,8 +52,44 @@ describe('buildMarketCount', () => {
 describe('getHomeMarket', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
     __resetHomeMarketCacheForTest();
     regionFindMany.mockResolvedValue(seoulRegions);
+  });
+
+  it('최근 거래 카드에 canonicalPath를 붙인다', async () => {
+    const keyPath = '/real-estate/apt-sale/seoul/gangnam/%ED%98%84%EB%8C%80';
+    queryRawUnsafe
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          type: 'apt',
+          transactionId: 7,
+          city: '서울특별시',
+          district: '강남구',
+          bjdCode: '11680',
+          buildingName: '현대',
+          dongName: '역삼동',
+          jibun: '1',
+          date: '2026-09-21',
+          amount: 210000n,
+          area: '84.90',
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>, type?: string) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `${keyPath}?type=${type}` }))),
+    );
+
+    const result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-09-21T12:00:00+09:00'));
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ buildingName: '현대', buildingKey: expect.any(String) }),
+    ]), 'apt-sale');
+    expect(result.recent.data?.[0].canonicalPath).toBe(`${keyPath}?type=apt-sale`);
   });
 
   it('세 sale 테이블을 지역·정확한 30일·취소 제외 조건으로 집계하고 최근 top5를 합친다', async () => {

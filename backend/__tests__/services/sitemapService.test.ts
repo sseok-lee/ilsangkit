@@ -11,6 +11,8 @@ const {
   getWasteScheduleRegionsMock,
   getActiveWasteGenerationMock,
   listIndexableWasteAreasMock,
+  mockAttachCanonicalPaths,
+  mockIsPreservedMode,
 } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
   getCategoryCountAndMaxDateMock: vi.fn(),
@@ -22,6 +24,8 @@ const {
   getWasteScheduleRegionsMock: vi.fn(),
   getActiveWasteGenerationMock: vi.fn(),
   listIndexableWasteAreasMock: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
+  mockIsPreservedMode: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -70,10 +74,15 @@ vi.mock('../../src/services/wasteAreaService.js', () => ({
 vi.mock('../../src/services/categoryRegistry.js', () => ({
   ALL_CATEGORIES: [],
 }));
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
+  isPreservedRealEstateUrlMode: mockIsPreservedMode,
+}));
 
 import {
   getSubscriptionIds,
   getRealEstateBuildings,
+  getRealEstateBuildingCount,
   getRealEstateCityDistrictHubs,
   getSitemapPageCounts,
   dealKeyToDateString,
@@ -102,6 +111,8 @@ beforeEach(() => {
   getActiveWasteGenerationMock.mockResolvedValue(null);
   listIndexableWasteAreasMock.mockResolvedValue([]);
   mockQueryRaw.mockResolvedValue([{ cnt: 0n }]);
+  mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
+  mockIsPreservedMode.mockReturnValue(false);
   delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
   process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
 });
@@ -227,6 +238,123 @@ describe('getRealEstateBuildings — RealEstateBuildingSummary 기반', () => {
     ]);
     const rows = await getRealEstateBuildings();
     expect(rows[0].lastmod).toBe('');
+  });
+
+  it('returns registry canonicalPath for real-estate sitemap rows', async () => {
+    const key = 'e'.repeat(64);
+    mockQueryRaw.mockResolvedValue([
+      {
+        realEstateType: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '래미안강남',
+        bjdCode: '1168010100',
+        buildingKey: key,
+        lastDealKey: BigInt(20260715),
+      },
+    ]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ type: string; buildingKey?: string | null }>) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${row.type}/${row.buildingKey}` }))),
+    );
+
+    const rows = await getRealEstateBuildings();
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith([expect.objectContaining({
+      type: 'apt-sale',
+      realEstateType: 'apt-sale',
+      buildingKey: key,
+    })]);
+    expect(rows[0].canonicalPath).toBe(`/registered/apt-sale/${key}`);
+  });
+
+  it('deduplicates shared registry canonicalPath values within a sitemap page', async () => {
+    const sharedPath = `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('같은빌라')}`;
+    mockQueryRaw.mockResolvedValue([
+      {
+        realEstateType: 'villa-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '같은빌라',
+        bjdCode: '1168010100',
+        buildingKey: 'a'.repeat(64),
+        lastDealKey: BigInt(20260715),
+      },
+      {
+        realEstateType: 'villa-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '같은빌라',
+        bjdCode: '1168010100',
+        buildingKey: 'b'.repeat(64),
+        lastDealKey: BigInt(20260716),
+      },
+    ]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ type: string }>) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: sharedPath }))),
+    );
+
+    const rows = await getRealEstateBuildings();
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].canonicalPath).toBe(sharedPath);
+  });
+
+  it('preserved URL mode counts distinct public canonical paths instead of summary rows', async () => {
+    mockIsPreservedMode.mockReturnValue(true);
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'address';
+    mockQueryRaw.mockResolvedValue([{ cnt: 5103n }]);
+
+    const count = await getRealEstateBuildingCount();
+
+    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
+    expect(count).toBe(5103);
+    expect(sql).toContain('COUNT(DISTINCT u.pathHash) AS cnt');
+    expect(sql).toContain('FROM RealEstateBuildingSummaryV2 s');
+    expect(sql).toContain('INNER JOIN RealEstatePublicUrl u');
+    expect(sql).toContain('u.type = s.type');
+    expect(sql).toContain('u.buildingKey = s.buildingKey');
+    expect(sql).toContain('s.buildingName IS NOT NULL');
+    expect(sql).toContain("s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'");
+  });
+
+  it('preserved URL mode pages unique canonical paths through internal pathHash groups ordered by newest grouped deal date', async () => {
+    const sharedPath = `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('같은빌라')}`;
+    mockIsPreservedMode.mockReturnValue(true);
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'address';
+    mockQueryRaw.mockResolvedValue([
+      {
+        realEstateType: 'villa-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '같은빌라',
+        bjdCode: '1168010100',
+        buildingKey: 'a'.repeat(64),
+        canonicalPath: sharedPath,
+        lastDealKey: BigInt(20260716),
+      },
+    ]);
+
+    const rows = await getRealEstateBuildings({ page: 2, limit: 50 });
+
+    const sql = flattenSql(mockQueryRaw.mock.calls[0]);
+    expect(sql).toContain('GROUP BY u.pathHash');
+    expect(sql).toContain('MIN(s.id) AS representativeId');
+    expect(sql).toContain('MAX(s.latestDealYear * 10000');
+    expect(sql).toContain('ORDER BY lastDealKey DESC, u.pathHash ASC');
+    expect(sql).toContain('JOIN RealEstateBuildingSummaryV2 s ON s.id = grouped.representativeId');
+    expect(sql).not.toContain('ROW_NUMBER() OVER');
+    expect(sql).not.toContain('PARTITION BY u.canonicalPath');
+    expect(sql).toContain('LIMIT ? OFFSET ?');
+    expect(mockQueryRaw.mock.calls[0].slice(-2)).toEqual([50, 50]);
+    expect(mockAttachCanonicalPaths).not.toHaveBeenCalled();
+    expect(rows).toEqual([
+      expect.objectContaining({
+        realEstateType: 'villa-sale',
+        buildingKey: 'a'.repeat(64),
+        canonicalPath: sharedPath,
+        lastmod: '2026-07-16',
+      }),
+    ]);
   });
 
   it('캐시하지 않는다 — 매 호출마다 조회한다', async () => {

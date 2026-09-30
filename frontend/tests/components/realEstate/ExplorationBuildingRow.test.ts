@@ -115,9 +115,31 @@ describe('ExplorationBuildingRow', () => {
     })
 
     expect(wrapper.find('a').attributes('href')).toBe(
-      `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('도곡렉슬')}/${building.buildingKey}?mode=jeonse`,
+      `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('도곡렉슬')}?mode=jeonse`,
     )
     expect(wrapper.text()).toContain('도곡동 527')
+  })
+
+  it('uses the page realEstateType when API list rows omit building.type', () => {
+    const wrapper = mount(ExplorationBuildingRow, {
+      props: {
+        building: {
+          ...building,
+          type: undefined,
+          latestDeals: {
+            sale: { ...building.latestDeals!.sale!, kind: 'sale' },
+            jeonse: null,
+            wolse: null,
+          },
+        },
+        mode: 'sale',
+        realEstateType: 'villa-sale',
+      },
+    })
+
+    expect(wrapper.find('a').attributes('href')).toBe(
+      `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('도곡렉슬')}`,
+    )
   })
 
   it('uses the original building type link when there are no deals', () => {
@@ -129,13 +151,15 @@ describe('ExplorationBuildingRow', () => {
     })
 
     expect(wrapper.find('a').attributes('href')).toBe(
-      `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('도곡렉슬')}/${building.buildingKey}`,
+      `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('도곡렉슬')}`,
     )
   })
 
-  it('keeps same-name addresses distinct by building key', () => {
+  it('keeps same-name addresses distinct when a readable canonicalPath is supplied', () => {
+    const firstPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('도곡렉슬')}/${encodeURIComponent('도곡동-527')}`
+    const secondPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('도곡렉슬')}/${encodeURIComponent('역삼동-785-10')}`
     const first = mount(ExplorationBuildingRow, {
-      props: { building, mode: 'sale' },
+      props: { building: { ...building, canonicalPath: firstPath }, mode: 'sale' },
     })
     const second = mount(ExplorationBuildingRow, {
       props: {
@@ -144,12 +168,15 @@ describe('ExplorationBuildingRow', () => {
           buildingKey: 'b'.repeat(64),
           dongName: '역삼동',
           jibun: '785-10',
+          canonicalPath: secondPath,
         },
         mode: 'sale',
       },
     })
 
     expect(first.find('a').attributes('href')).not.toBe(second.find('a').attributes('href'))
+    expect(first.find('a').attributes('href')).toBe(firstPath)
+    expect(second.find('a').attributes('href')).toBe(secondPath)
     expect(first.text()).toContain('도곡동 527')
     expect(second.text()).toContain('역삼동 785-10')
   })

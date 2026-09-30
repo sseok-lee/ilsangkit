@@ -40,6 +40,19 @@ describe('ExactDealFilters', () => {
     expect(wrapper.find('#exact-filter-status').text()).toBe('적용 조건 · 월세 · 전용 84.90㎡ · 6개월 · 보증금 0만원')
   })
 
+  it('전체 기간을 표시하고 단기 기간과 전체 사이를 전환한다', async () => {
+    const wrapper = mount(ExactDealFilters, {
+      props: { filters: { ...baseFilters, months: 0 }, options, pending: false },
+    })
+
+    const period = wrapper.find('select[name="months"]')
+    expect((period.element as HTMLSelectElement).value).toBe('0')
+    expect(wrapper.find('#exact-filter-status').text()).toContain('전체 기간')
+    await period.setValue('6')
+    await period.setValue('0')
+    expect(wrapper.emitted('patch')).toEqual([[{ months: 6 }], [{ months: 0 }]])
+  })
+
   it('적용된 area/deposit이 options에 없어도 현재 적용 조건을 native value로 보존한다', () => {
     const wrapper = mount(ExactDealFilters, {
       props: {

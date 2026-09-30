@@ -44,9 +44,23 @@ describe('refreshSummary (city-chunked)', () => {
 
   afterEach(() => {
     delete process.env.REAL_ESTATE_SUMMARY_MODE;
+    delete process.env.REAL_ESTATE_URL_MODE;
     delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
     delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
     rmSync(lockDir, { recursive: true, force: true });
+  });
+
+  it('does not report a city refresh as published when its URL registry cannot be prepared', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+    // This transaction deliberately has no readable registry. Summary publication
+    // must fail inside its transaction rather than commit URLs that cannot resolve.
+    const result = await refreshAddressSummaries(['apt-sale']);
+    expect(result.complete).toBe(false);
+    expect(result.batches).toEqual([expect.objectContaining({
+      type: 'apt-sale', city: '서울', status: 'failed', rowCount: 0,
+    })]);
   });
 
   it('알 수 없는 타입은 throw', async () => {

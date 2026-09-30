@@ -31,7 +31,54 @@ describe('toCitySlug / toDistrictSlug (frontend)', () => {
 })
 
 describe('toRealEstateUrl (frontend mirror)', () => {
-  it('appends a stable building key as the final path segment', () => {
+  it('uses backend canonicalPath before building a keyed fallback URL', () => {
+    const buildingKey = 'a'.repeat(64)
+    const canonicalPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${encodeURIComponent('역삼동-12-3')}`
+
+    expect(
+      toRealEstateUrl({
+        type: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '스톤빌리지',
+        buildingKey,
+        canonicalPath,
+      }),
+    ).toBe(canonicalPath)
+  })
+
+  it('ignores an accidental hash canonicalPath and falls back to the original public URL', () => {
+    const buildingKey = 'A'.repeat(64)
+    const canonicalPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${buildingKey}`
+
+    expect(
+      toRealEstateUrl({
+        type: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '스톤빌리지',
+        buildingKey,
+        canonicalPath,
+      }),
+    ).toBe(`/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}`)
+  })
+
+  it('does not reject a base URL whose building name happens to be 64 hex characters', () => {
+    const hexName = 'a'.repeat(64)
+    const canonicalPath = `/real-estate/apt-sale/seoul/gangnam/${hexName}`
+
+    expect(
+      toRealEstateUrl({
+        type: 'apt-sale',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: hexName,
+        canonicalPath,
+      }),
+    ).toBe(canonicalPath)
+  })
+
+  it('keeps the original public URL even when an internal building key exists', () => {
     const buildingKey = 'a'.repeat(64)
 
     expect(
@@ -43,7 +90,7 @@ describe('toRealEstateUrl (frontend mirror)', () => {
         buildingKey,
       }),
     ).toBe(
-      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}/${buildingKey}`,
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('스톤빌리지')}`,
     )
   })
 

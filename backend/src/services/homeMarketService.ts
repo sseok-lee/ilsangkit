@@ -17,6 +17,7 @@ import {
   GWANGJU_GU_BJD,
 } from './cityMapping.js';
 import { regionFilterToSql } from './realEstateService.js';
+import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const PARTIAL_CACHE_TTL_MS = 60 * 1000;
@@ -323,7 +324,7 @@ async function queryRecent(
   `;
 
   const rows = await db.$queryRawUnsafe<RawRecentRow[]>(sql, property, ...params);
-  return rows.map((row) => ({
+  const items = rows.map((row) => ({
     type: row.type,
     transactionId: row.transactionId,
     city: row.city,
@@ -337,6 +338,9 @@ async function queryRecent(
     amount: Number(row.amount),
     area: row.area === null ? null : Number(row.area).toFixed(2),
   }));
+  const itemsForUrl = items.map(({ type: _type, ...item }) => item);
+  const withCanonicalPaths = await attachRealEstateCanonicalPaths(itemsForUrl, `${property}-sale`);
+  return withCanonicalPaths.map((item, index) => ({ ...item, type: items[index].type }));
 }
 
 function buildWhereClauses(region: ResolvedRegion, window: DateWindow): { clauses: string[]; params: unknown[] } {

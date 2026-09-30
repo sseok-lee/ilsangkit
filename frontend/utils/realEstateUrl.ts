@@ -2,7 +2,8 @@
  * 부동산 상세/목록 URL 생성 유틸 (frontend).
  *
  * URL 스펙:
- *   /real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingNameNFC}/{buildingKey?}
+ *   /real-estate/{realEstateType}/{citySlug}/{districtSlug}/{buildingNameNFC}
+ *   또는 백엔드가 확정해 내려준 canonicalPath
  *
  * Backend `backend/src/lib/realEstateUrl.ts` 와 **동일 시그니처/동일 동작**을 유지.
  * 규칙이 변경되면 양쪽 파일을 함께 수정하고 vitest 양쪽을 실행할 것.
@@ -37,8 +38,10 @@ export interface RealEstateUrlParts {
   district: string
   /** 건물명. NFD/NFC 어느 쪽이어도 입력 가능 — 내부에서 NFC로 정규화. */
   buildingName: string
-  /** 동일 이름 건물을 주소 단위로 구분하는 SHA-256 키. */
+  /** 동일 이름 건물을 주소 단위로 구분하는 내부 키. 공개 URL에는 노출하지 않는다. */
   buildingKey?: string | null
+  /** 공개 URL 소유권 레지스트리가 확정한 상대 canonical path. */
+  canonicalPath?: string | null
 }
 
 export function toCitySlug(city: string): string {
@@ -55,6 +58,13 @@ export function toDistrictSlug(district: string): string {
   return DISTRICT_SLUG_MAP[trimmed] ?? trimmed.toLowerCase().replace(/\s+/g, '-')
 }
 
+function isHashCanonicalPath(path: string): boolean {
+  const segments = path.split('/').filter(Boolean)
+  if (segments.length !== 6) return false
+  if (segments[0] !== 'real-estate') return false
+  return /^[a-f0-9]{64}$/i.test(segments[5] ?? '')
+}
+
 /**
  * 2026-07-01 전남광주통합특별시: flat 27 시군구 단일 slug(jeonnamgwangju).
  * 신설명이면 district와 무관하게 jeonnamgwangju로, 그 외 도시는 기존 toCitySlug 그대로.
@@ -63,7 +73,8 @@ export function toDistrictSlug(district: string): string {
  */
 const MERGED_JNGJ_CITY = '전남광주통합특별시'
 
-export function toCitySlugByDistrict(city: string, _district: string): string {
+export function toCitySlugByDistrict(city: string, district: string): string {
+  void district
   if (city.trim() === MERGED_JNGJ_CITY) {
     return 'jeonnamgwangju'
   }
@@ -71,11 +82,13 @@ export function toCitySlugByDistrict(city: string, _district: string): string {
 }
 
 export function toRealEstateUrl(parts: RealEstateUrlParts): string {
+  if (parts.canonicalPath && !isHashCanonicalPath(parts.canonicalPath)) {
+    return parts.canonicalPath
+  }
   const citySlug = toCitySlugByDistrict(parts.city, parts.district)
   const districtSlug = toDistrictSlug(parts.district)
   const nfcName = parts.buildingName.normalize('NFC')
-  const base = `/real-estate/${parts.type}/${citySlug}/${districtSlug}/${encodeURIComponent(nfcName)}`
-  return parts.buildingKey ? `${base}/${parts.buildingKey}` : base
+  return `/real-estate/${parts.type}/${citySlug}/${districtSlug}/${encodeURIComponent(nfcName)}`
 }
 
 export function toRealEstateListUrl(parts: Omit<RealEstateUrlParts, 'buildingName'>): string {

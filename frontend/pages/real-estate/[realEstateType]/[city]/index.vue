@@ -59,6 +59,7 @@
             v-for="building in topComplexes"
             :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
             :building="building"
+            :real-estate-type="realEstateTypeParam"
             :mode="tabPart"
           />
         </div>

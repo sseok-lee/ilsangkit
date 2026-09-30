@@ -54,7 +54,7 @@ describe('HomeTrendingBuildings', () => {
     expect(saleLink.exists()).toBe(true);
   });
 
-  it('uses the keyed detail path and displays dong/jibun when supplied', () => {
+  it('keeps the original public detail path and displays dong/jibun when supplied', () => {
     const buildingKey = 'a'.repeat(64);
     const wrapper = mount(HomeTrendingBuildings, {
       props: {
@@ -68,7 +68,7 @@ describe('HomeTrendingBuildings', () => {
 
     expect(wrapper.text()).toContain('송파구 가락동 479');
     expect(wrapper.get('a[href*="/real-estate/apt-sale/"]').attributes('href')).toBe(
-      `/real-estate/apt-sale/seoul/songpa/${encodeURIComponent('헬리오시티')}/${buildingKey}`,
+      `/real-estate/apt-sale/seoul/songpa/${encodeURIComponent('헬리오시티')}`,
     );
   });
 });

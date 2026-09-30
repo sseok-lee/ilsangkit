@@ -19,6 +19,10 @@ import {
   getDetailWindow,
   normalizeExactArea,
 } from './realEstateExactFilter.js';
+import {
+  getRealEstateCanonicalPath,
+  isPreservedRealEstateUrlMode,
+} from './realEstateUrlRegistry.js';
 import type {
   DealMode,
   DealPoint,
@@ -102,6 +106,10 @@ interface RawLocationRow {
   lng: string | number | Prisma.Decimal | null;
 }
 
+interface RawWindowRow {
+  fromDate: string | Date | null;
+}
+
 export function serializeDetailPoints(rows: RawDetailPoint[]): DealPoint[] {
   return rows.map((row) => ({
     id: row.id,
@@ -120,9 +128,9 @@ export async function getDetailSnapshot(
 ): Promise<DetailSnapshot<SerializedTransaction>> {
   const mode = validateMode(type, query.mode);
   const table = tableForMode(type, mode);
-  const window = getDetailWindow(now, query.months);
+  const requestedWindow = getDetailWindow(now, query.months);
   const generatedAt = now.toISOString();
-  const today = window.to;
+  const today = requestedWindow.to;
   const identity = await resolveDetailIdentity(type, query);
 
   return prisma.$transaction(async (tx) => {
@@ -134,11 +142,14 @@ export async function getDetailSnapshot(
       requestedArea !== null && area !== requestedArea ? 'area-reset' : null;
 
     if (!area) {
-      return emptySnapshot(identity, mode, query.months, window, areas, generatedAt, adjustment);
+      return emptySnapshot(identity, mode, query.months, requestedWindow, areas, generatedAt, adjustment);
     }
 
+    const areaWindow = query.months === 0
+      ? await getRetainedDetailWindow(tx, table, identity, mode, today, area)
+      : requestedWindow;
     const deposits = mode === 'wolse'
-      ? await getDepositOptions(tx, table, identity, window, area)
+      ? await getDepositOptions(tx, table, identity, areaWindow, area)
       : [];
     const deposit = mode === 'wolse' ? chooseDeposit(deposits, query.deposit) : null;
 
@@ -147,9 +158,12 @@ export async function getDetailSnapshot(
     }
 
     if (mode === 'wolse' && deposit === null) {
-      return emptySnapshot(identity, mode, query.months, window, areas, generatedAt, adjustment, deposits, area);
+      return emptySnapshot(identity, mode, query.months, areaWindow, areas, generatedAt, adjustment, deposits, area);
     }
 
+    const window = query.months === 0 && mode === 'wolse' && deposit !== null
+      ? await getRetainedDetailWindow(tx, table, identity, mode, today, area, deposit)
+      : areaWindow;
     const normalized = { table, identity, mode, months: query.months, area, deposit };
     const pointRows = await getPointRows(tx, normalized, window);
     const total = await countRows(tx, normalized, window);
@@ -197,15 +211,20 @@ export async function getDetailPage(
     deposit = query.deposit;
   }
 
-  const window = getDetailWindow(now, query.months);
+  const requestedWindow = getDetailWindow(now, query.months);
+  const today = requestedWindow.to;
+  const identity = await resolveDetailIdentity(type, query);
   const normalized = {
     table,
-    identity: await resolveDetailIdentity(type, query),
+    identity,
     mode,
     months: query.months,
     area,
     deposit,
   };
+  const window = query.months === 0
+    ? await getRetainedDetailWindow(prisma, table, identity, mode, today, area, deposit)
+    : requestedWindow;
   const page = Math.max(1, Math.floor(query.page));
   const total = await countRows(prisma, normalized, window);
   const rows = await getTableRows(prisma, normalized, window, page);
@@ -277,7 +296,20 @@ async function resolveDetailIdentity(type: RealEstateType, input: DetailIdentity
     if (!building || building.regionMatched === false || building.bjdCode !== input.bjdCode) {
       throw new NotFoundError('부동산 상세 정보를 찾을 수 없습니다.');
     }
-    return { ...identity, ...(building.buildingKey ? { buildingKey: building.buildingKey } : {}), dongName: building.dongName?.trim() ?? '', jibun: building.jibun?.trim() || null };
+    if (building.legacyGrouped) {
+      return {
+        ...identity,
+        ...(building.canonicalPath ? { canonicalPath: building.canonicalPath } : {}),
+        legacyGrouped: true,
+      };
+    }
+    return {
+      ...identity,
+      ...(building.buildingKey ? { buildingKey: building.buildingKey } : {}),
+      ...(building.canonicalPath ? { canonicalPath: building.canonicalPath } : {}),
+      dongName: building.dongName?.trim() ?? '',
+      jibun: building.jibun?.trim() || null,
+    };
   }
   const rows = await prisma.$queryRaw<Array<{ dongName: string; jibun: string | null }>>(Prisma.sql`
     SELECT dongName, jibun FROM RealEstateBuildingSummaryV2
@@ -286,7 +318,20 @@ async function resolveDetailIdentity(type: RealEstateType, input: DetailIdentity
     LIMIT 1
   `);
   if (!rows[0]) throw new NotFoundError('부동산 상세 정보를 찾을 수 없습니다.');
-  return { ...identity, buildingKey: input.buildingKey, dongName: rows[0].dongName.trim(), jibun: rows[0].jibun?.trim() || null };
+  const preservedUrlMode = isPreservedRealEstateUrlMode();
+  const canonicalPath = preservedUrlMode
+    ? await getRealEstateCanonicalPath(type, input.buildingKey)
+    : null;
+  if (preservedUrlMode && !canonicalPath) {
+    throw new Error(`Missing RealEstatePublicUrl mapping for ${type}:${input.buildingKey}`);
+  }
+  return {
+    ...identity,
+    buildingKey: input.buildingKey,
+    ...(canonicalPath ? { canonicalPath } : {}),
+    dongName: rows[0].dongName.trim(),
+    jibun: rows[0].jibun?.trim() || null,
+  };
 }
 
 function addressWhere(identity: DetailIdentity, alias: string): Prisma.Sql {
@@ -404,6 +449,37 @@ async function getLatestArea(
     LIMIT 1
   `);
   return rows[0] ? formatArea(rows[0].area) : null;
+}
+
+async function getRetainedDetailWindow(
+  client: QueryClient,
+  table: TableConfig,
+  identity: DetailIdentity,
+  mode: DealMode,
+  today: string,
+  area?: string,
+  deposit?: number | null,
+): Promise<DetailSnapshot<SerializedTransaction>['window']> {
+  const areaFilter = area === undefined
+    ? Prisma.empty
+    : Prisma.sql`AND t.exclusiveArea = ${new Prisma.Decimal(area)}`;
+  const depositFilter = mode === 'wolse' && deposit !== undefined && deposit !== null
+    ? Prisma.sql`AND t.deposit = ${BigInt(deposit)}`
+    : Prisma.empty;
+  const rows = await client.$queryRaw<RawWindowRow[]>(Prisma.sql`
+    SELECT DATE_FORMAT(MIN(${dealDateExpression('t')}), '%Y-%m-%d') AS fromDate
+    FROM ${Prisma.raw(table.table)} t
+    WHERE ${baseWhere(table, identity, mode)}
+      AND ${validKnownDateThrough(today, 't')}
+      AND ${requiredValueWhere(table, mode)}
+      ${areaFilter}
+      ${depositFilter}
+  `);
+  const from = rows[0]?.fromDate;
+  return {
+    from: from === null || from === undefined ? today : formatDateValue(from),
+    to: today,
+  };
 }
 
 async function getDepositOptions(

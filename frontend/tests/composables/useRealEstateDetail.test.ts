@@ -217,7 +217,7 @@ describe('useRealEstateDetail', () => {
           bjdCode: '11680',
           buildingName: '일상숲 리버파크',
           mode: 'sale',
-          months: 6,
+          months: 0,
         },
       },
     ])
@@ -305,7 +305,7 @@ describe('useRealEstateDetail', () => {
 
     expect(fetchCalls[1]).toMatchObject({
       url: 'http://api/api/real-estate/apt-rent/detail',
-      query: expect.objectContaining({ mode: 'wolse', months: 6 }),
+      query: expect.objectContaining({ mode: 'wolse', months: 0 }),
     })
     expect(asyncKeys).toContain('real-estate-detail:apt-rent:11680:일상숲 리버파크:wolse')
     expect(detail.snapshot.value?.filters.mode).toBe('wolse')
@@ -928,7 +928,7 @@ describe('useRealEstateDetail', () => {
     testGlobal.$fetch = vi.fn((url: string, opts?: { query?: Record<string, unknown> }) => {
       if (url.endsWith('/detail-overview'))
         return Promise.resolve({ success: true, data: saleOverview })
-      if (url.endsWith('/detail') && opts?.query?.months === 6) return slowInitial.promise
+      if (url.endsWith('/detail') && opts?.query?.months === 0) return slowInitial.promise
       if (url.endsWith('/detail'))
         return Promise.resolve({
           success: true,
@@ -1047,7 +1047,7 @@ describe('useRealEstateDetail', () => {
     expect(detail.snapshot.value?.filters.mode).toBe('jeonse')
     expect(fetchCalls.at(-1)).toMatchObject({
       url: 'http://api/api/real-estate/apt-rent/detail',
-      query: expect.objectContaining({ mode: 'jeonse', months: 6 }),
+      query: expect.objectContaining({ mode: 'jeonse', months: 0 }),
     })
   })
 })

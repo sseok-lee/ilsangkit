@@ -121,6 +121,7 @@ export interface CanonicalRealEstatePathInput {
   type: RealEstateUrlType
   buildingName: string
   buildingKey?: string | null
+  canonicalPath?: string | null
   actualCity: string | null | undefined
   actualDistrict: string | null | undefined
 }
@@ -145,6 +146,7 @@ export function buildCanonicalRealEstatePath(input: CanonicalRealEstatePathInput
     district: input.actualDistrict!.trim(),
     buildingName: input.buildingName,
     buildingKey: input.buildingKey,
+    canonicalPath: input.canonicalPath,
   })
 }
 

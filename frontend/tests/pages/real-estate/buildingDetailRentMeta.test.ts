@@ -25,6 +25,10 @@ vi.mock('~/composables/useRealEstate', () => ({
   useRealEstate: () => realEstateMocks,
 }))
 
+function mockResolverResponse() {
+  return { success: true, data: { mode: 'keyed', canonicalPath: null } }
+}
+
 // 부평 현대 라이브 표본: 보증금 2,000만원 / 월 80만원, 2026년 8월
 const rentBuilding: BuildingInfo = {
   bjdCode: '2823710100', buildingName: '현대', city: '인천광역시', district: '부평구',
@@ -89,13 +93,21 @@ beforeEach(() => {
     generatedAt: '2026-09-21T00:00:00.000Z',
     adjustment: null,
   }
+  vi.stubGlobal('$fetch', vi.fn(async (url: string) => {
+    if (url.includes('/api/real-estate/resolve-url')) return mockResolverResponse()
+    if (url.includes('/api/real-estate/canonical-url')) return mockResolverResponse()
+    if (url.includes('/api/meta/sync-status')) return { success: true, data: {} }
+    throw new Error(`unexpected fetch: ${url}`)
+  }))
   vi.stubGlobal('useRouter', () => ({ push: vi.fn(), replace: vi.fn() }))
   vi.stubGlobal('createError', (o: { statusCode: number; statusMessage: string }) =>
     Object.assign(new Error(o.statusMessage), o))
   vi.stubGlobal('useAsyncData', vi.fn(async (key: string, handler?: () => Promise<unknown>) => {
     asyncDataKeys.push(key)
     let data: unknown = null
-    if (key.startsWith('re-detail-new-')) {
+    if (key.startsWith('re-public-url-resolution-')) {
+      data = handler ? await handler() : { mode: 'keyed', canonicalPath: null }
+    } else if (key.startsWith('re-detail-new-')) {
       data = executeInitialSsrLoader && handler
         ? { ...payload, ...(await handler()) as Record<string, unknown> }
         : payload

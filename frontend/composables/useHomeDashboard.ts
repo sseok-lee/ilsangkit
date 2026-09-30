@@ -2,6 +2,7 @@ import type { RealEstatePropertyType } from '~/types/realEstate'
 
 export interface TrendingBuildingItem {
   buildingKey?: string;
+  canonicalPath?: string | null;
   buildingName: string;
   city: string;
   district: string;

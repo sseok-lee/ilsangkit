@@ -109,6 +109,7 @@ function buildUrl(type: ColType, b: TrendingBuildingItem): string {
     district: b.district,
     buildingName: b.buildingName,
     buildingKey: b.buildingKey,
+    canonicalPath: b.canonicalPath,
   });
 }
 

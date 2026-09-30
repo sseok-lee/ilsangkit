@@ -267,6 +267,7 @@ function recentUrl(item: RecentBuilding): string {
     district: item.district,
     buildingName: item.buildingName,
     buildingKey: item.buildingKey,
+    canonicalPath: item.canonicalPath,
   })
 }
 

@@ -528,12 +528,12 @@ import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { useApiBase } from '~/composables/useApiBase'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, toRealEstateListUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { isDetailSsrDegraded } from '~/utils/detailSsrDegraded'
-import { suppressAds } from '~/composables/useAdsPolicy'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
@@ -545,12 +545,13 @@ const FacilityMap = defineAsyncComponent(() => import('~/components/map/Facility
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
 
 definePageMeta({
-  path: '/real-estate/:realEstateType/:city/:district/:buildingName/:buildingKey?',
+  path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
   key: route => route.path,
 })
 
 const route = useRoute()
 const router = useRouter()
+const apiBase = useApiBase()
 
 const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscription']
 
@@ -559,16 +560,13 @@ const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscripti
 const realEstateTypeParam = route.params.realEstateType as string
 const citySlugParam = route.params.city as string
 const districtSlugParam = route.params.district as string
-const rawBuildingKeyParam = Array.isArray(route.params.buildingKey)
-  ? route.params.buildingKey[0]
-  : route.params.buildingKey
-const requestedBuildingKey = typeof rawBuildingKeyParam === 'string' && rawBuildingKeyParam.length > 0
-  ? rawBuildingKeyParam
-  : undefined
-
-if (requestedBuildingKey && !/^[a-f0-9]{64}$/.test(requestedBuildingKey)) {
-  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
-}
+const rawAddressSuffixParam = Array.isArray(route.params.addressSuffix)
+  ? route.params.addressSuffix[0]
+  : route.params.addressSuffix
+const hasAddressSuffix = typeof rawAddressSuffixParam === 'string'
+  && rawAddressSuffixParam.length > 0
+const hasHashAddressSuffix = typeof rawAddressSuffixParam === 'string'
+  && /^[a-f0-9]{64}$/i.test(rawAddressSuffixParam)
 
 // Validate realEstateType
 if (!isRealEstateUrlType(realEstateTypeParam)) {
@@ -597,6 +595,108 @@ const buildingName = computed(() =>
   decodeURIComponent(route.params.buildingName as string).normalize('NFC'),
 )
 
+type PublicUrlResolution =
+  | { mode: 'keyed'; canonicalPath: null }
+  | {
+    mode: 'preserved'
+    type: RealEstateUrlType
+    buildingKey?: string
+    bjdCode: string
+    buildingName: string
+    canonicalPath: string
+    redirect: boolean
+    legacyGrouped?: true
+  }
+
+function stringifyRouteQuery(query: Record<string, unknown>): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value == null) continue
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item != null) params.append(key, String(item))
+      }
+    } else {
+      params.set(key, String(value))
+    }
+  }
+  const serialized = params.toString()
+  return serialized ? `?${serialized}` : ''
+}
+
+function isSafeRealEstatePath(path: string | null | undefined): path is string {
+  return typeof path === 'string'
+    && path.startsWith('/real-estate/')
+    && !path.startsWith('//')
+}
+
+function decodePathSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment).normalize('NFC')
+  } catch {
+    return segment.normalize('NFC')
+  }
+}
+
+function normalizePublicUrlPath(path: string): string {
+  const [pathname = ''] = path.split('?', 1)
+  return pathname
+    .split('/')
+    .map((segment, index) => index === 0 ? '' : encodeURIComponent(decodePathSegment(segment)))
+    .join('/')
+}
+
+function toPublicUrlResolutionError(err: unknown): never {
+  const status = (err as { statusCode?: number; status?: number }).statusCode
+    ?? (err as { status?: number }).status
+  if (status === 404) {
+    throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+  }
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+async function fetchPublicUrlResolution(path: string): Promise<PublicUrlResolution> {
+  const res = await $fetch<{ success: boolean; data: PublicUrlResolution | null }>(
+    `${apiBase}/api/real-estate/resolve-url`,
+    { query: { path }, timeout: 8000 },
+  )
+  if (res.data?.mode === 'keyed') {
+    return { mode: 'keyed', canonicalPath: null }
+  }
+  if (res.data?.mode === 'preserved'
+    && (res.data.buildingKey || res.data.legacyGrouped)
+    && isSafeRealEstatePath(res.data.canonicalPath)) {
+    return res.data
+  }
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+const publicUrlPath = normalizePublicUrlPath(route.path)
+const { data: publicUrlResolution, error: publicUrlResolutionError } = await useAsyncData(
+  `re-public-url-resolution-${publicUrlPath}`,
+  () => fetchPublicUrlResolution(publicUrlPath),
+)
+
+if (publicUrlResolutionError.value) {
+  toPublicUrlResolutionError(publicUrlResolutionError.value)
+}
+if (!publicUrlResolution.value) {
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+if (publicUrlResolution.value?.mode === 'preserved' && publicUrlResolution.value.redirect) {
+  await navigateTo(
+    `${publicUrlResolution.value.canonicalPath}${stringifyRouteQuery(route.query)}`,
+    { redirectCode: 301 },
+  )
+}
+if (publicUrlResolution.value?.mode === 'keyed' && hasAddressSuffix) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+if (hasHashAddressSuffix) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+
 // ── Derived values ────────────────────────────────────────────────────────────
 
 // Split realEstateType: e.g. "apt-sale" → propertyType="apt", tab="sale"
@@ -615,16 +715,7 @@ const routeCurrentTab = computed<TransactionMode>(() =>
 const currentTab = computed<TransactionMode>({
   get: () => routeCurrentTab.value,
   set: (val) => {
-    const siblingType = `${routePropertyTypePart.value}-${val}` as RealEstateUrlType
-    router.push(
-      toRealEstateUrl({
-        type: siblingType,
-        city: cityName,
-        district: districtName,
-        buildingName: buildingName.value,
-        buildingKey: activeBuildingKey(),
-      }),
-    )
+    void pushTransactionTab(val)
   },
 })
 
@@ -634,8 +725,79 @@ const propertyMeta = computed(() => PROPERTY_TYPE_META[routePropertyTypePart.val
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 
 const buildingInfo = ref<BuildingInfo | null>(null)
+function isLegacyGroupedResolution(): boolean {
+  return publicUrlResolution.value?.mode === 'preserved'
+    && publicUrlResolution.value.legacyGrouped === true
+}
 function activeBuildingKey(): string | undefined {
-  return requestedBuildingKey ?? buildingInfo.value?.buildingKey
+  if (isLegacyGroupedResolution()) return undefined
+  const resolvedKey = publicUrlResolution.value?.mode === 'preserved'
+    ? publicUrlResolution.value.buildingKey
+    : undefined
+  return resolvedKey ?? buildingInfo.value?.buildingKey
+}
+function activeCanonicalPath(): string | null {
+  const resolvedPath = publicUrlResolution.value?.mode === 'preserved'
+    ? publicUrlResolution.value.canonicalPath
+    : null
+  return resolvedPath ?? buildingInfo.value?.canonicalPath ?? null
+}
+
+async function canonicalPathForType(type: RealEstateUrlType, buildingKey: string | undefined): Promise<string | null> {
+  if (!buildingKey) return null
+  const res = await $fetch<{ success: boolean; data: { mode: 'preserved'; canonicalPath: string | null } | { mode: 'keyed'; canonicalPath: null } }>(
+    `${apiBase}/api/real-estate/canonical-url`,
+    { query: { type, buildingKey }, timeout: 8000 },
+  )
+  if (res.data?.mode !== 'preserved') return null
+  return isSafeRealEstatePath(res.data.canonicalPath) ? res.data.canonicalPath : null
+}
+
+async function canonicalPathForLegacyGroupedType(type: RealEstateUrlType): Promise<string | null> {
+  const basePath = toRealEstateUrl({
+    type,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+  })
+  const resolved = await fetchPublicUrlResolution(basePath)
+  if (resolved.mode !== 'preserved') return null
+  return isSafeRealEstatePath(resolved.canonicalPath) ? resolved.canonicalPath : null
+}
+
+async function pathForTransactionTab(tab: TransactionMode): Promise<string | null> {
+  const siblingType = `${routePropertyTypePart.value}-${tab}` as RealEstateUrlType
+  if (isLegacyGroupedResolution()) {
+    return canonicalPathForLegacyGroupedType(siblingType)
+  }
+  const buildingKey = activeBuildingKey()
+  const canonicalPath = await canonicalPathForType(siblingType, buildingKey)
+  if (publicUrlResolution.value?.mode === 'preserved' && !canonicalPath) {
+    return null
+  }
+  return toRealEstateUrl({
+    type: siblingType,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+    buildingKey,
+    canonicalPath,
+  })
+}
+
+async function pushTransactionTab(tab: TransactionMode, query: Record<string, string> = {}): Promise<void> {
+  let path: string | null = null
+  try {
+    path = await pathForTransactionTab(tab)
+  } catch {
+    fetchFailed.value = true
+    return
+  }
+  if (!path) return
+  await router.push({
+    path,
+    query,
+  })
 }
 const fetchFailed = ref(false)   // SSR building-info 일시 실패 여부
 const summary = ref<StatsSummary | null>(null)
@@ -658,7 +820,12 @@ const noindex = computed(() =>
 )
 
 // degraded(503) 또는 noindex(빈 건물) 페이지에선 광고 발화를 억제한다 (SSR·클라 네비 모두).
-watchEffect(() => suppressAds(fetchFailed.value || noindex.value))
+// useState 는 setup 문맥에서 한 번만 잡고, reactive watcher 안에서는 ref 값만 바꾼다.
+// noindex 가 비동기 SSR 데이터 반영 뒤 true 로 바뀔 때 useState 를 다시 호출하면 Nuxt context 가 없어 500 이 날 수 있다.
+const adsSuppressed = useState<boolean>('ads:suppressed', () => false)
+watchEffect(() => {
+  adsSuppressed.value = fetchFailed.value || noindex.value
+})
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
@@ -734,6 +901,7 @@ useHead(() => {
     district: districtName,
     buildingName: buildingName.value,
     buildingKey: activeBuildingKey(),
+    canonicalPath: activeCanonicalPath(),
   })}`
 
   // 치수는 실제로 만들어진 URL 에서 되읽는다. 예전엔 좌표 유무를 truthy 로 따로 판정했는데,
@@ -778,8 +946,6 @@ useHead(() => {
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
 const { getBuildingInfo, getComplexList, getNearby } = useRealEstate()
-const { useApiBase } = await import('~/composables/useApiBase')
-const apiBase = useApiBase()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema, setDetailProvenance } = useStructuredData()
 
@@ -799,7 +965,8 @@ setBreadcrumbSchema([
       city: cityName,
       district: districtName,
       buildingName: buildingName.value,
-      buildingKey: requestedBuildingKey,
+      buildingKey: activeBuildingKey(),
+      canonicalPath: activeCanonicalPath(),
     }),
   },
 ])
@@ -1082,7 +1249,8 @@ const exactAverage = computed(() => {
 })
 
 const periodTradeLabel = computed(() => {
-  const months = snapshot.value?.filters.months ?? 6
+  const months = snapshot.value?.filters.months ?? 0
+  if (months === 0) return '전체 기간 거래'
   if (months === 6) return '최근 6개월 거래'
   if (months === 12) return '최근 1년 거래'
   return '최근 3년 거래'
@@ -1134,16 +1302,24 @@ async function resolveBuildingContext(): Promise<{ bjdCode: string; building: Bu
     return { bjdCode: resolvedBjdCode.value, building: buildingInfo.value }
   }
 
-  if (requestedBuildingKey) {
+  const buildingKey = activeBuildingKey()
+  if (buildingKey) {
     const keyedBuilding = await getBuildingInfo(
       apiSlug.value,
       '',
       buildingName.value,
-      requestedBuildingKey,
+      buildingKey,
     )
     return {
       bjdCode: keyedBuilding?.bjdCode ?? '',
       building: keyedBuilding,
+    }
+  }
+
+  if (publicUrlResolution.value?.mode === 'preserved' && publicUrlResolution.value.legacyGrouped) {
+    return {
+      bjdCode: publicUrlResolution.value.bjdCode,
+      building: null,
     }
   }
 
@@ -1172,8 +1348,9 @@ const FACILITY_SUMMARY_LABELS: Record<(typeof FACILITY_SUMMARY_CATS)[number], st
 
 // ── SSR initial data load ─────────────────────────────────────────────────────
 
+const detailPayloadKey = `re-detail-new-${realEstateType}-${publicUrlPath}`
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
-  `re-detail-new-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}${requestedBuildingKey ? `-${requestedBuildingKey}` : ''}`,
+  detailPayloadKey,
   async () => {
     let infoFetchFailed = false
     let bjdCode = ''
@@ -1189,7 +1366,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     const [infoResult] = await Promise.allSettled([
       primedBuilding
         ? Promise.resolve(primedBuilding)
-        : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value, requestedBuildingKey),
+        : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value, activeBuildingKey()),
     ])
     const resolvedBuildingInfo = infoResult.status === 'fulfilled' ? infoResult.value : null
     if (infoResult.status === 'rejected') infoFetchFailed = true
@@ -1244,12 +1421,6 @@ if (!ssrError.value
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
 
-if (requestedBuildingKey
-  && ssrData.value?.buildingInfo
-  && ssrData.value.buildingInfo.buildingKey !== requestedBuildingKey) {
-  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
-}
-
 // ── 지역 불일치 문서 통합 (301) ───────────────────────────────────────────────
 //
 // 배경·프로덕션 실측(2026-09-04)은 utils/realEstateRegion.ts 상단 주석 참조. 요약하면
@@ -1270,6 +1441,7 @@ if (regionSourceInfo && !fetchFailed.value) {
     type: realEstateType,
     buildingName: buildingName.value,
     buildingKey: activeBuildingKey(),
+    canonicalPath: activeCanonicalPath(),
     actualCity: regionSourceInfo.city,
     actualDistrict: regionSourceInfo.district,
     requestedCitySlug: citySlugParam,
@@ -1351,7 +1523,7 @@ const {
 async function resetDetailFiltersForRoute() {
   await setFilters({
     mode: initialDetailMode.value ?? (currentTab.value === 'sale' ? 'sale' : 'jeonse'),
-    months: 6,
+    months: 0,
     area: undefined,
     deposit: undefined,
   })
@@ -1397,7 +1569,8 @@ function applyOverview(overviewValue: DetailOverview | null): void {
   const existing = buildingInfo.value
 
   buildingInfo.value = {
-    buildingKey: overviewValue.identity.buildingKey ?? existing?.buildingKey ?? requestedBuildingKey,
+    buildingKey: overviewValue.identity.buildingKey ?? existing?.buildingKey,
+    canonicalPath: existing?.canonicalPath ?? activeCanonicalPath(),
     bjdCode: overviewValue.identity.bjdCode || existing?.bjdCode || resolvedBjdCode.value,
     buildingName: overviewValue.identity.buildingName || existing?.buildingName || buildingName.value,
     city: existing?.city || cityName,
@@ -1518,23 +1691,10 @@ async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
   if (patch.mode) {
     const nextTab: TransactionMode = patch.mode === 'sale' ? 'sale' : 'rent'
     if (nextTab !== currentTab.value) {
-      const siblingType = `${routePropertyTypePart.value}-${nextTab}` as RealEstateUrlType
-      await router.push({
-        path: toRealEstateUrl({
-          type: siblingType,
-          city: cityName,
-          district: districtName,
-          buildingName: buildingName.value,
-          buildingKey: activeBuildingKey(),
-        }),
-        query: nextTab === 'rent' ? { mode: patch.mode } : {},
-      })
-      await setFilters({
-        mode: patch.mode,
-        months: 6,
-        area: undefined,
-        deposit: undefined,
-      })
+      await pushTransactionTab(nextTab, nextTab === 'rent' ? { mode: patch.mode } : {})
+      // 다른 탭 URL 로 이동하는 동안 같은 컴포넌트가 재사용될 수 있다.
+      // 이전 route/context 로 즉시 setFilters 를 호출하면 legacy grouped 상세에서
+      // 새 rent API 를 buildingKey 없이 요청할 수 있으므로, 새 route watcher 에 refetch 를 맡긴다.
       return
     }
   }
@@ -1583,6 +1743,7 @@ setRealEstateListingSchema(() => {
       district: districtName,
       buildingName: buildingName.value,
       buildingKey: activeBuildingKey(),
+      canonicalPath: activeCanonicalPath(),
     })}`,
     buildYear: info?.buildYear,
     totalCount: summary.value?.totalCount,
@@ -1833,7 +1994,7 @@ const hasNearby = computed(() =>
 .estate-section-head h2,
 .estate-flat-section :deep(h2),
 .estate-nearby-group :deep(h2),
-.estate-nearby-group :deep(h3) {
+.estate-nearby-group :deep(header h3) {
   color: var(--estate-ink);
   font-size: 21px;
   font-weight: 700;
@@ -2002,7 +2163,7 @@ const hasNearby = computed(() =>
   .estate-section-head h2,
   .estate-flat-section :deep(h2),
   .estate-nearby-group :deep(h2),
-  .estate-nearby-group :deep(h3) {
+  .estate-nearby-group :deep(header h3) {
     font-size: 24px;
   }
 

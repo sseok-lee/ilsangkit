@@ -21,6 +21,10 @@ import {
   toAbsoluteRealEstateUrl,
   type RealEstateUrlType,
 } from '../lib/realEstateUrl.js';
+import {
+  attachRealEstateCanonicalPaths,
+  isPreservedRealEstateUrlMode,
+} from '../services/realEstateUrlRegistry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_FILE = path.resolve(__dirname, '../../data/indexing-log.json');
@@ -76,8 +80,12 @@ export async function fetchBuildingUrls(): Promise<string[]> {
      WHERE buildingName IS NOT NULL AND buildingName != ''${mode === 'address' ? ' AND buildingKey IS NOT NULL' : ''}`
   );
 
-  return buildings
+  const indexableBuildings = buildings
     .filter((b) => isValidBuildingName(b.buildingName) && b.city && b.district)
+    .map((b) => ({ ...b, type: b.realEstateType }));
+  const buildingsWithCanonicalPaths = await attachRealEstateCanonicalPaths(indexableBuildings);
+  return buildingsWithCanonicalPaths
+    .filter((b) => !isPreservedRealEstateUrlMode() || !!b.canonicalPath)
     .map((b) =>
       toAbsoluteRealEstateUrl(SITE_BASE, {
         type: b.realEstateType,
@@ -85,6 +93,7 @@ export async function fetchBuildingUrls(): Promise<string[]> {
         district: b.district,
         buildingName: b.buildingName,
         ...(b.buildingKey ? { buildingKey: b.buildingKey } : {}),
+        canonicalPath: b.canonicalPath,
       })
     );
 }

@@ -9,6 +9,7 @@ export interface SuggestItem {
   category?: string
   buildingName?: string
   buildingKey?: string
+  canonicalPath?: string | null
   dongName?: string
   jibun?: string | null
   bjdCode?: string

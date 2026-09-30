@@ -206,6 +206,16 @@ describe('national, city, and district exploration lists', () => {
     expect(city).toContain('markDegradedResponse()')
   })
 
+  it('passes the current realEstateType into list row links', () => {
+    const national = readFileSync(resolve(process.cwd(), 'pages/real-estate/[realEstateType]/index.vue'), 'utf8')
+    const city = readFileSync(resolve(process.cwd(), 'pages/real-estate/[realEstateType]/[city]/index.vue'), 'utf8')
+    const district = readFileSync(resolve(process.cwd(), 'pages/real-estate/[realEstateType]/[city]/[district]/index.vue'), 'utf8')
+
+    expect(national).toContain(':real-estate-type="apiSlug"')
+    expect(city).toContain(':real-estate-type="realEstateTypeParam"')
+    expect(district).toContain(':real-estate-type="realEstateType"')
+  })
+
   it('uses the shared exploration row and filters on all three list roles', () => {
     for (const relativePath of [
       'pages/real-estate/[realEstateType]/index.vue',

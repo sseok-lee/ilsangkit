@@ -48,8 +48,10 @@ import {
 } from '../services/realEstateDetailService.js';
 import { getHomeMarket } from '../services/homeMarketService.js';
 import { z } from 'zod';
+import publicUrlRouter from './realEstatePublicUrl.js';
 
 const router = Router();
+router.use(publicUrlRouter);
 
 // 타입 파라미터 검증 스키마
 const TypeParamsSchema = z.object({

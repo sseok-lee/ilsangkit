@@ -116,7 +116,7 @@ describe('ComplexCard', () => {
   })
 
   describe('NuxtLink', () => {
-    it('buildingKey가 있으면 주소 식별 경로와 지번을 사용한다', () => {
+    it('buildingKey가 있어도 공개 링크는 기존 건물명 URL을 유지하고 지번을 표시한다', () => {
       const buildingKey = 'a'.repeat(64)
       const wrapper = mount(ComplexCard, {
         props: {
@@ -128,7 +128,7 @@ describe('ComplexCard', () => {
 
       expect(wrapper.text()).toContain('대치동 316')
       expect(wrapper.get('a').attributes('href')).toBe(
-        `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('대치아이파크')}/${buildingKey}`,
+        `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('대치아이파크')}`,
       )
     })
 

@@ -130,7 +130,10 @@ app.get('/api/internal/release-readiness', async (req: Request, res: Response) =
 
   const expectedRunId = process.env.REAL_ESTATE_SUMMARY_RUN_ID ?? process.env.ILSK_SUMMARY_RUN_ID;
   const runIdMatches = !expectedRunId || summary.runId === expectedRunId;
-  const ready = summary.ready && runIdMatches;
+  const urlMode = process.env.REAL_ESTATE_URL_MODE || 'keyed';
+  // Address releases must not expose ambiguous name-only links without the URL registry.
+  const urlModeReady = summary.mode !== 'address' || urlMode === 'preserved';
+  const ready = summary.ready && runIdMatches && urlModeReady;
   res.status(ready ? 200 : 503).json({
     ready,
     releaseId,
@@ -141,6 +144,11 @@ app.get('/api/internal/release-readiness', async (req: Request, res: Response) =
       validatedAt: summary.validatedAt ?? null,
       rowCount: summary.rowCount,
       reason: runIdMatches ? summary.reason : 'summary-run-id-mismatch',
+    },
+    realEstateUrls: {
+      mode: urlMode,
+      ready: urlModeReady && summary.ready,
+      reason: urlModeReady ? summary.reason : 'preserved-url-mode-required',
     },
     db: { ok: ready },
   });

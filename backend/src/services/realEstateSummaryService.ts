@@ -3,6 +3,7 @@ import { readSummaryMode, type SummaryReadMode } from '../lib/realEstateSummaryS
 import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 import { TABLE_NAME_MAP, type RealEstateType } from './realEstateService.js';
 import { refreshLegacySummariesUnlocked } from './realEstateLegacySummaryService.js';
+import { appendRealEstateUrlsForSummaryBatch } from './realEstateUrlRegistry.js';
 
 const SALE_TYPES = new Set(['apt-sale', 'villa-sale', 'offitel-sale']);
 // buildYear 컬럼이 없는 타입
@@ -188,6 +189,7 @@ async function refreshAddressSummaryType(type: string): Promise<SummaryBatchResu
           if (!SALE_TYPES.has(type)) {
             await tx.$executeRawUnsafe(buildRentSplitUpdate(table, 'RealEstateBuildingSummaryV2'), city, type, city);
           }
+          await appendRealEstateUrlsForSummaryBatch(tx, type, city);
           return Number(n) || 0;
         },
         { timeout: batchTimeoutMs() },

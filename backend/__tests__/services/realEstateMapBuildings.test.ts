@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { queryRawUnsafe, mockGetLatestDeals } = vi.hoisted(() => ({
+const { queryRawUnsafe, mockGetLatestDeals, mockAttachCanonicalPaths } = vi.hoisted(() => ({
   queryRawUnsafe: vi.fn(),
   mockGetLatestDeals: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 vi.mock('../../src/lib/prisma.js', () => ({
   prisma: { $queryRawUnsafe: (...a: unknown[]) => queryRawUnsafe(...a) },
@@ -16,6 +17,9 @@ vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
     getLatestDeals: mockGetLatestDeals,
   };
 });
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
+}));
 
 import { fetchBuildings, BUILDING_LIMIT, __resetIndexWarningForTest } from '../../src/services/realEstateMapService.js';
 import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
@@ -31,11 +35,44 @@ describe('fetchBuildings', () => {
   beforeEach(() => {
     queryRawUnsafe.mockReset();
     mockGetLatestDeals.mockReset();
+    mockAttachCanonicalPaths.mockReset();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
     mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => {
       const bundles = new Map<string, LatestDeals>();
       for (const key of keys) bundles.set(latestDealsKey(key), emptyLatestDeals());
       return Promise.resolve(bundles);
     });
+  });
+
+  it('지도 건물 항목에 canonicalPath를 붙인다', async () => {
+    const key = 'd'.repeat(64);
+    queryRawUnsafe.mockResolvedValueOnce([{ cnt: 1n }]).mockResolvedValueOnce([{
+      buildingKey: key,
+      buildingName: '도곡렉슬',
+      bjdCode: '11680',
+      city: '서울',
+      district: '강남구',
+      dongName: '도곡동',
+      jibun: '527',
+      lat: 37.49,
+      lng: 127.05,
+      latestPrice: 245000n,
+      monthlyRent: null,
+      latestDealYear: 2026,
+      latestDealMonth: 7,
+      latestDealDay: 25,
+      transactionCount: 83,
+    }]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>, type?: string) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${type}/${row.buildingKey}` }))),
+    );
+
+    const result = await fetchBuildings('apt-sale', BOUNDS);
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ buildingKey: key, buildingName: '도곡렉슬' }),
+    ]), 'apt-sale');
+    expect(result.items[0].canonicalPath).toBe(`/registered/apt-sale/${key}`);
   });
 
   it('FORCE INDEX 힌트를 건다 — 없으면 옵티마이저가 21배 느린 경로를 고른다', async () => {

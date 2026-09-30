@@ -40,6 +40,7 @@ import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 interface Props {
   building: ComplexInfo
   mode: 'sale' | 'rent' | 'representative'
+  realEstateType?: RealEstateUrlType
 }
 
 const props = defineProps<Props>()
@@ -62,14 +63,15 @@ function propertyTypeFromType(type: RealEstateType | undefined): RealEstatePrope
 }
 
 function typeForDeal(kind: DealKind | null): RealEstateUrlType {
-  if (!kind && props.building.type) return props.building.type as RealEstateUrlType
+  const sourceType = props.realEstateType ?? props.building.type
+  if (!kind && sourceType) return sourceType as RealEstateUrlType
 
-  const propertyType = propertyTypeFromType(props.building.type)
+  const propertyType = propertyTypeFromType(sourceType)
   if (kind === 'sale') return `${propertyType}-sale` as RealEstateUrlType
   if (kind === 'jeonse' || kind === 'wolse') return `${propertyType}-rent` as RealEstateUrlType
   if (props.mode === 'sale') return `${propertyType}-sale` as RealEstateUrlType
   if (props.mode === 'rent') return `${propertyType}-rent` as RealEstateUrlType
-  return (props.building.type ?? `${propertyType}-sale`) as RealEstateUrlType
+  return (sourceType ?? `${propertyType}-sale`) as RealEstateUrlType
 }
 
 const selectedKind = computed<DealKind | null>(() => {
@@ -91,6 +93,7 @@ const linkUrl = computed(() => {
     district: props.building.district,
     buildingName: props.building.buildingName,
     buildingKey: props.building.buildingKey,
+    canonicalPath: props.building.canonicalPath,
   })
   if (kind === 'jeonse' || kind === 'wolse') return `${base}?mode=${kind}`
   return base

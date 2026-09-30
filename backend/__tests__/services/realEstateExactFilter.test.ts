@@ -26,6 +26,13 @@ describe('정확한 거래 기간', () => {
     });
   });
 
+  it('0개월은 전체 기간 모드의 placeholder로 오늘만 반환한다', () => {
+    expect(getDetailWindow(new Date('2026-08-31T03:00:00Z'), 0)).toEqual({
+      from: '2026-08-31',
+      to: '2026-08-31',
+    });
+  });
+
   it('기간 시작일을 월말로 제한한다', () => {
     expect(getDetailWindow(new Date('2026-08-31T03:00:00Z'), 6)).toEqual({
       from: '2026-02-28',

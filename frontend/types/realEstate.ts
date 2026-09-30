@@ -117,6 +117,7 @@ export interface StatsResponse {
 export interface ComplexInfo {
   type?: RealEstateType
   buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
   bjdCode: string
   dongName: string
@@ -136,6 +137,8 @@ export interface ComplexInfo {
 // 건물 상세 정보
 export interface BuildingInfo {
   buildingKey?: string
+  canonicalPath?: string | null
+  legacyGrouped?: boolean
   bjdCode: string
   buildingName: string
   city: string
@@ -273,6 +276,7 @@ export interface PriceAnalysis {
 // 인근 단지 아이템
 export interface NearbyComplexItem {
   buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
   bjdCode: string
   city: string

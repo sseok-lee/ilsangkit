@@ -194,6 +194,7 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
     district: item.district,
     buildingName: item.buildingName,
     buildingKey: item.buildingKey,
+    canonicalPath: item.canonicalPath,
   })
   el.appendChild(link)
 

@@ -7,6 +7,10 @@ import {
   toAbsoluteRealEstateUrl,
   type RealEstateUrlType,
 } from '../lib/realEstateUrl.js';
+import {
+  attachRealEstateCanonicalPaths,
+  isPreservedRealEstateUrlMode,
+} from './realEstateUrlRegistry.js';
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const SITE_HOST = 'ilsangkit.co.kr';
@@ -169,7 +173,7 @@ export async function submitNewlyTransactedBuildings(
   });
 
   // 지번/thin buildingName 은 buildRealEstateUrlsV2 가 걸러낸다 — SEO 저품질 URL 제출 방지
-  const urls = buildRealEstateUrlsV2(
+  const urls = await buildRegisteredRealEstateUrlsV2(
     buildings.map((b) => ({
       realEstateType,
       city: b.city,
@@ -197,11 +201,13 @@ export function buildRealEstateUrlsV2(
     district: string;
     buildingName: string;
     buildingKey?: string;
+    canonicalPath?: string;
   }>
 ): string[] {
   const origin = `https://${SITE_HOST}`;
   return items
     .filter((it) => isValidBuildingName(it.buildingName))
+    .filter((it) => !isPreservedRealEstateUrlMode() || !!it.canonicalPath)
     .map((it) =>
       toAbsoluteRealEstateUrl(origin, {
         type: it.realEstateType,
@@ -209,6 +215,23 @@ export function buildRealEstateUrlsV2(
         district: it.district,
         buildingName: it.buildingName,
         buildingKey: it.buildingKey,
+        canonicalPath: it.canonicalPath,
       }),
     );
+}
+
+export async function buildRegisteredRealEstateUrlsV2(
+  items: Array<{
+    realEstateType: RealEstateUrlType;
+    city: string;
+    district: string;
+    buildingName: string;
+    buildingKey?: string;
+  }>
+): Promise<string[]> {
+  if (!isPreservedRealEstateUrlMode()) return buildRealEstateUrlsV2(items);
+  const itemsWithCanonicalPaths = await attachRealEstateCanonicalPaths(
+    items.map((item) => ({ ...item, type: item.realEstateType })),
+  );
+  return buildRealEstateUrlsV2(itemsWithCanonicalPaths);
 }

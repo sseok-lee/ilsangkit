@@ -73,7 +73,7 @@ describe('submitNewlyTransactedBuildings', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.urlList).toHaveLength(1);
-    expect(decodeURIComponent(body.urlList[0])).toMatch(/^https:\/\/ilsangkit\.co\.kr\/real-estate\/apt-sale\/seoul\/gangnam\/은마\/[a-f0-9]{64}$/);
+    expect(decodeURIComponent(body.urlList[0])).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/은마');
   });
 
   it('지번 패턴 buildingName 은 제출하지 않는다', async () => {

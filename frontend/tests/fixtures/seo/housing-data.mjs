@@ -313,16 +313,20 @@ export function detailSnapshot(type, query) {
   if (mode !== 'wolse') deposit = null
   const rows = rowsFor(type, mode, area, deposit)
   const pageRows = rows.slice(0, 20)
+  const months = Number(query.get('months') ?? 0)
+  const window = months === 0
+    ? { from: rows.map(rowYmd).filter(Boolean).sort()[0] ?? kstDate(0), to: kstDate(0) }
+    : dateWindow(months * 31)
   return {
     filters: {
       bjdCode: query.get('bjdCode') ?? typeIdentities[type]?.bjdCode ?? '1168010100',
       buildingName: query.get('buildingName') ?? typeIdentities[type]?.buildingName ?? '회복아파트',
       mode,
-      months: Number(query.get('months') ?? 6),
+      months,
       area: rows.length > 0 ? area : null,
       deposit,
     },
-    window: dateWindow(Number(query.get('months') ?? 6) * 31),
+    window,
     options: {
       areas: ['84.90', '84.91'],
       deposits:

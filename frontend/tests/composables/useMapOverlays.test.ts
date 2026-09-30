@@ -483,7 +483,7 @@ describe('useMapOverlays', () => {
       expect(el.querySelector('a')?.getAttribute('href')).toBe('/real-estate/apt-rent/seoul/gangnam/%EC%9D%80%EB%A7%88')
     })
 
-    it('buildingKey로 선택한 팝업 링크는 주소 식별 경로를 사용한다', () => {
+    it('buildingKey로 선택한 팝업 링크도 공개 URL에는 해시를 붙이지 않는다', () => {
       const { renderOverlays } = useMapOverlays()
       const buildingKey = 'a'.repeat(64)
       const item = rentBuilding(
@@ -494,7 +494,7 @@ describe('useMapOverlays', () => {
       renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: buildingKey })
 
       expect(contentOf(0).querySelector('a')?.getAttribute('href')).toBe(
-        `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('은마')}/${buildingKey}`,
+        `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('은마')}`,
       )
     })
 

@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { readSummaryMode, type SummaryReadMode } from '../lib/realEstateSummaryStore.js';
+import { assertRealEstateUrlsReady } from './realEstateUrlRegistry.js';
 
 export interface SummaryReadinessResult {
   mode: SummaryReadMode;
@@ -44,6 +45,11 @@ export async function checkActiveSummaryReadiness(env: SummaryReadinessEnv = pro
   const rowCount = Number(countRows[0]?.cnt ?? 0);
   if (rowCount <= 0) {
     return { mode, table, ready: false, reason: 'summary-v2-empty', runId: state.runId, validatedAt: state.validatedAt, rowCount };
+  }
+  try {
+    await assertRealEstateUrlsReady(env);
+  } catch {
+    return { mode, table, ready: false, reason: 'public-url-registry-not-ready', runId: state.runId, validatedAt: state.validatedAt, rowCount };
   }
   return { mode, table, ready: true, runId: state.runId, validatedAt: state.validatedAt, rowCount };
 }
