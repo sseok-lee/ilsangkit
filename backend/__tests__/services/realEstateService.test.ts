@@ -27,6 +27,8 @@ const {
   mockOffitelSaleFindFirst,
   mockOffitelRentFindFirst,
   mockQueryRawUnsafe,
+  mockGetLatestDeals,
+  mockAttachCanonicalPaths,
   mockSummaryFindMany,
   mockSummaryCount,
 } = vi.hoisted(() => ({
@@ -55,6 +57,8 @@ const {
   mockOffitelRentGroupBy: vi.fn(),
   mockOffitelRentFindFirst: vi.fn(),
   mockQueryRawUnsafe: vi.fn(),
+  mockGetLatestDeals: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
   mockSummaryFindMany: vi.fn(),
   mockSummaryCount: vi.fn(),
 }));
@@ -118,6 +122,20 @@ vi.mock('../../src/services/search/searchRegionIndex.js', async (orig) => {
     getRegionIndex: async () => actual.buildRegionIndex([{ city: '서울특별시', district: '강남구' }]),
   };
 });
+
+vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => {
+  const actual = await orig() as typeof import('../../src/services/realEstateLatestDeals.js');
+  return {
+    ...actual,
+    getLatestDeals: mockGetLatestDeals,
+  };
+});
+
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
+  getRealEstateCanonicalPath: vi.fn().mockResolvedValue(null),
+  isPreservedRealEstateUrlMode: vi.fn(() => false),
+}));
 
 import {
   searchTransactions,
@@ -183,6 +201,21 @@ const sampleRentRecord = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
+  mockGetLatestDeals.mockImplementation((keys: Array<{
+    propertyType: string;
+    buildingName: string;
+    bjdCode: string;
+  }>) => {
+    const bundles = new Map();
+    for (const key of keys) {
+      bundles.set(
+        JSON.stringify([key.propertyType, key.buildingName, key.bjdCode]),
+        { sale: null, jeonse: null, wolse: null },
+      );
+    }
+    return Promise.resolve(bundles);
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -847,6 +880,23 @@ describe('getComplexList', () => {
       getComplexList('unknown-type', '서울특별시', '강남구')
     ).rejects.toThrow();
   });
+
+  it('attaches canonicalPath to complex list items in one batch', async () => {
+    const key = 'a'.repeat(64);
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([{ ...rawSummaryRows[0], buildingKey: key, jibun: '123-1' }])
+      .mockResolvedValueOnce([{ total: BigInt(1) }]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey: string }>, type?: string) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${type}/${row.buildingKey}` }))),
+    );
+
+    const result = await getComplexList('apt-sale', '서울특별시', '강남구');
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ buildingKey: key, buildingName: '래미안' }),
+    ]), 'apt-sale');
+    expect(result.items[0].canonicalPath).toBe(`/registered/apt-sale/${key}`);
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -936,6 +986,26 @@ describe('searchAll', () => {
     });
   });
 
+  it('keeps canonicalPath on preview items', async () => {
+    const key = 'b'.repeat(64);
+    mockSearchAllRaw({
+      'apt-sale': [{ ...sampleSummaryRow, buildingKey: key, jibun: '123-1' }],
+    }, { 'apt-sale': 1 });
+    mockAttachCanonicalPaths.mockImplementation((rows: Array<{ buildingKey?: string | null }>, type?: string) =>
+      Promise.resolve(rows.map((row) => row.buildingKey
+        ? { ...row, canonicalPath: `/registered/${type}/${row.buildingKey}` }
+        : row)),
+    );
+
+    const result = await searchAll('래미안');
+    const aptSale = result.categories.find((c) => c.type === 'apt-sale');
+
+    expect(aptSale!.items[0]).toMatchObject({
+      buildingKey: key,
+      canonicalPath: `/registered/apt-sale/${key}`,
+    });
+  });
+
   it('limits preview items to 3 per category', async () => {
     await searchAll('래미안');
 
@@ -993,7 +1063,7 @@ describe('searchAll', () => {
     const distinctCalls = rawCalls('COUNT(DISTINCT');
     expect(distinctCalls).toHaveLength(3);
     const sql = String(distinctCalls[0][0]);
-    expect(sql).toContain('COUNT(DISTINCT buildingName, bjdCode)');
+    expect(sql).toContain('COUNT(DISTINCT buildingKey)');
     expect(sql).toContain('FROM RealEstateBuildingSummary');
     expect(sql).toContain('buildingName NOT REGEXP');
     expect(sql).toContain('type IN (?, ?)');

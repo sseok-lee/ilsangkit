@@ -1,7 +1,7 @@
 import type { SubscriptionSourceType } from '~/types/subscription'
 
 export type RentGroup = 'apply'
-export type RentDataSource = 'applyhome'
+export type RentDataSource = 'integrated'
 
 export interface SubscriptionTypeMeta {
   label: string
@@ -50,11 +50,10 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     label: '공공임대 청약',
     icon: 'home',
     iconImg: 'rent',
-    description: '청약통장으로 신청하는 공공임대 청약 일정과 정보를 확인하세요. LH·SH·GH 등 공공기관이 공급하는 임대주택으로 시세보다 저렴하게 거주할 수 있습니다.',
-    sourceType: 'APT',
+    description: '청약홈·마이홈·LH 공공임대 모집공고를 함께 확인하세요. 국민임대, 행복주택, 매입임대 등 공공기관 임대주택의 모집기간과 공급조건을 비교할 수 있습니다.',
     rentType: '임대주택',
     group: 'apply',
-    dataSource: 'applyhome',
+    dataSource: 'integrated',
   },
   private: {
     label: '공공지원 민간임대',
@@ -63,7 +62,7 @@ export const RENT_TYPES: Record<string, SubscriptionTypeMeta> = {
     description: '공공지원 민간임대 청약 일정과 정보를 확인하세요. 민간 건설사가 공급하지만 임대 보증금 보호와 전월세 상한이 적용됩니다.',
     sourceType: 'PRIVATE_RENT',
     group: 'apply',
-    dataSource: 'applyhome',
+    dataSource: 'integrated',
   },
 }
 
@@ -76,8 +75,8 @@ export interface RentGroupMeta {
 export const RENT_GROUP_META: Record<RentGroup, RentGroupMeta> = {
   apply: {
     group: 'apply',
-    heading: '청약홈 임대 청약',
-    description: '청약홈에서 접수하는 공공·민간 임대 청약입니다. 청약통장이 필요할 수 있으며 소득·자산 요건에 따라 신청 가능합니다.',
+    heading: '임대주택 모집공고',
+    description: '청약홈·마이홈·LH 등 여러 공공·민간 임대 모집공고를 모아 보여줍니다. 공고별 신청 자격과 접수 방법은 원문에서 확인하세요.',
   },
 }
 
@@ -93,12 +92,13 @@ export function getSourceTypeLabel(sourceType: string): string {
   if (sourceType === 'OFFITEL') return '오피스텔'
   if (sourceType === 'REMAINING') return '무순위'
   if (sourceType === 'PRIVATE_RENT') return '공공지원 민간임대'
+  if (sourceType === 'PUBLIC_RENT') return '공공임대'
   if (sourceType === 'OPTIONAL') return '임의공급'
   return sourceType
 }
 
-// 청약홈 API가 '임대주택' 대신 반환하는 실제 공공임대 rentType 값 (백엔드와 동일)
-export const PUBLIC_RENT_TYPES: readonly string[] = ['분양전환 가능임대', '분양전환 불가임대']
+// 청약홈/백엔드가 공공임대에 사용하는 rentType 값
+export const PUBLIC_RENT_TYPES: readonly string[] = ['임대주택', '분양전환 가능임대', '분양전환 불가임대']
 
 export interface SubscriptionTypeBadge {
   label: string
@@ -120,6 +120,7 @@ export function subscriptionTypeBadge(
   if (sourceType === 'REMAINING') return { label: '무순위·잔여', classes: 'bg-orange-50 text-orange-700', kind: 'sale' }
   if (sourceType === 'OPTIONAL') return { label: '임의공급', classes: 'bg-fuchsia-50 text-fuchsia-700', kind: 'sale' }
   if (sourceType === 'PRIVATE_RENT') return { label: '민간임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
+  if (sourceType === 'PUBLIC_RENT') return { label: '공공임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
   if (sourceType === 'APT' && rentType != null && PUBLIC_RENT_TYPES.includes(rentType)) {
     return { label: '공공임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
   }

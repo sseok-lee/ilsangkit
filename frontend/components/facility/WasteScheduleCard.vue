@@ -1,9 +1,9 @@
 <template>
-  <button
-    type="button"
+  <a
+    :href="sourceHref"
     :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세 정보 보기`"
     class="group w-full bg-white rounded-xl p-4 text-left shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-    @click="emit('select', region)"
+    @click="openSource"
   >
     <div class="flex items-start gap-4">
       <!-- Icon -->
@@ -58,21 +58,21 @@
         </div>
       </div>
     </div>
-  </button>
+  </a>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
 import { formatDays, formatTimeRange, normalizeProvidedText } from '~/utils/wasteSchedule'
+import { buildTrashSourceHref, storeTrashReturnStateForTarget, trashReturnStateFromRoute } from '~/utils/trashReturnContext'
 
 const props = defineProps<{
   region: RegionSchedule
 }>()
 
-const emit = defineEmits<{
-  (e: 'select', region: RegionSchedule): void
-}>()
+const route = useRoute()
+const sourceHref = computed(() => buildTrashSourceHref(props.region.id))
 
 const shortCity = computed(() =>
   props.region.city?.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') || ''
@@ -105,5 +105,18 @@ const badgeClass = (type: WasteType): string => {
     '대형폐기물': 'bg-purple-100 text-purple-700',
   }
   return map[type] || ''
+}
+
+function openSource(event: MouseEvent) {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+  event.preventDefault()
+  const state = trashReturnStateFromRoute(route, '목록으로 돌아가기', props.region.id)
+  storeTrashReturnStateForTarget(sourceHref.value, state)
+  const router = typeof useNuxtApp === 'function' ? useNuxtApp().$router : null
+  if (import.meta.client && router?.push) {
+    router.push({ path: sourceHref.value, state })
+  } else {
+    navigateTo({ path: sourceHref.value, state })
+  }
 }
 </script>

@@ -1,7 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
+import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/realEstateSummaryStore.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRegionFilter } from './cityMapping.js';
+import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
+import { attachRealEstateCanonicalPaths, getDeferredRealEstateIdentity } from './realEstateUrlRegistry.js';
+import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
 
 // ─────────────────────────────────────────────
 // Types
@@ -63,11 +68,14 @@ export interface StatsResponse {
 
 export interface ComplexItem {
   type?: RealEstateType;
+  buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   city: string;
   district: string;
   dongName: string;
+  jibun?: string | null;
   transactionCount: number;
   latestPrice: number | null;
   lat: number | null;
@@ -75,6 +83,7 @@ export interface ComplexItem {
   lastDealYear: number | null;
   lastDealMonth: number | null;
   buildYear: number | null;
+  latestDeals: LatestDeals;
 }
 
 export interface SearchAllResult {
@@ -84,6 +93,25 @@ export interface SearchAllResult {
     items: unknown[];
   }>;
   buildingCounts: { apt: number; villa: number; offitel: number };
+}
+
+interface SearchAllPreviewItem {
+  type: RealEstateType;
+  buildingKey?: string | null;
+  canonicalPath?: string;
+  buildingName: string;
+  bjdCode: string;
+  dongName?: string | null;
+  jibun?: string | null;
+  latestDeals?: LatestDeals;
+}
+
+interface LatestDealKeyInput {
+  type?: RealEstateType;
+  buildingName: string;
+  bjdCode: string;
+  dongName?: string | null;
+  jibun?: string | null;
 }
 
 // ─────────────────────────────────────────────
@@ -409,11 +437,13 @@ const VALID_NAME_SQL = `
 
 interface SummaryRawRow {
   type?: RealEstateType;
+  buildingKey?: string | null;
   buildingName: string;
   bjdCode: string;
   city: string;
   district: string;
   dongName: string;
+  jibun?: string | null;
   transactionCount: number | bigint;
   latestPrice: bigint | null;
   latestDealYear: number | null;
@@ -434,7 +464,111 @@ function buildSummarySearch(type: string, city?: string, district?: string, name
   return { whereClause: conditions.join(' AND '), params };
 }
 
-const SUMMARY_RECENT_ORDER_SQL = 'latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC';
+const SUMMARY_RECENT_ORDER_SQL = 'latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC';
+
+function currentSummaryMode() {
+  return readSummaryMode(process.env);
+}
+
+function listSummaryTable(): SummaryTable {
+  return summaryTableFor('list', currentSummaryMode());
+}
+
+function keyedDetailSummaryTable(): SummaryTable {
+  return summaryTableFor('keyed-detail', currentSummaryMode());
+}
+
+function summarySelectColumns(table: SummaryTable, includeType = false): string {
+  const identity = table === 'RealEstateBuildingSummaryV2'
+    ? 'buildingKey, jibun'
+    : 'NULL AS buildingKey, NULL AS jibun';
+  return `${includeType ? 'type, ' : ''}buildingName, ${identity}, bjdCode, city, district, dongName, transactionCount,
+              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng`;
+}
+
+function propertyPartitionKey(table: SummaryTable): string {
+  return table === 'RealEstateBuildingSummaryV2' ? 'buildingKey' : 'type, buildingName, bjdCode';
+}
+
+function propertyDistinctCount(table: SummaryTable): string {
+  return table === 'RealEstateBuildingSummaryV2' ? 'COUNT(DISTINCT buildingKey)' : 'COUNT(DISTINCT type, buildingName, bjdCode)';
+}
+
+function summaryRankedSelect(table: SummaryTable): string {
+  return table === 'RealEstateBuildingSummaryV2'
+    ? 's.*'
+    : 's.*, NULL AS buildingKey, NULL AS jibun';
+}
+
+function propertyTypeFromRealEstateType(type: string): PropertyType {
+  if (type.startsWith('apt-')) return 'apt';
+  if (type.startsWith('villa-')) return 'villa';
+  if (type.startsWith('offitel-')) return 'offitel';
+  throw new Error(`Unknown real estate type: ${type}`);
+}
+
+function dealScopeForRealEstateType(type: string): DealScope {
+  return type.endsWith('-sale') ? 'sale' : 'rent';
+}
+
+function toComplexItem(row: SummaryRawRow): ComplexItem {
+  return {
+    type: row.type,
+    buildingKey: row.buildingKey ?? null,
+    buildingName: row.buildingName,
+    bjdCode: row.bjdCode,
+    city: row.city,
+    district: row.district,
+    dongName: row.dongName,
+    jibun: row.jibun ?? null,
+    transactionCount: Number(row.transactionCount),
+    latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
+    lat: row.lat != null ? Number(row.lat) : null,
+    lng: row.lng != null ? Number(row.lng) : null,
+    lastDealYear: row.latestDealYear,
+    lastDealMonth: row.latestDealMonth,
+    buildYear: row.buildYear,
+    latestDeals: { sale: null, jeonse: null, wolse: null },
+  };
+}
+
+function latestDealKeyForItem(
+  item: LatestDealKeyInput,
+  fallbackType?: string,
+): BuildingKey {
+  const type = item.type ?? fallbackType;
+  if (!type) throw new Error('Real estate type is required for latest deal enrichment');
+  return {
+    propertyType: propertyTypeFromRealEstateType(type),
+    buildingName: item.buildingName,
+    bjdCode: item.bjdCode,
+    dongName: item.dongName,
+    jibun: item.jibun ?? null,
+  };
+}
+
+async function enrichComplexItems<T extends ComplexItem>(
+  items: T[],
+  scope: DealScope,
+  fallbackType?: string,
+): Promise<T[]> {
+  if (items.length === 0) return items;
+  const keys = items.map((item) => latestDealKeyForItem(item, fallbackType));
+  const bundles = await getLatestDeals(keys, scope);
+  return items.map((item, index) => ({
+    ...item,
+    latestDeals: bundles.get(latestDealsKey(keys[index]))!,
+  }));
+}
+
+async function attachAndEnrichComplexItems<T extends ComplexItem>(
+  items: T[],
+  scope: DealScope,
+  fallbackType?: string,
+): Promise<T[]> {
+  const withCanonicalPaths = await attachRealEstateCanonicalPaths(items, fallbackType);
+  return enrichComplexItems(withCanonicalPaths, scope, fallbackType);
+}
 
 /**
  * 건물 목록 조회 — RealEstateBuildingSummary 테이블.
@@ -453,12 +587,12 @@ export async function getComplexList(
 
   const { whereClause, params } = buildSummarySearch(type, city, district, buildingName);
   const offset = (page - 1) * limit;
+  const summaryTable = listSummaryTable();
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRawUnsafe<SummaryRawRow[]>(
-      `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
-              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
-       FROM RealEstateBuildingSummary
+      `SELECT ${summarySelectColumns(summaryTable)}
+       FROM ${summaryTable}
        WHERE ${whereClause}
        ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
        LIMIT ? OFFSET ?`,
@@ -467,7 +601,7 @@ export async function getComplexList(
       offset,
     ),
     prisma.$queryRawUnsafe<[{ total: bigint }]>(
-      `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM ${summaryTable} WHERE ${whereClause}`,
       ...params,
     ),
   ]);
@@ -475,20 +609,7 @@ export async function getComplexList(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: rows.map((row) => ({
-      buildingName: row.buildingName,
-      bjdCode: row.bjdCode,
-      city: row.city,
-      district: row.district,
-      dongName: row.dongName,
-      transactionCount: Number(row.transactionCount),
-      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
-      lat: row.lat != null ? Number(row.lat) : null,
-      lng: row.lng != null ? Number(row.lng) : null,
-      lastDealYear: row.latestDealYear,
-      lastDealMonth: row.latestDealMonth,
-      buildYear: row.buildYear,
-    })),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -523,12 +644,12 @@ export async function searchComplexesByKeyword(
 
   const { whereClause, params } = buildSummarySearch(type, effectiveCity, effectiveDistrict, hasName ? nameText : undefined);
   const offset = (page - 1) * limit;
+  const summaryTable = listSummaryTable();
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRawUnsafe<SummaryRawRow[]>(
-      `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
-              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
-       FROM RealEstateBuildingSummary
+      `SELECT ${summarySelectColumns(summaryTable)}
+       FROM ${summaryTable}
        WHERE ${whereClause}
        ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
        LIMIT ? OFFSET ?`,
@@ -537,7 +658,7 @@ export async function searchComplexesByKeyword(
       offset,
     ),
     prisma.$queryRawUnsafe<[{ total: bigint }]>(
-      `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM ${summaryTable} WHERE ${whereClause}`,
       ...params,
     ),
   ]);
@@ -545,20 +666,7 @@ export async function searchComplexesByKeyword(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: rows.map((row) => ({
-      buildingName: row.buildingName,
-      bjdCode: row.bjdCode,
-      city: row.city,
-      district: row.district,
-      dongName: row.dongName,
-      transactionCount: Number(row.transactionCount),
-      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
-      lat: row.lat != null ? Number(row.lat) : null,
-      lng: row.lng != null ? Number(row.lng) : null,
-      lastDealYear: row.latestDealYear,
-      lastDealMonth: row.latestDealMonth,
-      buildYear: row.buildYear,
-    })),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), dealScopeForRealEstateType(type), type),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -590,18 +698,20 @@ export async function searchPropertyComplexesByKeyword(
 
   const whereClause = conditions.join(' AND ');
   const offset = (page - 1) * limit;
+  const summaryTable = listSummaryTable();
+  const partitionKey = propertyPartitionKey(summaryTable);
+  const distinctCount = propertyDistinctCount(summaryTable);
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRawUnsafe<SummaryRawRow[]>(
-      `SELECT type, buildingName, bjdCode, city, district, dongName, transactionCount,
-              latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
+      `SELECT ${summarySelectColumns(summaryTable, true)}
        FROM (
-         SELECT s.*,
+         SELECT ${summaryRankedSelect(summaryTable)},
                 ROW_NUMBER() OVER (
-                  PARTITION BY buildingName, bjdCode
+                  PARTITION BY ${partitionKey}
                   ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
                 ) AS rn
-         FROM RealEstateBuildingSummary s
+         FROM ${summaryTable} s
          WHERE ${whereClause}
        ) ranked
        WHERE rn = 1
@@ -612,7 +722,7 @@ export async function searchPropertyComplexesByKeyword(
       offset,
     ),
     prisma.$queryRawUnsafe<[{ total: bigint }]>(
-      `SELECT COUNT(DISTINCT buildingName, bjdCode) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+      `SELECT ${distinctCount} AS total FROM ${summaryTable} WHERE ${whereClause}`,
       ...params,
     ),
   ]);
@@ -620,21 +730,7 @@ export async function searchPropertyComplexesByKeyword(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: rows.map((row) => ({
-      type: row.type,
-      buildingName: row.buildingName,
-      bjdCode: row.bjdCode,
-      city: row.city,
-      district: row.district,
-      dongName: row.dongName,
-      transactionCount: Number(row.transactionCount),
-      latestPrice: row.latestPrice != null ? Number(row.latestPrice) : null,
-      lat: row.lat != null ? Number(row.lat) : null,
-      lng: row.lng != null ? Number(row.lng) : null,
-      lastDealYear: row.latestDealYear,
-      lastDealMonth: row.latestDealMonth,
-      buildYear: row.buildYear,
-    })),
+    items: await attachAndEnrichComplexItems(rows.map(toComplexItem), 'all'),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -646,6 +742,9 @@ export async function searchPropertyComplexesByKeyword(
 // ─────────────────────────────────────────────
 
 export interface BuildingInfo {
+  buildingKey?: string;
+  canonicalPath?: string;
+  legacyGrouped?: boolean;
   bjdCode: string;
   buildingName: string;
   city: string;
@@ -675,6 +774,13 @@ export interface BuildingInfo {
    * null 로 되돌리지 않는 이유: 프론트가 "어디로 합칠지"를 알려면 실제 지역이 필요하다.
    */
   regionMatched?: boolean;
+}
+
+async function attachBuildingCanonicalPath(type: string, building: BuildingInfo | null): Promise<BuildingInfo | null> {
+  if (!building) return null;
+  if (!building.buildingKey && building.canonicalPath) return building;
+  const [withCanonicalPath] = await attachRealEstateCanonicalPaths([building], type);
+  return withCanonicalPath;
 }
 
 /** 법정동코드의 시군구 부분(시도 2 + 시군구 3 = 앞 5자리). 근거가 없으면 null. */
@@ -716,9 +822,30 @@ export function isSameSigunguBjdCode(
 export async function getBuildingInfo(
   type: string,
   bjdCode: string,
-  buildingName: string
+  buildingName: string,
+  buildingKey?: string
 ): Promise<BuildingInfo | null> {
   const model = getModel(type);
+  let ambiguousAddress = false;
+  const deferredIdentity = buildingKey ? null : await getDeferredRealEstateIdentity(type, bjdCode, buildingName);
+  let parcelRows: Array<{ dongName: string; jibun: string | null }> | undefined;
+  if (buildingKey) {
+    if (bjdCode && !/^(\d{5}|\d{10})$/.test(bjdCode)) return null;
+    const summaryTable = keyedDetailSummaryTable();
+    const matches = await prisma.$queryRawUnsafe<Array<{ bjdCode: string; buildingName: string; dongName: string; jibun: string | null }>>(
+      `SELECT bjdCode, buildingName, dongName, jibun FROM ${summaryTable} WHERE type = ? AND buildingKey = ? AND buildingName = ? AND (? = '' OR bjdCode = ?) LIMIT 1`,
+      type, buildingKey, buildingName, bjdCode, bjdCode,
+    );
+    const match = matches[0];
+    if (!match) return null;
+    bjdCode = match.bjdCode;
+    // Keep raw spellings for Prisma filters, while matching the normalized parcel.
+    parcelRows = await prisma.$queryRawUnsafe<Array<{ dongName: string; jibun: string | null }>>(
+      `SELECT DISTINCT dongName, jibun FROM ${getTableName(type)} WHERE bjdCode = ? AND buildingName = ? AND TRIM(dongName) = ? AND COALESCE(TRIM(jibun), '') = ?`,
+      bjdCode, buildingName, match.dongName.trim(), match.jibun?.trim() ?? '',
+    );
+    if (parcelRows.length === 0) return null;
+  }
 
   // buildingName으로 거래가 가장 많은 bjdCode를 고른다.
   const resolveBjdCodeByName = async (): Promise<string | null> => {
@@ -743,10 +870,12 @@ export async function getBuildingInfo(
     effectiveBjdCode: string,
     regionMatched: boolean
   ): Promise<BuildingInfo | null> => {
+    const groupedIdentity = deferredIdentity?.bjdCode === effectiveBjdCode ? deferredIdentity : null;
     // sale 은 취소거래(cancelDealDay)를 제외 — searchTransactions/getTransactionStats 와 정렬.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = { bjdCode: effectiveBjdCode, buildingName };
     if (isSaleType(type)) where.cancelDealDay = null;
+    if (parcelRows) where.OR = parcelRows;
 
     const [latest, agg, dongGroups] = await Promise.all([
       model.findFirst({
@@ -759,15 +888,20 @@ export async function getBuildingInfo(
         _max: { [areaField]: true },
       }),
       model.groupBy({
-        by: ['dongName'],
-        where: { ...where, dongName: { not: '' } },
+        by: ['dongName', 'jibun'],
+        where,
         _count: { dongName: true },
         orderBy: { _count: { dongName: 'desc' } },
-        take: 1,
       }),
     ]);
 
     if (!latest) return null;
+    const parcelKeys = new Set(dongGroups.map((row: { dongName: string; jibun?: string | null }) =>
+      JSON.stringify([row.dongName?.trim() ?? '', row.jibun?.trim() ?? ''])));
+    if (!buildingKey && !groupedIdentity && parcelKeys.size > 1) {
+      ambiguousAddress = true;
+      return null;
+    }
 
     let jeonseCount: number | undefined
     let wolseCount: number | undefined
@@ -778,7 +912,7 @@ export async function getBuildingInfo(
       ])
     }
 
-    const representativeDongName: string | null = dongGroups[0]?.dongName ?? null;
+    const representativeDongName: string | null = groupedIdentity ? null : dongGroups[0]?.dongName ?? null;
 
     let lat = latest.lat;
     let lng = latest.lng;
@@ -802,13 +936,17 @@ export async function getBuildingInfo(
     }
 
     return {
+      ...(buildingKey ? { buildingKey } : groupedIdentity ? {} : {
+        buildingKey: makeBuildingKey({ propertyType: type.split('-')[0], bjdCode: effectiveBjdCode, buildingName: latest.buildingName, dongName: latest.dongName ?? '', jibun: latest.jibun ?? null }),
+      }),
+      ...(groupedIdentity ? { canonicalPath: groupedIdentity.canonicalPath, legacyGrouped: true as const } : {}),
       bjdCode: effectiveBjdCode,
       buildingName: latest.buildingName,
       city: latest.city,
       district: latest.district,
       dongName: representativeDongName,
-      roadName: latest.roadName ?? null,
-      jibun: latest.jibun ?? null,
+      roadName: groupedIdentity ? null : latest.roadName ?? null,
+      jibun: groupedIdentity ? null : latest.jibun ?? null,
       buildYear: latest.buildYear ?? null,
       minArea: agg._min[areaField] !== null && agg._min[areaField] !== undefined ? Number(agg._min[areaField]) : null,
       maxArea: agg._max[areaField] !== null && agg._max[areaField] !== undefined ? Number(agg._max[areaField]) : null,
@@ -818,8 +956,8 @@ export async function getBuildingInfo(
         : (latest.monthlyRent !== null && latest.monthlyRent !== undefined ? Number(latest.monthlyRent) : null),
       latestDealYear: latest.dealYear,
       latestDealMonth: latest.dealMonth,
-      lat: lat !== null ? Number(lat) : null,
-      lng: lng !== null ? Number(lng) : null,
+      lat: groupedIdentity || lat === null ? null : Number(lat),
+      lng: groupedIdentity || lng === null ? null : Number(lng),
       jeonseCount,
       wolseCount,
       regionMatched,
@@ -834,13 +972,14 @@ export async function getBuildingInfo(
   if (bjdCode) {
     // 힌트가 그대로 통했으면 요청 지역 그대로다 — 추가 쿼리도, 지역 비교도 필요 없다.
     const fromHint = await buildForBjdCode(bjdCode, true);
-    if (fromHint) return fromHint;
+    if (fromHint) return attachBuildingCanonicalPath(type, fromHint);
+    if (buildingKey || deferredIdentity || ambiguousAddress) return null;
   }
 
   const resolvedBjdCode = await resolveBjdCodeByName();
   if (!resolvedBjdCode || resolvedBjdCode === bjdCode) return null;
   // 재해석 결과가 요청 시군구를 벗어났으면 regionMatched=false 로 드러낸다(호출부가 301/noindex 결정).
-  return buildForBjdCode(resolvedBjdCode, isSameSigunguBjdCode(bjdCode, resolvedBjdCode));
+  return attachBuildingCanonicalPath(type, await buildForBjdCode(resolvedBjdCode, isSameSigunguBjdCode(bjdCode, resolvedBjdCode)));
 }
 
 // ─────────────────────────────────────────────
@@ -975,11 +1114,11 @@ export async function searchAll(
       const { whereClause, params } = buildSummarySearch(type, effectiveCity, effectiveDistrict, hasName ? nameText : undefined);
 
       // 거래 원본 groupBy(수백만 행) 대신 사전집계 summary(인덱스 커버) 사용
+      const summaryTable = listSummaryTable();
       const [rows, buildingCount] = await Promise.all([
         prisma.$queryRawUnsafe<SummaryRawRow[]>(
-          `SELECT buildingName, bjdCode, city, district, dongName, transactionCount,
-                  latestPrice, latestDealYear, latestDealMonth, buildYear, lat, lng
-           FROM RealEstateBuildingSummary
+          `SELECT ${summarySelectColumns(summaryTable)}
+           FROM ${summaryTable}
            WHERE ${whereClause}
            ORDER BY ${SUMMARY_RECENT_ORDER_SQL}
            LIMIT ?`,
@@ -987,40 +1126,53 @@ export async function searchAll(
           3,
         ),
         prisma.$queryRawUnsafe<Array<{ total: bigint }>>(
-          `SELECT COUNT(*) AS total FROM RealEstateBuildingSummary WHERE ${whereClause}`,
+          `SELECT COUNT(*) AS total FROM ${summaryTable} WHERE ${whereClause}`,
           ...params,
         ),
       ]);
 
-      const items = rows.map((r) => serializeRow({
+      const items = await attachRealEstateCanonicalPaths(rows.map((r) => serializeRow({
+        type,
+        buildingKey: r.buildingKey,
         buildingName: r.buildingName,
         bjdCode: r.bjdCode,
         city: r.city,
         district: r.district,
         dongName: r.dongName,
+        jibun: r.jibun ?? null,
         buildYear: r.buildYear,
         dealYear: r.latestDealYear,
         dealMonth: r.latestDealMonth,
         dealAmount: isSale ? r.latestPrice : null,
         deposit: !isSale ? r.latestPrice : null,
         transactionCount: r.transactionCount,
-      }));
+      }) as SearchAllPreviewItem), type);
 
       return { type, count: Number(buildingCount[0]?.total ?? 0), items };
     })
   );
 
+  const allItems = results.flatMap((result) => result.items as SearchAllPreviewItem[]);
+  if (allItems.length > 0) {
+    const keys = allItems.map((item) => latestDealKeyForItem(item));
+    const bundles = await getLatestDeals(keys, 'all');
+    for (const [index, item] of allItems.entries()) {
+      item.latestDeals = bundles.get(latestDealsKey(keys[index]))!;
+    }
+  }
+
   // 유형별(apt/villa/offitel) 유니크 건물수 — sale/rent 두 테이블에 걸친 동일 건물의 이중카운트 제거.
-  // RealEstateBuildingSummary는 (type, buildingName, bjdCode) 유니크라 매매+전월세를 함께 가진 건물이
+  // RealEstateBuildingSummary는 type별 행이라 매매+전월세를 함께 가진 건물이
   // per-type count에서 두 번 잡힌다. 앱메모리 distinct(과거 2GB OOM)를 피해 DB-side로 COUNT(DISTINCT ...).
   // type IN (?, ?)는 고정 상수 배열 값이라 안전, region/name 파라미터는 바인딩으로 전달.
   const region = regionFilterToSql(buildRegionFilter(effectiveCity, effectiveDistrict));
+  const summaryTable = listSummaryTable();
   const distinctCounts = await Promise.all(PROPERTY_GROUPS.map(async ({ types }) => {
     const clauses = ['type IN (?, ?)', VALID_NAME_SQL, ...region.clauses];
     const params: unknown[] = [types[0], types[1], ...region.params];
     if (hasName) { clauses.push(`buildingName LIKE CONCAT(?, '%')`); params.push(nameText); }
     const rows = await prisma.$queryRawUnsafe<Array<{ c: bigint }>>(
-      `SELECT COUNT(DISTINCT buildingName, bjdCode) AS c FROM RealEstateBuildingSummary WHERE ${clauses.join(' AND ')}`,
+      `SELECT ${propertyDistinctCount(summaryTable)} AS c FROM ${summaryTable} WHERE ${clauses.join(' AND ')}`,
       ...params,
     );
     return Number(rows[0]?.c ?? 0);
@@ -1039,11 +1191,14 @@ export type NearbyRentType = 'all' | 'jeonse' | 'wolse';
 export type NearbyPropertyKey = 'apt' | 'villa' | 'offitel';
 
 export interface NearbyComplex {
+  buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   bjdCode: string;
   city: string;
   district: string;
   dongName: string;
+  jibun?: string | null;
   buildYear: number | null;
   transactionCount: number;
   /** sale: 매매가(만원). rent: 보증금(만원). */
@@ -1066,6 +1221,66 @@ const RENT_TRANSACTION_TABLE: Record<NearbyPropertyKey, string> = {
   offitel: 'OffitelRentTransaction',
 };
 
+
+interface NearbySummaryRawRow extends SummaryRawRow {
+  monthlyRent: number | bigint | null;
+  latestDealDay: number | null;
+}
+
+function summaryNearbySelectColumns(table: SummaryTable): string {
+  const identity = table === 'RealEstateBuildingSummaryV2'
+    ? 'buildingKey, jibun'
+    : 'NULL AS buildingKey, NULL AS jibun';
+  return `buildingName, ${identity}, bjdCode, city, district, dongName, buildYear, transactionCount,
+          latestPrice, monthlyRent, latestDealYear, latestDealMonth, latestDealDay, lat, lng`;
+}
+
+async function fetchNearbyFromSummary(
+  type: string,
+  bjdCode: string,
+  opts: { dongName: string | null; excludeBuildingName: string | null; limitPerType: number },
+): Promise<NearbyComplex[]> {
+  const summaryTable = listSummaryTable();
+  const conditions = ['type = ?', 'bjdCode = ?'];
+  const params: unknown[] = [type, bjdCode];
+  if (opts.dongName) {
+    conditions.push('dongName = ?');
+    params.push(opts.dongName);
+  }
+  if (opts.excludeBuildingName) {
+    conditions.push('buildingName != ?');
+    params.push(opts.excludeBuildingName);
+  }
+
+  const rows = await prisma.$queryRawUnsafe<NearbySummaryRawRow[]>(
+    `SELECT ${summaryNearbySelectColumns(summaryTable)}
+     FROM ${summaryTable}
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC
+     LIMIT ?`,
+    ...params,
+    opts.limitPerType,
+  );
+
+  return attachRealEstateCanonicalPaths(rows.map((r) => ({
+    buildingKey: r.buildingKey ?? null,
+    buildingName: r.buildingName,
+    bjdCode: r.bjdCode,
+    city: r.city,
+    district: r.district,
+    dongName: r.dongName,
+    jibun: r.jibun ?? null,
+    buildYear: r.buildYear ?? null,
+    transactionCount: Number(r.transactionCount),
+    latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
+    monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
+    latestDealYear: r.latestDealYear ?? null,
+    latestDealMonth: r.latestDealMonth ?? null,
+    lat: r.lat != null ? Number(r.lat) : null,
+    lng: r.lng != null ? Number(r.lng) : null,
+  })), type);
+}
+
 export async function getNearbyByBjd(
   bjdCode: string,
   mode: NearbyMode,
@@ -1084,34 +1299,8 @@ export async function getNearbyByBjd(
     const saleEntries = await Promise.all(
       NEARBY_PROPERTY_KEYS.map(async (key) => {
         const type = `${key}-sale`;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const where: Record<string, any> = { type, bjdCode };
-        if (dongName) where.dongName = dongName;
-        if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
-        const rows = await prisma.realEstateBuildingSummary.findMany({
-          where,
-          orderBy: [
-            { latestDealYear: 'desc' },
-            { latestDealMonth: 'desc' },
-            { transactionCount: 'desc' },
-          ],
-          take: limitPerType,
-        });
-        return [key, rows.map((r) => ({
-          buildingName: r.buildingName,
-          bjdCode: r.bjdCode,
-          city: r.city,
-          district: r.district,
-          dongName: r.dongName,
-          buildYear: r.buildYear ?? null,
-          transactionCount: r.transactionCount,
-          latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
-          monthlyRent: null,
-          latestDealYear: r.latestDealYear ?? null,
-          latestDealMonth: r.latestDealMonth ?? null,
-          lat: r.lat != null ? Number(r.lat) : null,
-          lng: r.lng != null ? Number(r.lng) : null,
-        }))] as const;
+        const rows = await fetchNearbyFromSummary(type, bjdCode, { dongName, excludeBuildingName, limitPerType });
+        return [key, rows.map((row) => ({ ...row, monthlyRent: null }))] as const;
       }),
     );
     for (const [key, items] of saleEntries) result[key] = items;
@@ -1129,35 +1318,8 @@ export async function getNearbyByBjd(
     const entries = await Promise.all(
       NEARBY_PROPERTY_KEYS.map(async (key) => {
         const type = `${key}-rent`;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const where: Record<string, any> = { type, bjdCode };
-        if (dongName) where.dongName = dongName;
-        if (excludeBuildingName) where.buildingName = { not: excludeBuildingName };
-        const rows = await prisma.realEstateBuildingSummary.findMany({
-          where,
-          orderBy: [
-            { latestDealYear: 'desc' },
-            { latestDealMonth: 'desc' },
-            { transactionCount: 'desc' },
-          ],
-          take: limitPerType,
-        });
-        return [key, rows.map((r) => ({
-          buildingName: r.buildingName,
-          bjdCode: r.bjdCode,
-          city: r.city,
-          district: r.district,
-          dongName: r.dongName,
-          buildYear: r.buildYear ?? null,
-          transactionCount: r.transactionCount,
-          // 전월세 타입에서 latestPrice 는 deposit(보증금)이다.
-          latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,
-          monthlyRent: r.monthlyRent != null ? Number(r.monthlyRent) : null,
-          latestDealYear: r.latestDealYear ?? null,
-          latestDealMonth: r.latestDealMonth ?? null,
-          lat: r.lat != null ? Number(r.lat) : null,
-          lng: r.lng != null ? Number(r.lng) : null,
-        }))] as const;
+        const rows = await fetchNearbyFromSummary(type, bjdCode, { dongName, excludeBuildingName, limitPerType });
+        return [key, rows] as const;
       }),
     );
     for (const [key, items] of entries) result[key] = items;
@@ -1171,7 +1333,7 @@ export async function getNearbyByBjd(
   const rentEntries = await Promise.all(NEARBY_PROPERTY_KEYS.map(async (key) => {
     const tableName = RENT_TRANSACTION_TABLE[key];
     const dongFilter = dongName
-      ? Prisma.sql`AND t.dongName = ${dongName}`
+      ? Prisma.sql`AND TRIM(t.dongName) = ${dongName.trim()}`
       : Prisma.empty;
     const excludeFilter = excludeBuildingName
       ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
@@ -1190,6 +1352,7 @@ export async function getNearbyByBjd(
       city: string;
       district: string;
       dongName: string;
+      jibun: string | null;
       buildYear: bigint | number | null;
       transactionCount: bigint | number;
       latestPrice: bigint | number | null;
@@ -1205,6 +1368,7 @@ export async function getNearbyByBjd(
           t.city,
           t.district,
           t.dongName,
+          t.jibun,
           t.buildYear,
           t.deposit,
           t.monthlyRent,
@@ -1212,7 +1376,7 @@ export async function getNearbyByBjd(
           t.dealMonth,
           t.dealDay,
           ROW_NUMBER() OVER (
-            PARTITION BY t.buildingName, t.bjdCode
+            PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), '')
             ORDER BY t.dealYear DESC, t.dealMonth DESC, COALESCE(t.dealDay, 0) DESC, t.id DESC
           ) AS rn
         FROM \`${Prisma.raw(tableName)}\` t
@@ -1225,13 +1389,14 @@ export async function getNearbyByBjd(
         SELECT
           buildingName,
           bjdCode,
+          TRIM(dongName) AS dongName,
+          COALESCE(TRIM(jibun), '') AS jibun,
           COUNT(*) AS transactionCount,
           ANY_VALUE(city) AS city,
           ANY_VALUE(district) AS district,
-          ANY_VALUE(dongName) AS dongName,
           ANY_VALUE(buildYear) AS buildYear
         FROM ranked
-        GROUP BY buildingName, bjdCode
+        GROUP BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
       )
       SELECT
         c.buildingName,
@@ -1239,6 +1404,7 @@ export async function getNearbyByBjd(
         c.city,
         c.district,
         c.dongName,
+        c.jibun,
         c.buildYear,
         c.transactionCount,
         r.deposit AS latestPrice,
@@ -1249,6 +1415,8 @@ export async function getNearbyByBjd(
       INNER JOIN ranked r
         ON r.buildingName = c.buildingName
         AND r.bjdCode = c.bjdCode
+        AND TRIM(r.dongName) = c.dongName
+        AND COALESCE(TRIM(r.jibun), '') = c.jibun
         AND r.rn = 1
       ORDER BY r.dealYear DESC, r.dealMonth DESC, c.transactionCount DESC
       LIMIT ${limitPerType}
@@ -1260,6 +1428,7 @@ export async function getNearbyByBjd(
       city: r.city,
       district: r.district,
       dongName: r.dongName,
+      jibun: r.jibun ?? null,
       buildYear: r.buildYear != null ? Number(r.buildYear) : null,
       transactionCount: Number(r.transactionCount),
       latestPrice: r.latestPrice != null ? Number(r.latestPrice) : null,

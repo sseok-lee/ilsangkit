@@ -58,6 +58,8 @@ const baseStubs = {
   SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
   AdBanner: { template: '<div />' },
   TransactionModeTab: { template: '<div />' },
+  ExplorationFilters: { template: '<div data-test="exploration-filters" />' },
+  ExplorationBuildingRow: { template: '<div />' },
   ComplexCard: { template: '<div />' },
   Pagination: { template: '<div />' },
   DataSourceSection: { template: '<div />' },

@@ -72,6 +72,7 @@ export const RealEstatePropertyComplexSchema = z.object({
 
 // 부동산 건물 정보 스키마
 export const RealEstateBuildingInfoSchema = z.object({
+  buildingKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   bjdCode: z.string().max(10),
   buildingName: z.string().max(100),
 });

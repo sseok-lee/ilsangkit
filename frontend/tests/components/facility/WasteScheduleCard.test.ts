@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import WasteScheduleCard from '~/components/facility/WasteScheduleCard.vue'
 
@@ -17,7 +17,12 @@ const schedule = {
 }
 
 describe('WasteScheduleCard', () => {
-  it('현재 지역으로 이동하는 링크 대신 상세 선택 이벤트를 발생시킨다', async () => {
+  beforeEach(() => {
+    vi.stubGlobal('navigateTo', vi.fn())
+    vi.stubGlobal('useRoute', () => ({ fullPath: '/trash?city=서울특별시&district=강남구', path: '/trash', query: {} }))
+  })
+
+  it('원본 상세로 이동하는 실제 링크를 렌더하고 중첩 링크를 만들지 않는다', () => {
     const wrapper = mount(WasteScheduleCard, {
       props: { region: schedule },
       global: {
@@ -27,12 +32,10 @@ describe('WasteScheduleCard', () => {
       },
     })
 
-    expect(wrapper.find('a').exists()).toBe(false)
-    expect(wrapper.get('button').attributes('aria-label')).toContain('상세 정보 보기')
-
-    await wrapper.get('button').trigger('click')
-
-    expect(wrapper.emitted('select')).toEqual([[schedule]])
+    expect(wrapper.findAll('a')).toHaveLength(1)
+    expect(wrapper.get('a').attributes('href')).toBe('/trash/15019')
+    expect(wrapper.get('a').attributes('aria-label')).toContain('상세 정보 보기')
+    expect(wrapper.emitted('select')).toBeUndefined()
   })
 })
 
@@ -122,6 +125,7 @@ describe('WasteScheduleCard SSR 본문', () => {
       template: '<WasteScheduleCard :region="region" />',
       data: () => ({ region: dalseo }),
     })
+    app.component('CategoryIcon', { template: '<span />' })
     const text = (await renderToString(app)).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
 
     expect(text).toContain('월 · 수 · 금')

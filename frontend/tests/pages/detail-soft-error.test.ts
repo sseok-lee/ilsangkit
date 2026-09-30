@@ -459,7 +459,6 @@ describe('허브·목록 — 상류 실패를 200 + index 로 굳히지 않는�
     ['시설 허브 15종', 'pages/[category]/index.vue'],
     ['가이드 목록', 'pages/guide/index.vue'],
     ['오늘의 이슈 목록', 'pages/article/index.vue'],
-    ['청약 목록', 'pages/subscription/index.vue'],
     ['지하철 목록', 'pages/subway/index.vue'],
     ['공매 허브', 'pages/auction/index.vue'],
     ['공매 목록', 'pages/auction/list.vue'],
@@ -472,6 +471,16 @@ describe('허브·목록 — 상류 실패를 200 + index 로 굳히지 않는�
 
     expect(source).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
     expect(source).toMatch(/import\.meta\.server[\s\S]{0,80}markDegradedResponse\(\)/)
+  })
+
+  it('청약 허브는 useSubscriptionHub의 부분 실패 503 경로에 위임한다', () => {
+    const page = readFileSync(resolve(frontendRoot, 'pages/subscription/index.vue'), 'utf8')
+    const composable = readFileSync(resolve(frontendRoot, 'composables/useSubscriptionHub.ts'), 'utf8')
+
+    expect(page).toContain('await useSubscriptionHub()')
+    expect(page).not.toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
+    expect(composable).toContain("import { markDegradedResponse } from '~/composables/useDegradedResponse'")
+    expect(composable).toMatch(/import\.meta\.server[\s\S]{0,80}markDegradedResponse\(\)/)
   })
 
   it.each(HUB_PAGES)('%s 는 상류 실패를 noindex 로 굳히지 않는다', (_label, relative) => {

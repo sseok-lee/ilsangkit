@@ -1,6 +1,9 @@
 // @TASK Phase2-3 - 아파트 전월세 동기화 스크립트 테스트 (TDD)
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { mockUpsert, mockFindUnique, mockFindMany, mockTransaction } = vi.hoisted(() => ({
   mockUpsert: vi.fn(),
@@ -25,6 +28,19 @@ import {
   syncAptRentByLawd,
   type RawAptRentItem,
 } from '../../src/scripts/syncAptRent.js';
+
+let lockDir: string;
+
+beforeEach(() => {
+  lockDir = mkdtempSync(join(tmpdir(), 'real-estate-lock-'));
+  process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
+});
+
+afterEach(() => {
+  delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+  delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
+  rmSync(lockDir, { recursive: true, force: true });
+});
 
 describe('transformAptRentItem', () => {
   it('API 응답 item을 DB 필드로 변환 (전세)', () => {

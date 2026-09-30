@@ -1,0 +1,1094 @@
+{
+  "areaList": {
+    "success": true,
+    "data": {
+      "generationId": "fixture-generation-id",
+      "items": [
+        {
+          "areaId": 101,
+          "name": "계약1동",
+          "city": "서울특별시",
+          "district": "계약구",
+          "href": "/trash/areas/101",
+          "matchReason": "region",
+          "scheduleCount": 23,
+          "conditionalCount": 24,
+          "summary": "계약 조건 A, 계약 조건 B, 조건 0",
+          "dataDate": "2026-09-28T00:00:00.000Z"
+        },
+        {
+          "areaId": 102,
+          "name": "계약2동",
+          "city": "서울특별시",
+          "district": "계약구",
+          "href": "/trash/areas/102",
+          "matchReason": "region",
+          "scheduleCount": 2,
+          "conditionalCount": 2,
+          "summary": "2개 배출 일정",
+          "dataDate": "2026-09-28T00:00:00.000Z"
+        }
+      ],
+      "total": 2,
+      "page": 1,
+      "totalPages": 1,
+      "unresolved": {
+        "count": 1,
+        "href": "/trash?coverage=unresolved&city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=계약%EA%B5%AC"
+      }
+    }
+  },
+  "areaDetail": {
+    "success": true,
+    "data": {
+      "generationId": "fixture-generation-id",
+      "area": {
+        "areaId": 101,
+        "name": "계약1동",
+        "city": "서울특별시",
+        "district": "계약구",
+        "href": "/trash/areas/101",
+        "matchReason": "region",
+        "scheduleCount": 23,
+        "conditionalCount": 24,
+        "summary": "계약 조건 A, 계약 조건 B, 조건 0",
+        "dataDate": "2026-09-28T00:00:00.000Z"
+      },
+      "schedules": [
+        {
+          "schedule": {
+            "id": 202,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동+계약2동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/shared",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "whole",
+          "conditionText": "",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 201,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약구",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/direct-district-overlap",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "whole",
+          "conditionText": "",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 203,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약조건동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/multi-condition",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "계약 조건 A",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 203,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약조건동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/multi-condition",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "partial",
+          "conditionText": "계약 조건 B",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 300,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-0",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 0",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 301,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-1",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 1",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 302,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-2",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 2",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 303,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-3",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 3",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 304,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-4",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 4",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 305,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-5",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 5",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 306,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-6",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 6",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 307,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-7",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 7",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 308,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-8",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 8",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 309,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-9",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 9",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 310,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-10",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 10",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 311,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-11",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 11",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 312,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-12",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 12",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 313,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-13",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 13",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 314,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-14",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 14",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 315,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-15",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 15",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 316,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-16",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 16",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 317,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-17",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 17",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 318,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-18",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 18",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "schedule": {
+            "id": 319,
+            "city": "서울특별시",
+            "district": "계약구",
+            "targetRegion": "계약1동",
+            "emissionPlace": "집 앞",
+            "sourceUrl": "https://example.test/w5/area-a-19",
+            "govCode": "3220000",
+            "sourceStatus": "active",
+            "applicableAreas": [],
+            "appliesTo": [],
+            "details": {
+              "livingWaste": {
+                "dayOfWeek": "월"
+              },
+              "lastModified": "2026-09-28"
+            }
+          },
+          "scope": "conditional",
+          "conditionText": "조건 19",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        }
+      ],
+      "unresolved": {
+        "count": 1,
+        "href": "/trash?coverage=unresolved&city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=계약%EA%B5%AC"
+      },
+      "indexEligible": false,
+      "indexReason": "pending W9 public indexing policy",
+      "contentUpdatedAt": "2026-09-28T00:00:00.000Z",
+      "predecessorOrSuccessorLinks": [
+        {
+          "name": "계약2동",
+          "href": "/trash/areas/102"
+        }
+      ]
+    }
+  },
+  "sourceDetail": {
+    "success": true,
+    "data": {
+      "id": 201,
+      "city": "서울특별시",
+      "district": "계약구",
+      "targetRegion": "계약구",
+      "emissionPlace": "집 앞",
+      "sourceUrl": "https://example.test/w5/direct-district-overlap",
+      "govCode": "3220000",
+      "sourceStatus": "active",
+      "applicableAreas": [
+        {
+          "areaId": 101,
+          "name": "계약1동",
+          "href": "/trash/areas/101",
+          "scope": "whole",
+          "conditionText": ""
+        },
+        {
+          "areaId": 102,
+          "name": "계약2동",
+          "href": "/trash/areas/102",
+          "scope": "whole",
+          "conditionText": ""
+        }
+      ],
+      "appliesTo": [
+        {
+          "areaId": 101,
+          "districtCode": null,
+          "scope": "whole",
+          "conditionText": "",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "areaId": null,
+          "districtCode": "11680",
+          "scope": "whole",
+          "conditionText": "",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        }
+      ],
+      "details": {
+        "livingWaste": {
+          "dayOfWeek": "월"
+        },
+        "lastModified": "2026-09-28"
+      }
+    }
+  },
+  "sourceDetailMultiCondition": {
+    "success": true,
+    "data": {
+      "id": 203,
+      "city": "서울특별시",
+      "district": "계약구",
+      "targetRegion": "계약조건동",
+      "emissionPlace": "집 앞",
+      "sourceUrl": "https://example.test/w5/multi-condition",
+      "govCode": "3220000",
+      "sourceStatus": "active",
+      "applicableAreas": [
+        {
+          "areaId": 101,
+          "name": "계약1동",
+          "href": "/trash/areas/101",
+          "scope": "conditional",
+          "conditionText": "계약 조건 A\n계약 조건 B"
+        }
+      ],
+      "appliesTo": [
+        {
+          "areaId": 101,
+          "districtCode": null,
+          "scope": "conditional",
+          "conditionText": "계약 조건 A",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "areaId": 101,
+          "districtCode": null,
+          "scope": "partial",
+          "conditionText": "계약 조건 B",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        }
+      ],
+      "details": {
+        "livingWaste": {
+          "dayOfWeek": "월"
+        },
+        "lastModified": "2026-09-28"
+      }
+    }
+  },
+  "sourceDetailLegal": {
+    "success": true,
+    "data": {
+      "id": 204,
+      "city": "서울특별시",
+      "district": "계약구",
+      "targetRegion": "계약법정동",
+      "emissionPlace": "집 앞",
+      "sourceUrl": "https://example.test/w5/legal-only",
+      "govCode": "3220000",
+      "sourceStatus": "active",
+      "applicableAreas": [],
+      "appliesTo": [
+        {
+          "areaId": 105,
+          "districtCode": null,
+          "scope": "whole",
+          "conditionText": "계약 법정 관계 제외",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        }
+      ],
+      "details": {
+        "livingWaste": {
+          "dayOfWeek": "월"
+        },
+        "lastModified": "2026-09-28"
+      }
+    }
+  },
+  "sourceDetailEmptyAreas": {
+    "success": true,
+    "data": {
+      "id": 205,
+      "city": "서울특별시",
+      "district": "계약구",
+      "targetRegion": "계약만료충돌동",
+      "emissionPlace": "집 앞",
+      "sourceUrl": "https://example.test/w5/expired-conflict",
+      "govCode": "3220000",
+      "sourceStatus": "active",
+      "applicableAreas": [],
+      "appliesTo": [
+        {
+          "areaId": 101,
+          "districtCode": null,
+          "scope": "partial",
+          "conditionText": "계약 conflict 제외",
+          "state": "conflict",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "areaId": 104,
+          "districtCode": null,
+          "scope": "whole",
+          "conditionText": "계약 만료 제외",
+          "state": "verified",
+          "reason": "w5 fixture",
+          "evidence": [
+            {
+              "url": "https://example.test/w5-reference",
+              "note": "w5 fixture evidence",
+              "version": "w5-fixture",
+              "effectiveTo": null,
+              "effectiveFrom": "2020-01-01"
+            }
+          ]
+        }
+      ],
+      "details": {
+        "livingWaste": {
+          "dayOfWeek": "월"
+        },
+        "lastModified": "2026-09-28"
+      }
+    }
+  },
+  "sourceList": {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": 401,
+          "city": "서울특별시",
+          "district": "계약구",
+          "targetRegion": "불명확 계약",
+          "emissionPlace": "집 앞",
+          "sourceUrl": "https://example.test/w5/unresolved",
+          "govCode": "3220000",
+          "sourceStatus": "active",
+          "applicableAreas": [],
+          "appliesTo": [
+            {
+              "areaId": null,
+              "districtCode": null,
+              "scope": "partial",
+              "conditionText": "불명확 계약",
+              "state": "unresolved",
+              "reason": "w5 fixture",
+              "evidence": [
+                {
+                  "url": "https://example.test/w5-reference",
+                  "note": "w5 fixture evidence",
+                  "version": "w5-fixture",
+                  "effectiveTo": null,
+                  "effectiveFrom": "2020-01-01"
+                }
+              ]
+            }
+          ],
+          "details": {
+            "livingWaste": {
+              "dayOfWeek": "월"
+            },
+            "lastModified": "2026-09-28"
+          }
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "totalPages": 1
+    }
+  }
+}

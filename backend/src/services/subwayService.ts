@@ -7,6 +7,7 @@
 import type { SubwayStation } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
+import { escapeSqlLikeKeyword } from './search/sqlLike.js';
 
 const EARTH_RADIUS_M = 6_371_000;
 
@@ -253,7 +254,7 @@ export async function listStationsGrouped(params: ListStationsGroupedParams): Pr
   const where: Record<string, unknown> = {};
   if (params.line) where.line = params.line;
   if (params.district) where.district = params.district;
-  if (params.keyword) where.name = { contains: params.keyword };
+  if (params.keyword) where.name = { contains: escapeSqlLikeKeyword(params.keyword) };
 
   if (params.citySlug) {
     const slug = params.citySlug;

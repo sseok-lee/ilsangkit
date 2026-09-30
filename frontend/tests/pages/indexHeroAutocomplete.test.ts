@@ -1,18 +1,45 @@
+/* eslint-disable vue/one-component-per-file */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import type { MountingOptions } from '@vue/test-utils';
 import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted, readonly } from 'vue';
+import type { Component } from 'vue';
 import IndexPage from '~/pages/index.vue';
 
+type NuxtAutocompleteTestGlobal = typeof globalThis & {
+  ref: typeof ref
+  computed: typeof computed
+  watch: typeof watch
+  watchEffect: typeof watchEffect
+  onMounted: typeof onMounted
+  onUnmounted: typeof onUnmounted
+  readonly: typeof readonly
+  useAsyncData: Mock
+}
+
+const testGlobal = globalThis as NuxtAutocompleteTestGlobal
+
 // Stub Vue auto-imports that Nuxt provides but vitest doesn't
-;(globalThis as any).ref = ref
-;(globalThis as any).computed = computed
-;(globalThis as any).watch = watch
-;(globalThis as any).watchEffect = watchEffect
-;(globalThis as any).onMounted = onMounted
-;(globalThis as any).onUnmounted = onUnmounted
-;(globalThis as any).readonly = readonly
+testGlobal.ref = ref
+testGlobal.computed = computed
+testGlobal.watch = watch
+testGlobal.watchEffect = watchEffect
+testGlobal.onMounted = onMounted
+testGlobal.onUnmounted = onUnmounted
+testGlobal.readonly = readonly
 
 vi.stubGlobal('navigateTo', vi.fn());
+
+
+vi.mock('~/components/home/HomeMarketSection.vue', () => ({
+  default: defineComponent({
+    name: 'HomeMarketSection',
+    setup() {
+      return () => h('section', { 'data-testid': 'home-market' }, '우리 동네 거래')
+    },
+  }),
+}))
 
 const homePagePayload = {
   dashboard: {
@@ -31,14 +58,14 @@ const homePagePayload = {
 beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal('$fetch', vi.fn(async () => ({ success: true, data: { items: [] } })));
-  ;(globalThis as any).useAsyncData = vi.fn((key?: string) => {
+  testGlobal.useAsyncData = vi.fn((key?: string) => {
     const data = key === 'home-page' ? ref(homePagePayload) : ref(null);
     const result = { data, status: ref('idle'), error: ref(null), refresh: vi.fn(), pending: ref(false) };
     return Object.assign(Promise.resolve(result), result);
   });
 });
 
-async function mountSuspended(component: any, options?: any) {
+async function mountSuspended(component: Component, options?: MountingOptions<Record<string, unknown>>) {
   const wrapper = mount(
     defineComponent({
       render() {

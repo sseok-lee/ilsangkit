@@ -15,7 +15,7 @@ interface BuildingRow {
 }
 
 function makeDelegate(rows: BuildingRow[]) {
-  const findMany = vi.fn().mockResolvedValue(rows);
+  const findMany = vi.fn().mockResolvedValue(rows.map(row => ({ bjdCode: '11680', dongName: '대치동', jibun: '316', ...row })));
   return { delegate: { findMany }, findMany };
 }
 
@@ -58,8 +58,8 @@ describe('submitNewlyTransactedBuildings', () => {
     await submitNewlyTransactedBuildings(delegate, 'apt-sale', 'aptSale', SINCE);
 
     const args = findMany.mock.calls[0][0];
-    expect(args.distinct).toEqual(['buildingName', 'city', 'district']);
-    expect(args.select).toEqual({ buildingName: true, city: true, district: true });
+    expect(args.distinct).toEqual(['buildingName', 'city', 'district', 'bjdCode', 'dongName', 'jibun']);
+    expect(args.select).toEqual({ buildingName: true, city: true, district: true, bjdCode: true, dongName: true, jibun: true });
   });
 
   it('신규 거래가 생긴 건물의 상세페이지 URL 을 제출한다', async () => {
@@ -73,9 +73,7 @@ describe('submitNewlyTransactedBuildings', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.urlList).toHaveLength(1);
-    expect(decodeURIComponent(body.urlList[0])).toBe(
-      'https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/은마',
-    );
+    expect(decodeURIComponent(body.urlList[0])).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/은마');
   });
 
   it('지번 패턴 buildingName 은 제출하지 않는다', async () => {

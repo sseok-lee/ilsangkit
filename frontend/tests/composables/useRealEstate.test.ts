@@ -78,6 +78,16 @@ describe('useRealEstate.getBuildingInfo — 실패 구분', () => {
     await expect(getBuildingInfo('apt-sale' as never, '1', '래미안')).resolves.toEqual({ buildingName: '래미안', bjdCode: '1' })
   })
 
+  it('buildingKey를 building-info query에 전달한다', async () => {
+    const buildingKey = 'a'.repeat(64)
+    mockFetch.mockResolvedValue({ success: true, data: { buildingKey, buildingName: '래미안', bjdCode: '1' } })
+    const { getBuildingInfo } = useRealEstate()
+
+    await getBuildingInfo('apt-sale' as never, '1', '래미안', buildingKey)
+
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining(`buildingKey=${buildingKey}`))
+  })
+
   it('404(없는 건물)면 null 반환', async () => {
     mockFetch.mockRejectedValue({ statusCode: 404 })
     const { getBuildingInfo } = useRealEstate()

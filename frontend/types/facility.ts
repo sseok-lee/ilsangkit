@@ -24,19 +24,51 @@ export function isFacilityCategory(value: string): value is FacilityCategory {
   return (FACILITY_CATEGORIES as readonly string[]).includes(value)
 }
 
-// 시설 기본 정보 (목록용)
-export interface Facility {
+export interface FacilityDestination {
+  kind: 'waste-area'
+  href: string
+}
+
+interface BaseFacility {
   id: string
   name: string
   category: FacilityCategory
   address: string | null
   roadAddress: string | null
-  lat: number
-  lng: number
   city: string
   district: string
   distance?: number
   extras?: Record<string, unknown>
+  destination?: FacilityDestination
+}
+
+export interface LocatedFacility extends BaseFacility {
+  lat: number
+  lng: number
+  destination?: undefined
+}
+
+export interface WasteAreaFacility extends BaseFacility {
+  category: 'trash'
+  lat: null
+  lng: null
+  destination: FacilityDestination
+}
+
+// 시설 기본 정보 (목록용).
+// - Flag-off legacy/source trash rows are ordinary located rows with numeric coordinates and no destination.
+// - Flag-on waste-area rows are the explicit null-coordinate destination variant below.
+export type Facility = LocatedFacility | WasteAreaFacility
+
+export function isWasteAreaFacility(facility: Facility): facility is WasteAreaFacility {
+  return facility.category === 'trash'
+    && facility.lat === null
+    && facility.lng === null
+    && facility.destination?.kind === 'waste-area'
+}
+
+export function isLocatedFacility(facility: Facility): facility is LocatedFacility {
+  return typeof facility.lat === 'number' && typeof facility.lng === 'number'
 }
 
 // 시설 상세 정보
@@ -639,6 +671,7 @@ export interface GroupedCategory {
   category: FacilityCategory
   label: string
   count: number
+  unit?: '곳' | '지역'
   items: Facility[]
 }
 

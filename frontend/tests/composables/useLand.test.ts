@@ -49,3 +49,10 @@ describe('useLand', () => {
     expect(url).not.toContain('limit=');
   });
 });
+
+it('getTransactions serializes all AND filters', async () => {
+  globalThis.$fetch = vi.fn().mockResolvedValue({ success: true, data: {} }) as any
+  await useLand().getTransactions({ bjdCode: '11680', dongName: '역삼동', keyword: '123-4', jimok: '대', landUse: '제2종일반주거지역', page: 2 })
+  const url = new URL((globalThis.$fetch as any).mock.calls[0][0], 'http://localhost')
+  expect(Object.fromEntries(url.searchParams)).toMatchObject({ keyword: '123-4', jimok: '대', landUse: '제2종일반주거지역', page: '2' })
+})

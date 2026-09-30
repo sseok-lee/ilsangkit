@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-slate-900" :style="{ '--cat': catColorVar }">
+  <div class="detail-page min-h-screen bg-background-light flex flex-col text-slate-900" :style="{ '--cat': catColorVar }">
     <!-- Main Content -->
     <div class="flex-1 w-full">
       <!-- Loading State -->
@@ -45,6 +45,7 @@
               <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
                 <button
                   class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm"
+                  aria-label="지도 닫기"
                   @click="isMapExpanded = false"
                 >
                   <span class="material-symbols-outlined text-slate-700">close</span>
@@ -72,9 +73,9 @@
           </Transition>
         </Teleport>
 
-        <!-- Unified body: Hero + 본문 + 사이드바를 하나의 grid로 통합 -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
-          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 lg:gap-6 lg:items-start">
+        <!-- 시설 정보와 위치를 본문 한 열로 구성 -->
+        <div class="w-full max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
+          <div>
             <article class="flex flex-col gap-4 md:gap-5 w-full min-w-0">
               <!-- Breadcrumb + Share -->
               <div class="flex items-center justify-between gap-2">
@@ -113,6 +114,7 @@
                 :stats="desktopHeroStats"
               />
 
+
               <!-- Ad: HERO 아래 -->
               <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
@@ -139,27 +141,52 @@
               <AdBanner />
 
               <!-- 위치·로드뷰 -->
-              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
-                <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
-                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
-                  <ClientOnly>
-                    <FacilityMap
-                      :center="{ lat: facility.lat, lng: facility.lng }"
-                      :facilities="mapFacilities"
-                      :level="mapLevel"
-                      class="w-full h-full !min-h-0"
-                    />
-                  </ClientOnly>
-                  <button
-                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
-                    @click="isMapExpanded = true"
-                  >
-                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
-                    지도 크게 보기
-                  </button>
-                </div>
-                <div class="h-[220px] md:h-[300px]">
-                  <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+              <SectionBlock id="facility-location" heading="위치·로드뷰" subtext="지도와 로드뷰로 시설 주변을 확인하세요.">
+                <template #right>
+                  <div class="hidden md:flex items-center gap-1">
+                    <div class="relative">
+                      <button
+                        class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
+                        @click="showNavDropdown = !showNavDropdown"
+                      >
+                        <span class="material-symbols-outlined text-[18px]">directions</span>
+                        길찾기
+                        <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                      </button>
+                      <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
+                        <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+                          <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
+                        </button>
+                        <div class="h-px bg-slate-100"></div>
+                        <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                          <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div class="grid gap-3 md:grid-cols-2">
+                  <!-- 지도와 로드뷰를 모든 화면에서 함께 제공 -->
+                  <div class="relative h-[220px] md:h-[320px] w-full rounded-lg overflow-hidden border border-line">
+                    <ClientOnly>
+                      <FacilityMap
+                        :center="{ lat: facility.lat, lng: facility.lng }"
+                        :facilities="mapFacilities"
+                        :level="mapLevel"
+                        class="w-full h-full !min-h-0"
+                      />
+                    </ClientOnly>
+                    <button
+                      class="md:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                      @click="isMapExpanded = true"
+                    >
+                      <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                      지도 크게 보기
+                    </button>
+                  </div>
+                  <div class="h-[220px] md:h-[320px] overflow-hidden rounded-lg border border-line">
+                    <FacilityRoadview :lat="facility.lat" :lng="facility.lng" />
+                  </div>
                 </div>
               </SectionBlock>
 
@@ -196,51 +223,6 @@
                 :last-sync-date="lastSyncDate"
               />
             </article>
-
-            <aside class="hidden md:flex lg:sticky lg:top-24 w-full flex-col">
-              <!-- Map Container -->
-              <div class="relative w-full aspect-square bg-[#e5e7eb] h-full rounded-xl overflow-hidden shadow-md min-h-[300px]" role="img" aria-label="시설 위치 지도">
-                <ClientOnly>
-                  <FacilityMap
-                    :center="{ lat: facility.lat, lng: facility.lng }"
-                    :facilities="mapFacilities"
-                    :level="mapLevel"
-                    class="w-full h-full opacity-80"
-                  />
-                </ClientOnly>
-              </div>
-
-              <!-- Action Buttons (Desktop Sticky Bottom) -->
-              <div class="mt-3 p-4 bg-white border border-slate-200 flex gap-3 shadow-card rounded-xl">
-                <button
-                  class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
-                  aria-label="이 시설 공유하기"
-                  @click="handleShare"
-                >
-                  <span class="material-symbols-outlined">share</span>
-                  공유하기
-                </button>
-                <div class="relative flex-[2]">
-                  <button
-                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2"
-                    @click="showNavDropdown = !showNavDropdown"
-                  >
-                    <span class="material-symbols-outlined">directions</span>
-                    길찾기
-                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
-                  </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
-                      <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
-                    </button>
-                    <div class="h-px bg-slate-100"></div>
-                    <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
-                      <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </aside>
           </div>
         </div>
       </template>
@@ -268,7 +250,7 @@ import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
 import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
-import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll, LocatedFacility } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
@@ -621,8 +603,8 @@ const isOpen24Hours = computed(() => {
 // 이 값을 안 쓰면 지도에 중심점 핀 하나만 찍혀 통합의 이점이 화면에 안 나타난다.
 // (설치 지점 목록은 DetailFacilityStatus 가 "설치 장소 상세" 자리에서 직접 렌더한다.)
 const accessPoints = computed(() => parseAccessPoints(details.value))
-const mapFacilities = computed<Facility[]>(() =>
-  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as Facility) : [],
+const mapFacilities = computed<LocatedFacility[]>(() =>
+  facility.value ? accessPointsToMapFacilities(accessPoints.value, facility.value as LocatedFacility) : [],
 )
 const mapLevel = computed(() => mapLevelForAccessPoints(accessPoints.value))
 
@@ -956,5 +938,15 @@ const crossFacilitiesGrouped = computed(() => {
 }
 .material-symbols-outlined.filled {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+</style>
+<style scoped>
+.detail-page :deep(.shadow-card) {
+  box-shadow: none;
+}
+
+.detail-page :deep(section.bg-white),
+.detail-page :deep(.bg-white.border) {
+  box-shadow: none;
 }
 </style>

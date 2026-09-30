@@ -33,8 +33,8 @@ design_backup/
 docs_backup/
 specs_backup/
 
-# Uploaded assets (images etc)
-assets/
+# Uploaded assets at repository root (frontend source assets are versioned)
+/assets/
 
 # Temp data files
 backend/temp/

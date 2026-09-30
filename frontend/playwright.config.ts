@@ -3,7 +3,17 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   // These suites require playwright.seo.config.ts and its fixture servers.
-  testIgnore: ['**/seo-rendering-recovery.spec.ts', '**/real-estate-nearby.spec.ts'],
+  testIgnore: [
+    '**/seo-rendering-recovery.spec.ts',
+    '**/real-estate-nearby.spec.ts',
+    '**/housing-redesign.spec.ts',
+    '**/subscription-list-redesign.spec.ts',
+    '**/exploration-search-redesign.spec.ts',
+    '**/remaining-editorial-redesign.spec.ts',
+    '**/remaining-property-redesign.spec.ts',
+    '**/remaining-lifestyle-redesign.spec.ts',
+    '**/waste-area-discovery.spec.ts',
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

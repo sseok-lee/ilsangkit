@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   bjdCache,
   resolveBjdCode,
+  resolveIncheonReorgRedirect,
   type BjdLookupResult,
 } from '../../server/middleware/real-estate-redirect'
 
@@ -76,5 +77,61 @@ describe('resolveBjdCode', () => {
     await resolveBjdCode('11680  ', fetcher)
     const calledWith = fetcher.mock.calls[0][0] as string
     expect(calledWith).toContain('bjdCode=11680%20%20')
+  })
+})
+
+
+describe('resolveIncheonReorgRedirect canonical URL preservation', () => {
+  it('uses preserved resolver canonicalPath before constructing an explicit buildingKey URL', async () => {
+    const canonical = '/real-estate/apt-sale/incheon/geomdan/%EA%B2%80%EB%8B%A8%EC%95%84%ED%8C%8C%ED%8A%B8/readable-address'
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.startsWith('/api/real-estate/resolve-url')) {
+        return { success: true, data: { mode: 'preserved', canonicalPath: canonical, redirect: true } }
+      }
+      throw new Error(`unexpected fetch: ${path}`)
+    })
+
+    await expect(resolveIncheonReorgRedirect(
+      `/real-estate/apt-sale/incheon/seo/%EA%B2%80%EB%8B%A8%EC%95%84%ED%8C%8C%ED%8A%B8/${'a'.repeat(64)}`,
+      fetcher,
+    )).resolves.toEqual({ redirect: canonical })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0][0]).toContain('/api/real-estate/resolve-url')
+  })
+
+  it('does not treat a readable suffix as an internal buildingKey', async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.startsWith('/api/real-estate/resolve-url')) {
+        return { success: true, data: { mode: 'keyed', canonicalPath: null } }
+      }
+      if (path.startsWith('/api/real-estate/apt-sale/complexes')) {
+        return { success: true, data: { items: [{ district: '검단구', buildingName: '검단아파트' }] } }
+      }
+      throw new Error(`unexpected fetch: ${path}`)
+    })
+
+    await expect(resolveIncheonReorgRedirect(
+      '/real-estate/apt-sale/incheon/seo/%EA%B2%80%EB%8B%A8%EC%95%84%ED%8C%8C%ED%8A%B8/readable-address',
+      fetcher,
+    )).resolves.toEqual({ notFound: true })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a registry-owned canonical even when its district is a legacy slug', async () => {
+    const path = '/real-estate/apt-sale/incheon/seo/owner'
+    const fetcher = vi.fn().mockResolvedValue({
+      success: true, data: { mode: 'preserved', canonicalPath: path, redirect: false },
+    })
+    await expect(resolveIncheonReorgRedirect(path, fetcher)).resolves.toBeNull()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([404, 503])('leaves resolver %s to detail handling without guessing by name', async (statusCode) => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.startsWith('/api/real-estate/resolve-url')) throw { statusCode }
+      return { success: true, data: { items: [{ district: '검단구', buildingName: 'owner' }] } }
+    })
+    await expect(resolveIncheonReorgRedirect('/real-estate/apt-sale/incheon/seo/owner', fetcher)).resolves.toBeNull()
+    expect(fetcher).toHaveBeenCalledTimes(1)
   })
 })

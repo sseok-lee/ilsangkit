@@ -144,6 +144,31 @@ describe('DetailFacilityStatus — 카테고리 메타데이터 제거 회귀', 
     expect(wrapper.text()).toContain('정보 없음')
   })
 
+
+  it('parking: 요금 필드가 비어 있으면 무료나 0원으로 만들지 않는다', () => {
+    const wrapper = mount(DetailFacilityStatus, {
+      props: {
+        facility: makeFacility('parking', {
+          capacity: 12,
+          feeType: null,
+          baseFee: null,
+          baseTime: null,
+          additionalFee: null,
+          additionalTime: null,
+          dailyMaxFee: null,
+          monthlyFee: null,
+        }),
+      },
+      global: globalConfig,
+    })
+
+    const text = wrapper.text()
+    expect(text).toContain('요금 정보')
+    expect(text).toContain('정보 없음 · 현장 확인 필요')
+    expect(text).not.toContain('무료')
+    expect(text).not.toContain('0원')
+  })
+
   it('parking: 시설현황에 주차장 유형(lotType) 행이 없다', () => {
     const wrapper = mount(DetailFacilityStatus, {
       props: { facility: makeFacility('parking', { lotType: '노외', capacity: 30 }) },

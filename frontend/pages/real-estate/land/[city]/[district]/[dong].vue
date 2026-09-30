@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" class="order-1 md:order-1" />
 
@@ -15,15 +15,20 @@
 
       <!-- T0: 데스크톱 제목 (title-tag="div"로 강등 → 단일 h1 유지) -->
       <PageHero
-        class="hidden md:block order-2 md:order-2"
+        class="property-hero hidden md:block order-2 md:order-2"
         title-tag="div"
         eyebrow="토지 실거래가"
         :title="`${dong} 토지 실거래가`"
         :description="`${cityName} ${districtName} ${dong} 지역의 토지 매매 실거래가와 평당 시세를 확인하세요.`"
       />
 
+      <div v-if="landError" role="alert" class="order-3 rounded-lg border border-line p-5">
+        <p>토지 정보를 불러오지 못했습니다.</p>
+        <button type="button" class="min-h-11 px-4 text-primary" @click="refreshLand()">다시 시도</button>
+      </div>
+
       <!-- T1: 헤드라인 카드 (대지 평당가) — 첫 광고보다 위로 승격 -->
-      <div class="order-3 md:order-3 bg-white rounded-xl border border-line shadow-card p-5 md:p-6">
+      <div class="order-3 md:order-3 property-stat">
         <div class="text-eyebrow text-slate-500 mb-1">대지(일반 거래) 평당가</div>
         <template v-if="summary && summary.avgPricePerPyeong != null">
           <div class="flex flex-wrap items-baseline gap-2">
@@ -46,8 +51,78 @@
       <!-- Ad①: T0/T1 직후 (고가시성 보존) -->
       <AdBanner class="order-4 md:order-4" />
 
+      <SectionBlock v-if="detail" class="property-section order-5 md:order-5 min-w-0" heading="전체 거래 내역" :subtext="txCountLabel">
+        <form class="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_200px_auto]" @submit.prevent="submitTxSearch">
+          <label class="grid gap-1 text-sm text-muted" for="land-tx-keyword">지번·지목·용도지역 검색
+            <input id="land-tx-keyword" v-model="txDraft" maxlength="100" class="min-h-11 min-w-0 rounded-lg border border-line px-3 text-ink" placeholder="지번, 지목, 용도지역">
+          </label>
+          <label class="grid gap-1 text-sm text-muted" for="land-tx-jimok">지목
+            <select id="land-tx-jimok" :value="txJimok" class="min-h-11 min-w-0 rounded-lg border border-line px-3 text-ink" @change="pushTxQuery({ jimok: ($event.target as HTMLSelectElement).value || undefined, page: 1 })">
+              <option value="" :selected="!txJimok">전체 지목</option>
+              <option v-for="option in filterOptions.jimok" :key="option" :value="option" :selected="option === txJimok">{{ option }}</option>
+            </select>
+          </label>
+          <label class="grid gap-1 text-sm text-muted" for="land-tx-land-use">용도지역
+            <select id="land-tx-land-use" :value="txLandUse" class="min-h-11 min-w-0 rounded-lg border border-line px-3 text-ink" @change="pushTxQuery({ landUse: ($event.target as HTMLSelectElement).value || undefined, page: 1 })">
+              <option value="" :selected="!txLandUse">전체 용도지역</option>
+              <option v-for="option in filterOptions.landUse" :key="option" :value="option" :selected="option === txLandUse">{{ option }}</option>
+            </select>
+          </label>
+          <button type="submit" class="min-h-11 self-end rounded-lg bg-primary px-5 font-semibold text-white">검색</button>
+        </form>
+        <div v-if="txError" role="alert" class="py-8 text-center">
+          <p>거래 내역을 불러오지 못했습니다.</p>
+          <button type="button" class="min-h-11 px-4 text-primary" @click="refreshTransactions()">다시 시도</button>
+        </div>
+        <p v-else-if="txPending" role="status" class="py-8 text-center text-muted">거래 내역을 불러오는 중입니다.</p>
+        <p v-else-if="txItems.length === 0" class="py-8 text-center text-muted">조건에 맞는 거래가 없습니다.</p>
+        <div v-else class="overflow-x-auto">
+            <table class="min-w-[760px] w-full text-sm border-collapse tabular-nums">
+              <thead>
+                <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
+                  <th class="py-2 pr-3">지번</th>
+                  <th class="py-2 pr-3">지목</th>
+                  <th class="py-2 pr-3">용도지역</th>
+                  <th class="py-2 pr-3 text-right">면적(㎡)</th>
+                  <th class="py-2 pr-3 text-right">거래금액</th>
+                  <th class="py-2 pr-3 text-right">평당가</th>
+                  <th class="py-2 pr-3">거래일</th>
+                  <th class="py-2">지분</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="tx in txItems"
+                  :key="tx.id"
+                  class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                >
+                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.jibun ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.jimok ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.landUse ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700 text-right font-semibold">{{ formatManwonKorean(tx.dealAmount) }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
+                  <td class="py-2.5 pr-3 text-slate-700">
+                    {{ tx.dealYear }}.{{ String(tx.dealMonth).padStart(2, '0') }}{{ tx.dealDay != null ? '.' + String(tx.dealDay).padStart(2, '0') : '' }}
+                  </td>
+                  <td class="py-2.5 text-slate-500">
+                    <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">지분</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        <Pagination v-if="!txError && !txPending" :href-for="txPageHref" class="flex-wrap" :current-page="txPage" :total-pages="txTotalPages" @page-change="goToTxPage" />
+      </SectionBlock>
+
+      <AdBanner class="order-5 md:order-5" />
+
+      <p v-if="detail?.statsMeta" class="order-6 text-sm text-muted">
+        동 전체 기준 통계 · {{ detail.statsMeta.sampledTransactions.toLocaleString('ko-KR') }}건 사용
+        <template v-if="detail.statsMeta.isSampleCapped"> · 전체 {{ detail.statsMeta.totalTransactions.toLocaleString('ko-KR') }}건 중 최대 {{ detail.statsMeta.sampleLimit.toLocaleString('ko-KR') }}건 표본</template>
+      </p>
       <!-- T1: 지목별 시세 -->
-      <SectionBlock class="order-5 md:order-5" heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
+      <SectionBlock class="property-section order-6 md:order-6" heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
         <div v-if="detail && detail.jimokGroups.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <div
             v-for="g in detail.jimokGroups"
@@ -73,7 +148,7 @@
       </SectionBlock>
 
       <!-- T3: 대지 거래 사례 -->
-      <SectionBlock class="order-6 md:order-6" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
+      <SectionBlock class="property-section order-7 md:order-7" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
         <div v-if="detail && detail.daeSamples.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div
             v-for="tx in detail.daeSamples"
@@ -103,10 +178,11 @@
       <!-- T3: 분기별 추이 + 용도지역 분포 (2-col grid) -->
       <div
         v-if="detail && (detail.priceTimeline.length > 0 || detail.landUseDistribution.length > 0)"
-        class="order-7 md:order-7 grid grid-cols-1 md:grid-cols-2 gap-3"
+        class="order-8 md:order-8 grid grid-cols-1 md:grid-cols-2 gap-3"
       >
         <!-- 분기별 대지 평당가 추이 -->
         <SectionBlock
+        class="property-section"
           v-if="detail.priceTimeline.length > 0"
           heading="분기별 대지 평당가 추이"
           subtext="비지분 대지 기준 분기별 평균 평당가입니다."
@@ -137,6 +213,7 @@
 
         <!-- 용도지역 분포 -->
         <SectionBlock
+        class="property-section"
           v-if="detail.landUseDistribution.length > 0"
           heading="용도지역 분포"
           subtext="거래된 토지의 용도지역별 건수입니다."
@@ -155,48 +232,16 @@
       </div>
 
       <!-- Ad②: 추이/분포 ↔ 전체거래 사이로 이동 -->
-      <AdBanner class="order-8 md:order-8" />
+
 
       <!-- T3: 전체 거래 내역 -->
-      <SectionBlock v-if="detail && detail.total > 0" class="order-9 md:order-9" heading="전체 거래 내역" :subtext="`전체 ${detail.total.toLocaleString('ko-KR')}건 · 지분·도로 포함`">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse tabular-nums">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
-                  <th class="py-2 pr-3">지목</th>
-                  <th class="py-2 pr-3 text-right">면적(㎡)</th>
-                  <th class="py-2 pr-3 text-right">평당가</th>
-                  <th class="py-2 pr-3">거래일</th>
-                  <th class="py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="tx in txItems"
-                  :key="tx.id"
-                  class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                >
-                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.jimok ?? '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">
-                    {{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}
-                  </td>
-                  <td class="py-2.5 text-slate-500">
-                    <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">지분</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        <Pagination :current-page="txPage" :total-pages="txTotalPages" @page-change="goToTxPage" />
-      </SectionBlock>
+
 
       <!-- Ad③: 전체거래 이후 -->
       <AdBanner class="order-10 md:order-10" />
 
       <!-- T5: FAQ -->
-      <SectionBlock class="order-11 md:order-11" heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
+      <SectionBlock class="property-section order-11 md:order-11" heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
         <p class="text-sm text-slate-700 mb-6 leading-relaxed">{{ pageDescription }}</p>
         <dl class="flex flex-col gap-4">
           <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
@@ -216,7 +261,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useLand } from '~/composables/useLand'
@@ -233,6 +279,7 @@ import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
 const route = useRoute()
+const router = useRouter()
 const citySlug = route.params.city as string
 const districtSlug = route.params.district as string
 
@@ -258,7 +305,7 @@ const dong = decodeURIComponent(route.params.dong as string).normalize('NFC')
 
 const land = useLand()
 
-const { data, error: landError } = await useAsyncData(
+const { data, error: landError, refresh: refreshLand } = await useAsyncData(
   `land-dong-${citySlug}-${districtSlug}-${dong}`,
   async () => {
     // 목록을 받아 find 하지 않는다. 목록은 transactionCount desc 정렬이라 `limit: 100` 은
@@ -318,18 +365,60 @@ const mobileHeaderStats = computed(() => {
 // ── 전체 거래 내역 페이지네이션 ───────────────────────────────────────────────
 
 const TX_LIMIT = 20
-const txItems = ref([...(data.value?.detail?.items ?? [])])
-const txPage = ref(1)
-const txTotalPages = computed(() =>
-  detail.value ? (detail.value.total === 0 ? 0 : Math.ceil(detail.value.total / TX_LIMIT)) : 1
+function queryText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+const txKeyword = computed(() => queryText(route.query?.q))
+const txJimok = computed(() => queryText(route.query?.jimok))
+const txLandUse = computed(() => queryText(route.query?.landUse))
+const txPage = computed(() => {
+  const number = Number(queryText(route.query?.page) || 1)
+  return Number.isSafeInteger(number) && number > 0 ? number : 1
+})
+const hasTxFilter = computed(() => Boolean(txKeyword.value || txJimok.value || txLandUse.value))
+const hasTxQuery = computed(() => Object.keys(route.query ?? {}).length > 0)
+const txDraft = ref(txKeyword.value)
+watch(txKeyword, value => { txDraft.value = value })
+const txKey = computed(() => `land-transactions-${citySlug}-${districtSlug}-${dong}-${JSON.stringify([txKeyword.value, txJimok.value, txLandUse.value, txPage.value])}`)
+const { data: txResult, error: txError, pending: txPending, refresh: refreshTransactions } = await useAsyncData(
+  txKey,
+  async () => {
+    const bjdCode = summary.value?.bjdCode
+    if (!bjdCode) return null
+    if (!hasTxFilter.value && txPage.value === 1) return detail.value
+    return land.getTransactions({
+      bjdCode, dongName: dong,
+      keyword: txKeyword.value || undefined,
+      jimok: txJimok.value || undefined,
+      landUse: txLandUse.value || undefined,
+      page: txPage.value, limit: TX_LIMIT,
+    })
+  },
+  { default: () => null, watch: [summary] },
 )
+if (txError.value && import.meta.server) markDegradedResponse()
+const txItems = computed(() => txResult.value?.items ?? [])
+const txTotalPages = computed(() => txResult.value?.totalPages ?? 0)
+const filterOptions = computed(() => detail.value?.filterOptions ?? txResult.value?.filterOptions ?? { jimok: [], landUse: [] })
+const txCountLabel = computed(() => `${hasTxFilter.value ? '검색 결과' : '전체'} ${(txResult.value?.total ?? 0).toLocaleString('ko-KR')}건 · 요약과 추이는 동 전체 기준`)
+watchEffect(() => suppressAds(hasTxQuery.value || !!landError.value || !!txError.value || !!txPending.value || !summary.value?.transactionCount))
 
-async function goToTxPage(p: number) {
-  const bjd = summary.value?.bjdCode
-  if (!bjd) return
-  const res = await useLand().getTransactions({ bjdCode: bjd, dongName: dong, page: p, limit: TX_LIMIT })
-  txItems.value = res.items
-  txPage.value = res.page
+function pushTxQuery(patch: Record<string, string | number | undefined>) {
+  return router.push({ query: { ...route.query, ...patch, page: patch.page === 1 ? undefined : patch.page } })
+}
+function submitTxSearch() {
+  return pushTxQuery({ q: txDraft.value.trim() || undefined, page: 1 })
+}
+function goToTxPage(page: number) {
+  return pushTxQuery({ page })
+}
+function txPageHref(page: number) {
+  const query = new URLSearchParams()
+  if (txKeyword.value) query.set('q', txKeyword.value)
+  if (txJimok.value) query.set('jimok', txJimok.value)
+  if (txLandUse.value) query.set('landUse', txLandUse.value)
+  if (page > 1) query.set('page', String(page))
+  return `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong)}${query.size ? `?${query}` : ''}`
 }
 
 // 헤더 공유 버튼: Web Share API 우선, 미지원 시 URL 클립보드 복사
@@ -367,7 +456,7 @@ async function handleShare() {
 //    503 을 찍어 놓고 같은 응답에 'noindex, follow' 를 함께 실어 보냈다.
 //    일시 장애는 절대 색인 신호를 건드리면 안 되므로 fetchFailed 로 넘겨 fail-open 시킨다.
 const noindex = computed(() =>
-  !isTransactionDocumentIndexable({
+  hasTxQuery.value || !isTransactionDocumentIndexable({
     transactionCount: summary.value?.transactionCount,
     fetchFailed: !!landError.value,
   }),
@@ -414,7 +503,7 @@ useHead(() => {
   return {
     title,
     meta,
-    ...(noindex.value ? {} : { link: [{ rel: 'canonical', href: selfCanonical }] }),
+    link: noindex.value ? [] : [{ rel: 'canonical', href: selfCanonical }],
   }
 })
 
@@ -474,3 +563,5 @@ if (!noindex.value) {
   })
 }
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

@@ -91,4 +91,35 @@ describe('FacilityList', () => {
     expect(loadingWrapper.text()).not.toContain('검색 결과가 없습니다')
     expect(emptyWrapper.text()).toContain('검색 결과가 없습니다')
   })
+
+  it('기본 variant 는 기존 FacilityCard 렌더를 유지한다', () => {
+    const wrapper = mount(FacilityList, {
+      props: { facilities: mockFacilities, loading: false },
+      global: {
+        stubs: {
+          FacilityCard: {
+            template: '<article class="facility-card">{{ facility.name }}</article>',
+            props: ['facility'],
+          },
+        },
+      },
+    })
+
+    expect(wrapper.findAll('.facility-card')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="facility-row"]').exists()).toBe(false)
+  })
+
+  it('rows variant 에서 시설 상세 링크와 주요 정보를 행으로 유지한다', () => {
+    const wrapper = mount(FacilityList, {
+      props: { facilities: mockFacilities, loading: false, variant: 'rows' },
+    })
+
+    const rows = wrapper.findAll('[data-testid="facility-row"]')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].attributes('href')).toBe('/toilet/toilet-1')
+    expect(rows[0].text()).toContain('강남역 지하 공중화장실')
+    expect(rows[0].text()).toContain('서울특별시 강남구 강남대로 396')
+    expect(rows[0].text()).toContain('150m')
+  })
+
 })

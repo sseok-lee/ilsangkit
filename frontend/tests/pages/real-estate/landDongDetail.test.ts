@@ -146,12 +146,16 @@ const mockGetRegionDetail = vi.fn(async (_params: any) => ({
   daeCount: 100,
 }))
 
+const mockGetTransactions = vi.fn(async (_params: any) => ({ items: [], total: 0, page: 2, totalPages: 0, filterOptions: { jimok: ['대'], landUse: ['제2종일반주거지역'] } }))
+const push = vi.fn()
+;(globalThis as any).useRouter = () => ({ push })
+
 vi.mock('~/composables/useLand', () => ({
   useLand: () => ({
     getRegions: mockGetRegions,
     getRegionDetail: mockGetRegionDetail,
     getHubSummary: async () => ({ cities: [], totalTransactions: 0 }),
-    getTransactions: vi.fn(async (_params: any) => ({ items: [], total: 0, page: 1, totalPages: 0 })),
+    getTransactions: mockGetTransactions,
   }),
 }))
 
@@ -179,6 +183,8 @@ vi.mock('~/utils/seoConstants', () => ({
 beforeEach(() => {
   mockSetBreadcrumbSchema.mockClear()
   mockSetFAQSchema.mockClear()
+  mockGetTransactions.mockClear()
+  push.mockClear()
   mockGetRegions.mockClear()
   mockGetRegionDetail.mockClear()
   capturedHeadCalls.length = 0
@@ -563,11 +569,11 @@ describe('real-estate/land/[city]/[district]/[dong].vue — 섹션 재배치(spe
     const html = wrapper.html()
     const distIdx = html.indexOf('용도지역 분포')
     const totalIdx = html.indexOf('전체 거래 내역')
-    // 추이/분포 < (둘째)Ad < 전체거래 순서. 광고 인덱스를 분포~전체거래 구간에서 탐색.
-    const adInBetween = html.slice(distIdx, totalIdx).includes('stub-ad')
+    // Approved redesign: transactions precede distributions, with the second ad between them.
+    const adInBetween = html.slice(totalIdx, distIdx).includes('stub-ad')
     expect(distIdx).toBeGreaterThan(-1)
     expect(totalIdx).toBeGreaterThan(-1)
-    expect(distIdx).toBeLessThan(totalIdx)
+    expect(totalIdx).toBeLessThan(distIdx)
     expect(adInBetween, '추이/분포와 전체거래 사이에 AdBanner가 있어야 한다').toBe(true)
   })
 
@@ -596,4 +602,42 @@ describe('real-estate/land/[city]/[district]/[dong].vue — 섹션 재배치(spe
     expect(tables.length).toBeGreaterThan(0)
     expect(tables.every((t) => t.classes().includes('tabular-nums'))).toBe(true)
   })
+})
+
+
+describe('land transaction filters', () => {
+  it('restores URL filters in SSR fetch and keeps whole-dong statistics', async () => {
+    ;(globalThis as any).useRoute = () => ({ params: { city: 'seoul', district: 'gangnam', dong: '역삼동' }, query: { q: '123', jimok: '대', landUse: '제2종일반주거지역', page: '2' } })
+    const original = await mockGetRegionDetail({})
+    mockGetRegionDetail.mockResolvedValueOnce({ ...original, statsMeta: { totalTransactions: 6001, sampleLimit: 5000, sampledTransactions: 5000, isSampleCapped: true }, filterOptions: { jimok: ['대'], landUse: ['제2종일반주거지역'] } } as any)
+    const wrapper = await mountPage()
+    expect(mockGetTransactions).toHaveBeenCalledWith(expect.objectContaining({ bjdCode: '1168010100', dongName: '역삼동', keyword: '123', jimok: '대', landUse: '제2종일반주거지역', page: 2, limit: 20 }))
+    expect(wrapper.get('#land-tx-jimok option[value="대"]').attributes()).toHaveProperty('selected')
+    expect(wrapper.get('#land-tx-land-use option[value="제2종일반주거지역"]').attributes()).toHaveProperty('selected')
+    expect(wrapper.text()).toContain('동 전체 기준')
+    expect(wrapper.text()).toContain('최대 5,000건')
+    expect(wrapper.text()).toContain('조건에 맞는 거래가 없습니다')
+    expect(mockGetRegionDetail).toHaveBeenLastCalledWith({ bjdCode: '1168010100', dongName: '역삼동', page: 1, limit: 20 })
+    const head = capturedHeadCalls.map(resolveHead).find(entry => entry.meta?.some((tag: any) => tag.name === 'description'))
+    expect(head.meta).toContainEqual({ name: 'robots', content: 'noindex, follow' })
+    expect(head.link ?? []).toHaveLength(0)
+  })
+
+  it('applies drafts only on submit and resets page while keeping selected filters', async () => {
+    ;(globalThis as any).useRoute = () => ({ params: { city: 'seoul', district: 'gangnam', dong: '역삼동' }, query: { jimok: '대', page: '2' } })
+    const wrapper = await mountPage()
+    await wrapper.get('#land-tx-keyword').setValue('  123-4  ')
+    expect(push).not.toHaveBeenCalled()
+    await wrapper.get('form').trigger('submit')
+    expect(push).toHaveBeenCalledWith({ query: { jimok: '대', q: '123-4', page: undefined } })
+  })
+})
+
+it('전체 거래 내역은 원본 거래금액·지번·용도지역 열을 함께 제공한다', async () => {
+  const wrapper = await mountPage()
+  const section = wrapper.findAll('section').find(node => node.find('#land-tx-keyword').exists())!
+  expect(section.text()).toContain('지번')
+  expect(section.text()).toContain('용도지역')
+  expect(section.text()).toContain('거래금액')
+  expect(section.text()).not.toContain('.??')
 })

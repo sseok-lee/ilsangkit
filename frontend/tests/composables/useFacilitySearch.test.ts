@@ -146,4 +146,55 @@ describe('useFacilitySearch', () => {
       })
     )
   })
+
+  it('requestGrouped는 상태를 변경하지 않고 recovery와 signal을 보존한다', async () => {
+    const controller = new AbortController()
+    const data = {
+      categories: [],
+      totalCount: 7,
+      recovery: {
+        scope: 'popular',
+        regionLabel: null,
+        chips: [],
+      },
+    }
+    mockFetch.mockResolvedValue({ success: true, data })
+    const search = useFacilitySearch()
+
+    const result = await search.requestGrouped({ keyword: '강남', limit: 3 }, controller.signal)
+
+    expect(result).toEqual(data)
+    expect(mockFetch).toHaveBeenCalledWith('/api/facilities/search', {
+      method: 'POST',
+      body: { keyword: '강남', limit: 3, grouped: true },
+      retry: 1,
+      signal: controller.signal,
+    })
+    expect(search.loading.value).toBe(false)
+    expect(search.groupedResults.value).toEqual([])
+    expect(search.groupedTotalCount.value).toBe(0)
+    expect(search.error.value).toBeNull()
+  })
+
+  it.each([
+    { success: false, data: { categories: [], totalCount: 0 } },
+    { success: true, data: undefined },
+  ])('requestGrouped는 malformed success envelope를 throw한다: %j', async (response) => {
+    mockFetch.mockResolvedValue(response)
+    const { requestGrouped } = useFacilitySearch()
+
+    await expect(requestGrouped({ keyword: '강남' })).rejects.toThrow()
+  })
+
+  it('기존 searchGrouped는 void를 반환하며 requestGrouped 오류를 기존 state에 반영한다', async () => {
+    mockFetch.mockResolvedValue({ success: false, data: undefined })
+    const search = useFacilitySearch()
+
+    const result = await search.searchGrouped({ keyword: '강남' })
+
+    expect(result).toBeUndefined()
+    expect(search.error.value).not.toBeNull()
+    expect(search.groupedResults.value).toEqual([])
+    expect(search.groupedTotalCount.value).toBe(0)
+  })
 })

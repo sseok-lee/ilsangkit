@@ -6,10 +6,12 @@ import { resolveFacilityRedirect } from '../middleware/facility-redirect'
 import { ssrFetch } from './ssrFetch'
 import { rejectSitemapLoc, SITEMAP_LOC_ORIGIN, type SitemapLocRejectReason } from './sitemapPolicy'
 import { escapeXml } from './xml'
+import { buildTrashRegionPath } from '~/shared/regionSlugs'
 
 export const SITE_URL = 'https://ilsangkit.co.kr'
 
 export const MAX_URLS_PER_SITEMAP = 10_000
+export const TRASH_MAX_URLS_PER_SITEMAP = 50_000
 
 /**
  * changefreq / priority 는 의도적으로 없다.
@@ -234,12 +236,22 @@ export interface SitemapWasteRegion {
   updatedAt: string
 }
 
+export interface SitemapWasteArea {
+  areaId: number
+  contentUpdatedAt: string
+}
+
 // 쓰레기 배출 구·군 집계 지역 목록. 개별 /trash/[id] 대신 집계 URL 사이트맵 생성에 사용.
 // 응답 형태: { success, data: { regions: [{ city, district, updatedAt }] } }
-export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]> {
+interface SitemapFetchResult<T> {
+  ok: boolean
+  data: T[]
+}
+
+async function fetchWasteScheduleRegionsResult(): Promise<SitemapFetchResult<SitemapWasteRegion>> {
   const cacheKey = 'waste-schedule-regions'
   const cached = getCached<SitemapWasteRegion>(cacheKey)
-  if (cached) return cached
+  if (cached) return { ok: true, data: cached }
 
   try {
     const json = await ssrFetch<{ data?: { regions?: SitemapWasteRegion[] } }>(
@@ -248,11 +260,84 @@ export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]>
     )
     const data = json.data?.regions ?? []
     if (data.length > 0) setCache(cacheKey, data)
-    return data
+    return { ok: true, data }
   } catch (err) {
     console.error('[sitemap] fetchWasteScheduleRegions failed', err)
-    return []
+    return { ok: false, data: [] }
   }
+}
+
+export async function fetchWasteScheduleRegions(): Promise<SitemapWasteRegion[]> {
+  const result = await fetchWasteScheduleRegionsResult()
+  return result.data
+}
+
+async function fetchWasteAreasResult(): Promise<SitemapFetchResult<SitemapWasteArea>> {
+  const cacheKey = 'waste-areas'
+  const cached = getCached<SitemapWasteArea>(cacheKey)
+  if (cached) return { ok: true, data: cached }
+
+  try {
+    const json = await ssrFetch<{ data?: { areas?: SitemapWasteArea[] } }>(
+      '/api/sitemap/waste-areas',
+      { timeoutMs: SITEMAP_FETCH_TIMEOUT_MS },
+    )
+    const data = json.data?.areas ?? []
+    if (data.length > 0) setCache(cacheKey, data)
+    return { ok: true, data }
+  } catch (err) {
+    console.error('[sitemap] fetchWasteAreas failed', err)
+    return { ok: false, data: [] }
+  }
+}
+
+export async function fetchWasteAreas(): Promise<SitemapWasteArea[]> {
+  const result = await fetchWasteAreasResult()
+  return result.data
+}
+
+export interface WasteSitemapUrl {
+  loc: string
+  lastmod: string
+}
+
+export interface WasteSitemapInputs {
+  regions: SitemapWasteRegion[]
+  areas: SitemapWasteArea[]
+  urls: WasteSitemapUrl[]
+  latestLastmod: string | null
+}
+
+export async function fetchWasteSitemapInputs(): Promise<WasteSitemapInputs> {
+  const [regions, areas] = await Promise.all([fetchWasteScheduleRegionsResult(), fetchWasteAreasResult()])
+  if (!regions.ok || !areas.ok) {
+    throw new Error('waste sitemap upstream unavailable')
+  }
+  const urls = buildWasteSitemapUrls(regions.data, areas.data)
+  const latestLastmod = urls.reduce((max, item) => (item.lastmod > max ? item.lastmod : max), '') || null
+  return { regions: regions.data, areas: areas.data, urls, latestLastmod }
+}
+
+export function buildWasteSitemapUrls(
+  regions: SitemapWasteRegion[],
+  areas: SitemapWasteArea[]
+): WasteSitemapUrl[] {
+  const byLoc = new Map<string, WasteSitemapUrl>()
+  for (const region of regions) {
+    const regionPath = buildTrashRegionPath(region.city, region.district)
+    if (!regionPath) continue
+    byLoc.set(`${SITE_URL}${regionPath}`, {
+      loc: `${SITE_URL}${regionPath}`,
+      lastmod: formatDateForSitemap(region.updatedAt),
+    })
+  }
+  for (const area of areas) {
+    byLoc.set(`${SITE_URL}/trash/areas/${area.areaId}`, {
+      loc: `${SITE_URL}/trash/areas/${area.areaId}`,
+      lastmod: formatDateForSitemap(area.contentUpdatedAt),
+    })
+  }
+  return [...byLoc.values()].sort((a, b) => a.loc.localeCompare(b.loc))
 }
 
 export interface SitemapRealEstateBuilding {
@@ -260,6 +345,8 @@ export interface SitemapRealEstateBuilding {
   city: string
   district: string
   buildingName: string
+  buildingKey?: string | null
+  canonicalPath?: string | null
   bjdCode: string
   // 건물별 가장 최근 실거래월('YYYY-MM-DD'). 백엔드 미배포 시점 대비 optional — 없으면 weekStart 폴백.
   lastmod?: string

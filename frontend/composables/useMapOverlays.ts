@@ -1,7 +1,11 @@
 import { shallowRef } from 'vue'
 import { isBuildingItem, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
+import type { DealSnapshot } from '~/types/realEstateExploration'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { itemKey } from '~/composables/useRealEstateMap'
+
+const DEALS_UNAVAILABLE_MESSAGE = '거래 정보를 불러오지 못했습니다'
+const NO_DEAL_MESSAGE = '거래 없음'
 
 /**
  * 만원 단위 금액을 "16억 8,340만" / "8,500만" / "3억" 형태로 만든다.
@@ -19,19 +23,35 @@ function formatManwon(manwon: number): string {
 }
 
 /**
- * 건물 마커 라벨.
- * monthlyRent 판별식: null=매매 / 0=전세 / >0=월세. IS NULL 을 전세로 쓰지 않는다 —
- * 전월세 타입에서 null 은 summary 미갱신을 뜻한다.
+ * 건물 마커 라벨. 여섯 지도 유형은 latestDeals bundle 만 신뢰한다.
+ * bundle 자체가 없으면 로드 실패, bundle 안의 null 슬롯은 확인된 거래 없음이다.
  */
-export function formatPriceLabel(item: MapBuildingItem): string {
-  if (item.latestPrice == null) return '—'
-  const price = formatManwon(item.latestPrice)
-  if (item.monthlyRent == null) return price
-  if (item.monthlyRent === 0) return `전세 ${price}`
-  // 두 숫자에 각각 무엇인지 라벨을 붙인다. 예전엔 `월 1억·80` 처럼 가운데점으로만
-  // 갈랐는데, 앞이 보증금이고 뒤가 월세라는 걸 알아야 읽혔다. 월세액도 보증금과 같은
-  // 만원 단위다.
-  return `보 ${price}/월 ${item.monthlyRent.toLocaleString('ko-KR')}만`
+export function formatPriceLabel(item: MapBuildingItem, type = ''): string {
+  const bundle = item.latestDeals
+  if (!bundle) return DEALS_UNAVAILABLE_MESSAGE
+
+  const isRent = type.endsWith('-rent') || (!type && bundle.sale == null && (bundle.jeonse != null || bundle.wolse != null))
+  if (!isRent) {
+    return bundle.sale?.amount == null ? NO_DEAL_MESSAGE : formatManwon(bundle.sale.amount)
+  }
+
+  const deal = latestRentDeal(bundle.jeonse, bundle.wolse)
+  if (!deal) return NO_DEAL_MESSAGE
+  if (deal.kind === 'jeonse') {
+    return deal.deposit == null ? NO_DEAL_MESSAGE : `전세 ${formatManwon(deal.deposit)}`
+  }
+  if (deal.deposit == null || deal.monthlyRent == null) return NO_DEAL_MESSAGE
+  return `보 ${formatManwon(deal.deposit)}/월 ${deal.monthlyRent.toLocaleString('ko-KR')}만`
+}
+
+function dealDateKey(deal: DealSnapshot): number {
+  return deal.dealYear * 10000 + deal.dealMonth * 100 + (deal.dealDay ?? 0)
+}
+
+function latestRentDeal(jeonse: DealSnapshot | null, wolse: DealSnapshot | null): DealSnapshot | null {
+  if (!jeonse) return wolse
+  if (!wolse) return jeonse
+  return dealDateKey(wolse) > dealDateKey(jeonse) ? wolse : jeonse
 }
 
 /**
@@ -41,8 +61,8 @@ export function formatPriceLabel(item: MapBuildingItem): string {
  * 별도 요소로 그리기 때문이다 — 문자열에 넣으면 스타일을 나눠 줄 수 없다.
  */
 export function formatJeonseLabel(item: MapBuildingItem): string | null {
-  if (item.jeonseDeposit == null) return null
-  return formatManwon(item.jeonseDeposit)
+  const deposit = item.latestDeals?.jeonse?.deposit
+  return deposit == null ? null : formatManwon(deposit)
 }
 
 /**
@@ -52,30 +72,22 @@ export function formatJeonseLabel(item: MapBuildingItem): string | null {
  * 보증금이 0인지 미상인지 알 수 없다. 0 은 유효한 값이라 `== null` 로만 판정한다.
  */
 export function formatWolseLabel(item: MapBuildingItem): string | null {
-  if (item.wolseDeposit == null || item.wolseMonthlyRent == null) return null
-  return `${formatManwon(item.wolseDeposit)} · ${item.wolseMonthlyRent.toLocaleString('ko-KR')}만`
+  const deal = item.latestDeals?.wolse
+  if (deal?.deposit == null || deal.monthlyRent == null) return null
+  return `${formatManwon(deal.deposit)} · ${deal.monthlyRent.toLocaleString('ko-KR')}만`
 }
 
 /**
- * 전세/월세 표시 값. 새 분리 컬럼(jeonseDeposit, wolseDeposit)이 **둘 다 null** 이면
- * "거래가 없다"가 아니라 "이 시·도 배치가 아직 안 돌았다"는 뜻이다 — 전월세 요약 행은
- * 반드시 전세 또는 월세 거래에서 나오므로, 정상적으로 갱신됐다면 둘 중 최소 하나는
- * 채워져 있어야 한다. 배포 직후엔 `prisma db push` 만 돌아 다섯 새 컬럼이 전부 NULL
- * 인 채로 다음 nightly sync(~03:50 KST, 최대 ~18시간 뒤)까지 남는다 — 그동안은 레거시
- * 컬럼(latestPrice/monthlyRent, monthlyRent: null=매매/0=전세/>0=월세)으로 폴백해
- * 예전과 같은 값을 보여준다. 둘 중 하나라도 값이 있으면 정상 갱신된 것으로 보고
- * formatJeonseLabel/formatWolseLabel 을 그대로 쓴다.
+ * 전세/월세 표시 값. bundle 존재 여부를 null 슬롯과 분리해 호출부가 오류와 거래 없음을
+ * 서로 다른 상태로 표시할 수 있게 한다.
  */
-export function getRentDisplay(item: MapBuildingItem): { jeonse: string | null; wolse: string | null } {
-  if (item.jeonseDeposit != null || item.wolseDeposit != null) {
-    return { jeonse: formatJeonseLabel(item), wolse: formatWolseLabel(item) }
+export function getRentDisplay(item: MapBuildingItem): { jeonse: string | null; wolse: string | null; unavailable: boolean } {
+  if (!item.latestDeals) return { jeonse: null, wolse: null, unavailable: true }
+  return {
+    jeonse: formatJeonseLabel(item),
+    wolse: formatWolseLabel(item),
+    unavailable: false,
   }
-  if (item.latestPrice == null) return { jeonse: null, wolse: null }
-  if (item.monthlyRent === 0) return { jeonse: formatManwon(item.latestPrice), wolse: null }
-  if (item.monthlyRent != null && item.monthlyRent > 0) {
-    return { jeonse: null, wolse: `${formatManwon(item.latestPrice)} · ${item.monthlyRent.toLocaleString('ko-KR')}만` }
-  }
-  return { jeonse: null, wolse: null }
 }
 
 /** 지역 버블 라벨. 단위를 명시해 줌 전환 시 의미가 바뀌는 걸 알린다. */
@@ -159,11 +171,17 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
   }
 
   if (isRent) {
-    const { jeonse, wolse } = getRentDisplay(item)
-    addLine('전세', jeonse ?? '거래 없음', { secondary: false, absent: jeonse == null })
-    addLine('월세', wolse ?? '거래 없음', { secondary: true, absent: wolse == null })
+    const { jeonse, wolse, unavailable } = getRentDisplay(item)
+    if (unavailable) {
+      addLine('', DEALS_UNAVAILABLE_MESSAGE, { secondary: false, absent: true })
+    } else {
+      addLine('전세', jeonse ?? NO_DEAL_MESSAGE, { secondary: false, absent: jeonse == null })
+      addLine('월세', wolse ?? NO_DEAL_MESSAGE, { secondary: true, absent: wolse == null })
+    }
   } else {
-    addLine('매매', formatPriceLabel(item), { secondary: false, absent: false })
+    const value = formatPriceLabel(item, type)
+    const absent = value === NO_DEAL_MESSAGE || value === DEALS_UNAVAILABLE_MESSAGE
+    addLine('매매', value, { secondary: false, absent })
   }
 
   const link = document.createElement('a')
@@ -175,6 +193,8 @@ function buildPopup(item: MapBuildingItem, type: string, isRent: boolean): HTMLE
     city: item.city,
     district: item.district,
     buildingName: item.buildingName,
+    buildingKey: item.buildingKey,
+    canonicalPath: item.canonicalPath,
   })
   el.appendChild(link)
 
@@ -244,7 +264,7 @@ export function useMapOverlays() {
       if (item.lat == null || item.lng == null) continue
       const building = isBuildingItem(item)
       const text = building
-        ? formatPriceLabel(item as MapBuildingItem)
+        ? formatPriceLabel(item as MapBuildingItem, opts.type ?? '')
         : formatPyeongLabel(item as MapRegionItem)
 
       // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 순서가 곧 우선순위 —

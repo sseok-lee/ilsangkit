@@ -40,7 +40,7 @@ describe('RegionFacilityCategoryGrid', () => {
     expect(wrapper.text()).toContain('12,345개 시설')
   })
 
-  it('topCategories에 포함된 카테고리는 강조 클래스 적용', () => {
+  it('topCategories에 포함된 카테고리는 행 배경으로 강조한다', () => {
     const wrapper = mount(RegionFacilityCategoryGrid, {
       props: {
         city: 'seoul',
@@ -52,10 +52,8 @@ describe('RegionFacilityCategoryGrid', () => {
       global: globalConfig,
     })
     const links = wrapper.findAll('a')
-    // parking is in topCategories → primary border
-    expect(links[0].classes().some(c => c.includes('primary'))).toBe(true)
-    // hospital is not → slate border
-    expect(links[1].classes().some(c => c.includes('slate-200'))).toBe(true)
+    expect(links[0].classes()).toContain('bg-primary/5')
+    expect(links[1].classes()).toContain('bg-white')
   })
 
   it('H2 "생활시설현황" 헤딩 + section id="facilities"', () => {

@@ -78,6 +78,7 @@ const statusLabel = computed(() => {
   if (status === 'upcoming') return '접수예정'
   if (status === 'ongoing') return '청약중'
   if (status === 'closed') return '마감'
+  if (status === 'unknown') return '일정 확인 필요'
   return ''
 })
 
@@ -86,6 +87,7 @@ const statusBadgeClass = computed(() => {
   const baseClass = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0'
   if (status === 'upcoming') return `${baseClass} bg-primary-100 text-primary-700 ring-1 ring-inset ring-primary-200`
   if (status === 'ongoing') return `${baseClass} bg-green-100 text-green-700 ring-1 ring-inset ring-green-200`
+  if (status === 'unknown') return `${baseClass} bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200`
   return `${baseClass} bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200`
 })
 

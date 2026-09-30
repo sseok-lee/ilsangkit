@@ -39,6 +39,8 @@ export interface RealEstateUrlParts {
   district: string;
   /** 건물명. NFD/NFC 어느 쪽이어도 입력 가능 — 내부에서 NFC로 정규화. */
   buildingName: string;
+  buildingKey?: string | null;
+  canonicalPath?: string | null;
 }
 
 /**
@@ -61,7 +63,17 @@ export function toCitySlugByDistrict(city: string, _district: string): string {
   return toCitySlug(city);
 }
 
+function isHashCanonicalPath(path: string): boolean {
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length !== 6) return false;
+  if (segments[0] !== 'real-estate') return false;
+  return /^[a-f0-9]{64}$/i.test(segments[5] ?? '');
+}
+
 export function toRealEstateUrl(parts: RealEstateUrlParts): string {
+  if (parts.canonicalPath && !isHashCanonicalPath(parts.canonicalPath)) {
+    return parts.canonicalPath;
+  }
   const citySlug = toCitySlugByDistrict(parts.city, parts.district);
   const districtSlug = toDistrictSlug(parts.district);
   const nfcName = parts.buildingName.normalize('NFC');

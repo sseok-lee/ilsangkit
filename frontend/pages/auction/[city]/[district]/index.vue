@@ -1,9 +1,10 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="공매"
         :title="`${districtName} 공매 물건·낙찰가율`"
         :description="`${cityName} ${districtName} 부동산 공매 물건과 용도별 낙찰가율 통계를 확인하세요.`"
@@ -15,12 +16,12 @@
       </p>
 
       <!-- 용도별 집계 카드 -->
-      <SectionBlock v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
+      <SectionBlock class="property-section" v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <div
             v-for="g in usageGroups"
             :key="g.usageGroup"
-            class="bg-white rounded-xl border border-line p-4 shadow-card"
+            class="property-stat"
           >
             <p class="text-caption text-slate-500 mb-1">{{ USAGE_GROUP_LABEL[g.usageGroup] }}</p>
             <p class="text-sm font-bold text-slate-900">{{ formatBidRate(g.avgBidRate) }}</p>
@@ -30,9 +31,9 @@
       </SectionBlock>
 
       <!-- 진행중 물건 -->
-      <SectionBlock v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AuctionCard v-for="item in activeItems" :key="item.cltrMngNo" :item="item" />
+      <SectionBlock class="property-section" v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
+        <div class="flex flex-col">
+          <AuctionCard variant="row" v-for="item in activeItems" :key="item.cltrMngNo" :item="item" />
         </div>
         <div class="mt-3 text-right">
           <NuxtLink :to="`/auction/list?city=${cityName}&district=${districtName}`" class="text-sm text-primary hover:underline">전체 물건 보기 →</NuxtLink>
@@ -40,16 +41,16 @@
       </SectionBlock>
 
       <!-- 최근 낙찰 물건 -->
-      <SectionBlock v-if="recentSold.length > 0" heading="최근 낙찰" subtext="최근 낙찰된 공매 물건입니다.">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AuctionCard v-for="item in recentSold" :key="item.cltrMngNo" :item="item" />
+      <SectionBlock class="property-section" v-if="recentSold.length > 0" heading="최근 낙찰" subtext="최근 낙찰된 공매 물건입니다.">
+        <div class="flex flex-col">
+          <AuctionCard variant="row" v-for="item in recentSold" :key="item.cltrMngNo" :item="item" />
         </div>
       </SectionBlock>
 
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock heading="자주 묻는 질문">
+      <SectionBlock class="property-section" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details
             v-for="faq in AUCTION_FAQ"
@@ -178,3 +179,5 @@ setBreadcrumbSchema([
   { name: districtName, url: `/auction/${citySlug}/${districtSlug}` },
 ])
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

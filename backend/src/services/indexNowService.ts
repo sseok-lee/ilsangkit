@@ -1,11 +1,16 @@
 // IndexNow API 서비스
 // 네이버/Bing 등 IndexNow 지원 검색엔진에 URL 변경을 즉시 알림
 
+import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 import {
   toAbsoluteRealEstateUrl,
   type RealEstateUrlType,
 } from '../lib/realEstateUrl.js';
+import {
+  attachRealEstateCanonicalPaths,
+  isPreservedRealEstateUrlMode,
+} from './realEstateUrlRegistry.js';
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const SITE_HOST = 'ilsangkit.co.kr';
@@ -101,9 +106,9 @@ export function buildSubwayUrls(slugs: string[]): string[] {
 export interface TransactionBuildingDelegate {
   findMany(args: {
     where: { createdAt: { gte: Date }; syncedAt: { gte: Date } };
-    select: { buildingName: true; city: true; district: true };
-    distinct: ['buildingName', 'city', 'district'];
-  }): Promise<Array<{ buildingName: string; city: string; district: string }>>;
+    select: { buildingName: true; city: true; district: true; bjdCode: true; dongName: true; jibun: true };
+    distinct: ['buildingName', 'city', 'district', 'bjdCode', 'dongName', 'jibun'];
+  }): Promise<Array<{ buildingName: string; city: string; district: string; bjdCode: string; dongName: string; jibun: string | null }>>;
 }
 
 /**
@@ -163,17 +168,18 @@ export async function submitNewlyTransactedBuildings(
       createdAt: { gte: since },
       syncedAt: { gte: since },
     },
-    select: { buildingName: true, city: true, district: true },
-    distinct: ['buildingName', 'city', 'district'],
+    select: { buildingName: true, city: true, district: true, bjdCode: true, dongName: true, jibun: true },
+    distinct: ['buildingName', 'city', 'district', 'bjdCode', 'dongName', 'jibun'],
   });
 
   // 지번/thin buildingName 은 buildRealEstateUrlsV2 가 걸러낸다 — SEO 저품질 URL 제출 방지
-  const urls = buildRealEstateUrlsV2(
+  const urls = await buildRegisteredRealEstateUrlsV2(
     buildings.map((b) => ({
       realEstateType,
       city: b.city,
       district: b.district,
       buildingName: b.buildingName,
+      buildingKey: makeBuildingKey({ propertyType: realEstateType.split('-')[0], bjdCode: b.bjdCode, buildingName: b.buildingName, dongName: b.dongName ?? '', jibun: b.jibun }),
     })),
   );
 
@@ -194,17 +200,38 @@ export function buildRealEstateUrlsV2(
     city: string;
     district: string;
     buildingName: string;
+    buildingKey?: string;
+    canonicalPath?: string;
   }>
 ): string[] {
   const origin = `https://${SITE_HOST}`;
   return items
     .filter((it) => isValidBuildingName(it.buildingName))
+    .filter((it) => !isPreservedRealEstateUrlMode() || !!it.canonicalPath)
     .map((it) =>
       toAbsoluteRealEstateUrl(origin, {
         type: it.realEstateType,
         city: it.city,
         district: it.district,
         buildingName: it.buildingName,
+        buildingKey: it.buildingKey,
+        canonicalPath: it.canonicalPath,
       }),
     );
+}
+
+export async function buildRegisteredRealEstateUrlsV2(
+  items: Array<{
+    realEstateType: RealEstateUrlType;
+    city: string;
+    district: string;
+    buildingName: string;
+    buildingKey?: string;
+  }>
+): Promise<string[]> {
+  if (!isPreservedRealEstateUrlMode()) return buildRealEstateUrlsV2(items);
+  const itemsWithCanonicalPaths = await attachRealEstateCanonicalPaths(
+    items.map((item) => ({ ...item, type: item.realEstateType })),
+  );
+  return buildRealEstateUrlsV2(itemsWithCanonicalPaths);
 }

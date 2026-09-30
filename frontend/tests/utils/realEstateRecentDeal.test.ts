@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveRecentDeal, formatLatestPrice } from '~/utils/realEstateRecentDeal'
+import { resolveRecentDeal, resolveLatestSaleDeal, formatLatestPrice } from '~/utils/realEstateRecentDeal'
 
 describe('resolveRecentDeal', () => {
   it('보증금과 월세, 거래월을 함께 뽑는다', () => {
@@ -36,6 +36,32 @@ describe('resolveRecentDeal', () => {
     })
     expect(deal.amount).toBe(50000)
     expect(deal.dealDate).toBeNull()
+  })
+})
+
+describe('resolveLatestSaleDeal', () => {
+  it('overview.latestSale을 최근 매매 단일 소스로 변환한다', () => {
+    expect(resolveLatestSaleDeal({
+      identity: { bjdCode: '11680', buildingName: '반포자이' },
+      latestSale: { id: 1, amount: 80000, year: 2026, month: 9, day: 12, area: '84.90', floor: 0 },
+      buildYear: 2009,
+      minArea: '59.98',
+      maxArea: '132.44',
+      saleCount6m: 8,
+      window6m: { from: '2026-03-21', to: '2026-09-21' },
+      addresses: [],
+      location: null,
+      locationAmbiguous: false,
+      generatedAt: '2026-09-21T00:00:00.000Z',
+    })).toEqual({ amount: 80000, monthlyRent: null, dealDate: '2026년 9월 12일' })
+  })
+
+  it('latestSale이 없으면 금액 메타를 만들 수 없는 null 값을 반환한다', () => {
+    expect(resolveLatestSaleDeal({ latestSale: null } as any)).toEqual({
+      amount: null,
+      monthlyRent: null,
+      dealDate: null,
+    })
   })
 })
 

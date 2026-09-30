@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { resolve } from 'path';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
+import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
 import {
   fetchRealEstateData,
   generateSourceId,
@@ -158,6 +159,7 @@ async function syncByLawdAndYm(
   // SyncHistory 카운터가 영원히 0으로 남는다 — baseSyncService.runSync 주석 참조.
   stats: SyncStats = createSyncStats(),
 ): Promise<void> {
+  return withRealEstateWriteLock('syncByLawdAndYm', async () => {
   const items = await fetchRealEstateData(API_ENDPOINT, lawdCd, dealYmd, serviceKey);
 
   if (items.length === 0) return;
@@ -195,12 +197,15 @@ async function syncByLawdAndYm(
 
   stats.newRecords += newCount;
   stats.updatedRecords += updateCount;
+
+  });
 }
 
 /**
  * 메인 동기화 함수
  */
 async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromYm?: string; toYm?: string }): Promise<void> {
+  return withRealEstateWriteLock('syncVillaRent', async () => {
   const serviceKey = process.env.OPENAPI_SERVICE_KEY ?? '';
   if (!serviceKey) {
     throw new Error('OPENAPI_SERVICE_KEY environment variable is not set');
@@ -246,6 +251,8 @@ async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromY
       }
     }
   });
+
+  });
 }
 
 /**
@@ -281,7 +288,7 @@ async function main(): Promise<void> {
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
   installRuntimeGuard({ maxMinutes: 20, name: 'syncVillaRent', prisma });
-  main().catch((error) => {
+  withRealEstateWriteLock('syncVillaRent', main).catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

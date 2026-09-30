@@ -46,6 +46,13 @@ export const CITY_SLUGS_SET = new Set(Object.values(CITY_SLUGS))
 const LEGACY_JNGJ_CITIES = new Set(['gwangju', 'jeonnam'])
 const JNGJ_SLUG = 'jeonnamgwangju'
 const NEW_FORMAT_TYPE_MODE = /^(apt|villa|offitel)-(sale|rent)$/
+const HASH_SUFFIX = /^[a-f0-9]{64}$/i
+
+export function hasUnpublishedHashSuffix(pathname: string): boolean {
+  const segments = pathname.split('/')
+  if (segments[1] !== 'real-estate' || !NEW_FORMAT_TYPE_MODE.test(segments[2] ?? '')) return false
+  return segments.length >= 7 && HASH_SUFFIX.test(segments.at(-1) ?? '')
+}
 
 export function resolveRegionReorgCityRedirect(pathname: string, flagOn: boolean): string | null {
   if (!flagOn) return null
@@ -76,6 +83,38 @@ const INCHEON_CURRENT_DISTRICT_SLUGS = new Set([
   'bupyeong', 'gyeyang', 'seohae', 'geomdan', 'ganghwa', 'ongjin',
 ])
 
+
+function isSafeRealEstatePath(path: string | null | undefined): path is string {
+  return typeof path === 'string'
+    && path.startsWith('/real-estate/')
+    && !path.startsWith('//')
+}
+
+async function resolvePublicUrlMode(
+  pathname: string,
+  fetcher: (path: string) => Promise<unknown>,
+): Promise<{ mode: 'keyed' } | { mode: 'preserved'; canonicalPath: string } | null> {
+  try {
+    const res = (await fetcher(
+      `/api/real-estate/resolve-url?path=${encodeURIComponent(pathname)}`,
+    )) as {
+      success?: boolean
+      data?: {
+        mode?: string
+        canonicalPath?: string | null
+        redirect?: boolean
+      } | null
+    } | null
+    if (res?.success !== true) return null
+    if (res.data?.mode === 'keyed') return { mode: 'keyed' }
+    const canonicalPath = res.data?.mode === 'preserved' ? res.data.canonicalPath : null
+    if (!isSafeRealEstatePath(canonicalPath)) return null
+    return { mode: 'preserved', canonicalPath }
+  } catch {
+    return null
+  }
+}
+
 export async function resolveIncheonReorgRedirect(
   pathname: string,
   fetcher: (path: string) => Promise<unknown>,
@@ -90,19 +129,28 @@ export async function resolveIncheonReorgRedirect(
   // 구 허브(단지 없음) → 시 허브 (서구는 2구로 분리라 단일 신설구로 못 보냄)
   if (!building) return { redirect: `/real-estate/${seg[2]}/incheon` }
 
+  const publicUrl = await resolvePublicUrlMode(pathname, fetcher)
+  // Registry errors/absence are handled by the detail resolver as 503/404.
+  // Never replace an unresolved address with a similarly named building.
+  if (!publicUrl) return null
+  if (publicUrl.mode === 'preserved') {
+    return publicUrl.canonicalPath === pathname ? null : { redirect: publicUrl.canonicalPath }
+  }
+  if (seg[6]) return { notFound: true }
+
   // 단지 상세: 국토부 현행 귀속(신설구)을 조회해 목적지 결정
   let decoded: string
   try { decoded = decodeURIComponent(building) } catch { decoded = building }
   const nfc = decoded.normalize('NFC')
+  const isCurrent = (d: string) => {
+    const s = DISTRICT_SLUG_MAP[d]
+    return !!s && INCHEON_CURRENT_DISTRICT_SLUGS.has(s)
+  }
   try {
     const res = (await fetcher(
       `/api/real-estate/${seg[2]}/complexes?city=${encodeURIComponent('인천')}&buildingName=${encodeURIComponent(nfc)}&limit=20`,
     )) as { success?: boolean; data?: { items?: Array<{ district: string; buildingName: string }> } } | null
     const items = res?.data?.items ?? []
-    const isCurrent = (d: string) => {
-      const s = DISTRICT_SLUG_MAP[d]
-      return !!s && INCHEON_CURRENT_DISTRICT_SLUGS.has(s)
-    }
     // 정확 일치(현행구) 우선, 없으면 현행구 첫 건
     const cur = items.find((it) => it.buildingName === nfc && isCurrent(it.district))
       ?? items.find((it) => isCurrent(it.district))
@@ -289,6 +337,13 @@ export default defineEventHandler(async (event) => {
     pathname.startsWith('/api/')
   ) {
     return
+  }
+
+  if (hasUnpublishedHashSuffix(pathname)) {
+    setResponseStatus(event, 404)
+    setHeader(event, 'content-type', 'text/html; charset=utf-8')
+    setHeader(event, 'cache-control', 'no-store')
+    return event.respondWith(new Response(renderMissingBjdHtml(pathname), { status: 404 }))
   }
 
   // 과거 색인·IndexNow 에 유출된 깨진 지역 슬러그(화성/부천 신설 구)를 정본으로 301.

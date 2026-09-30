@@ -14,6 +14,7 @@ const ITEMS: MapItem[] = [
 const BUILDING_ITEMS: MapItem[] = [
   {
     buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: '1168010300',
     lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
     latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
     jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
@@ -308,7 +309,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
           },
           MapFilterBar: { name: 'MapFilterBar', template: '<div />', props: ['type'] },
           RealEstateMapCanvas: { name: 'RealEstateMapCanvas', template: '<div />', props: ['items', 'center', 'level'] },
-          MapBottomSheet: { name: 'MapBottomSheet', template: '<div><slot /></div>' },
+          MapBottomSheet: { name: 'MapBottomSheet', template: '<div><slot /></div>', props: ['expanded'], emits: ['update:expanded'] },
           ClientOnly: { template: '<div><slot /></div>' },
         },
       },
@@ -319,12 +320,12 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     // AdSense 스크립트가 layouts/map.vue 루트에 인라인 height:auto!important 를
     // 주입해도(라이브 실측, 데스크톱 1440x900 에서 611px 스크롤 발생) section 자체가
     // 뷰포트 좌표로 고정돼 있으면 그 주입과 무관하게 스크롤 0 이 유지된다.
-    // 헤더는 h-14 lg:h-16(56px/64px)이라 top 값도 브레이크포인트별로 필요하다.
+    // 헤더는 h-16 lg:h-20(64px/80px)이라 top 값도 브레이크포인트별로 필요하다.
     const cls = mountForLayout().find('section').classes()
     expect(cls).toContain('fixed')
     expect(cls).toContain('inset-x-0')
-    expect(cls).toContain('top-14')
-    expect(cls).toContain('lg:top-16')
+    expect(cls).toContain('top-16')
+    expect(cls).toContain('lg:top-20')
     expect(cls).toContain('bottom-0')
   })
 
@@ -339,7 +340,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     // 명시적으로 골라 그 우연에 기대지 않게 한다.
     const cls = mountForLayout()
       .findAll('section > div')
-      .find((d) => d.classes().includes('lg:flex'))
+      .find((d) => d.classes().includes('absolute') && d.classes().includes('flex-col'))
       ?.classes()
     expect(cls).toContain('absolute')
     expect(cls).toContain('inset-0')
@@ -352,10 +353,10 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     // 그 밑의 MapSidebar 루트(h-full)가 무너져 스크롤이 죽는다 — lg:flex 로 두면
     // align-items:stretch(기본값)가 height 가 auto 일 때 작동하므로 그 주입 위에서도
     // 살아남는다(라이브 검증). row 방향 flex 의 메인축(가로)은 자동으로 안 늘어나므로
-    // MapSidebar 쪽에 w-full 을 내려 320px 폭을 유지한다.
+    // MapSidebar 쪽에 w-full 을 내려 360px 폭을 유지한다.
     const w = mountForLayout()
     const asideCls = w.find('aside').classes()
-    expect(asideCls).toContain('lg:w-[320px]')
+    expect(asideCls).toContain('lg:w-[360px]')
     expect(asideCls).toContain('lg:shrink-0')
     expect(asideCls).toContain('lg:flex')
     expect(asideCls).not.toContain('lg:block')
@@ -364,18 +365,12 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     expect(sidebar.classes()).toContain('w-full')
   })
 
-  it('지도 영역은 h-full 이다 — 모바일 60vh 폐지 회귀 가드', () => {
-    // relative+flex-1 조합은 지도 영역 div 에만 존재한다(컨테이너 div·aside·필터바
-    // absolute 래퍼 어디에도 이 조합이 없다) — find('div') 의 순서가 아니라 클래스
-    // 조합으로 정밀하게 골라낸다.
-    const mapArea = mountForLayout()
-      .findAll('div')
-      .find((d) => d.classes().includes('relative') && d.classes().includes('flex-1'))
-    expect(mapArea).toBeTruthy()
-    const cls = mapArea!.classes()
-    expect(cls).toContain('h-full')
-    expect(cls).toContain('lg:h-auto')
-    expect(cls.some((c) => c.includes('vh'))).toBe(false)
+  it('지도 영역은 하단 시트 위까지만 차지한다 — 모바일 SDK 출처가 시트에 가려지지 않는다', () => {
+    const w = mountForLayout()
+    const mapArea = w.find('.map-canvas-panel')
+    expect(mapArea.exists()).toBe(true)
+    expect(mapArea.attributes('style')).toContain('--sheet-cover: 38dvh')
+    expect(mapArea.classes().some((c) => c.startsWith('h-') || c.includes('60vh'))).toBe(false)
   })
 
   describe('showFooter 반대조건 배선 — 데스크톱/모바일 상호배타', () => {
@@ -425,6 +420,7 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
 
   const RENT_ITEM: MapItem = {
     buildingName: '은마', city: '서울', district: '강남구', dongName: '대치동',
+    bjdCode: '1168010100',
     lat: 37.5, lng: 127.06, latestPrice: 75000, monthlyRent: 340,
     latestDealYear: 2026, latestDealMonth: 7, latestDealDay: 25, transactionCount: 114,
     jeonseDeposit: 96000, jeonseDealKey: 20260712,
@@ -448,7 +444,7 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
     const w = mountWithBuilding()
     await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
     await nextTick()
-    expect(w.vm.selectedKey).toBe('은마|강남구')
+    expect(w.vm.selectedKey).toBe('은마|1168010100')
   })
 
   it('같은 건물을 다시 고르면 접힌다', async () => {
@@ -497,7 +493,7 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
 
   // 줌 왕복 회귀 가드: "은마"를 선택해 카드를 펼친 채 줌아웃하면(building→dong) 목록의
   // 항목 단위 자체가 바뀐다. 이 시점에 선택을 비우지 않으면, 다시 줌인(dong→building)했을
-  // 때 새로 받아온 building 목록에 같은 키("은마|강남구")가 재등장해 클릭 없이 카드가
+  // 때 새로 받아온 building 목록에 같은 키("은마|1168010100")가 재등장해 클릭 없이 카드가
   // 저절로 다시 펼쳐진다 — granularity 가 실제로 바뀌는 순간(fetch 응답 반영 시점)에
   // 곧바로 선택을 지워야 이 사고를 막는다. idle→디바운스(250ms)→fetch 의 실제 경로를
   // 그대로 태워 검증한다(가짜 타이머는 여기서 async $fetch 체인과 얽혀 신뢰도가 떨어진다).
@@ -520,7 +516,7 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
 
       await w.findComponent({ name: 'MapSidebar' }).vm.$emit('select', RENT_ITEM)
       await nextTick()
-      expect(w.vm.selectedKey).toBe('은마|강남구')
+      expect(w.vm.selectedKey).toBe('은마|1168010100')
 
       const bounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
       await w.findComponent(CanvasStub).vm.$emit('idle', bounds, 7, { lat: 37.5, lng: 127.06 })

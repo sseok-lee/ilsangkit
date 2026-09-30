@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-export const SubscriptionStatusSchema = z.enum(['upcoming', 'ongoing', 'closed']);
+export const SubscriptionStatusSchema = z.enum(['upcoming', 'ongoing', 'closed', 'unknown']);
 
-export const SubscriptionSourceTypeSchema = z.enum(['APT', 'OFFITEL', 'REMAINING', 'PRIVATE_RENT', 'OPTIONAL']);
+export const SubscriptionSourceTypeSchema = z.enum(['APT', 'OFFITEL', 'REMAINING', 'PRIVATE_RENT', 'OPTIONAL', 'PUBLIC_RENT']);
 
 export const SubscriptionCategorySchema = z.enum(['sale', 'rent']);
 
@@ -13,9 +13,11 @@ export const SubscriptionListSchema = z.object({
   rentType: z.string().max(20).optional(),
   sourceType: SubscriptionSourceTypeSchema.optional(),
   category: SubscriptionCategorySchema.optional(),
+  q: z.string().trim().transform(value => value.replace(/\s+/g, ' '))
+    .pipe(z.string().max(100)).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  sort: z.enum(['announcement', 'deadline', 'startSoon']).optional(),
+  sort: z.enum(['announcement', 'deadline', 'startSoon', 'priority', 'recent']).optional(),
 });
 
 export const SubscriptionIdSchema = z.object({
@@ -36,4 +38,6 @@ export const RentalPriceStatsSchema = z.object({
 });
 
 export type SubscriptionListParams = z.infer<typeof SubscriptionListSchema>;
+export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
+export type SubscriptionSort = NonNullable<SubscriptionListParams['sort']>;
 export type RentalPriceStats = z.infer<typeof RentalPriceStatsSchema>;

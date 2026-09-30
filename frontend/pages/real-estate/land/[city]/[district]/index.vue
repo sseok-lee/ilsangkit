@@ -1,25 +1,33 @@
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
       <Breadcrumb :items="breadcrumbItems" />
 
       <PageHero
+        class="property-hero"
         eyebrow="토지 실거래가"
         :title="`${districtName} 토지 실거래가`"
         :description="`${cityName} ${districtName} 동별 토지 매매 실거래가를 확인하세요. 국토교통부 공식 데이터 기반.`"
       />
 
-      <SectionBlock :subtext="`${districtName} 내 동을 선택하면 토지 거래 내역을 확인할 수 있습니다.`">
+      <nav aria-label="상위 지역" class="property-actions"><HardLink :to="`/real-estate/land/${citySlug}`">구·군 다시 선택</HardLink></nav>
+      <LandRegionNavigation :city-slug="citySlug" :district-slug="districtSlug">
+      <SectionBlock class="property-section" :subtext="`${districtName} 내 동을 선택하면 토지 거래 내역을 확인할 수 있습니다.`">
         <template #heading>
           <h2 class="text-display-3 text-slate-900">{{ districtName }} 동 목록</h2>
         </template>
 
-        <div v-if="sortedDongs.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <form class="property-search" @submit.prevent="regionSearch = regionDraft.trim()">
+          <label class="sr-only" for="land-region-search">지역명 검색</label>
+          <input id="land-region-search" v-model="regionDraft" placeholder="지역명 검색" maxlength="100">
+          <button type="submit">검색</button>
+        </form>
+        <div v-if="regionCandidates.length > 0" class="property-region-list">
           <HardLink
-            v-for="dong in sortedDongs"
+            v-for="dong in regionCandidates"
             :key="dong.bjdCode"
             :to="`/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(dong.dongName)}`"
-            class="group bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:border-primary/30 transition-[box-shadow,border-color] duration-200 ease-out block"
+            class="property-region-link"
           >
             <span class="text-display-3 text-slate-800">{{ dong.dongName }}</span>
             <template v-if="dong.avgPricePerPyeong != null">
@@ -36,11 +44,14 @@
           </HardLink>
         </div>
 
+        <div v-else-if="regionsError" role="alert" class="py-8 text-sm text-muted">지역 정보를 불러오지 못했습니다. <button class="min-h-11 underline" @click="refresh()">다시 시도</button></div>
+        <p v-else-if="regionSearch" class="py-8 text-sm text-muted">검색한 지역이 없습니다.</p>
         <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
           <p class="text-slate-700 font-semibold">데이터 없음</p>
           <p class="text-slate-500 text-sm mt-1">{{ districtName }} 지역의 토지 거래 데이터가 준비 중입니다.</p>
         </div>
       </SectionBlock>
+      </LandRegionNavigation>
 
       <AdBanner />
 
@@ -51,10 +62,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
+import LandRegionNavigation from '~/components/realEstate/LandRegionNavigation.vue'
+import { loadLandRegions } from '~/utils/landRegionNavigation'
 import { useLand } from '~/composables/useLand'
 import { buildLandRegionTitle, buildLandRegionDescription } from '~/utils/landMeta'
 import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
@@ -89,9 +102,9 @@ if (!districtName) {
 
 const land = useLand()
 
-const { data: regionsData, error: regionsError, status: regionsStatus } = await useAsyncData(
+const { data: regionsData, error: regionsError, status: regionsStatus, refresh } = await useAsyncData(
   `land-district-${citySlug}-${districtSlug}`,
-  () => land.getRegions({ city: cityName, district: districtName, page: 1, limit: 100 }),
+  () => loadLandRegions(page => land.getRegions({ city: cityName, district: districtName, page, limit: 100 })),
   { default: () => null },
 )
 
@@ -202,4 +215,9 @@ setItemListSchema(
     url: `/real-estate/land/${citySlug}/${districtSlug}/${encodeURIComponent(d.dongName)}`,
   })),
 )
+const regionDraft = ref('')
+const regionSearch = ref('')
+const regionCandidates = computed(() => (sortedDongs.value).filter(row => row.dongName.includes(regionSearch.value)))
 </script>
+
+<style src="~/assets/css/remaining-property.css"></style>

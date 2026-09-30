@@ -1,8 +1,10 @@
 // 주의: select 필드(buildingName/type/city/district/bjdCode/transactionCount)는 모두 JSON-safe(BigInt 아님) → serializeRow 불필요.
 import { prisma } from '../../lib/prisma.js';
+import { readSummaryMode, summaryTableFor } from '../../lib/realEstateSummaryStore.js';
 import { parseSearchQueryCached } from './searchQueryParser.js';
 import { getRegionIndex } from './searchRegionIndex.js';
 import { CATEGORY_SYNONYM_MAP } from './searchCategorySynonyms.js';
+import { attachRealEstateCanonicalPaths } from '../realEstateUrlRegistry.js';
 import type { FacilityCategory } from '../../schemas/facility.js';
 
 export interface SuggestItem {
@@ -13,6 +15,10 @@ export interface SuggestItem {
   district?: string;
   category?: FacilityCategory;
   buildingName?: string;
+  buildingKey?: string;
+  canonicalPath?: string;
+  dongName?: string;
+  jibun?: string | null;
   bjdCode?: string;
   reType?: string;
 }
@@ -70,18 +76,46 @@ export async function suggest(q: string, scope?: SuggestScope): Promise<SuggestR
   if (!suppressBuilding) {
     const nameForBuilding = parsed.freeText || query;
     if (nameForBuilding.length >= 2) {
-      const rows = await prisma.realEstateBuildingSummary.findMany({
-        where: { buildingName: { startsWith: nameForBuilding } },
-        orderBy: { transactionCount: 'desc' },
-        take: SECTION_LIMIT,
-        select: { buildingName: true, type: true, city: true, district: true, bjdCode: true, transactionCount: true },
-      });
-      for (const r of rows) {
+      const mode = readSummaryMode(process.env);
+      const table = summaryTableFor('list', mode);
+      const identity = mode === 'address'
+        ? 'buildingKey, dongName, jibun'
+        : 'NULL AS buildingKey, dongName, NULL AS jibun';
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        buildingName: string;
+        buildingKey: string | null;
+        dongName: string;
+        jibun: string | null;
+        type: string;
+        city: string;
+        district: string;
+        bjdCode: string;
+        transactionCount: number | bigint;
+      }>>(
+        `SELECT buildingName, ${identity}, type, city, district, bjdCode, transactionCount
+         FROM ${table}
+         WHERE buildingName LIKE CONCAT(?, '%')
+         ORDER BY transactionCount DESC
+         LIMIT ?`,
+        nameForBuilding,
+        SECTION_LIMIT,
+      );
+      const buildingRows = await attachRealEstateCanonicalPaths(
+        rows.map((r) => ({ ...r, buildingKey: r.buildingKey ?? undefined })),
+      );
+      for (const r of buildingRows) {
+        const sublabel = mode === 'address'
+          ? `${[r.district, r.dongName, r.jibun].filter(Boolean).join(' ')} · 거래 ${Number(r.transactionCount)}건`
+          : `${r.district} · 거래 ${Number(r.transactionCount)}건`;
         items.push({
           type: 'building',
           label: r.buildingName,
-          sublabel: `${r.district} · 거래 ${r.transactionCount}건`,
+          sublabel,
           buildingName: r.buildingName,
+          buildingKey: r.buildingKey ?? undefined,
+          canonicalPath: r.canonicalPath,
+          dongName: r.dongName,
+          jibun: r.jibun,
           bjdCode: r.bjdCode,
           city: r.city,
           district: r.district,

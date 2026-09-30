@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background-light flex flex-col text-strong">
+  <div class="detail-page min-h-screen bg-background-light flex flex-col text-strong">
     <div class="flex-1 w-full">
       <!-- Loading -->
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
@@ -57,8 +57,8 @@
         </Teleport>
 
         <!-- Body -->
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
-          <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-4 lg:gap-6 lg:items-start">
+        <div class="max-w-[1120px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
+          <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px] gap-4 lg:gap-8 lg:items-start">
             <article class="flex flex-col gap-4 md:gap-5 w-full min-w-0">
               <!-- Breadcrumb + Share -->
               <div class="flex items-center justify-between gap-2">
@@ -135,7 +135,7 @@
               <!-- 위치·로드뷰 -->
               <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 역 주변을 확인하세요.">
                 <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
-                <div class="md:hidden relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
+                <div class="md:hidden relative h-[220px] w-full rounded-lg overflow-hidden border border-line mb-3">
                   <ClientOnly>
                     <FacilityMap
                       :center="{ lat: station.lat, lng: station.lng }"
@@ -209,9 +209,9 @@
             </article>
 
             <!-- Sidebar -->
-            <aside class="hidden md:flex lg:sticky lg:top-24 w-full flex-col">
+            <aside class="hidden md:flex lg:sticky lg:top-24 w-full min-w-0 flex-col">
               <!-- Map -->
-              <div class="relative w-full aspect-square bg-[#e5e7eb] h-full rounded-xl overflow-hidden shadow-md min-h-[300px]" role="img" aria-label="지하철역 위치 지도">
+              <div class="relative w-full aspect-[4/3] bg-[#e5e7eb] rounded-lg overflow-hidden border border-line shadow-none min-h-[260px]" role="img" aria-label="지하철역 위치 지도">
                 <ClientOnly>
                   <FacilityMap
                     :center="{ lat: station.lat, lng: station.lng }"
@@ -223,19 +223,19 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-3 p-4 bg-white border border-line-2 flex gap-3 shadow-card rounded-xl">
+              <div class="mt-3 p-3 bg-white border border-line flex gap-2 shadow-none rounded-lg">
                 <a
                   v-if="station.phoneNumber"
                   data-test="sidebar-call"
                   :href="`tel:${station.phoneNumber}`"
-                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 border border-line"
                   aria-label="전화 걸기"
                 >
                   <span class="material-symbols-outlined">call</span>
                   전화
                 </a>
                 <button
-                  class="flex-1 h-12 rounded-xl bg-background-light text-strong font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 border border-line"
                   aria-label="공유하기"
                   @click="handleShare"
                 >
@@ -244,14 +244,14 @@
                 </button>
                 <div class="relative flex-[2]">
                   <button
-                    class="w-full h-12 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2"
+                    class="w-full h-11 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors shadow-none flex items-center justify-center gap-2"
                     @click="showNavDropdown = !showNavDropdown"
                   >
                     <span class="material-symbols-outlined">directions</span>
                     길찾기
                     <span class="material-symbols-outlined text-[18px]">expand_more</span>
                   </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-line-2 overflow-hidden z-20">
+                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-sm border border-line overflow-hidden z-20">
                     <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
                       <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                     </a>
@@ -611,3 +611,13 @@ useHead({
   ],
 })
 </script>
+<style scoped>
+.detail-page :deep(.shadow-card) {
+  box-shadow: none;
+}
+
+.detail-page :deep(section.bg-white),
+.detail-page :deep(.bg-white.border) {
+  box-shadow: none;
+}
+</style>

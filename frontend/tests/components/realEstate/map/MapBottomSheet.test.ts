@@ -12,9 +12,11 @@ describe('MapBottomSheet', () => {
     const handle = w.find('button')
     const sheet = w.get('[class*="fixed"]')
     expect(handle.attributes('aria-expanded')).toBe('false')
+    expect(handle.attributes('aria-label')).toBe('목록 펼치기')
     expect(sheet.classes()).toContain('top-[62dvh]')
     expect(sheet.classes()).toContain('bottom-0')
     expect(sheet.classes().some((c) => /^h-\[/.test(c))).toBe(false)
+    expect(sheet.classes().some((c) => c === 'transition-[top]' || c.includes('duration-'))).toBe(false)
   })
 
   it('핸들 클릭 시 펼쳐진다 — aria-expanded=true, top 인셋이 하단 75%를 차지한다', async () => {
@@ -23,6 +25,7 @@ describe('MapBottomSheet', () => {
 
     const sheet = w.get('[class*="fixed"]')
     expect(w.find('button').attributes('aria-expanded')).toBe('true')
+    expect(w.find('button').attributes('aria-label')).toBe('목록 접기')
     expect(sheet.classes()).toContain('top-[25dvh]')
     expect(sheet.classes()).toContain('bottom-0')
     expect(sheet.classes().some((c) => /^h-\[/.test(c))).toBe(false)

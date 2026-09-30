@@ -18,20 +18,31 @@ import path from 'node:path'
   return e
 }
 
+const navigateToMock = vi.fn()
+;(globalThis as any).navigateTo = navigateToMock
+
 ;(globalThis as any).useRoute = vi.fn(() => ({
   params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
   query: {},
+  path: '/real-estate/apt-sale/seoul/gangnam/%EB%B0%98%ED%8F%AC%EC%9E%90%EC%9D%B4',
 }))
 
+const routerPush = vi.fn()
+const routerReplace = vi.fn()
+
 ;(globalThis as any).useRouter = vi.fn(() => ({
-  replace: vi.fn(),
-  push: vi.fn(),
+  replace: routerReplace,
+  push: routerPush,
 }))
 
 const mockSetBreadcrumbSchema = vi.fn()
 const mockSetItemListSchema = vi.fn()
 const mockSetBuildingPlaceSchema = vi.fn()
 const mockSetRealEstateListingSchema = vi.fn()
+const mockSetFilters = vi.fn()
+const mockGoToPage = vi.fn()
+const mockRefresh = vi.fn()
+const mockRefreshOverview = vi.fn()
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
@@ -52,6 +63,40 @@ vi.mock('~/composables/useRealEstate', () => ({
     getComplexList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 }),
   }),
 }))
+
+vi.mock('~/composables/useRealEstateDetail', async () => {
+  const { ref } = await import('vue')
+  return {
+    useRealEstateDetail: () => ({
+      overview: ref(null),
+      snapshot: ref({
+        filters: {
+          bjdCode: '1168010100',
+          buildingName: '반포자이',
+          mode: 'sale',
+          months: 6,
+          area: '84.90',
+          deposit: null,
+        },
+        options: { areas: ['84.90'], deposits: [] },
+        points: [],
+        window: { from: '2026-04-01', to: '2026-09-29' },
+        table: { items: [], total: 0, page: 1, totalPages: 0 },
+      }),
+      table: ref({ items: [], total: 0, page: 1, totalPages: 0 }),
+      pending: ref(false),
+      tablePending: ref(false),
+      error: ref(null),
+      overviewError: ref(null),
+      tableError: ref(null),
+      announcement: ref(''),
+      setFilters: mockSetFilters,
+      goToPage: mockGoToPage,
+      refresh: mockRefresh,
+      refreshOverview: mockRefreshOverview,
+    }),
+  }
+})
 
 vi.mock('~/composables/useApiBase', () => ({
   useApiBase: () => '',
@@ -84,7 +129,11 @@ vi.mock('~/utils/seoConstants', () => ({
 
 vi.mock('~/utils/realEstateUrl', () => ({
   isRealEstateUrlType: vi.fn(() => true),
-  toRealEstateUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`),
+  toRealEstateUrl: vi.fn((p: any) =>
+    p.canonicalPath
+      ? p.canonicalPath
+      : `/real-estate/${p.type}/${p.city}/${p.district}/${p.buildingName}`
+  ),
   toRealEstateListUrl: vi.fn((p: any) => `/real-estate/${p.type}/${p.city}/${p.district}`),
 }))
 
@@ -105,6 +154,38 @@ beforeEach(() => {
   mockSetItemListSchema.mockClear()
   mockSetBuildingPlaceSchema.mockClear()
   mockSetRealEstateListingSchema.mockClear()
+  mockSetFilters.mockClear()
+  mockGoToPage.mockClear()
+  mockRefresh.mockClear()
+  mockRefreshOverview.mockClear()
+  routerPush.mockClear()
+  routerReplace.mockClear()
+  navigateToMock.mockClear()
+  vi.mocked((globalThis as any).useAsyncData).mockClear()
+  ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+  vi.mocked((globalThis as any).useAsyncData).mockImplementation((key: string, handler?: () => unknown) => {
+    if (key.startsWith('re-public-url-resolution-')) {
+      return Promise.resolve(handler ? handler() : null).then(data => ({
+        data: ref(data),
+        status: ref('success'),
+        error: ref(null),
+        refresh: vi.fn(),
+        pending: ref(false),
+      }))
+    }
+    return {
+      data: ref(null),
+      status: ref('idle'),
+      error: ref(null),
+      refresh: vi.fn(),
+      pending: ref(false),
+    } as any
+  })
+  vi.mocked((globalThis as any).useRoute).mockReturnValue({
+    params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
+    query: {},
+    path: '/real-estate/apt-sale/seoul/gangnam/%EB%B0%98%ED%8F%AC%EC%9E%90%EC%9D%B4',
+  })
 })
 
 async function mountSuspended(component: any, options?: any) {
@@ -130,6 +211,11 @@ async function mountSuspended(component: any, options?: any) {
           RelatedGuides: { template: '<div />' },
           FacilityMap: { template: '<div />' },
           TransactionModeTab: { template: '<div />' },
+          ExactDealFilters: {
+            template: '<button data-testid="emit-wolse" @click="$emit(\'patch\', { mode: \'wolse\' })">월세</button>',
+            props: ['filters', 'options', 'pending'],
+            emits: ['patch'],
+          },
         },
         ...options?.global,
       },
@@ -140,6 +226,150 @@ async function mountSuspended(component: any, options?: any) {
 }
 
 describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — building detail', () => {
+  it('주소 suffix 라우트는 내부 buildingKey처럼 검증하지 않고 resolver로 넘긴다', async () => {
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: {
+        realEstateType: 'apt-sale',
+        city: 'seoul',
+        district: 'gangnam',
+        buildingName: '반포자이',
+        addressSuffix: '반포동-20-43',
+      },
+      query: {},
+      path: '/real-estate/apt-sale/seoul/gangnam/%EB%B0%98%ED%8F%AC%EC%9E%90%EC%9D%B4/%EB%B0%98%ED%8F%AC%EB%8F%99-20-43',
+    })
+    ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        mode: 'preserved',
+        type: 'apt-sale',
+        buildingKey: 'b'.repeat(64),
+        bjdCode: '1168010100',
+        buildingName: '반포자이',
+        canonicalPath: '/real-estate/apt-sale/seoul/gangnam/%EB%B0%98%ED%8F%AC%EC%9E%90%EC%9D%B4/%EB%B0%98%ED%8F%AC%EB%8F%99-20-43',
+        redirect: false,
+      },
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    await expect(mountSuspended(m.default)).resolves.toBeTruthy()
+    expect((globalThis as any).$fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/real-estate/resolve-url'),
+      expect.objectContaining({
+        query: {
+          path: '/real-estate/apt-sale/seoul/gangnam/%EB%B0%98%ED%8F%AC%EC%9E%90%EC%9D%B4/%EB%B0%98%ED%8F%AC%EB%8F%99-20-43',
+        },
+      }),
+    )
+  })
+
+  it('public URL resolver는 hydration 재호출을 막기 위해 useAsyncData payload로 감싼다', async () => {
+    const useAsyncDataSpy = vi.mocked((globalThis as any).useAsyncData)
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    await mountSuspended(m.default)
+
+    expect(useAsyncDataSpy.mock.calls.some(([key]) =>
+      typeof key === 'string' && key.startsWith('re-public-url-resolution-'),
+    )).toBe(true)
+  })
+
+  it('해시 suffix 공개 URL은 301 alias로 두지 않고 404 가드로 둔다', () => {
+    const targetPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
+    )
+    const src = readFileSync(targetPath, 'utf-8')
+
+    expect(src).toContain('addressSuffix')
+    expect(src).toContain('hasHashAddressSuffix')
+    expect(src).toContain("throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })")
+  })
+
+
+
+  it('동일 건물명 readable suffix 상세들은 resolver key가 달라져도 SSR detail cache key가 충돌하지 않는다', async () => {
+    const firstPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}/${encodeURIComponent('반포동-20-43')}`
+    const secondPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}/${encodeURIComponent('반포동-20-44')}`
+    const firstKey = 'a'.repeat(64)
+    const secondKey = 'b'.repeat(64)
+    const useAsyncDataSpy = vi.mocked((globalThis as any).useAsyncData)
+    ;(globalThis as any).$fetch = vi.fn().mockImplementation((_url: string, options?: { query?: { path?: string } }) => {
+      if (options?.query?.path === firstPath) {
+        return Promise.resolve({ success: true, data: { mode: 'preserved', type: 'apt-sale', buildingKey: firstKey, bjdCode: '1168010100', buildingName: '반포자이', canonicalPath: firstPath, redirect: false } })
+      }
+      if (options?.query?.path === secondPath) {
+        return Promise.resolve({ success: true, data: { mode: 'preserved', type: 'apt-sale', buildingKey: secondKey, bjdCode: '1168010100', buildingName: '반포자이', canonicalPath: secondPath, redirect: false } })
+      }
+      return Promise.resolve({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이', addressSuffix: '반포동-20-43' },
+      query: {},
+      path: firstPath,
+    })
+    await mountSuspended(m.default)
+    const firstDetailKey = useAsyncDataSpy.mock.calls.map(([key]) => key).find((key): key is string => typeof key === 'string' && key.startsWith('re-detail-new-'))
+
+    useAsyncDataSpy.mockClear()
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이', addressSuffix: '반포동-20-44' },
+      query: {},
+      path: secondPath,
+    })
+    await mountSuspended(m.default)
+    const secondDetailKey = useAsyncDataSpy.mock.calls.map(([key]) => key).find((key): key is string => typeof key === 'string' && key.startsWith('re-detail-new-'))
+
+    expect(firstDetailKey).toBeTruthy()
+    expect(secondDetailKey).toBeTruthy()
+    expect(firstDetailKey).not.toBe(secondDetailKey)
+    expect(firstDetailKey).toContain(encodeURIComponent('반포동-20-43'))
+    expect(secondDetailKey).toContain(encodeURIComponent('반포동-20-44'))
+  })
+
+  it('legacy grouped base 상세도 같은 건물명 readable suffix와 다른 SSR detail cache key를 가진다', async () => {
+    const groupedBasePath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}`
+    const readableSuffixPath = `${groupedBasePath}/${encodeURIComponent('반포동-20-43')}`
+    const useAsyncDataSpy = vi.mocked((globalThis as any).useAsyncData)
+    ;(globalThis as any).$fetch = vi.fn().mockImplementation((_url: string, options?: { query?: { path?: string } }) => {
+      if (options?.query?.path === groupedBasePath) {
+        return Promise.resolve({ success: true, data: { mode: 'preserved', type: 'apt-sale', bjdCode: '1168010100', buildingName: '반포자이', canonicalPath: groupedBasePath, redirect: false, legacyGrouped: true } })
+      }
+      if (options?.query?.path === readableSuffixPath) {
+        return Promise.resolve({ success: true, data: { mode: 'preserved', type: 'apt-sale', buildingKey: 'a'.repeat(64), bjdCode: '1168010100', buildingName: '반포자이', canonicalPath: readableSuffixPath, redirect: false } })
+      }
+      return Promise.resolve({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
+      query: {},
+      path: groupedBasePath,
+    })
+    await mountSuspended(m.default)
+    const groupedDetailKey = useAsyncDataSpy.mock.calls.map(([key]) => key).find((key): key is string => typeof key === 'string' && key.startsWith('re-detail-new-'))
+
+    useAsyncDataSpy.mockClear()
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: { realEstateType: 'apt-sale', city: 'seoul', district: 'gangnam', buildingName: '반포자이', addressSuffix: '반포동-20-43' },
+      query: {},
+      path: readableSuffixPath,
+    })
+    await mountSuspended(m.default)
+    const suffixDetailKey = useAsyncDataSpy.mock.calls.map(([key]) => key).find((key): key is string => typeof key === 'string' && key.startsWith('re-detail-new-'))
+
+    expect(groupedDetailKey).toBeTruthy()
+    expect(suffixDetailKey).toBeTruthy()
+    expect(groupedDetailKey).not.toBe(suffixDetailKey)
+    expect(groupedDetailKey).toContain(groupedBasePath)
+    expect(suffixDetailKey).toContain(encodeURIComponent('반포동-20-43'))
+  })
+
   it('컴포넌트가 존재해야 한다', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     expect(m.default).toBeDefined()
@@ -198,6 +428,49 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const wrapper = await mountSuspended(m.default)
     const breadcrumbs = wrapper.findAll('[data-stub="breadcrumb"]')
     expect(breadcrumbs.length).toBe(1)
+  })
+
+
+
+  it('noindex 전환은 setup 밖에서 useState 를 다시 호출하지 않고 캡처한 광고 suppression ref만 갱신한다', async () => {
+    const { shouldNoindexRealEstateDetail } = await import('~/utils/realEstateNoindex')
+    const noindexFlag = ref(false)
+    vi.mocked(shouldNoindexRealEstateDetail).mockImplementation(() => noindexFlag.value)
+
+    const originalUseState = (globalThis as any).useState
+    const adsSuppressed = ref(false)
+    let setupContextOpen = true
+    const useStateSpy = vi.fn((key: string, init?: () => unknown) => {
+      if (key === 'ads:suppressed') {
+        if (!setupContextOpen) throw new Error('useState called after setup context')
+        return adsSuppressed
+      }
+      return originalUseState(key, init)
+    })
+    ;(globalThis as any).useState = useStateSpy
+
+    try {
+      const placeholderPath = '/real-estate/offitel-sale/seoul/gangnam/(1012)'
+      vi.mocked((globalThis as any).useRoute).mockReturnValue({
+        params: { realEstateType: 'offitel-sale', city: 'seoul', district: 'gangnam', buildingName: '(1012)' },
+        query: {},
+        path: placeholderPath,
+      })
+      ;(globalThis as any).$fetch = vi.fn().mockResolvedValue({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+
+      const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+      await mountSuspended(m.default)
+      setupContextOpen = false
+      noindexFlag.value = true
+      await flushPromises()
+
+      expect(adsSuppressed.value).toBe(true)
+      expect(useStateSpy.mock.calls.filter(([key]) => key === 'ads:suppressed')).toHaveLength(1)
+    } finally {
+      setupContextOpen = true
+      ;(globalThis as any).useState = originalUseState
+      vi.mocked(shouldNoindexRealEstateDetail).mockReturnValue(false)
+    }
   })
 
   it('noindex 조건(buildingInfo=null)에서 canonical link가 출력되지 않아야 한다 (policy compliance)', async () => {
@@ -259,13 +532,13 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(sec.classes()).toContain('md:order-4')
   })
 
-  it('거래 내역 섹션이 데스크톱 md:order-9 를 가진다 (위치보다 아래는 아님: 위치는 md:order-7)', async () => {
+  it('거래 내역 섹션이 데스크톱 md:order-7 를 가진다 (승인된 차트→광고→표 순서)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
-    // 거래 내역 SectionBlock은 order-6 md:order-9 (유일한 order-6 section)
+    // 거래 내역 flat section은 order-6 md:order-7 (유일한 order-6 section)
     const sec = sectionByOrderClass(wrapper, 'order-6')
     expect(sec, '거래 내역 섹션(order-6)이 렌더되어야 한다').toBeTruthy()
-    expect(sec.classes()).toContain('md:order-9')
+    expect(sec.classes()).toContain('md:order-7')
   })
 
   it('재배치 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
@@ -274,37 +547,25 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
-  // ---------------- 건축년도 칩 '(N년차)' 병기 (PR ⑪ Task 1) ----------------
-  // 이 페이지의 heroStats.건축년도는 buildingInfo(useAsyncData 경유 SSR fetch, 없으면
-  // import.meta.client 게이트의 client-side loadData() fallback)에 의존한다. 이 테스트
-  // 하네스의 전역 useAsyncData mock(tests/setup.ts)은 fetcher를 호출하지 않고, 이 vitest
-  // 환경(plain @vitejs/plugin-vue, Nuxt 빌드 파이프라인 없음)에선 import.meta.client도
-  // falsy라 client fallback도 트리거되지 않는다 — 즉 마운트로는 buildingInfo.value를
-  // 실제 채울 수 없다(실측: mock 오버라이드해도 getBuildingInfo 호출 0회).
-  // 형제 가드(buildingDetailHeroEmpty.test.ts)가 동일한 이유로 채택한 소스 텍스트 계약
-  // 고정 방식을 따른다 — "페이지 마운트는 과도하므로 소스 가드 채택".
-  it('건축년도 heroStats 항목이 buildYearLabel(...) ?? PLACEHOLDER 계약을 사용한다', () => {
+  it('상단 요약은 승인된 overview 필드와 flat section anchor를 사용한다', () => {
     const targetPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
     )
     const src = readFileSync(targetPath, 'utf-8')
 
-    // import: buildYearLabel(~/utils/formatters), getCurrentYear(~/utils/seoConstants)
-    expect(src).toMatch(/import\s*\{[^}]*buildYearLabel[^}]*\}\s*from\s*'~\/utils\/formatters'/)
-    expect(src).toMatch(/import\s*\{[^}]*getCurrentYear[^}]*\}\s*from\s*'~\/utils\/seoConstants'/)
-
-    // heroStats 건축년도 라인: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER
-    expect(src).toContain(
-      "{ label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },",
-    )
-
-    // 다른 heroStats 항목(최근 거래가/거래일/전·월세비중/전용면적)은 이 PR에서 손대지 않는다
-    expect(src).toContain("{ label: '최근 거래가', value: recent }")
-    expect(src).toContain("{ label: '전·월세 비중', value: rentRatioLabel.value }")
+    expect(src).toContain('latestSaleAmountLabel')
+    expect(src).toContain('latestSaleDetailLine')
+    expect(src).toContain('overviewBuildYearLabel')
+    expect(src).toContain('overviewAreaRangeLabel')
+    expect(src).toContain('overviewSaleCount6mLabel')
+    expect(src).toContain('detailOverview.value?.latestSale')
+    expect(src).toContain('<nav class="estate-section-nav"')
+    expect(src).toContain('href="#transactions"')
+    expect(src).not.toContain('heroStats')
+    expect(src).not.toContain('MobileDetailHeader')
+    expect(src).not.toContain('PageHero')
   })
-
-  // buildYearLabel 자체의 '(N년차)' 병기 행동은 tests/utils/formatters.test.ts에서 결정적으로 검증됨.
 
   it('재배치·건축년도 병기 변경 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
@@ -312,13 +573,131 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
-  it('기간 필터 버튼은 선택 상태를 aria-pressed로 노출한다', () => {
+  it('정확 조건 필터·차트·표는 새 상세 스냅샷 계약에 연결된다', () => {
     const targetPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       '../../../pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
     )
     const src = readFileSync(targetPath, 'utf-8')
 
-    expect(src).toContain(':aria-pressed="selectedMonths === opt.value"')
+    expect(src).toContain('<ExactDealFilters')
+    expect(src).toContain('@patch="handleExactFilterPatch"')
+    expect(src).toContain('<DealPriceChart')
+    expect(src).toContain(':points="snapshot.points"')
+    expect(src).toContain(':window="snapshot.window"')
+    expect(src).toContain(':transactions="table.items"')
+    expect(src).toContain('@page-change="goToExactPage"')
+    expect(src).not.toContain('getTransactionStats')
+    expect(src).not.toContain('searchTransactions')
+    expect(src).not.toContain('getAreaGroups')
+  })
+
+  it('매매 상세에서 월세로 이동할 때 같은 buildingKey의 임대 canonicalPath와 mode=wolse query를 한 번에 push한다', async () => {
+    const buildingKey = 'a'.repeat(64)
+    const rentCanonicalPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('반포자이')}`
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: {
+        realEstateType: 'apt-sale',
+        city: 'seoul',
+        district: 'gangnam',
+        buildingName: '반포자이',
+      },
+      query: {},
+      path: `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}`,
+    })
+    ;(globalThis as any).$fetch = vi.fn().mockImplementation((url: string, options?: { query?: { path?: string } }) => {
+      if (url.includes('/resolve-url')) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            mode: 'preserved',
+            type: 'apt-sale',
+            buildingKey,
+            bjdCode: '1168010100',
+            buildingName: '반포자이',
+            canonicalPath: `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}`,
+            redirect: false,
+          },
+        })
+      }
+      if (url.includes('/canonical-url')) {
+        return Promise.resolve({ success: true, data: { mode: 'preserved', canonicalPath: rentCanonicalPath } })
+      }
+      return Promise.resolve({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    await wrapper.get('[data-testid="emit-wolse"]').trigger('click')
+    await flushPromises()
+
+    expect(routerPush).toHaveBeenCalledWith({
+      path: rentCanonicalPath,
+      query: { mode: 'wolse' },
+    })
+    expect(routerPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('legacy grouped 상세에서 월세로 이동할 때 sibling base resolver를 사용하고 buildingKey를 만들지 않는다', async () => {
+    const saleCanonicalPath = `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('반포자이')}`
+    const rentResolvedPath = '/real-estate/apt-rent/서울/강남구/반포자이'
+    vi.mocked((globalThis as any).useRoute).mockReturnValue({
+      params: {
+        realEstateType: 'apt-sale',
+        city: 'seoul',
+        district: 'gangnam',
+        buildingName: '반포자이',
+      },
+      query: {},
+      path: saleCanonicalPath,
+    })
+    ;(globalThis as any).$fetch = vi.fn().mockImplementation((_url: string, options?: { query?: { path?: string } }) => {
+      if (options?.query?.path === saleCanonicalPath) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            mode: 'preserved',
+            type: 'apt-sale',
+            bjdCode: '1168010100',
+            buildingName: '반포자이',
+            canonicalPath: saleCanonicalPath,
+            redirect: false,
+            legacyGrouped: true,
+          },
+        })
+      }
+      if (options?.query?.path === rentResolvedPath) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            mode: 'preserved',
+            type: 'apt-rent',
+            bjdCode: '1168010100',
+            buildingName: '반포자이',
+            canonicalPath: rentResolvedPath,
+            redirect: false,
+            legacyGrouped: true,
+          },
+        })
+      }
+      return Promise.resolve({ success: true, data: { mode: 'keyed', canonicalPath: null } })
+    })
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    mockSetFilters.mockClear()
+    await wrapper.get('[data-testid="emit-wolse"]').trigger('click')
+    await flushPromises()
+
+    expect(mockSetFilters).not.toHaveBeenCalled()
+    expect(routerPush).toHaveBeenCalledWith({
+      path: rentResolvedPath,
+      query: { mode: 'wolse' },
+    })
+    expect((globalThis as any).$fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/canonical-url'),
+      expect.anything(),
+    )
+    expect(routerPush.mock.calls[0][0].path).not.toMatch(/[a-f0-9]{64}$/)
   })
 })

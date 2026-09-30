@@ -30,10 +30,28 @@ import {
   PriceAnalysisQuerySchema,
   NearbyQuerySchema,
 } from '../schemas/realEstate.js';
+import {
+  DetailOverviewQuerySchema,
+  DetailPageQuerySchema,
+  DetailQuerySchema,
+  validateDetailTypeMode,
+  type DetailOverviewQueryInput,
+  type DetailPageQueryInput,
+  type DetailQueryInput,
+} from '../schemas/realEstateDetail.js';
+import { HomeMarketQuerySchema, type HomeMarketQueryInput } from '../schemas/homeMarket.js';
 import { MapQuerySchema, resolveGranularity, type MapQueryInput } from '../schemas/realEstateMap.js';
+import {
+  getDetailOverview,
+  getDetailPage,
+  getDetailSnapshot,
+} from '../services/realEstateDetailService.js';
+import { getHomeMarket } from '../services/homeMarketService.js';
 import { z } from 'zod';
+import publicUrlRouter from './realEstatePublicUrl.js';
 
 const router = Router();
+router.use(publicUrlRouter);
 
 // 타입 파라미터 검증 스키마
 const TypeParamsSchema = z.object({
@@ -74,6 +92,17 @@ router.get(
   }),
 );
 
+// GET /api/real-estate/home-market - 홈 지역별 30일 부동산 시장 요약 (must be before /:type routes)
+router.get(
+  '/home-market',
+  validate(HomeMarketQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { city, district } = req.query as HomeMarketQueryInput;
+    const result = await getHomeMarket({ city, district });
+    res.json({ success: true, data: result });
+  }),
+);
+
 // GET /api/real-estate/search - 통합 검색 (must be before /:type routes)
 router.get(
   '/search',
@@ -95,6 +124,64 @@ router.get(
     const result = await searchPropertyComplexesByKeyword(propertyType, keyword, page, limit);
     res.json({ success: true, data: result });
   })
+);
+
+// GET /api/real-estate/:type/detail-overview - 상세 상단 독립 요약
+router.get(
+  '/:type/detail-overview',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: DetailOverviewQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const query = res.locals.validated.query as DetailOverviewQueryInput;
+    const result = await getDetailOverview(type, {
+      bjdCode: query.bjdCode,
+      buildingName: query.buildingName,
+      buildingKey: query.buildingKey,
+    });
+
+    if (result === null) {
+      throw new NotFoundError('부동산 상세 정보를 찾을 수 없습니다.');
+    }
+
+    res.json({ success: true, data: result });
+  }),
+);
+
+// GET /api/real-estate/:type/detail-page - 확정 필터 거래표 페이지
+router.get(
+  '/:type/detail-page',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: DetailPageQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const query = res.locals.validated.query as DetailPageQueryInput;
+    validateDetailTypeMode(type, query.mode);
+
+    const result = await getDetailPage(type, query);
+    res.json({ success: true, data: result });
+  }),
+);
+
+// GET /api/real-estate/:type/detail - 상세 선택지·차트·첫 페이지 스냅샷
+router.get(
+  '/:type/detail',
+  validateMultiple({
+    params: TypeParamsSchema,
+    query: DetailQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
+    const query = res.locals.validated.query as DetailQueryInput;
+    validateDetailTypeMode(type, query.mode);
+
+    const result = await getDetailSnapshot(type, query);
+    res.json({ success: true, data: result });
+  }),
 );
 
 // GET /api/real-estate/:type/search - 거래 검색
@@ -162,9 +249,9 @@ router.get(
   }),
   asyncHandler(async (_req: Request, res: Response) => {
     const { type } = res.locals.validated.params as z.infer<typeof TypeParamsSchema>;
-    const { bjdCode, buildingName } =
+    const { bjdCode, buildingName, buildingKey } =
       res.locals.validated.query as z.infer<typeof RealEstateBuildingInfoSchema>;
-    const result = await getBuildingInfo(type, bjdCode, buildingName);
+    const result = await getBuildingInfo(type, bjdCode, buildingName, buildingKey);
     if (!result) {
       throw new NotFoundError('건물 정보를 찾을 수 없습니다.');
     }

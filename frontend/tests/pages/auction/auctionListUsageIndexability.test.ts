@@ -44,9 +44,10 @@ const capturedHeadCalls: any[] = []
   capturedHeadCalls.push(argOrFn)
 })
 
+const getItems = vi.fn(async (_params: any) => ({ items: [], total: 0, page: 1, totalPages: 0 }))
 vi.mock('~/composables/useAuction', () => ({
   useAuction: () => ({
-    getItems: vi.fn(async (_params: any) => ({ items: [], total: 0, page: 1, totalPages: 0 })),
+    getItems,
   }),
 }))
 
@@ -153,4 +154,12 @@ describe('pages/auction/list.vue — ?usage= 값 검증', () => {
     const { meta } = headOf()
     expect(meta.find((m) => m.name === 'robots')!.content).toBe('noindex, follow')
   })
+})
+
+it('restores q/exact/sort/page for initial fetch with noindex and no canonical', async () => {
+  await mountWithQuery({ q: '  CLTR-1 ', status: 'scheduled', statusMode: 'exact', sort: 'apsl', page: '2' })
+  expect(getItems).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'CLTR-1', status: 'scheduled', statusMode: 'exact', sort: 'apsl', page: 2 }))
+  const { meta, link } = headOf()
+  expect(meta).toContainEqual({ name: 'robots', content: 'noindex, follow' })
+  expect(link).toHaveLength(0)
 })

@@ -2,6 +2,8 @@
 import type { RealEstatePropertyType } from '../schemas/realEstate.js';
 
 export type TrendingBuildingItem = {
+  buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
   slug: string;
   city: string;       // 정식명 ('서울특별시')

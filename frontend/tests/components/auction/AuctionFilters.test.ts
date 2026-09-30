@@ -48,3 +48,21 @@ describe('AuctionFilters', () => {
     expect(w.emitted('update:district')?.[0]).toEqual(['강남구']);
   });
 });
+
+
+describe('auction keyword/exact', () => {
+  it('submits trimmed draft only on submit', async () => {
+    const wrapper = mount(AuctionFilters, { props: { usage: '', status: '', city: '', district: '', keyword: '' } })
+    await wrapper.get('input[name="keyword"]').setValue('  CLTR-1  ')
+    expect(wrapper.emitted('update:keyword')).toBeUndefined()
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.emitted('update:keyword')).toEqual([['CLTR-1']])
+  })
+  it('emits exact state and mode together while preserving legacy labels', async () => {
+    const wrapper = mount(AuctionFilters, { props: { usage: '', status: 'ongoing', statusMode: 'legacy', city: '', district: '' } })
+    expect(wrapper.get('[data-testid="status"] option[value="ongoing"]').text()).toBe('진행·예정')
+    await wrapper.get('[data-testid="status"]').setValue('exact:scheduled')
+    expect(wrapper.emitted('update:status')).toEqual([['scheduled']])
+    expect(wrapper.emitted('update:statusMode')).toEqual([['exact']])
+  })
+})

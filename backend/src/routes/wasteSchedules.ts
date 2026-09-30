@@ -1,7 +1,7 @@
 // 쓰레기 배출 일정 API 라우터
 // NOTE: 지도 마커가 아닌 지역별 일정 조회용
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate, validateMultiple } from '../middlewares/validate.js';
 import { WasteScheduleQuerySchema, WasteScheduleRegionsQuerySchema } from '../schemas/wasteSchedule.js';
@@ -9,15 +9,16 @@ import { WasteScheduleQuerySchema, WasteScheduleRegionsQuerySchema } from '../sc
 const CityParamsSchema = z.object({
   city: z.string().min(1).max(50),
 });
-
-const IdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
 import * as wasteScheduleService from '../services/wasteScheduleService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { NotFoundError } from '../lib/errors.js';
+import { AppError, NotFoundError, ServiceUnavailableError } from '../lib/errors.js';
 
 const router = Router();
+
+router.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 /**
  * GET /api/waste-schedules
@@ -31,9 +32,15 @@ router.get(
     const { query } = res.locals.validated as {
       query: { city?: string; district?: string; keyword?: string; page: number; limit: number };
     };
-    const { city, district, keyword, page, limit } = query;
+    const { city, district, keyword, page, limit, coverage } = query as typeof query & {
+      coverage?: 'unresolved';
+    };
 
-    const result = await wasteScheduleService.getByRegion(city, district, keyword, { page, limit });
+    const result = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getByRegion(city, district, keyword, {
+      page,
+      limit,
+      coverage,
+    }));
     res.json({ success: true, data: result });
   })
 );
@@ -52,7 +59,7 @@ router.get(
     };
     const { page, limit } = query;
 
-    const result = await wasteScheduleService.getRegions({ page, limit });
+    const result = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getRegions({ page, limit }));
     res.json({ success: true, data: result });
   })
 );
@@ -62,7 +69,7 @@ router.get(
  * 시/도 목록 조회
  */
 router.get('/cities', asyncHandler(async (_req: Request, res: Response) => {
-  const cities = await wasteScheduleService.getCities();
+  const cities = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getCities());
   res.json({ success: true, data: { items: cities } });
 }));
 
@@ -72,7 +79,7 @@ router.get('/cities', asyncHandler(async (_req: Request, res: Response) => {
  */
 router.get('/districts/:city', validate(CityParamsSchema, 'params'), asyncHandler(async (req: Request, res: Response) => {
   const city = req.params.city as string;
-  const districts = await wasteScheduleService.getDistricts(city);
+  const districts = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getDistricts(city));
   res.json({ success: true, data: { items: districts } });
 }));
 
@@ -80,13 +87,33 @@ router.get('/districts/:city', validate(CityParamsSchema, 'params'), asyncHandle
  * GET /api/waste-schedules/:id
  * 단건 조회 (상세 페이지용)
  */
-router.get('/:id', validate(IdParamsSchema, 'params'), asyncHandler(async (req: Request, res: Response) => {
-  const id = (req.params as unknown as { id: number }).id;
-  const item = await wasteScheduleService.getById(id);
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
+  const rawId = String(req.params.id);
+  if (!/^[1-9]\d*$/.test(rawId)) {
+    throw new AppError(400, '잘못된 쓰레기 정보 ID입니다', 'INVALID_WASTE_ID');
+  }
+  const id = Number(rawId);
+  if (!Number.isSafeInteger(id)) {
+    throw new AppError(400, '잘못된 쓰레기 정보 ID입니다', 'INVALID_WASTE_ID');
+  }
+  const item = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getById(id));
   if (!item) {
     throw new NotFoundError('배출 일정을 찾을 수 없습니다');
   }
   res.json({ success: true, data: item });
 }));
+
+async function translateWasteScheduleRouteRead<T>(res: Response, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (error.statusCode === 503) res.setHeader('Cache-Control', 'no-store');
+      throw error;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    throw new ServiceUnavailableError('쓰레기 배출 정보를 조회할 수 없습니다', 'WASTE_SOURCE_UNAVAILABLE');
+  }
+}
 
 export default router;

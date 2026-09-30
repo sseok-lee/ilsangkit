@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import facilitiesRouter from './routes/facilities.js';
 import metaRouter from './routes/meta.js';
 import wasteSchedulesRouter from './routes/wasteSchedules.js';
+import wasteAreasRouter from './routes/wasteAreas.js';
 import sitemapRouter from './routes/sitemap.js';
 import guidesRouter from './routes/guides.js';
 import articlesRouter from './routes/articles.js';
@@ -27,6 +28,7 @@ import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
 import { helmetConfig, corsOptions, sanitizeInput } from './middlewares/security.js';
+import { checkActiveSummaryReadiness, type SummaryReadinessResult } from './services/realEstateSummaryReadiness.js';
 
 const app: Application = express();
 
@@ -34,6 +36,44 @@ const app: Application = express();
 app.set('trust proxy', 1);
 
 // Middleware
+
+let releaseReadinessCheck = checkActiveSummaryReadiness;
+
+export function setReleaseReadinessDbCheckForTests(
+  check: (() => Promise<SummaryReadinessResult>) | undefined
+): void {
+  if (process.env.NODE_ENV !== 'test')
+    throw new Error('release readiness test hook is only available in test mode');
+  releaseReadinessCheck = check ?? checkActiveSummaryReadiness;
+}
+
+function currentReleaseId(): string | undefined {
+  const releaseId = process.env.ILSK_RELEASE_ID?.trim();
+  return releaseId || undefined;
+}
+
+function isLoopbackAddress(value: unknown): boolean {
+  const normalized = String(value ?? '').trim().replace(/^::ffff:/, '');
+  return normalized === '127.0.0.1' || normalized === '::1' || normalized === 'localhost';
+}
+
+function isLoopbackRequest(req: Request): boolean {
+  const forwarded = String(req.headers['x-forwarded-for'] ?? '')
+    .split(',')
+    .map((address) => address.trim())
+    .filter(Boolean);
+  if (forwarded.length > 0 && forwarded.some((address) => !isLoopbackAddress(address))) {
+    return false;
+  }
+  return isLoopbackAddress(req.ip) || isLoopbackAddress(req.socket.remoteAddress);
+}
+
+app.use((_, res, next) => {
+  const releaseId = currentReleaseId();
+  if (releaseId) res.setHeader('X-Ilsangkit-Release-Id', releaseId);
+  next();
+});
+
 app.use(helmetConfig);
 app.use(cors(corsOptions));
 app.use(requestIdMiddleware);
@@ -46,15 +86,19 @@ app.use(sanitizeInput);
 // Static file serving (uploaded images)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../assets/images');
-app.use('/api/images', (_req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(uploadDir, {
-  maxAge: '7d',
-  immutable: true,
-  dotfiles: 'deny',
-  index: false,
-}));
+app.use(
+  '/api/images',
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(uploadDir, {
+    maxAge: '7d',
+    immutable: true,
+    dotfiles: 'deny',
+    index: false,
+  })
+);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -65,11 +109,57 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+app.get('/api/internal/release-readiness', async (req: Request, res: Response) => {
+  const releaseId = currentReleaseId();
+  if (!releaseId || !isLoopbackRequest(req)) {
+    res.status(404).json({ error: 'Not Found', message: 'The requested resource was not found' });
+    return;
+  }
+
+  let summary: SummaryReadinessResult;
+  try {
+    summary = await releaseReadinessCheck(process.env);
+  } catch {
+    summary = {
+      mode: 'address',
+      table: 'RealEstateBuildingSummaryV2',
+      ready: false,
+      reason: 'readiness-check-failed',
+    };
+  }
+
+  const expectedRunId = process.env.REAL_ESTATE_SUMMARY_RUN_ID ?? process.env.ILSK_SUMMARY_RUN_ID;
+  const runIdMatches = !expectedRunId || summary.runId === expectedRunId;
+  const urlMode = process.env.REAL_ESTATE_URL_MODE || 'keyed';
+  // Address releases must not expose ambiguous name-only links without the URL registry.
+  const urlModeReady = summary.mode !== 'address' || urlMode === 'preserved';
+  const ready = summary.ready && runIdMatches && urlModeReady;
+  res.status(ready ? 200 : 503).json({
+    ready,
+    releaseId,
+    summary: {
+      mode: summary.mode,
+      table: summary.table,
+      runId: summary.runId ?? null,
+      validatedAt: summary.validatedAt ?? null,
+      rowCount: summary.rowCount,
+      reason: runIdMatches ? summary.reason : 'summary-run-id-mismatch',
+    },
+    realEstateUrls: {
+      mode: urlMode,
+      ready: urlModeReady && summary.ready,
+      reason: urlModeReady ? summary.reason : 'preserved-url-mode-required',
+    },
+    db: { ok: ready },
+  });
+});
+
 // API routes
 app.use('/api/facilities', facilitiesRouter);
 app.use('/api/facilities', facilityNaverBlogRouter);
 app.use('/api/meta', metaRouter);
 app.use('/api/waste-schedules', wasteSchedulesRouter);
+app.use('/api/waste-areas', wasteAreasRouter);
 app.use('/api/sitemap', sitemapRouter);
 app.use('/api/guides', guidesRouter);
 app.use('/api/articles', articlesRouter);

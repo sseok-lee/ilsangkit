@@ -1,20 +1,24 @@
 <template>
-  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+  <div class="bg-background-light min-h-screen">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Hero -->
     <PageHero
-      eyebrow="부동산 목록"
-      :title="`${propertyMeta?.label ?? ''} 실거래가`"
+      class="exploration-page-hero"
+      :title="`전국 ${propertyMeta?.label ?? ''} ${tabLabel} 실거래가`"
       :description="propertyDescription"
       :stats="heroStats"
     />
 
     <!-- 거래 유형과 지역 -->
     <SectionBlock heading="거래 유형과 지역" subtext="매매/전월세 탭을 고르고 시/도를 선택해 지역별 실거래가를 확인하세요.">
-      <TransactionModeTab v-model="currentTab" class="mb-3" />
-      <RegionChips :href-for="(slug) => `/real-estate/${apiSlug}/${slug}`" />
+      <ExplorationFilters :type="apiSlug" />
+      <div class="mt-4 pt-4 border-t border-line flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <RegionChips :href-for="(slug) => `/real-estate/${apiSlug}/${slug}`" />
+        <NuxtLink :to="mapHref" class="map-link">전국 지도에서 보기</NuxtLink>
+      </div>
     </SectionBlock>
 
     <!-- Ad: 거래유형·지역 필터 직후 -->
@@ -23,7 +27,7 @@
     <!-- 결과 -->
     <template v-if="pending">
       <SectionBlock heading="건물 목록" subtext="지역 선택 후 결과가 표시됩니다.">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="space-y-px bg-line overflow-hidden">
           <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
             <div class="flex gap-3">
               <div class="shrink-0 w-10 h-10 rounded-lg bg-slate-200"></div>
@@ -61,19 +65,19 @@
     </template>
 
     <template v-else-if="renderableComplexes.length > 0">
-      <SectionBlock heading="건물 목록" subtext="최근 거래가 있는 건물부터 확인하세요.">
+      <SectionBlock class="exploration-list-section" heading="건물 목록" subtext="서버 집계 기준 최근 거래가 있는 건물부터 확인하세요.">
         <template #right>
           <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
             {{ totalComplexes.toLocaleString() }}건
           </span>
         </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ComplexCard
-            v-for="complex in renderableComplexes"
-            :key="`${complex.buildingName}-${complex.bjdCode}`"
-            :complex="complex"
-            :property-type="baseType"
-            :tab="currentTab"
+        <div class="building-list">
+          <ExplorationBuildingRow
+            v-for="building in renderableComplexes"
+            :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
+            :building="building"
+            :real-estate-type="apiSlug"
+            :mode="currentTab"
           />
         </div>
         <!-- Ad: 건물 목록 이후 -->
@@ -94,8 +98,8 @@
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-card">
             <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
           </div>
-          <p class="text-slate-700 font-semibold text-lg">지역을 선택해주세요</p>
-          <p class="text-slate-500 text-sm mt-1">시/도와 구/군을 선택하면 거래 내역을 확인할 수 있습니다</p>
+          <p class="text-slate-700 font-semibold text-lg">공개된 건물이 없습니다</p>
+          <p class="text-slate-500 text-sm mt-1">다른 건물 유형이나 거래 유형을 선택해 보세요</p>
         </div>
       </SectionBlock>
     </template>
@@ -121,13 +125,14 @@
     <section>
       <DataSourceSection domain="real-estate" />
     </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, watchEffect } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
-import type { RealEstatePropertyType, TransactionMode, ComplexInfo, ComplexListResponse, RealEstateHubType } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, ComplexInfo, RealEstateHubType } from '~/types/realEstate'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { HUB_TYPES } from '~/types/realEstate'
 import { toRealEstateUrl } from '~/utils/realEstateUrl'
@@ -140,17 +145,20 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { resolveRealEstateListSsrOutcome } from '~/utils/realEstateListSsrOutcome'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
+import { suppressAds } from '~/composables/useAdsPolicy'
 import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { buildPageHref } from '~/utils/paginationHref'
+import { explorationMapHref } from '~/utils/explorationNavigation'
+import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionChips from '~/components/common/RegionChips.vue'
+import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
+import ExplorationBuildingRow from '~/components/realEstate/ExplorationBuildingRow.vue'
 
 const route = useRoute()
-const router = useRouter()
-
 const realEstateTypeParam = computed(() => route.params.realEstateType as RealEstateHubType)
 
 // 유효하지 않은 realEstateType이면 404
@@ -160,12 +168,9 @@ if (!HUB_TYPES.includes(realEstateTypeParam.value as RealEstateHubType)) {
 
 const baseType = computed(() => realEstateTypeParam.value.split('-')[0] as RealEstatePropertyType)
 
-const currentTab = computed<TransactionMode>({
-  get: () => (realEstateTypeParam.value.endsWith('-rent') ? 'rent' : 'sale'),
-  set: (val) => {
-    router.push(`/real-estate/${baseType.value}-${val}`)
-  },
-})
+const currentTab = computed<TransactionMode>(() =>
+  realEstateTypeParam.value.endsWith('-rent') ? 'rent' : 'sale',
+)
 
 const apiSlug = computed(() => realEstateTypeParam.value)
 const propertyMeta = computed(() => PROPERTY_TYPE_META[baseType.value])
@@ -185,6 +190,7 @@ const currentPage = ref(1)
 const totalPages = ref(0)
 const pending = ref(true)
 const error = ref(false)
+const mapHref = computed(() => explorationMapHref(apiSlug.value as RealEstateUrlType, null))
 
 // SSR: 초기 건물 목록을 서버에서 로드.
 // 2026-05 villa-sale 허브가 한 번의 fetch 실패로 빈 본문이 stale-while-revalidate
@@ -198,7 +204,7 @@ const error = ref(false)
 const initialPage = parsePositivePageQuery(route.query.page)
 const { data: initialData, error: initialFetchError, status: initialFetchStatus } = await useAsyncData(
   `re-complexes-${apiSlug.value}-p${initialPage}`,
-  () => getComplexList(apiSlug.value, undefined, undefined, undefined, initialPage),
+  () => getComplexList(apiSlug.value, undefined, undefined, undefined, initialPage, 15),
 )
 if (initialData.value) {
   complexes.value = initialData.value.items
@@ -207,6 +213,8 @@ if (initialData.value) {
   currentPage.value = initialData.value.page
 }
 pending.value = false
+error.value = !!initialFetchError.value
+watchEffect(() => suppressAds(error.value || totalComplexes.value === 0))
 
 // SSR 응답 판정 — 장애(degraded)와 정상 0건(empty)을 구분한다.
 // 판정 근거·회귀 배경은 utils/realEstateListSsrOutcome.ts 주석 참조.
@@ -291,22 +299,11 @@ useHead(() => ({
   ],
 }))
 
-const paginationRange = computed(() => {
-  const total = totalPages.value
-  const current = currentPage.value
-  const delta = 2
-  const range: number[] = []
-  for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
-    range.push(i)
-  }
-  return range
-})
-
 async function loadComplexes(page: number = 1) {
   pending.value = true
   error.value = false
   try {
-    const result = await getComplexList(apiSlug.value, undefined, undefined, undefined, page)
+    const result = await getComplexList(apiSlug.value, undefined, undefined, undefined, page, 15)
     complexes.value = result.items
     totalComplexes.value = result.total
     currentPage.value = result.page
@@ -397,6 +394,8 @@ watch(
             city: c.city,
             district: c.district,
             buildingName: c.buildingName,
+            buildingKey: c.buildingKey,
+            canonicalPath: c.canonicalPath,
           }),
         })),
       )
@@ -423,3 +422,43 @@ const heroStats = computed(() => {
   return stats
 })
 </script>
+
+<style scoped>
+.exploration-page-hero,
+.exploration-list-section {
+  border-radius: 0;
+  border-right: 0;
+  border-left: 0;
+  box-shadow: none;
+}
+
+.exploration-page-hero :deep(h1) {
+  font-size: 27px;
+}
+
+@media (min-width: 768px) {
+  .exploration-page-hero :deep(h1) {
+    font-size: 36px;
+  }
+}
+
+.map-link {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  color: #2450dc;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.map-link:focus-visible {
+  outline: 2px solid #2450dc;
+  outline-offset: 2px;
+}
+
+.building-list {
+  border-top: 1px solid #e6e9f0;
+}
+</style>

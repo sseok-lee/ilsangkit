@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, defineComponent, h, Suspense } from 'vue'
+import { ref, reactive, watch, defineComponent, h, Suspense, type Ref } from 'vue'
 import ArticleIndexPage from '~/pages/article/index.vue'
 
 // ─── Mock 데이터 ──────────────────────────────────────────────────────────────
@@ -78,19 +78,25 @@ vi.mock('~/composables/useStructuredData', () => ({
 // useAsyncData가 실제로 handler(fetchArticles 호출부)를 실행하도록 목킹한다.
 // (article-detail.test.ts의 mockUseAsyncDataWith와 달리, 여기선 handler 인자로
 // 넘어온 fetchArticles 호출 여부·인자를 검증해야 하므로 handler를 직접 실행한다.)
+const route = reactive({ query: {} as Record<string, string> })
+const push = vi.fn(async ({ query }) => { route.query = query })
 function mockUseAsyncDataInvoking() {
-  ;(globalThis as Record<string, unknown>).useAsyncData = vi.fn(
-    (_key: string, handler: () => Promise<unknown>) => {
-      const data = ref<unknown>(null)
-      const status = ref('pending')
-      const promise = handler().then((resolved: unknown) => {
-        data.value = resolved
-        status.value = 'success'
-        return { data, status }
-      })
-      return Object.assign(promise, { data, status, error: ref(null), refresh: vi.fn(), pending: ref(false) })
-    },
-  )
+  vi.stubGlobal('useRoute', () => route)
+  vi.stubGlobal('useRouter', () => ({ push }))
+  vi.stubGlobal('useAsyncData', vi.fn(async (key: Ref<string>, handler: () => Promise<unknown>) => {
+    const data = ref<unknown>(null)
+    const status = ref('pending')
+    const error = ref<unknown>(null)
+    let request = 0
+    async function refresh() {
+      const own = ++request
+      status.value = 'pending'; data.value = null; error.value = null
+      try { const result = await handler(); if (own === request) { data.value = result; status.value = 'success' } }
+      catch (err) { if (own === request) { error.value = err; status.value = 'error' } }
+    }
+    watch(key, refresh); await refresh()
+    return { data, status, error, refresh }
+  }))
 }
 
 const globalStubs = {
@@ -119,6 +125,7 @@ async function mountArticleIndex() {
 describe('ArticleIndexPage - /article', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    route.query = {}
     mockFetchArticles.mockResolvedValue({ items: mockArticles, total: 2, page: 1, totalPages: 1 })
   })
 
@@ -137,7 +144,7 @@ describe('ArticleIndexPage - /article', () => {
     expect(link.exists()).toBe(true)
   })
 
-  it('카테고리 chip 클릭 시 categories로 재요청한다 (client-side, route 변경 없음)', async () => {
+  it('카테고리 선택을 URL에 기록하고 categories로 재요청한다', async () => {
     const wrapper = await mountArticleIndex()
     mockFetchArticles.mockClear()
     mockFetchArticles.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 1 })
@@ -156,8 +163,7 @@ describe('ArticleIndexPage - /article', () => {
         categories: expect.arrayContaining(['apt-sale']),
       }),
     )
-    // route query param 없이 client-side로만 처리되어야 한다
-    expect(wrapper.vm.$route?.query).toBeUndefined()
+    expect(push).toHaveBeenCalledWith({ query: { topic: 'real-estate' } })
   })
 
   it('기사가 0건이면 빈 상태를 안전하게 렌더링한다 (크래시 없음)', async () => {

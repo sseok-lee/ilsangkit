@@ -105,6 +105,11 @@ function getModel(category: SummaryCategory) {
   return CATEGORY_REGISTRY[category].model();
 }
 
+function publicWhereForCategory<T extends Record<string, unknown>>(category: SummaryCategory, where: T): T & { stagedMarker?: null } {
+  if (category !== 'trash') return where;
+  return { ...where, stagedMarker: null };
+}
+
 /**
  * Haversine 공식으로 두 좌표 간 거리(km) 계산
  */
@@ -147,7 +152,7 @@ export async function getAreaSummary(
   });
   if (!region) return null;
 
-  const baseWhere = { city: cityCondition, district: region.district };
+  const baseWhere = publicWhereForCategory(category, { city: cityCondition, district: region.district });
   const currentLat = Number(region.lat);
   const currentLng = Number(region.lng);
   const model = getModel(category);
@@ -213,7 +218,7 @@ async function getNearbyDistricts(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (model as any).groupBy({
       by: ['district'],
-      where: { city: cityCondition },
+      where: publicWhereForCategory(category, { city: cityCondition }),
       _count: true,
     }) as Promise<Array<{ district: string | null; _count: number }>>,
     prisma.region.findMany({

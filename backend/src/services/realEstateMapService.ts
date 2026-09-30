@@ -1,6 +1,10 @@
 import { prisma } from '../lib/prisma.js';
+import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/realEstateSummaryStore.js';
 import { TABLE_NAME_MAP, serializeRow } from './realEstateService.js';
 import { recentMonthsCondition } from '../lib/sargableDate.js';
+import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
+import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
+import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
 
 /** 건물 마커 상한. 카카오 CustomOverlay 는 DOM 노드라 이 이상은 렌더가 무겁다. */
 export const BUILDING_LIMIT = 200;
@@ -13,10 +17,14 @@ export interface Bounds {
 }
 
 export interface MapBuildingItem {
+  buildingKey?: string | null;
+  canonicalPath?: string;
   buildingName: string;
+  bjdCode: string;
   city: string;
   district: string;
   dongName: string;
+  jibun?: string | null;
   lat: number | null;
   lng: number | null;
   /** 매매=거래금액, 전월세=보증금 (만원) */
@@ -37,10 +45,38 @@ export interface MapBuildingItem {
   /** 위 거래일 YYYYMMDD. */
   wolseDealKey: number | null;
   transactionCount: number;
+  latestDeals: LatestDeals;
 }
 
 function assertKnownType(type: string): void {
   if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
+}
+
+function propertyTypeFromRealEstateType(type: string): PropertyType {
+  if (type.startsWith('apt-')) return 'apt';
+  if (type.startsWith('villa-')) return 'villa';
+  if (type.startsWith('offitel-')) return 'offitel';
+  throw new Error(`Unknown real estate type: ${type}`);
+}
+
+function dealScopeForRealEstateType(type: string): DealScope {
+  return type.endsWith('-sale') ? 'sale' : 'rent';
+}
+
+async function enrichMapBuildings(type: string, items: MapBuildingItem[]): Promise<MapBuildingItem[]> {
+  if (items.length === 0) return items;
+  const keys: BuildingKey[] = items.map((item) => ({
+    propertyType: propertyTypeFromRealEstateType(type),
+    buildingName: item.buildingName,
+    bjdCode: item.bjdCode,
+    dongName: item.dongName,
+    jibun: item.jibun ?? null,
+  }));
+  const bundles = await getLatestDeals(keys, dealScopeForRealEstateType(type));
+  return items.map((item, index) => ({
+    ...item,
+    latestDeals: bundles.get(latestDealsKey(keys[index]))!,
+  }));
 }
 
 /**
@@ -54,8 +90,27 @@ function assertKnownType(type: string): void {
  * "반경 1km 병원 893곳을 6곳으로" 렌더하던 2026-08 버그가 재발한다.
  */
 /** Prisma 인덱스명. FORCE INDEX 가 문자열로 참조하므로 스키마의 @@index([type, lat, lng]) 와 묶여 있다. */
-const COORD_INDEX = 'RealEstateBuildingSummary_type_lat_lng_idx';
-const INDEX_HINT = ` FORCE INDEX (${COORD_INDEX})`;
+function mapSummaryTable(): SummaryTable {
+  return summaryTableFor('list', readSummaryMode(process.env));
+}
+
+function mapCoordIndex(table: SummaryTable): string {
+  return `${table}_type_lat_lng_idx`;
+}
+
+function mapIndexHint(table: SummaryTable): string {
+  return ` FORCE INDEX (${mapCoordIndex(table)})`;
+}
+
+function mapSelectColumns(table: SummaryTable): string {
+  const identity = table === 'RealEstateBuildingSummaryV2'
+    ? 'buildingKey, jibun'
+    : 'NULL AS buildingKey, NULL AS jibun';
+  return `${identity}, buildingName, bjdCode, city, district, dongName, lat, lng,
+            latestPrice, monthlyRent, latestDealYear, latestDealMonth, latestDealDay,
+            jeonseDeposit, jeonseDealKey, wolseDeposit, wolseMonthlyRent, wolseDealKey,
+            transactionCount`;
+}
 
 /** MySQL 1176 = ER_KEY_DOES_NOT_EXIST. 힌트가 가리키는 인덱스가 없을 때 난다. */
 function isMissingIndexError(err: unknown): boolean {
@@ -81,13 +136,13 @@ async function queryWithIndexHint<T>(
   params: unknown[],
 ): Promise<T[]> {
   try {
-    return await prisma.$queryRawUnsafe<T[]>(build(INDEX_HINT), ...params);
+    return await prisma.$queryRawUnsafe<T[]>(build(mapIndexHint(mapSummaryTable())), ...params);
   } catch (err) {
     if (!isMissingIndexError(err)) throw err;
     if (!warnedMissingIndex) {
       warnedMissingIndex = true;
       console.warn(
-        `[realEstateMap] ${COORD_INDEX} 가 없어 힌트 없이 폴백합니다 — 뷰포트 조회가 크게 느려집니다. ` +
+        `[realEstateMap] 선택된 summary 좌표 인덱스가 없어 힌트 없이 폴백합니다 — 뷰포트 조회가 크게 느려집니다. ` +
           'prisma db push 가 적용됐는지 확인하세요.',
       );
     }
@@ -108,36 +163,35 @@ export async function fetchBuildings(
   const where = `type = ? AND lat IS NOT NULL AND lng IS NOT NULL
       AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
   const params = [type, bounds.swLat, bounds.neLat, bounds.swLng, bounds.neLng];
+  const summaryTable = mapSummaryTable();
 
   const countRows = await queryWithIndexHint<{ cnt: bigint | number }>(
-    (hint) => `SELECT COUNT(*) AS cnt FROM RealEstateBuildingSummary${hint}
+    (hint) => `SELECT COUNT(*) AS cnt FROM ${summaryTable}${hint}
      WHERE ${where}`,
     params,
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
   const rows = await queryWithIndexHint<Record<string, unknown>>(
-    (hint) => `SELECT buildingName, city, district, dongName, lat, lng,
-            latestPrice, monthlyRent, latestDealYear, latestDealMonth, latestDealDay,
-            jeonseDeposit, jeonseDealKey, wolseDeposit, wolseMonthlyRent, wolseDealKey,
-            transactionCount
-     FROM RealEstateBuildingSummary${hint}
+    (hint) => `SELECT ${mapSelectColumns(summaryTable)}
+     FROM ${summaryTable}${hint}
      WHERE ${where}
      ORDER BY transactionCount DESC
      LIMIT ${BUILDING_LIMIT}`,
     params,
   );
 
-  const items = rows.map((r) => {
+  const items = await attachRealEstateCanonicalPaths(rows.map((r) => {
     const s = serializeRow(r) as Record<string, unknown>;
     return {
       ...s,
       lat: s.lat == null ? null : Number(s.lat),
       lng: s.lng == null ? null : Number(s.lng),
+      latestDeals: { sale: null, jeonse: null, wolse: null },
     } as MapBuildingItem;
-  });
+  }), type);
 
-  return { items, total, exact: total <= BUILDING_LIMIT };
+  return { items: await enrichMapBuildings(type, items), total, exact: total <= BUILDING_LIMIT };
 }
 
 // ─────────────────────────────────────────────

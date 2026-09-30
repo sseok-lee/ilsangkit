@@ -8,11 +8,13 @@ const {
   mockOffitelSaleCount,
   mockOffitelRentCount,
   mockQueryRaw,
+  mockQueryRawUnsafe,
   mockSubscriptionCount,
   mockSubscriptionUnitTypeAggregate,
   mockSubscriptionFindMany,
   mockGenericCount,
   mockGetPropertyHotspots,
+  mockAttachCanonicalPaths,
 } = vi.hoisted(() => ({
   mockAptSaleCount: vi.fn(),
   mockAptRentCount: vi.fn(),
@@ -21,15 +23,20 @@ const {
   mockOffitelSaleCount: vi.fn(),
   mockOffitelRentCount: vi.fn(),
   mockQueryRaw: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
   mockSubscriptionCount: vi.fn(),
   mockSubscriptionUnitTypeAggregate: vi.fn(),
   mockSubscriptionFindMany: vi.fn(),
   mockGenericCount: vi.fn().mockResolvedValue(0),
   mockGetPropertyHotspots: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn(),
 }));
 
 vi.mock('../../src/services/realEstateHotspotService.js', () => ({
   getPropertyHotspots: mockGetPropertyHotspots,
+}));
+vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
@@ -58,6 +65,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
     subscription: { count: mockSubscriptionCount, findMany: mockSubscriptionFindMany },
     subscriptionUnitType: { aggregate: mockSubscriptionUnitTypeAggregate },
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRawUnsafe,
   },
   prisma: {
     toilet: { count: mockGenericCount },
@@ -84,6 +92,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
     subscription: { count: mockSubscriptionCount, findMany: mockSubscriptionFindMany },
     subscriptionUnitType: { aggregate: mockSubscriptionUnitTypeAggregate },
     $queryRaw: mockQueryRaw,
+    $queryRawUnsafe: mockQueryRawUnsafe,
   },
 }));
 
@@ -93,6 +102,7 @@ vi.mock('../../src/services/subscriptionService.js', () => ({
 }));
 
 import {
+  getStats,
   getNewlyListedToday,
   getRealEstateTrends,
   getTrendingBuildings,
@@ -100,6 +110,33 @@ import {
   getHomeDashboard,
   clearHomeDashboardCache,
 } from '../../src/services/metaService.js';
+
+describe('getStats', () => {
+  beforeEach(() => {
+    clearHomeDashboardCache();
+    mockGenericCount.mockReset();
+    mockGenericCount.mockResolvedValue(0);
+    mockAptSaleCount.mockResolvedValue(0);
+    mockAptRentCount.mockResolvedValue(0);
+    mockVillaSaleCount.mockResolvedValue(0);
+    mockVillaRentCount.mockResolvedValue(0);
+    mockOffitelSaleCount.mockResolvedValue(0);
+    mockOffitelRentCount.mockResolvedValue(0);
+    mockSubscriptionCount.mockResolvedValue(0);
+    mockQueryRaw
+      .mockReset()
+      .mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+    mockQueryRawUnsafe
+      .mockReset()
+      .mockResolvedValueOnce([{ apt: BigInt(0), villa: BigInt(0), offitel: BigInt(0) }]);
+  });
+
+  it('excludes staged trash candidates from public homepage totals', async () => {
+    await getStats();
+
+    expect(mockGenericCount.mock.calls).toContainEqual([{ where: { stagedMarker: null } }]);
+  });
+});
 
 // ─────────────────────────────────────────────
 // Task 2: getNewlyListedToday
@@ -147,6 +184,8 @@ describe('getNewlyListedToday', () => {
 describe('getRealEstateTrends', () => {
   beforeEach(() => {
     mockQueryRaw.mockReset();
+    mockAttachCanonicalPaths.mockReset();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
   });
 
   // 평당가 = (sumPrice/sumArea) × 3.3058. 테스트 값은 sumArea=1로 두어 sumPrice 자체가 곧 (만원/㎡)이 되도록 단순화.
@@ -254,6 +293,7 @@ describe('getTrendingBuildings', () => {
     monthlies?: number[],
   ) {
     return prices.map((p, i) => ({
+      buildingKey: `${buildingName}-${district}`.padEnd(64, '0').slice(0, 64),
       buildingName, city, district,
       txnCount: BigInt(txnCount),
       representativeArea,
@@ -303,6 +343,22 @@ describe('getTrendingBuildings', () => {
       medianPrice: 20000,
       medianMonthlyRent: 120,
     });
+  });
+
+  it('adds canonicalPath to trending buildings through registry batch', async () => {
+    const key = 'h'.repeat(64);
+    mockQueryRaw
+      .mockResolvedValueOnce([{ buildingKey: key, buildingName: '헬리오시티', city: '서울특별시', district: '송파구', txnCount: 17n, representativeArea: 85, price: 184000, monthlyRent: null }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>, type?: string) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${type}/${row.buildingKey}` }))),
+    );
+
+    const result = await getTrendingBuildings();
+
+    expect(mockAttachCanonicalPaths).toHaveBeenCalledWith([expect.objectContaining({ buildingKey: key })], 'apt-sale');
+    expect(result.sale[0]).toMatchObject({ buildingKey: key, canonicalPath: `/registered/apt-sale/${key}` });
   });
 
   it('returns empty arrays when no data', async () => {
@@ -371,7 +427,8 @@ describe('getSubscriptionSummary', () => {
 //   - prisma.toilet/wifi/.../sports/region.count() → mockGenericCount (already always resolves 0)
 //   - prisma.aptSaleTransaction/aptRentTransaction/... count → specific mocks
 //   - prisma.subscription.count() → mockSubscriptionCount (once, for subscriptionActiveCount)
-//   - prisma.$queryRaw x2 (evCharger cnt, buildingCountResult)
+//   - prisma.$queryRaw x1 (evCharger cnt)
+//   - prisma.$queryRawUnsafe x1 (active summary table buildingCountResult)
 // getNewlyListedToday uses count mocks (already set by getStats, uses .mockResolvedValue so shared)
 // getRealEstateTrends uses $queryRaw x6
 // getTrendingBuildings uses $queryRaw x3
@@ -389,12 +446,12 @@ function setupFullMocks() {
   // subscription.count called 3 times total: 1 (getStats) + 2 (getSubscriptionSummary)
   mockSubscriptionCount.mockResolvedValue(5);
 
-  // $queryRaw sequence: 2 (stats) + 18 (trends) + 3 (buildings) = 23 total
+  // $queryRaw sequence: 1 (stats) + 18 (trends) + 3 (buildings) = 22 total
   const sumRow = (sumPrice: number | null, cnt: number) =>
     ({ sumPrice, sumArea: sumPrice === null ? null : 1, cnt: BigInt(cnt) });
+  mockQueryRawUnsafe.mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]); // stats: buildingCount
   mockQueryRaw
     .mockResolvedValueOnce([{ cnt: BigInt(500) }])                                            // stats: evCharger
-    .mockResolvedValueOnce([{ apt: BigInt(20000), villa: BigInt(8000), offitel: BigInt(2000) }]) // stats: buildingCount
     .mockResolvedValueOnce([sumRow(54000, 100)])  // trends: aptCurr
     .mockResolvedValueOnce([sumRow(52000, 90)])   // trends: aptPrev
     .mockResolvedValueOnce([sumRow(30000, 80)])   // trends: aptJeonseCurr
@@ -431,6 +488,7 @@ describe('getHomeDashboard', () => {
     mockOffitelSaleCount.mockReset();
     mockOffitelRentCount.mockReset();
     mockQueryRaw.mockReset();
+    mockQueryRawUnsafe.mockReset();
     mockSubscriptionCount.mockReset();
     mockSubscriptionUnitTypeAggregate.mockReset();
     mockSubscriptionFindMany.mockReset();
@@ -566,6 +624,8 @@ describe('getHomeDashboard', () => {
     mockSubscriptionFindMany.mockRejectedValue(new Error('pool timeout'));
     mockQueryRaw.mockReset();
     mockQueryRaw.mockRejectedValue(new Error('pool timeout'));
+    mockQueryRawUnsafe.mockReset();
+    mockQueryRawUnsafe.mockRejectedValue(new Error('pool timeout'));
     mockGetPropertyHotspots.mockReset();
     mockGetPropertyHotspots.mockRejectedValue(new Error('pool timeout'));
     // mockGenericCount는 항상 0 반환 — getStats의 facility count들은 성공 (toilet, wifi 등)

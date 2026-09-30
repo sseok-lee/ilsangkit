@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { RENT_TYPES, RENT_GROUP_META, subscriptionTypeBadge, PUBLIC_RENT_TYPES, buildSubscriptionSeoTitle } from '~/utils/subscriptionMeta'
 
 describe('subscriptionMeta descriptions', () => {
+  it('공공임대 설명은 마이홈/LH까지 포괄하고 청약홈·청약통장 필수로 오해시키지 않는다', () => {
+    expect(RENT_TYPES.public.description).toContain('마이홈')
+    expect(RENT_TYPES.public.description).toContain('LH')
+    expect(RENT_TYPES.public.description).not.toContain('청약통장으로 신청')
+    expect(RENT_GROUP_META.apply.description).not.toContain('청약홈에서 접수')
+  })
+
   it('RENT_TYPES 공공임대·민간임대 description이 50자 이상이다', () => {
     expect(RENT_TYPES.public.description.length).toBeGreaterThanOrEqual(50)
     expect(RENT_TYPES.private.description.length).toBeGreaterThanOrEqual(50)
@@ -42,6 +49,21 @@ describe('subscriptionTypeBadge', () => {
 
   it('APT + 공공임대 rentType은 공공임대(회색, rent)', () => {
     const b = subscriptionTypeBadge('APT', PUBLIC_RENT_TYPES[0])
+    expect(b.label).toBe('공공임대')
+    expect(b.kind).toBe('rent')
+    expect(b.classes).toContain('slate')
+  })
+
+  it('APT + legacy 임대주택 rentType도 공공임대(회색, rent)', () => {
+    expect(PUBLIC_RENT_TYPES).toContain('임대주택')
+    const b = subscriptionTypeBadge('APT', '임대주택')
+    expect(b.label).toBe('공공임대')
+    expect(b.kind).toBe('rent')
+    expect(b.classes).toContain('slate')
+  })
+
+  it('PUBLIC_RENT는 공공임대(회색, rent)', () => {
+    const b = subscriptionTypeBadge('PUBLIC_RENT', '국민임대')
     expect(b.label).toBe('공공임대')
     expect(b.kind).toBe('rent')
     expect(b.classes).toContain('slate')

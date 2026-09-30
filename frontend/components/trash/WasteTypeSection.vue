@@ -1,15 +1,15 @@
 <template>
-  <section class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+  <section class="bg-white rounded-lg p-4 shadow-none border border-line">
     <div class="flex items-center gap-3 mb-3">
       <div
-        class="w-10 h-10 rounded-full flex items-center justify-center"
+        class="w-9 h-9 rounded-lg flex items-center justify-center"
         :class="iconBgClass"
       >
         <span class="material-symbols-outlined text-[20px]" :class="iconTextClass">{{ icon }}</span>
       </div>
       <h3 class="font-bold text-slate-900">{{ title }}</h3>
     </div>
-    <div class="text-sm text-slate-600 space-y-2 pl-1">
+    <div class="text-sm text-slate-600 space-y-3">
       <div v-if="info.dayOfWeek" class="flex items-start gap-2">
         <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-1">calendar_month</span>
         <div>
@@ -18,7 +18,7 @@
             <span
               v-for="day in parseDays(info.dayOfWeek)"
               :key="day"
-              class="inline-flex items-center justify-center w-7 h-7 text-xs font-semibold rounded-full"
+              class="inline-flex items-center justify-center h-7 min-w-7 px-2 text-xs font-semibold rounded-full"
               :class="dayChipClass(day)"
             >{{ day }}</span>
           </div>

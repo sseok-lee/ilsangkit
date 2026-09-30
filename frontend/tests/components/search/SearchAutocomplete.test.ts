@@ -51,6 +51,26 @@ describe('SearchAutocomplete', () => {
     expect(navigateTo).toHaveBeenCalledWith('/seoul/gangnam');
   });
 
+  it('건물 추천은 buildingKey가 있어도 기존 상세 경로로 이동한다', async () => {
+    const buildingKey = 'a'.repeat(64);
+    vi.mocked($fetch).mockImplementation(async (url: string) => {
+      if (url.includes('/popular')) return { success: true, data: { items: [] } };
+      return { success: true, data: { items: [{
+        type: 'building', label: '은마', buildingName: '은마', reType: 'apt-sale',
+        city: '서울특별시', district: '강남구', buildingKey,
+      }] } };
+    });
+    const wrapper = mount(SearchAutocomplete, { props: { open: true, modelValue: '은마' } });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await flushPromises();
+
+    await wrapper.find('[data-suggest-type="building"]').trigger('click');
+
+    expect(navigateTo).toHaveBeenCalledWith(
+      `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('은마')}`,
+    );
+  });
+
   // 한글 IME 조합 중에는 v-model(modelValue)이 마지막 커밋 음절까지만 갱신되어
   // 한 음절 지연된다("강남" 입력 시 modelValue는 "강"). 부모가 네이티브 input의
   // 실시간 값을 setQuery로 직접 넘기면 컴포넌트는 지연 없이 그 값으로 추천해야 한다.

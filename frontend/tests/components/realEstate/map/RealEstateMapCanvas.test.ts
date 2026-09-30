@@ -137,9 +137,50 @@ describe('RealEstateMapCanvas', () => {
     await flushPromises()
 
     expect(w.emitted('idle')).toBeTruthy()
+    expect(w.emitted('loaded')).toHaveLength(1)
     const [bounds, level] = w.emitted('idle')![0] as [unknown, number]
     expect(bounds).toEqual({ swLat: 33, swLng: 124, neLat: 39, neLng: 132 })
     expect(level).toBe(9)
+  })
+
+  it('SDK 초기화 실패를 load-error 로 알리고 화면에 재시도 버튼을 보여준다', async () => {
+    mocks.initMap.mockRejectedValueOnce(new Error('Failed to load Kakao Maps SDK'))
+    const w = mountCanvas()
+    await flushPromises()
+
+    expect(w.emitted('load-error')?.[0]).toEqual(['Failed to load Kakao Maps SDK'])
+    expect(w.find('[data-testid="map-canvas-error"]').text()).toContain('Failed to load Kakao Maps SDK')
+    expect(mocks.renderOverlays).not.toHaveBeenCalled()
+  })
+
+  it('SDK 초기화 실패 재시도 버튼은 44px 최소 높이를 요청한다', async () => {
+    mocks.initMap.mockRejectedValueOnce(new Error('Failed to load Kakao Maps SDK'))
+    const w = mountCanvas()
+    await flushPromises()
+
+    expect(w.find('[data-testid="map-canvas-error"] button').classes()).toContain('min-h-[44px]')
+  })
+
+  it('retry 는 지도 초기화를 다시 시도하고 idle 리스너를 중복 등록하지 않는다', async () => {
+    mocks.initMap
+      .mockRejectedValueOnce(new Error('Failed to load Kakao Maps SDK'))
+      .mockImplementationOnce(async () => {
+        mocks.mapRef.value = { getLevel: () => 9, setLevel: vi.fn() }
+      })
+    const w = mountCanvas()
+    await flushPromises()
+    const kakao = (window as any).kakao
+    expect(kakao.maps.event.addListener).not.toHaveBeenCalled()
+
+    await (w.vm as unknown as { retry: () => Promise<void> }).retry()
+    await flushPromises()
+
+    expect(w.emitted('loaded')).toHaveLength(1)
+    expect(kakao.maps.event.addListener).toHaveBeenCalledTimes(1)
+
+    await (w.vm as unknown as { retry: () => Promise<void> }).retry()
+    await flushPromises()
+    expect(kakao.maps.event.addListener).toHaveBeenCalledTimes(1)
   })
 
   // panTo(애니메이션)가 아니라 setCenter(즉시)여야 한다. panTo 는 목표 지점이 이미 화면
@@ -237,16 +278,16 @@ describe('RealEstateMapCanvas', () => {
   // 그대로 관측할 수 있다.
   describe('renderOverlays 네 번째 인자(type/selectedKey) 배선', () => {
     it('마운트(onMounted 경로)가 props.type/selectedKey 를 그대로 넘긴다', async () => {
-      mountCanvas({ type: 'villa-rent', selectedKey: '은마|강남구' })
+      mountCanvas({ type: 'villa-rent', selectedKey: '은마|1168010100' })
       await flushPromises()
 
       expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
       const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
-      expect(overlayOpts).toEqual({ type: 'villa-rent', selectedKey: '은마|강남구' })
+      expect(overlayOpts).toEqual({ type: 'villa-rent', selectedKey: '은마|1168010100' })
     })
 
     it('items 가 바뀌면(items watch 경로) 그 호출도 현재 type/selectedKey 를 넘긴다', async () => {
-      const w = mountCanvas({ type: 'apt-rent', selectedKey: '도곡렉슬|강남구' })
+      const w = mountCanvas({ type: 'apt-rent', selectedKey: '도곡렉슬|1168011800' })
       await flushPromises()
       mocks.renderOverlays.mockClear()
 
@@ -259,7 +300,7 @@ describe('RealEstateMapCanvas', () => {
       const [, itemsArg, , overlayOpts] = mocks.renderOverlays.mock.calls[0]
       // Vue 는 배열 prop 을 내부적으로 감싸므로(reference 불일치) 값 동등성으로 비교한다.
       expect(itemsArg).toEqual(nextItems)
-      expect(overlayOpts).toEqual({ type: 'apt-rent', selectedKey: '도곡렉슬|강남구' })
+      expect(overlayOpts).toEqual({ type: 'apt-rent', selectedKey: '도곡렉슬|1168011800' })
     })
 
     it('selectedKey 가 바뀌면(selectedKey watch 경로) 그 호출이 새 키를 넘긴다', async () => {
@@ -267,11 +308,11 @@ describe('RealEstateMapCanvas', () => {
       await flushPromises()
       mocks.renderOverlays.mockClear()
 
-      await w.setProps({ selectedKey: '신동아|강남구' })
+      await w.setProps({ selectedKey: '신동아|1168011500' })
 
       expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
       const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
-      expect(overlayOpts).toEqual({ type: 'apt-sale', selectedKey: '신동아|강남구' })
+      expect(overlayOpts).toEqual({ type: 'apt-sale', selectedKey: '신동아|1168011500' })
     })
   })
 })

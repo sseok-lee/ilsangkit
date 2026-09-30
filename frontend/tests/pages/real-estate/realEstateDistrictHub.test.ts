@@ -91,6 +91,16 @@ beforeEach(() => {
   mockGetComplexList.mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 })
   mockNationalTotal.value = 0
   ;(globalThis as any).useHead.mockClear()
+  ;(globalThis as any).useAsyncData = vi.fn(() => {
+    const result = {
+      data: ref(null),
+      status: ref('idle'),
+      error: ref(null),
+      refresh: vi.fn(),
+      pending: ref(false),
+    }
+    return Object.assign(Promise.resolve(result), result)
+  })
 })
 
 // 전역 useAsyncData 목(tests/setup.ts)은 fetcher를 실제로 호출하지 않으므로 SSR
@@ -121,6 +131,9 @@ async function mountSuspended(component: any, options?: any) {
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
+          DataSourceSection: { template: '<div />' },
+          ExplorationFilters: { template: '<div data-stub="filters" />' },
+          ExplorationBuildingRow: { template: '<div data-stub="building-row" />' },
         },
         ...options?.global,
       },

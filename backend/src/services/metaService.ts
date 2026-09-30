@@ -1,7 +1,10 @@
 import { prisma } from '../lib/prisma.js';
+import { readSummaryMode, summaryTableFor } from '../lib/realEstateSummaryStore.js';
+import { buildingKeySql } from '../lib/realEstateBuildingIdentity.js';
 import { dateBasedStatusFilter } from './subscriptionService.js';
 import { getPropertyHotspots } from './realEstateHotspotService.js';
 import { dealDateRangeFilter } from './realEstateDateFilter.js';
+import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 import type { HomeDashboardResponse, RealEstateTrend, TrendingBuildingItem } from '../types/homeDashboard.js';
 
 export interface StatsData {
@@ -73,6 +76,20 @@ export async function getStats(): Promise<{ cached: boolean; data: StatsData }> 
   return inflightStats;
 }
 
+
+async function fetchRealEstateBuildingCounts(): Promise<[{ apt: bigint; villa: bigint; offitel: bigint }]> {
+  const mode = readSummaryMode(process.env);
+  const table = summaryTableFor('list', mode);
+  const distinctExpr = mode === 'address' ? 'buildingKey' : "CONCAT(buildingName,'|',bjdCode)";
+  return prisma.$queryRawUnsafe<[{ apt: bigint; villa: bigint; offitel: bigint }]>(
+    `SELECT
+      COUNT(DISTINCT CASE WHEN type IN ('apt-sale','apt-rent') THEN ${distinctExpr} END) AS apt,
+      COUNT(DISTINCT CASE WHEN type IN ('villa-sale','villa-rent') THEN ${distinctExpr} END) AS villa,
+      COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN ${distinctExpr} END) AS offitel
+     FROM ${table}`,
+  );
+}
+
 async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> {
   const [
     toiletCount, wifiCount, clothesCount, trashCount, parkingCount, aedCount, libraryCount, hospitalCount, pharmacyCount,
@@ -83,7 +100,7 @@ async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> 
     prisma.toilet.count(),
     prisma.wifi.count(),
     prisma.clothes.count(),
-    prisma.wasteSchedule.count(),
+    prisma.wasteSchedule.count({ where: { stagedMarker: null } }),
     prisma.parking.count(),
     prisma.aed.count(),
     prisma.library.count(),
@@ -101,12 +118,7 @@ async function fetchFreshStats(): Promise<{ cached: boolean; data: StatsData }> 
     prisma.villaRentTransaction.count(),
     prisma.offitelSaleTransaction.count(),
     prisma.offitelRentTransaction.count(),
-    prisma.$queryRaw<[{ apt: bigint; villa: bigint; offitel: bigint }]>`
-      SELECT
-        COUNT(DISTINCT CASE WHEN type IN ('apt-sale','apt-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS apt,
-        COUNT(DISTINCT CASE WHEN type IN ('villa-sale','villa-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS villa,
-        COUNT(DISTINCT CASE WHEN type IN ('offitel-sale','offitel-rent') THEN CONCAT(buildingName,'|',bjdCode) END) AS offitel
-      FROM RealEstateBuildingSummary`,
+    fetchRealEstateBuildingCounts(),
     prisma.region.count(),
     prisma.subscription.count({
       where: {
@@ -440,6 +452,7 @@ export async function getRealEstateTrends(): Promise<RealEstateTrend[]> {
  * 단지 전체 거래수(txnCount)는 NULL 면적 포함한 raw count.
  */
 type TrendingTxnRow = {
+  buildingKey: string;
   buildingName: string;
   city: string;
   district: string;
@@ -462,7 +475,7 @@ function rowsToTrendingItems(rows: TrendingTxnRow[]): TrendingBuildingItem[] {
   const groups = new Map<string, TrendingTxnRow[]>();
   const order: string[] = [];
   for (const r of rows) {
-    const key = `${r.buildingName}|${r.city}|${r.district}`;
+    const key = r.buildingKey;
     if (!groups.has(key)) {
       groups.set(key, []);
       order.push(key);
@@ -475,6 +488,7 @@ function rowsToTrendingItems(rows: TrendingTxnRow[]): TrendingBuildingItem[] {
     const prices = group.map((r) => (r.price === null ? null : Number(r.price))).filter((v): v is number => v !== null);
     const monthlies = group.map((r) => (r.monthlyRent === null ? null : Number(r.monthlyRent))).filter((v): v is number => v !== null);
     return {
+      buildingKey: first.buildingKey,
       buildingName: first.buildingName,
       slug: encodeURIComponent(first.buildingName),
       city: first.city,
@@ -496,134 +510,130 @@ export async function getTrendingBuildings(): Promise<{ sale: TrendingBuildingIt
   const [saleRows, jeonseRows, wolseRows] = await Promise.all([
     prisma.$queryRaw<TrendingTxnRow[]>`
       WITH bucketed AS (
-        SELECT buildingName, city, district,
+        SELECT ${buildingKeySql('apt', 't')} AS buildingKey, buildingName, city, district,
                ROUND(exclusiveArea / 5) * 5 AS areaBucket,
                dealAmount AS price
-        FROM AptSaleTransaction
+        FROM AptSaleTransaction t
         WHERE ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
-        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        SELECT buildingKey, buildingName, city, district, COUNT(*) AS txnCount
         FROM bucketed
-        GROUP BY buildingName, city, district
+        GROUP BY buildingKey, buildingName, city, district
         ORDER BY txnCount DESC, buildingName ASC
         LIMIT 5
       ),
       primary_buckets AS (
-        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+        SELECT b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket,
                ROW_NUMBER() OVER (
-                 PARTITION BY b.buildingName, b.city, b.district
+                 PARTITION BY b.buildingKey
                  ORDER BY COUNT(*) DESC, b.areaBucket ASC
                ) AS rn
         FROM bucketed b
-        JOIN top_buildings tb USING (buildingName, city, district)
-        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+        JOIN top_buildings tb USING (buildingKey)
+        GROUP BY b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket
       )
-      SELECT b.buildingName, b.city, b.district,
+      SELECT b.buildingKey, b.buildingName, b.city, b.district,
              tb.txnCount AS txnCount,
              b.areaBucket AS representativeArea,
              b.price AS price,
              NULL AS monthlyRent
       FROM bucketed b
-      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN top_buildings tb USING (buildingKey)
       JOIN primary_buckets pb
-        ON pb.buildingName = b.buildingName
-       AND pb.city = b.city
-       AND pb.district = b.district
+        ON pb.buildingKey = b.buildingKey
        AND pb.areaBucket = b.areaBucket
        AND pb.rn = 1
       ORDER BY tb.txnCount DESC, b.buildingName ASC`,
     prisma.$queryRaw<TrendingTxnRow[]>`
       WITH bucketed AS (
-        SELECT buildingName, city, district,
+        SELECT ${buildingKeySql('apt', 't')} AS buildingKey, buildingName, city, district,
                ROUND(exclusiveArea / 5) * 5 AS areaBucket,
                deposit AS price
-        FROM AptRentTransaction
+        FROM AptRentTransaction t
         WHERE rentType = '전세'
           AND ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
-        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        SELECT buildingKey, buildingName, city, district, COUNT(*) AS txnCount
         FROM bucketed
-        GROUP BY buildingName, city, district
+        GROUP BY buildingKey, buildingName, city, district
         ORDER BY txnCount DESC, buildingName ASC
         LIMIT 5
       ),
       primary_buckets AS (
-        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+        SELECT b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket,
                ROW_NUMBER() OVER (
-                 PARTITION BY b.buildingName, b.city, b.district
+                 PARTITION BY b.buildingKey
                  ORDER BY COUNT(*) DESC, b.areaBucket ASC
                ) AS rn
         FROM bucketed b
-        JOIN top_buildings tb USING (buildingName, city, district)
-        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+        JOIN top_buildings tb USING (buildingKey)
+        GROUP BY b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket
       )
-      SELECT b.buildingName, b.city, b.district,
+      SELECT b.buildingKey, b.buildingName, b.city, b.district,
              tb.txnCount AS txnCount,
              b.areaBucket AS representativeArea,
              b.price AS price,
              NULL AS monthlyRent
       FROM bucketed b
-      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN top_buildings tb USING (buildingKey)
       JOIN primary_buckets pb
-        ON pb.buildingName = b.buildingName
-       AND pb.city = b.city
-       AND pb.district = b.district
+        ON pb.buildingKey = b.buildingKey
        AND pb.areaBucket = b.areaBucket
        AND pb.rn = 1
       ORDER BY tb.txnCount DESC, b.buildingName ASC`,
     prisma.$queryRaw<TrendingTxnRow[]>`
       WITH bucketed AS (
-        SELECT buildingName, city, district,
+        SELECT ${buildingKeySql('apt', 't')} AS buildingKey, buildingName, city, district,
                ROUND(exclusiveArea / 5) * 5 AS areaBucket,
                deposit AS price,
                monthlyRent AS monthlyRent
-        FROM AptRentTransaction
+        FROM AptRentTransaction t
         WHERE rentType = '월세'
           AND ${dealDateRangeFilter(from, to)}
           AND exclusiveArea IS NOT NULL AND exclusiveArea > 0
       ),
       top_buildings AS (
-        SELECT buildingName, city, district, COUNT(*) AS txnCount
+        SELECT buildingKey, buildingName, city, district, COUNT(*) AS txnCount
         FROM bucketed
-        GROUP BY buildingName, city, district
+        GROUP BY buildingKey, buildingName, city, district
         ORDER BY txnCount DESC, buildingName ASC
         LIMIT 5
       ),
       primary_buckets AS (
-        SELECT b.buildingName, b.city, b.district, b.areaBucket,
+        SELECT b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket,
                ROW_NUMBER() OVER (
-                 PARTITION BY b.buildingName, b.city, b.district
+                 PARTITION BY b.buildingKey
                  ORDER BY COUNT(*) DESC, b.areaBucket ASC
                ) AS rn
         FROM bucketed b
-        JOIN top_buildings tb USING (buildingName, city, district)
-        GROUP BY b.buildingName, b.city, b.district, b.areaBucket
+        JOIN top_buildings tb USING (buildingKey)
+        GROUP BY b.buildingKey, b.buildingName, b.city, b.district, b.areaBucket
       )
-      SELECT b.buildingName, b.city, b.district,
+      SELECT b.buildingKey, b.buildingName, b.city, b.district,
              tb.txnCount AS txnCount,
              b.areaBucket AS representativeArea,
              b.price AS price,
              b.monthlyRent AS monthlyRent
       FROM bucketed b
-      JOIN top_buildings tb USING (buildingName, city, district)
+      JOIN top_buildings tb USING (buildingKey)
       JOIN primary_buckets pb
-        ON pb.buildingName = b.buildingName
-       AND pb.city = b.city
-       AND pb.district = b.district
+        ON pb.buildingKey = b.buildingKey
        AND pb.areaBucket = b.areaBucket
        AND pb.rn = 1
       ORDER BY tb.txnCount DESC, b.buildingName ASC`,
   ]);
 
-  return {
-    sale: rowsToTrendingItems(saleRows).map((it) => ({ ...it, medianMonthlyRent: null })),
-    jeonse: rowsToTrendingItems(jeonseRows).map((it) => ({ ...it, medianMonthlyRent: null })),
-    wolse: rowsToTrendingItems(wolseRows),
-  };
+  const [sale, jeonse, wolse] = await Promise.all([
+    attachRealEstateCanonicalPaths(rowsToTrendingItems(saleRows).map((it) => ({ ...it, medianMonthlyRent: null })), 'apt-sale'),
+    attachRealEstateCanonicalPaths(rowsToTrendingItems(jeonseRows).map((it) => ({ ...it, medianMonthlyRent: null })), 'apt-rent'),
+    attachRealEstateCanonicalPaths(rowsToTrendingItems(wolseRows), 'apt-rent'),
+  ]);
+
+  return { sale, jeonse, wolse };
 }
 
 /**

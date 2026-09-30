@@ -278,7 +278,14 @@ function select(it: SuggestItem) {
     it.district
   ) {
     navigateTo(
-      toRealEstateUrl({ type: it.reType, city: it.city, district: it.district, buildingName: it.buildingName }),
+      toRealEstateUrl({
+        type: it.reType,
+        city: it.city,
+        district: it.district,
+        buildingName: it.buildingName,
+        buildingKey: it.buildingKey,
+        canonicalPath: it.canonicalPath,
+      }),
     )
   } else {
     navigateTo(keywordDestination(it.label))

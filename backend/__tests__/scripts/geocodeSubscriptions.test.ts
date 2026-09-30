@@ -52,6 +52,13 @@ describe('searchByAddress / searchByKeyword — 에러 스월로잉', () => {
 });
 
 describe('getSubscriptionsToGeocode — per-run 상한 + 재시도 차단', () => {
+  it('does not assign one arbitrary coordinate to public rental notices or superseded records', async () => {
+    mockFindMany.mockResolvedValue([]);
+    await getSubscriptionsToGeocode(new PrismaClient());
+    expect(mockFindMany.mock.calls.at(-1)?.[0].where).toMatchObject({
+      sourceType: { not: 'PUBLIC_RENT' }, supersededById: null,
+    });
+  });
   beforeEach(() => vi.clearAllMocks());
 
   it('lat=null·시도횟수<MAX 만 조회하고, 배치 상한(take)·미시도 우선 정렬을 적용한다', async () => {

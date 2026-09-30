@@ -38,7 +38,7 @@ const globalConfig = {
   stubs: {
     ClientOnly: { template: '<div><slot /></div>' },
     OperatingStatusBanner: { template: '<div data-testid="operating-status-banner" />' },
-    SectionBlock: { template: '<section><slot /></section>' },
+    SectionBlock: { template: '<section><slot name="right" /><slot /></section>' },
   },
 }
 
@@ -108,6 +108,46 @@ describe('DetailBasicInfo', () => {
       global: globalConfig,
     })
     expect(wrapper.html()).toContain('tel:02-1234-5678')
+  })
+
+
+  it('parking: 운영시간이 없으면 24시간 운영으로 만들지 않는다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('parking', {
+          parkingType: '공영',
+          operatingHours: null,
+          useTime: null,
+          phone: '02-1234-5678',
+        }),
+        ...baseProps,
+      },
+      global: globalConfig,
+    })
+
+    expect(wrapper.text()).toContain('02-1234-5678')
+    expect(wrapper.text()).not.toContain('24시간 운영')
+    expect(wrapper.text()).not.toContain('운영중')
+  })
+
+  it('전화와 데이터셋 외부 링크를 독립 앵커로 렌더한다', () => {
+    const wrapper = mount(DetailBasicInfo, {
+      props: {
+        facility: makeFacility('parking', { phone: '02-9876-5432', parkingType: '공영' }),
+        ...baseProps,
+        rawSyncDate: '2026-06-19T00:00:00.000Z',
+      },
+      global: globalConfig,
+    })
+
+    const phone = wrapper.get('a[href="tel:02-9876-5432"]')
+    const source = wrapper.get('a[href="https://www.data.go.kr/data/15012896/standard.do"]')
+
+    expect(phone.attributes('target')).toBeUndefined()
+    expect(source.attributes('target')).toBe('_blank')
+    expect(source.attributes('rel')).toContain('noopener')
+    expect(phone.findAll('a')).toHaveLength(0)
+    expect(source.findAll('a')).toHaveLength(0)
   })
 
   it('pharmacy는 요일별 운영시간 표(WeekdayHoursTable)를 렌더한다', () => {

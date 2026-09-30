@@ -619,6 +619,7 @@ export function useFacilityMeta() {
       description,
       path: `/trash/${schedule.id}`,
       type: 'article',
+      canonical: false,
     })
   }
 

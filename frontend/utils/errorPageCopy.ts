@@ -42,6 +42,15 @@ export function resolveErrorPageCopy(input: ErrorPageCopyInput): ErrorPageCopy {
 
   if (statusCode === 410) {
     const category = input.facilityCategory ?? null
+    if (category === 'trash') {
+      return {
+        kind: 'gone',
+        title: '종료된 배출 안내입니다',
+        description: '원본 공공데이터에서 종료되었거나 더 이상 제공되지 않는 쓰레기 배출 안내입니다.',
+        showRecovery: true,
+        categoryCta: { href: '/trash', label: '쓰레기 배출 목록 보기' },
+      }
+    }
     const meta = category ? CATEGORY_META[category] : undefined
 
     // 카테고리를 못 뽑은 410 은 시설이라고 단정하지 않는다(gone.ts 처럼 다른 출처가

@@ -15,11 +15,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import prisma from '../lib/prisma.js';
+import { readSummaryMode, summaryTableFor } from '../lib/realEstateSummaryStore.js';
 import { isValidBuildingName } from '../lib/realEstateBuildingName.js';
 import {
   toAbsoluteRealEstateUrl,
   type RealEstateUrlType,
 } from '../lib/realEstateUrl.js';
+import {
+  attachRealEstateCanonicalPaths,
+  isPreservedRealEstateUrlMode,
+} from '../services/realEstateUrlRegistry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_FILE = path.resolve(__dirname, '../../data/indexing-log.json');
@@ -57,54 +62,38 @@ function saveLog(log: IndexingLog): void {
   fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2), 'utf-8');
 }
 
-async function fetchBuildingUrls(): Promise<string[]> {
-  const buildings = await prisma.$queryRaw<
+export async function fetchBuildingUrls(): Promise<string[]> {
+  const mode = readSummaryMode(process.env);
+  const table = summaryTableFor('list', mode);
+  const keyProjection = mode === 'address' ? 'buildingKey' : 'NULL AS buildingKey';
+  const buildings = await prisma.$queryRawUnsafe<
     Array<{
       realEstateType: RealEstateUrlType;
       buildingName: string;
+      buildingKey: string | null;
       city: string;
       district: string;
     }>
-  >`
-    SELECT 'apt-sale' AS realEstateType, buildingName, city, district
-      FROM AptSaleTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-    UNION ALL
-    SELECT 'apt-rent' AS realEstateType, buildingName, city, district
-      FROM AptRentTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-    UNION ALL
-    SELECT 'villa-sale' AS realEstateType, buildingName, city, district
-      FROM VillaSaleTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-    UNION ALL
-    SELECT 'villa-rent' AS realEstateType, buildingName, city, district
-      FROM VillaRentTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-    UNION ALL
-    SELECT 'offitel-sale' AS realEstateType, buildingName, city, district
-      FROM OffitelSaleTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-    UNION ALL
-    SELECT 'offitel-rent' AS realEstateType, buildingName, city, district
-      FROM OffitelRentTransaction
-      WHERE buildingName IS NOT NULL AND buildingName != ''
-      GROUP BY buildingName, city, district
-  `;
+  >(
+    `SELECT type AS realEstateType, buildingName, city, district, ${keyProjection}
+     FROM ${table}
+     WHERE buildingName IS NOT NULL AND buildingName != ''${mode === 'address' ? ' AND buildingKey IS NOT NULL' : ''}`
+  );
 
-  return buildings
+  const indexableBuildings = buildings
     .filter((b) => isValidBuildingName(b.buildingName) && b.city && b.district)
+    .map((b) => ({ ...b, type: b.realEstateType }));
+  const buildingsWithCanonicalPaths = await attachRealEstateCanonicalPaths(indexableBuildings);
+  return buildingsWithCanonicalPaths
+    .filter((b) => !isPreservedRealEstateUrlMode() || !!b.canonicalPath)
     .map((b) =>
       toAbsoluteRealEstateUrl(SITE_BASE, {
         type: b.realEstateType,
         city: b.city,
         district: b.district,
         buildingName: b.buildingName,
+        ...(b.buildingKey ? { buildingKey: b.buildingKey } : {}),
+        canonicalPath: b.canonicalPath,
       })
     );
 }

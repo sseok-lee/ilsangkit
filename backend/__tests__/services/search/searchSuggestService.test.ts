@@ -1,19 +1,62 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+
+const { mockGroupBy, mockAttachCanonicalPaths } = vi.hoisted(() => ({
+  mockGroupBy: vi.fn(),
+  mockAttachCanonicalPaths: vi.fn((rows: unknown[]) => Promise.resolve(rows)),
+}));
 
 vi.mock('../../../src/services/search/searchRegionIndex.js', async (orig) => {
   const actual = await orig() as typeof import('../../../src/services/search/searchRegionIndex.js');
   return { ...actual, getRegionIndex: async () => actual.buildRegionIndex([{ city: '서울특별시', district: '강남구' }]) };
 });
 
-const mockGroupBy = vi.fn();
 vi.mock('../../../src/lib/prisma.js', () => ({
-  prisma: { realEstateBuildingSummary: { findMany: (...a: unknown[]) => mockGroupBy(...a) } },
-  default: { realEstateBuildingSummary: { findMany: (...a: unknown[]) => mockGroupBy(...a) } },
+  prisma: { $queryRawUnsafe: (...a: unknown[]) => mockGroupBy(...a) },
+  default: { $queryRawUnsafe: (...a: unknown[]) => mockGroupBy(...a) },
+}));
+vi.mock('../../../src/services/realEstateUrlRegistry.js', () => ({
+  attachRealEstateCanonicalPaths: mockAttachCanonicalPaths,
 }));
 
 import { suggest } from '../../../src/services/search/searchSuggestService.js';
 
 describe('suggest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
+  });
+
+  it('keeps same-name suggestions tied to their individual addresses', async () => {
+    const rows = [
+      { buildingKey: 'a'.repeat(64), dongName: '대치동', jibun: '934-2' },
+      { buildingKey: 'b'.repeat(64), dongName: '역삼동', jibun: '785-10' },
+    ].map(address => ({ ...address, buildingName: '스톤빌리지', type: 'villa-sale', city: '서울', district: '강남구', bjdCode: '11680', transactionCount: 9 }));
+    mockGroupBy.mockResolvedValue(rows);
+    const result = await suggest('스톤빌리지', 'realestate');
+    const buildings = result.items.filter(item => item.type === 'building');
+    expect(buildings.map(item => item.buildingKey)).toEqual(rows.map(row => row.buildingKey));
+    expect(buildings[0].sublabel).toContain('대치동 934-2');
+    expect(buildings[1].sublabel).toContain('역삼동 785-10');
+    expect(String(mockGroupBy.mock.lastCall?.[0])).toContain('buildingKey, dongName, jibun');
+  });
+
+  it('returns canonicalPath for building suggestions from the registry batch', async () => {
+    const key = 'c'.repeat(64);
+    mockGroupBy.mockResolvedValue([
+      { buildingKey: key, buildingName: '캐슬타워', type: 'apt-sale', city: '서울', district: '강남구', dongName: '역삼동', jibun: '10', bjdCode: '11680', transactionCount: 7 },
+    ]);
+    mockAttachCanonicalPaths.mockImplementationOnce((rows: Array<{ buildingKey?: string }>) =>
+      Promise.resolve(rows.map((row) => ({ ...row, canonicalPath: `/registered/${row.buildingKey}` }))),
+    );
+
+    const result = await suggest('캐슬', 'realestate');
+
+    expect(result.items.find(item => item.type === 'building')).toMatchObject({
+      buildingKey: key,
+      canonicalPath: `/registered/${key}`,
+    });
+  });
+
   it('"강남" → 지역 추천(강남구) 포함, 건물 조회는 startsWith로 호출', async () => {
     mockGroupBy.mockResolvedValue([
       { buildingName: '강남효성해링턴', type: 'apt-sale', city: '서울', district: '강남구', bjdCode: '1168010100', transactionCount: 32 },
@@ -22,8 +65,7 @@ describe('suggest', () => {
     const types = res.items.map(i => i.type);
     expect(types).toContain('region');
     expect(types).toContain('building');
-    const arg = mockGroupBy.mock.calls[0][0];
-    expect(arg.where.buildingName).toEqual({ startsWith: '강남' });
+    expect(mockGroupBy.mock.calls[0][1]).toBe('강남');
   });
 
   it('q가 1자면 건물 조회를 하지 않는다(>=2 가드)', async () => {

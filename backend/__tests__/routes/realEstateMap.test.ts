@@ -1,7 +1,23 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app';
 import { resolveGranularity, MapQuerySchema } from '../../src/schemas/realEstateMap.js';
+
+const { mockFetchRegions, mockFetchBuildings } = vi.hoisted(() => ({
+  mockFetchRegions: vi.fn(),
+  mockFetchBuildings: vi.fn(),
+}));
+
+vi.mock('../../src/services/realEstateMapService.js', () => ({
+  fetchRegions: mockFetchRegions,
+  fetchBuildings: mockFetchBuildings,
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFetchRegions.mockResolvedValue([]);
+  mockFetchBuildings.mockResolvedValue({ items: [], total: 0, exact: true });
+});
 
 describe('resolveGranularity', () => {
   it('level >= 11 은 city', () => {
@@ -175,6 +191,11 @@ describe('GET /api/real-estate/:type/map (라우트)', () => {
     expect(withPrev.status).toBe(200);
     expect(withPrev.body.success).toBe(true);
     expect(withPrev.body.data.granularity).toBe('district');
+    expect(mockFetchRegions).toHaveBeenLastCalledWith(
+      'apt-sale',
+      'district',
+      { swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+    );
 
     const withoutPrev = await request(app)
       .get('/api/real-estate/apt-sale/map')
@@ -182,6 +203,11 @@ describe('GET /api/real-estate/:type/map (라우트)', () => {
     expect(withoutPrev.status).toBe(200);
     expect(withoutPrev.body.success).toBe(true);
     expect(withoutPrev.body.data.granularity).toBe('city');
+    expect(mockFetchRegions).toHaveBeenLastCalledWith(
+      'apt-sale',
+      'city',
+      { swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+    );
   });
 
   it('한국 영역 밖 좌표(swLat=20)는 422', async () => {

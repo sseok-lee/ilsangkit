@@ -31,51 +31,52 @@ jobs:
             set -u
             set -x
             echo "[step:start] $(date -u +%FT%TZ)"
-            cd /home/project2/backend
-            echo "[step:cwd-ok] $(pwd)"
+            ACTIVE_BACKEND_LINK="${ILSK_ACTIVE_BACKEND_LINK:-/home/project2/backend}"
+            if [ -L /home/project2/current-backend ]; then
+              ACTIVE_BACKEND_LINK="/home/project2/current-backend"
+            fi
+            ACTIVE_BACKEND_DIR="$(cd "$ACTIVE_BACKEND_LINK" && pwd -P)"
+            cd "$ACTIVE_BACKEND_DIR"
+            echo "[step:active-backend] $ACTIVE_BACKEND_DIR"
+            INVENTORY="${ILSK_DEPLOY_INVENTORY:-/home/project2/deploy/inventory.json}"
+            SYNC_RUNTIME_SCRIPT="${ILSK_SYNC_RUNTIME_SCRIPT:-}"
+            if [ -z "$SYNC_RUNTIME_SCRIPT" ]; then
+              ACTIVE_RELEASE_ROOT="$(dirname "$ACTIVE_BACKEND_DIR")"
+              SYNC_RUNTIME_SCRIPT="$ACTIVE_RELEASE_ROOT/scripts/deploy/sync-runtime.mjs"
+            fi
+            if [ -f "$SYNC_RUNTIME_SCRIPT" ]; then
+              SYNC_RUNTIME_MODE="release"
+              node "$SYNC_RUNTIME_SCRIPT" print --active-backend-link "$ACTIVE_BACKEND_LINK" --inventory "$INVENTORY" || exit $?
+              run_backend_node_timed() {
+                RUNTIME_LIMIT="$1"
+                shift
+                timeout --kill-after=30s "$RUNTIME_LIMIT" node "$SYNC_RUNTIME_SCRIPT" run --active-backend-link "$ACTIVE_BACKEND_LINK" --inventory "$INVENTORY" -- node "$@"
+              }
+            else
+              if [ -L /home/project2/current-backend ]; then
+                echo "[error] current-backend is active but sync runtime helper was not found: $SYNC_RUNTIME_SCRIPT"
+                exit 2
+              fi
+              SYNC_RUNTIME_MODE="legacy"
+              LEGACY_BACKEND_ENV_FILE="${ILSK_BACKEND_ENV_FILE:-$ACTIVE_BACKEND_DIR/.env}"
+              run_backend_node_timed() {
+                RUNTIME_LIMIT="$1"
+                shift
+                if [ -f "$LEGACY_BACKEND_ENV_FILE" ]; then
+                  timeout --kill-after=30s "$RUNTIME_LIMIT" node --env-file "$LEGACY_BACKEND_ENV_FILE" "$@"
+                else
+                  timeout --kill-after=30s "$RUNTIME_LIMIT" node "$@"
+                fi
+              }
+            fi
+            export REAL_ESTATE_WRITE_LOCK_DIR="${REAL_ESTATE_WRITE_LOCK_DIR:-/home/project2/run/real-estate-locks}"
+            mkdir -p "$REAL_ESTATE_WRITE_LOCK_DIR"
+            REAL_ESTATE_SYNC_EXIT=0
+            echo "[step:real-estate-lock-dir] $REAL_ESTATE_WRITE_LOCK_DIR"
 
-            # pkill -f 는 drone-ssh 가 bash -c '<script>' 로 넘긴 이 스크립트 본문
-            # 자체를 argv 에 담은 부모 bash 까지 매칭시켜 SIGKILL 해버린다
-            # (2026-04-17 run #24580271281, 2026-04-18 run #24596132685, #24596179994).
-            # 해법: pgrep -x node 로 실행 파일명이 정확히 'node' 인 프로세스만 후보로
-            # 뽑은 뒤 /proc/<pid>/cmdline 으로 argv 를 확인해 우리 sync 스크립트만 종료.
-            # 부모 bash 는 name=bash 이므로 절대 후보에 오르지 않음.
-            kill_sync_zombies() {
-              local pid cmd
-              for pid in $(pgrep -x node 2>/dev/null); do
-                cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
-                case "$cmd" in
-                  *dist/scripts/syncApt*|\
-                  *dist/scripts/syncVilla*|\
-                  *dist/scripts/syncOffitel*|\
-                  *dist/scripts/syncLandSale*|\
-                  *dist/scripts/geocodeRealEstate*|\
-                  *dist/scripts/refreshRealEstateSummary*|\
-                  *dist/scripts/syncSubscription*|\
-                  *dist/scripts/geocodeSubscriptions*|\
-                  *dist/scripts/syncAuction*|\
-                  *dist/scripts/geocodeAuction*|\
-                  *dist/scripts/generateSitemaps*)
-                    kill -9 "$pid" 2>/dev/null || true
-                    ;;
-                esac
-              done
-            }
-
-            # --- 좀비 청소 (시작 전) ---------------------------------------
-            # 이전 실행에서 남은 sync/geocode/refresh/subscription 프로세스 강제 종료.
-            # 2026-04-17 사고 때 SSH 연결 끊겨도 node 가 살아남아 MySQL 을 7시간 잡은
-            # 사슬의 1번째 방어선.
-            echo "[step:pre-kill]"
-            kill_sync_zombies
-            echo "[step:pre-kill-done exit=$?]"
-            # ilsangkit 유저의 30분 이상 걸린 non-Sleep 커넥션 KILL.
-            # information_schema.processlist는 metadata lock 시 hang할 수 있어 SHOW PROCESSLIST 사용.
-            echo "[step:pre-mysql-show]"
-            mysql -e "SHOW PROCESSLIST" 2>/dev/null \
-              | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
-              | mysql 2>/dev/null || true
-            echo "[step:pre-mysql-done exit=$?]"
+            # Cooperative writer locking is enforced by each real-estate writer.
+            # This workflow no longer kills existing node processes or MySQL sessions; stale locks
+            # require explicit token-based recovery by an operator.
 
             # 현재 월과 직전 월만 동기화 (YYYYMM)
             CURRENT_YM=$(date +%Y%m)
@@ -83,7 +84,7 @@ jobs:
             echo "[step:ym-resolved PREV=$PREV_YM CUR=$CURRENT_YM]"
 
             # dist 산출물 존재 선행 체크 — deploy 워크플로우가 선행되지 않은 경우 조기 실패
-            if [ ! -f dist/scripts/syncAptSale.js ]; then
+            if [ ! -f "$ACTIVE_BACKEND_DIR/dist/scripts/syncAptSale.js" ]; then
               echo "[error] dist/scripts/syncAptSale.js 미존재 — Deploy 워크플로우 선행 실행 필요"
               exit 2
             fi
@@ -98,22 +99,26 @@ jobs:
             for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSale syncOffitelRent syncLandSale syncAuction; do
               echo "[step:loop-${SCRIPT}-start] $(date -u +%FT%TZ)"
               echo "--- ${SCRIPT} 동기화 ---"
-              timeout --kill-after=30s 20m node "dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" \
-                || echo "[WARN] ${SCRIPT} 실패 (exit=$?)"
+              SCRIPT_EXIT=0
+              run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/${SCRIPT}.js" --from "$PREV_YM" --to "$CURRENT_YM" || SCRIPT_EXIT=$?
+              if [ "$SCRIPT_EXIT" -ne 0 ]; then
+                echo "::warning::${SCRIPT} 실패 (exit=$SCRIPT_EXIT)"
+                REAL_ESTATE_SYNC_EXIT=4
+              fi
               echo "[step:loop-${SCRIPT}-end]"
             done
 
             # 좌표 없는 건물 지오코딩 (카카오 API rate limit 감안 45분)
             echo "[step:geocode-start]"
             echo "--- 지오코딩 ---"
-            timeout --kill-after=30s 45m node dist/scripts/geocodeRealEstate.js \
+            run_backend_node_timed 45m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeRealEstate.js" \
               || echo "[WARN] 지오코딩 실패 (exit=$?)"
             echo "[step:geocode-end]"
 
             # 공매 물건 지오코딩 (온비드 API 무좌표 → 카카오 주소검색, 30분)
             echo "[step:geocode-auction-start]"
             echo "--- 공매 지오코딩 ---"
-            timeout --kill-after=30s 30m node dist/scripts/geocodeAuction.js \
+            run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeAuction.js" \
               || echo "[WARN] 공매 지오코딩 실패 (exit=$?)"
             echo "[step:geocode-auction-end]"
 
@@ -136,12 +141,12 @@ jobs:
             echo "[step:summary-start]"
             echo "--- Summary 갱신 ---"
             SUMMARY_EXIT=0
-            timeout --kill-after=30s 25m node dist/scripts/refreshRealEstateSummary.js || SUMMARY_EXIT=$?
+            run_backend_node_timed 25m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRealEstateSummary.js" || SUMMARY_EXIT=$?
             case "$SUMMARY_EXIT" in
               0) echo "[sync] Summary 갱신 완료" ;;
-              4) echo "::warning::Summary 일부 타입 실패 — 위 로그의 '실패한 타입' 확인. 그 타입은 어제 값이 남는다." ;;
-              124|137) echo "::warning::Summary 가 25분 예산을 초과해 강제 종료됐다(exit=$SUMMARY_EXIT). 뒤쪽 타입(villa-rent·offitel)이 실행되지 않았을 수 있다 — 위 로그의 '완료 N/6' 확인." ;;
-              *) echo "::warning::Summary 갱신 실패 (exit=$SUMMARY_EXIT) — 전 타입이 어제 값으로 남는다." ;;
+              4) echo "::warning::Summary 일부 타입 실패 — 위 로그의 '실패한 타입' 확인. 그 타입은 어제 값이 남는다."; REAL_ESTATE_SYNC_EXIT=4 ;;
+              124|137) echo "::warning::Summary 가 25분 예산을 초과해 강제 종료됐다(exit=$SUMMARY_EXIT). 뒤쪽 타입(villa-rent·offitel)이 실행되지 않았을 수 있다 — 위 로그의 '완료 N/6' 확인."; REAL_ESTATE_SYNC_EXIT=4 ;;
+              *) echo "::warning::Summary 갱신 실패 (exit=$SUMMARY_EXIT) — 전 타입이 어제 값으로 남는다."; REAL_ESTATE_SYNC_EXIT=4 ;;
             esac
             echo "[step:summary-end]"
 
@@ -150,9 +155,15 @@ jobs:
             # 색인·사이트맵을 먼저 끝낸 뒤 맨 마지막 격리 단계에서 지오코딩한다(아래 참조).
             echo "[step:subscription-start]"
             echo "--- 청약 동기화 (지오코딩 제외) ---"
-            timeout --kill-after=30s 30m node dist/scripts/syncSubscription.js --source ALL --skip-geocode \
+            run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/syncSubscription.js" --source ALL --skip-geocode \
               || echo "[WARN] 청약 동기화 실패 (exit=$?)"
             echo "[step:subscription-end]"
+
+            # 마이홈 + LH 공공임대 (공고 식별자로 병합, 주소 지오코딩 제외)
+            echo "[step:public-rental-start]"
+            run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/syncPublicRental.js" --write \
+              || echo "::warning::공공임대 동기화 실패 (exit=$?) — sub-public-rent 이력 확인"
+            echo "[step:public-rental-end]"
 
             # Google Indexing API 자동 제출은 중단됨 (2026-06-19).
             # Indexing API 는 공식적으로 JobPosting / BroadcastEvent 타입만 지원하므로
@@ -165,8 +176,10 @@ jobs:
             # 실패/가드거부 시 기존 파일 유지(크롤러 영향 없음).
             echo "[step:sitemap-gen-start]"
             echo "--- 사이트맵 정적 재생성 ---"
-            export SITEMAP_DIR="/home/project2/sitemaps"
-            export SITEMAP_REGEN_BASE="http://127.0.0.1:3000"
+            if [ "$SYNC_RUNTIME_MODE" = "legacy" ]; then
+              export SITEMAP_DIR="${SITEMAP_DIR:-/home/project2/sitemaps}"
+              export SITEMAP_REGEN_BASE="${SITEMAP_REGEN_BASE:-http://127.0.0.1:3000}"
+            fi
             set +x
             export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
             set -x
@@ -181,7 +194,7 @@ jobs:
             # 예산 10m→20m: 자식 하나당 최대 120초(SITEMAP_FETCH_TIMEOUT_MS)를 쓸 수 있고
             # 자식이 78개다. deploy.yml 과 동일하게 맞춘다.
             SITEMAP_EXIT=0
-            timeout --kill-after=30s 20m node dist/scripts/generateSitemaps.js || SITEMAP_EXIT=$?
+            run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/generateSitemaps.js" || SITEMAP_EXIT=$?
             case "$SITEMAP_EXIT" in
               0) echo "[sync] 사이트맵 갱신 완료" ;;
               4) echo "::warning::사이트맵 부분 갱신 — 일부 파일이 직전 생성본으로 이월됐다. 위 로그의 이월 목록 확인." ;;
@@ -197,18 +210,13 @@ jobs:
             #    타임아웃돼도 위 단계는 이미 완료됐으므로 영향 없음. per-run 상한으로 bound.
             echo "[step:subscription-geocode-start]"
             echo "--- 청약 주소 지오코딩 (격리) ---"
-            timeout --kill-after=30s 15m node dist/scripts/geocodeSubscriptions.js \
+            run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeSubscriptions.js" \
               || echo "[WARN] 청약 지오코딩 실패/스킵 (exit=$?)"
             echo "[step:subscription-geocode-end]"
 
-            # --- 좀비 청소 (종료 후) -------------------------------------
-            # 만에 하나 남은 프로세스/커넥션이 있으면 여기서 확실히 정리.
-            echo "[step:post-kill]"
-            kill_sync_zombies
-            echo "[step:post-mysql]"
-            mysql -e "SHOW PROCESSLIST" 2>/dev/null \
-              | awk '$2=="ilsangkit" && $6+0 > 1800 && $5!="Sleep" {print "KILL "$1";"}' \
-              | mysql 2>/dev/null || true
-            echo "[step:post-done]"
+            if [ "$REAL_ESTATE_SYNC_EXIT" -ne 0 ]; then
+              echo "::warning::부동산 writer 단계에서 실패가 발생했다(exit=$REAL_ESTATE_SYNC_EXIT). 전체 작업은 완료했지만 워크플로는 실패로 종료한다."
+              exit "$REAL_ESTATE_SYNC_EXIT"
+            fi
 
             echo "=== 동기화 완료 ==="

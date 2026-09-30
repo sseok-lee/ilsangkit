@@ -1,55 +1,41 @@
 <template>
-  <div class="bg-background-light">
-    <div class="bg-gradient-to-b from-slate-50 to-background-light border-b border-slate-100">
-      <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">임대 청약</h1>
-        <p class="mt-2 text-slate-500 text-sm">청약통장으로 접수하는 공공임대 청약과 공공지원 민간임대 청약 일정을 안내합니다.</p>
+  <div class="bg-white">
+    <div class="mx-auto max-w-6xl px-4 pb-5 pt-8 md:flex md:items-end md:justify-between md:gap-8 md:px-6 md:pb-7 md:pt-10">
+      <div>
+        <h1 class="text-[27px] md:text-[36px] leading-tight font-bold text-slate-900">임대주택 모집공고</h1>
+        <p class="mt-3 text-slate-600 text-sm md:text-base">공공임대부터 공공지원 민간임대까지, 지역별로 찾아보세요.</p>
       </div>
+      <p class="mt-3 text-left text-xs text-slate-500 md:mt-0 md:shrink-0 md:text-right md:text-sm">
+        <strong class="font-semibold text-slate-900 md:block md:text-lg">청약홈 · 마이홈 · LH</strong>
+        <span class="md:block">공개 자료 기준</span>
+      </p>
     </div>
-
-    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6 space-y-8">
-      <section
-        v-for="group in groups"
-        :key="group"
-        class="space-y-3"
-        :data-test-group="group"
-      >
-        <header>
-          <h2 class="text-xl font-bold text-slate-900">{{ RENT_GROUP_META[group].heading }}</h2>
-          <p class="mt-1 text-sm text-slate-500">{{ RENT_GROUP_META[group].description }}</p>
-        </header>
-
-        <div class="flex flex-wrap gap-2 overflow-x-auto md:overflow-visible">
-          <NuxtLink
-            v-for="[slug, meta] in rentTypesByGroup(group)"
-            :key="slug"
-            :to="`/subscription/rent/${slug}`"
-            class="px-4 py-2 rounded-lg font-medium text-sm bg-white text-slate-700 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors whitespace-nowrap"
-          >
-            {{ meta.label }}
-          </NuxtLink>
-        </div>
-      </section>
-
-      <SubscriptionListView category="rent" />
+    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
+      <SubscriptionListView :scope="scope" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { SITE_URL } from '~/utils/seoConstants'
-import { RENT_GROUP_META, rentTypesByGroup, type RentGroup } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { isSubscriptionListQueryFiltered, subscriptionListHead } from '~/utils/subscriptionListHead'
 
-const groups: RentGroup[] = ['apply']
+const route = useRoute()
+const scope = { category: 'rent' as const }
+const filtered = computed(() => isSubscriptionListQueryFiltered(route.query, scope))
 
 const { setMeta } = useFacilityMeta()
 setMeta({
   title: '임대 청약 일정',
-  description: '청약통장으로 접수하는 청약홈 임대청약(공공/민간)과 LH 분양·임대 공고를 한 곳에서 비교하세요.',
+  description: '청약홈·마이홈·LH 공공임대와 공공지원 민간임대 모집공고를 한 곳에서 비교하세요.',
   path: '/subscription/rent',
+  canonical: false,
 })
+
+useHead(() => subscriptionListHead(route.path, filtered.value))
 
 const { setBreadcrumbSchema, setItemListSchema } = useStructuredData()
 setBreadcrumbSchema([
@@ -60,6 +46,6 @@ setBreadcrumbSchema([
 
 setItemListSchema([
   { name: '공공임대 청약', url: '/subscription/rent/public' },
-  { name: '민간임대 청약', url: '/subscription/rent/private' },
+  { name: '공공지원 민간임대', url: '/subscription/rent/private' },
 ])
 </script>

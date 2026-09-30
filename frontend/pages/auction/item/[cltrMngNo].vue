@@ -178,7 +178,7 @@ if (item.value) {
 </script>
 
 <template>
-  <div class="bg-background-light min-h-screen">
+  <div class="property-redesign bg-white min-h-screen">
     <!-- fail-open: 일시 장애(503)면 item 이 null 이다. 빈 본문 200 대신 재시도 안내를 그린다. -->
     <div v-if="!item" class="mx-auto max-w-[1200px] px-4 md:px-6 py-20 text-center">
       <p class="text-slate-600 font-medium">공매 물건 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
@@ -201,7 +201,7 @@ if (item.value) {
       />
       <!-- 데스크톱: PageHero(title-tag=div 로 강등 → 단일 h1 유지) -->
       <PageHero
-        class="hidden md:block"
+        class="property-hero hidden md:block"
         title-tag="div"
         :description="[item.usage, item.orgNm].filter(Boolean).join(' · ')"
       >
@@ -221,7 +221,7 @@ if (item.value) {
         <AuctionBidHistory
           :item="item"
           data-test="tier-bid-history"
-          class="order-1 md:order-1"
+          class="property-section order-1 md:order-1"
         />
 
         <!-- T1b: 실거래가 시세 비교 (입찰정보 직후 상향) -->
@@ -231,7 +231,7 @@ if (item.value) {
           :market-avg="marketCompare.marketAvg"
           :market-label="marketCompare.label"
           data-test="tier-price-compare"
-          class="order-2 md:order-2"
+          class="property-section order-2 md:order-2"
         />
 
         <!-- Ad②: 입찰정보·시세비교 이후 (단 사이 위치 보존) -->
@@ -248,8 +248,10 @@ if (item.value) {
           :lat="item.lat"
           :lng="item.lng"
           :address="item.address"
-          class="order-5 md:order-5"
+          class="property-section order-5 md:order-5"
         />
+
+        <p v-else class="order-5 py-5 text-sm text-muted">위치 좌표가 제공되지 않아 지도를 표시할 수 없습니다.</p>
 
         <!-- Ad③: 스펙·지도 이후 (단 사이 위치 보존) -->
         <AdBanner class="order-6 md:order-6" />
@@ -258,9 +260,9 @@ if (item.value) {
         <SectionBlock
           v-if="nearby.length"
           heading="같은 지역 공매 물건"
-          class="order-7 md:order-7"
+          class="property-section order-7 md:order-7"
         >
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2"><AuctionCard v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
+          <div class="flex flex-col"><AuctionCard variant="row" v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
         </SectionBlock>
 
         <!-- T4: 주변 생활시설 — 부동산 상세와 동일 컴포넌트 -->
@@ -268,7 +270,7 @@ if (item.value) {
           v-if="item.lat != null && item.lng != null"
           heading="주변 생활시설"
           subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
-          class="order-8 md:order-8"
+          class="property-section order-8 md:order-8"
         >
           <NearbyFacilities :lat="item.lat" :lng="item.lng" />
         </SectionBlock>
@@ -278,7 +280,7 @@ if (item.value) {
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
+      <SectionBlock class="property-section" heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
         <div class="space-y-1">
           <details
             v-for="faq in AUCTION_FAQ"
@@ -312,3 +314,5 @@ if (item.value) {
     </div>
   </div>
 </template>
+
+<style src="~/assets/css/remaining-property.css"></style>

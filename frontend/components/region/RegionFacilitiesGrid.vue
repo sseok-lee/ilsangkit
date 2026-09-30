@@ -40,6 +40,13 @@
         </NuxtLink>
       </EmptyState>
 
+      <FacilityList
+        v-else-if="variant === 'rows'"
+        :facilities="facilities"
+        :loading="false"
+        variant="rows"
+      />
+
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <FacilityCard
           v-for="facility in facilities"
@@ -63,10 +70,12 @@
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
+import FacilityList from '~/components/facility/FacilityList.vue'
+import FacilityCard from '~/components/facility/FacilityCard.vue'
 import type { Facility } from '~/types/facility'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 
-defineProps<{
+withDefaults(defineProps<{
   categoryName: string
   districtName: string
   total: number
@@ -76,9 +85,12 @@ defineProps<{
   currentPage: number
   totalPages: number
   categorySlug?: string
+  variant?: 'cards' | 'rows'
   /** 주면 페이지네이션이 <a href> 로 렌더돼 크롤러가 2페이지 이후로 갈 수 있다. */
   hrefFor?: (page: number) => string
-}>()
+}>(), {
+  variant: 'cards',
+})
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void

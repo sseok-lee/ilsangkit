@@ -7,7 +7,7 @@
       <h3 class="font-display text-strong text-[15px] font-extrabold tracking-tight truncate flex-1 min-w-0">{{ item.buildingName }}</h3>
       <span :class="['shrink-0 text-[11px] font-bold rounded-md px-2 py-0.5', badgeClass]">{{ propertyLabel }}</span>
     </div>
-    <p class="text-faint text-xs truncate">{{ item.city }} {{ item.district }} {{ item.dongName }}</p>
+    <p class="text-faint text-xs truncate">{{ addressText }}</p>
     <p :class="['mt-2 text-[13px] font-bold rounded-md inline-flex items-center gap-1 px-2 py-1', priceBadgeClass]">
       <span>{{ priceLabel }}</span>
       <span>{{ priceText }}</span>
@@ -51,6 +51,12 @@ const priceLabel = computed(() => '최근 거래가')
 
 const priceBadgeClass = computed(() =>
   props.mode === 'sale' ? 'bg-primary-50 text-primary-700' : 'bg-rose-50 text-rose-700'
+)
+
+const addressText = computed(() =>
+  [props.item.city, props.item.district, props.item.dongName, props.item.jibun]
+    .filter(Boolean)
+    .join(' ')
 )
 
 // 만원 단위 가격을 "${억}억 ${만}" 또는 "${만}만"으로 포맷
@@ -98,6 +104,8 @@ const linkUrl = computed(() => {
     city: props.item.city,
     district: props.item.district,
     buildingName: props.item.buildingName,
+    buildingKey: props.item.buildingKey,
+    canonicalPath: props.item.canonicalPath,
   })
 })
 </script>

@@ -17,8 +17,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout tested commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,14 +31,14 @@ jobs:
             backend/package-lock.json
             frontend/package-lock.json
 
-      - name: Build Backend
+      - name: Build backend
         run: |
           cd backend
           npm ci
           npx prisma generate
           npm run build
 
-      - name: Build Frontend
+      - name: Build frontend
         run: |
           cd frontend
           npm ci
@@ -49,210 +51,107 @@ jobs:
           NCP_MAP_CLIENT_ID: ${{ secrets.NCP_MAP_CLIENT_ID }}
           NCP_MAP_CLIENT_SECRET: ${{ secrets.NCP_MAP_CLIENT_SECRET }}
 
-      - name: Clean old server-side build artifacts on server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            # frontend .output/server (Nitro 서버 코드) 는 SCP 가 통째로 덮어쓰기 전에
-            # 비워서 stale chunks 가 남지 않게 한다.
-            # frontend .output/public/_nuxt/* (content-hashed immutable 클라이언트 chunks)
-            # 는 절대 삭제하지 않는다 — 이미 사용자/Googlebot 브라우저에 캐시된 옛 HTML
-            # 이 참조하는 chunk 가 사라지면 dynamic import 500/404 발생 (2026-05-21).
-            # SCP 가 새 hash chunks 를 _nuxt 에 추가하기만 하므로 옛 chunks 는 자연 누적.
-            # 디스크 누적은 별도 cron 으로 30일 이상 chunk 청소 (TODO 별도 PR).
-            rm -rf /home/project2/frontend/.output/server
-            rm -rf /home/project2/backend/dist
+      - name: Package release artifacts
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          RELEASE_ID="address-${HEAD_SHA:0:12}"
+          mkdir -p release-out/backend release-out/frontend release-out/scripts/deploy
+          cp -R backend/dist backend/package*.json backend/prisma release-out/backend/
+          cp -R frontend/.output release-out/frontend/
+          cp scripts/deploy/release.mjs scripts/deploy/deployment-state.mjs scripts/deploy/sync-runtime.mjs scripts/deploy/nginx-release.conf.template release-out/scripts/deploy/
+          cp ecosystem.release.config.cjs release-out/
+          node - "$RELEASE_ID" <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+          const crypto = require('node:crypto')
+          const releaseId = process.argv[2]
+          const nuxtDir = path.resolve('frontend/.output/public/_nuxt')
+          const assets = []
+          function walk(dir) {
+            if (!fs.existsSync(dir)) return
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name)
+              if (entry.isDirectory()) walk(full)
+              else if (entry.isFile()) {
+                const relativePath = path.relative(nuxtDir, full).split(path.sep).join('/')
+                if (relativePath === 'builds/latest.json') continue
+                assets.push({
+                  path: `/home/project2/deploy/releases/${releaseId}/frontend/.output/public/_nuxt/${relativePath}`,
+                  fileName: relativePath,
+                  sha256: crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex'),
+                })
+              }
+            }
+          }
+          walk(nuxtDir)
+          if (assets.length === 0) throw new Error('no hashed frontend _nuxt assets found')
+          fs.writeFileSync('release-out/hashed-assets.json', JSON.stringify(assets, null, 2) + '\n')
+          NODE
+          tar -C release-out/backend -czf release-out/backend.tgz .
+          tar -C release-out/frontend -czf release-out/frontend.tgz .
+          BACKEND_SHA="$(sha256sum release-out/backend.tgz | awk '{print $1}')"
+          FRONTEND_SHA="$(sha256sum release-out/frontend.tgz | awk '{print $1}')"
+          cat > release-out/manifest.json <<JSON
+          {
+            "releaseId": "${RELEASE_ID}",
+            "commitSha": "${HEAD_SHA}",
+            "workflowSha": "${HEAD_SHA}",
+            "backendArtifact": { "path": "/home/project2/release-inbox/${RELEASE_ID}/backend.tgz", "sha256": "${BACKEND_SHA}" },
+            "frontendArtifact": { "path": "/home/project2/release-inbox/${RELEASE_ID}/frontend.tgz", "sha256": "${FRONTEND_SHA}" }
+          }
+          JSON
+          echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
 
-      - name: Deploy to Cafe24 Server
+      - name: Upload immutable release bundle
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "backend/dist,backend/package*.json,backend/prisma,frontend/.output,ecosystem.config.js"
-          target: "/home/project2"
-          strip_components: 0
+          source: "release-out/*"
+          target: "/home/project2/release-inbox/${{ env.RELEASE_ID }}"
+          strip_components: 1
 
-      - name: Kill long-running queries and apply schema
+      - name: Validate and switch release on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 5m
+          command_timeout: 30m
           script: |
-            # 60초 이상 실행 중인 쿼리 종료 (prisma db push 전 락 해제)
-            KILL_LIST=$(mysql -e "
-              SELECT GROUP_CONCAT(CONCAT('KILL ', id) SEPARATOR '; ')
-              FROM information_schema.processlist
-              WHERE time > 60 AND command = 'Execute' AND user != 'root';
-            " 2>/dev/null | tail -n 1)
-            if [ -n "$KILL_LIST" ] && [ "$KILL_LIST" != "NULL" ]; then
-              mysql -e "$KILL_LIST;" 2>/dev/null || true
-              echo "장시간 실행 쿼리 종료: $KILL_LIST"
+            set -euo pipefail
+            RELEASE_ID="${{ env.RELEASE_ID }}"
+            INBOX="/home/project2/release-inbox/${RELEASE_ID}"
+            INVENTORY="/home/project2/deploy/inventory.json"
+            MANIFEST="${INBOX}/manifest.json"
+            RELEASE_SCRIPT="${INBOX}/scripts/deploy/release.mjs"
+            HASHED_ASSETS="${INBOX}/hashed-assets.json"
+            if [ ! -f "$INVENTORY" ]; then
+              echo "[deploy] missing C1 inventory: $INVENTORY" >&2
+              exit 2
+            fi
+            if [ ! -f "$HASHED_ASSETS" ]; then
+              echo "[deploy] missing hashed asset manifest: $HASHED_ASSETS" >&2
+              exit 2
             fi
 
-            cd /home/project2/backend
-            npx prisma db push --accept-data-loss
-            npx prisma generate
+            SUMMARY_READY="$(node - "$INVENTORY" <<'NODE'
+            const fs = require('node:fs')
+            const inventory = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+            const activeBackendPort = inventory.active?.backend?.port || 8000
+            process.stdout.write(`http://127.0.0.1:${activeBackendPort}/api/internal/release-readiness`)
+            NODE
+            )"
+            SUMMARY_READINESS="$(curl -fsS "$SUMMARY_READY")"
 
-      - name: Install Dependencies and Restart Services
-        uses: appleboy/ssh-action@master
-        env:
-          NUXT_INTERNAL_API_BASE: ${{ secrets.NUXT_INTERNAL_API_BASE }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 10m
-          envs: NUXT_INTERNAL_API_BASE
-          script: |
-            mkdir -p /home/project2/assets/images/guides
+            printf '%s' "$SUMMARY_READINESS" > "$INBOX/readiness.json"
+            node "$INBOX/scripts/deploy/deployment-state.mjs" "$INVENTORY" "$MANIFEST" "$HASHED_ASSETS" "$INBOX/readiness.json"
 
-            cd /home/project2/backend
-            npm ci
-            # src/ 는 서버로 배포되지 않으므로 tsx 기반 npm run db:fulltext 불가 —
-            # tsc 빌드 산출물(dist/scripts)을 직접 실행한다. 스크립트는 멱등이라
-            # 이미 ngram 인 인덱스는 스킵하고, 기본 파서 인덱스는 ngram 으로 재생성.
-            node dist/scripts/applyFulltextNgram.js || echo "[fulltext-ngram] WARN: exited $? — skipped (ngram 미지원 또는 오류, 검색은 LIKE 폴백)"
-
-            # pm2 reload 는 fork mode 단일 프로세스에서는 restart 와 동일 동작이라 무해하고,
-            # 향후 cluster mode 전환 시 자동으로 zero-downtime rolling restart 로 동작한다.
-            pm2 describe ilsangkit-backend > /dev/null
-            if [ $? -eq 0 ]; then
-              pm2 reload ilsangkit-backend
-            else
-              pm2 start dist/server.js --name ilsangkit-backend --max-memory-restart 500M
-            fi
-
-            # 사이트맵 정적 서빙: reader(frontend)와 생성 스크립트가 쓰는 env.
-            # --update-env 가 이 셸 env 를 frontend 프로세스에 주입하므로 reload 전에 export.
-            export SITEMAP_DIR="/home/project2/sitemaps"
-            export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
-            export SITEMAP_REGEN_BASE="http://127.0.0.1:3000"
-
-            # frontend SSR이 backend를 loopback으로 직접 호출하도록 runtime env 주입.
-            # --update-env 플래그로 pm2 가 기존 child process 의 env 를 현재 shell 의 env 로 교체.
-            cd /home/project2/frontend
-            export NUXT_INTERNAL_API_BASE
-            # Nitro SSR 서버를 loopback 에만 바인딩 — nginx 가 127.0.0.1:3000 으로 프록시하므로
-            # 외부 직접 노출(nginx 우회) 차단. --update-env 로 이 값이 frontend 프로세스에 주입됨.
-            export NITRO_HOST="127.0.0.1"
-            # 2026-07 전남광주통합특별시 정규화: 광주/전남 → jeonnamgwangju 301 활성.
-            # 데이터 마이그레이션 완료 후 켬 — 옛 URL을 신 slug로 301 이전(404 아님).
-            export REGION_REORG_301="1"
-            # 2026-07 인천 개편: 소멸구(서구/중구/동구) → 신설구 301 활성.
-            # 부동산 데이터 재싱크·삭제·요약갱신 완료 후 켬.
-            export INCHEON_REORG_301="1"
-            pm2 describe ilsangkit-frontend > /dev/null
-            if [ $? -eq 0 ]; then
-              pm2 reload ilsangkit-frontend --update-env
-            else
-              # ★ --max-memory-restart 는 반드시 --max-old-space-size 보다 낮아야 한다.
-              # 순서가 뒤집히면(2026-08-02 이전: heap 1024MB vs pm2 1200MB) V8 이 먼저
-              # heap limit 에 도달해 FATAL ERROR → SIGABRT 로 하드 크래시하고, pm2 의
-              # 정상 재시작 경로는 한 번도 발동하지 않는다. 실제로 하루 12~24 회 크래시했고
-              # 그때마다 30 초 행 + 502/504 가 크롤러에 그대로 나갔다.
-              # 850M(RSS) 는 heap 1024MB 도달 훨씬 전에 pm2 가 graceful restart 를 걸도록 하는 값.
-              # 이 폴백으로 프로세스가 재생성되면 런타임에만 있던 설정을 잃으므로 여기 명시한다.
-              pm2 start .output/server/index.mjs --name ilsangkit-frontend \
-                --node-args="--max-old-space-size=1024" \
-                --max-memory-restart 850M \
-                --update-env
-            fi
-
-            pm2 save
-
-            # 배포 스큐 방지: nginx proxy_cache 의 옛 HTML 을 제거한다.
-            # 캐시 키가 URL 기준($request_uri, 빌드ID 없음)이라 배포해도 자동 무효화되지 않으므로
-            # 명시 퍼지한다. 반드시 워밍업 루프 '앞'에 둔다 — 그래야 아래 워밍업 GET 이 stale HIT 대신
-            # 새 origin 을 타격해 새 HTML 로 캐시를 재선점한다 (배포 SSH 계정 root 라 권한 OK).
-            # 경로는 서버 nginx proxy_cache_path 와 일치해야 함 — 변경 시 함께 수정.
-            echo "[deploy] nginx proxy_cache 퍼지"
-            find /var/cache/nginx/ilsangkit -mindepth 1 -delete || true
-
-            # 배포 직후 콜드 부트 5xx 차단 워밍업.
-            # 1) backend /api/health 폴링으로 light ready 시점 감지 (최대 30초)
-            # 2) backend /api/sitemap/page-counts 폴링으로 heavy ready 감지 (최대 60초)
-            #    sitemap.xml 이 의존하는 무거운 집계 쿼리 - DB 풀/Prisma 모듈 cold start
-            #    완료 전에 frontend warmup 이 timeout abort → 빈/축소 sitemap 이 메모리
-            #    캐시(s-maxage=86400)에 박혀 24h stale 노출되는 사고 방지 (2026-05-21 PR-B).
-            # 3) frontend SSR 주요 라우트 사전 GET 으로 Nitro in-memory 캐시 + 모듈 그래프 워밍
-            #    (네이버 서치어드바이저 "서버 접근 불가" 리포트의 콜드 5xx 원인 해소)
-            echo "[warmup] backend /api/health 폴링"
-            for i in $(seq 1 30); do
-              if curl -sf -o /dev/null http://localhost:8000/api/health; then
-                echo "[warmup] backend ready (${i}s)"
-                break
-              fi
-              sleep 1
-            done
-
-            echo "[warmup] backend /api/sitemap/page-counts 폴링 (heavy endpoint ready 확인)"
-            for i in $(seq 1 60); do
-              if curl -sf -m 10 -o /dev/null http://localhost:8000/api/sitemap/page-counts; then
-                echo "[warmup] backend heavy endpoint ready (${i}s)"
-                break
-              fi
-              sleep 1
-            done
-
-            echo "[warmup] frontend SSR 라우트 사전 GET"
-            # 부동산 허브 6개를 반드시 포함한다. 한 번의 fetch 실패가 5분 SWR 캐시
-            # (s-maxage=300) 에 빈 본문으로 박히면 그 동안 모든 사용자/Googlebot 에게
-            # 빈 페이지가 반환되어 색인이 막힌다 (2026-05 villa-sale 사고).
-            # warmup 으로 캐시를 정상 본문으로 선점한다.
-            for path in \
-              / \
-              /real-estate \
-              /real-estate/apt-sale /real-estate/apt-rent \
-              /real-estate/villa-sale /real-estate/villa-rent \
-              /real-estate/offitel-sale /real-estate/offitel-rent \
-              /toilet /wifi /ev-charger /hospital /parking /aed /trash /park; do
-              curl -s -o /dev/null -m 30 "https://ilsangkit.co.kr${path}" || true
-            done
-
-            # backend 집계 캐시 선점은 제거됐다. /api/sitemap/real-estate-buildings 가
-            # RealEstateBuildingSummary 를 읽도록 바뀌어 0.34초(종전 56초)이고 캐시도 두지 않는다.
-            # 워밍할 캐시가 없으므로 선점 자체가 무의미하다.
-
-            # sitemap.xml + 모든 sub-sitemap chunk 동적 워밍.
-            # sitemap.xml 을 먼저 fetch → 안의 모든 <loc> 추출 → 각각 워밍.
-            # 새 sub-sitemap 카테고리/chunk 추가 시 deploy.yml 수정 불필요 (자동 적응).
-            # 2026-05-21 사고: real-estate-hub.xml 이 warmup 목록에서 빠져 빈 캐시 24h
-            # 박혀서 검색엔진이 시/군/구 허브 URL 발견 못 함.
-            # ⚠️ 현재 이 루프는 디스크 우선 서빙 때문에 정적 파일만 읽는다 — nginx/Nitro
-            # 캐시 워밍 효과는 남아있으나 backend 캐시는 위 블록이 담당한다.
-            echo "[warmup] sitemap 인덱스 + 모든 sub-sitemap chunk 동적 워밍"
-            curl -s -m 30 "https://ilsangkit.co.kr/sitemap.xml" \
-              | grep -oE '<loc>[^<]+</loc>' \
-              | sed -e 's|<loc>||' -e 's|</loc>||' \
-              | while read -r sitemap_url; do
-                  curl -s -o /dev/null -m 30 "$sitemap_url" || true
-                done
-            echo "[warmup] sitemap 워밍 완료"
-
-            # 배포 직후 1회 정적 sitemap 생성 (첫 롤아웃·SITEMAP_DIR 비어있을 때 대비).
-            # 실패/가드거부 시 비제로 exit 하지만 기존 파일은 보존되므로 배포는 실패시키지 않는다.
-            #
-            # 종전에는 결과를 `|| echo "[WARN]"` 로만 흘려서, 5일간 사이트맵이 얼어붙었는데도
-            # 배포는 계속 초록이었다(2026-07-22~27). 종료 코드별로 Actions 주석을 남겨
-            # 실패·부분갱신이 로그를 뒤지지 않아도 보이게 한다.
-            #   0=완전 갱신 / 4=부분 갱신(일부 이월) / 2=거부·실패 / 3=예외 / 1=env 누락
-            #
-            # 예산 10m→20m: 자식 하나당 최대 60초(SITEMAP_FETCH_TIMEOUT_MS)를 쓸 수 있고
-            # 자식이 78개라 무거운 것이 여러 개 겹치면 10분으로는 부족하다.
-            echo "[deploy] 사이트맵 정적 생성"
-            SITEMAP_EXIT=0
-            ( cd /home/project2/backend && timeout --kill-after=30s 20m node dist/scripts/generateSitemaps.js ) || SITEMAP_EXIT=$?
-            case "$SITEMAP_EXIT" in
-              0) echo "[deploy] 사이트맵 갱신 완료" ;;
-              4) echo "::warning::사이트맵 부분 갱신 — 일부 파일이 직전 생성본으로 이월됐다. 위 로그의 이월 목록 확인." ;;
-              *) echo "::warning::사이트맵 생성 실패/거부 (exit=$SITEMAP_EXIT) — 기존 파일 유지. 반복되면 stale 사이트맵이 서빙된다." ;;
-            esac
+            node "$RELEASE_SCRIPT" deploy --inventory "$INVENTORY" --manifest "$MANIFEST"
+            node "$RELEASE_SCRIPT" reconcile --inventory "$INVENTORY" --manifest "$MANIFEST"
 
       - name: Deployment Status
-        run: echo "✅ Deployment completed successfully!"
+        run: echo "✅ Release switch completed"

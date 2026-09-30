@@ -1,19 +1,36 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '../../src/lib/prisma.js';
+import { makeBuildingKey } from '../../src/lib/realEstateBuildingIdentity.js';
+import { assertLocalTestDatabaseUrl } from '../../src/utils/testDatabaseGuard.js';
 import { getNearbyByBjd } from '../../src/services/realEstateService.js';
 
 const TEST_BJD = '1144012700';
+const guardedDatabaseUrl = assertLocalTestDatabaseUrl(process.env.HOUSING_TEST_DATABASE_URL ?? process.env.DATABASE_URL);
+
+function testBuildingKey(type: string, buildingName: string, jibun: string, bjdCode: string = TEST_BJD): string {
+  return makeBuildingKey({
+    propertyType: type.split('-')[0],
+    bjdCode,
+    buildingName,
+    dongName: bjdCode === TEST_BJD ? '한강로동' : 'z',
+    jibun,
+  });
+}
 
 async function seedSummary(rows: Array<{ buildingName: string; type: string; latestPrice: number; transactionCount?: number }>) {
+  let index = 0;
   for (const r of rows) {
-    await prisma.realEstateBuildingSummary.create({
+    index += 1;
+    await prisma.realEstateBuildingSummaryV2.create({
       data: {
         type: r.type,
+        buildingKey: testBuildingKey(r.type, r.buildingName, `${index}-1`),
         buildingName: r.buildingName,
         bjdCode: TEST_BJD,
         city: '서울특별시',
         district: '마포구',
         dongName: '한강로동',
+        jibun: `${index}-1`,
         transactionCount: r.transactionCount ?? 1,
         latestPrice: r.latestPrice,
         latestDealYear: 2026,
@@ -24,9 +41,12 @@ async function seedSummary(rows: Array<{ buildingName: string; type: string; lat
 }
 
 describe('getNearbyByBjd', () => {
-  beforeAll(async () => { await prisma.realEstateBuildingSummary.deleteMany({ where: { bjdCode: TEST_BJD } }); });
-  afterAll(async () => { await prisma.realEstateBuildingSummary.deleteMany({ where: { bjdCode: TEST_BJD } }); });
-  beforeEach(async () => { await prisma.realEstateBuildingSummary.deleteMany({ where: { bjdCode: TEST_BJD } }); });
+  beforeAll(async () => {
+    expect(guardedDatabaseUrl).toContain('_test');
+    await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { bjdCode: TEST_BJD } });
+  });
+  afterAll(async () => { await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { bjdCode: TEST_BJD } }); });
+  beforeEach(async () => { await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { bjdCode: TEST_BJD } }); });
 
   it('mode=sale → 3개 키(apt/villa/offitel) 반환, monthlyRent=null', async () => {
     await seedSummary([
@@ -74,18 +94,27 @@ describe('getNearbyByBjd', () => {
 
   it('다른 bjdCode 단지는 제외', async () => {
     await seedSummary([{ buildingName: 'In', type: 'apt-sale', latestPrice: 1 }]);
-    await prisma.realEstateBuildingSummary.create({
+    await prisma.realEstateBuildingSummaryV2.create({
       data: {
-        type: 'apt-sale', buildingName: 'Out', bjdCode: '9999999999',
-        city: 'x', district: 'y', dongName: 'z',
-        transactionCount: 1, latestPrice: 1, latestDealYear: 2026, latestDealMonth: 1,
+        type: 'apt-sale',
+        buildingKey: testBuildingKey('apt-sale', 'Out', '1', '9999999999'),
+        buildingName: 'Out',
+        bjdCode: '9999999999',
+        city: 'x',
+        district: 'y',
+        dongName: 'z',
+        jibun: '1',
+        transactionCount: 1,
+        latestPrice: 1,
+        latestDealYear: 2026,
+        latestDealMonth: 1,
       },
     });
     try {
       const result = await getNearbyByBjd(TEST_BJD, 'sale', {});
       expect(result.apt.map(c => c.buildingName)).toEqual(['In']);
     } finally {
-      await prisma.realEstateBuildingSummary.deleteMany({ where: { buildingName: 'Out' } });
+      await prisma.realEstateBuildingSummaryV2.deleteMany({ where: { buildingName: 'Out' } });
     }
   });
 });

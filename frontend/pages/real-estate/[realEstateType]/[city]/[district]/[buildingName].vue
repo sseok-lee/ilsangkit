@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background-light">
+  <div class="estate-detail-page bg-white">
     <!-- Loading State (lazy navigation) -->
     <div v-if="ssrLoading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
       <div class="text-center">
@@ -45,65 +45,77 @@
       </Transition>
     </Teleport>
 
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-10 flex flex-col gap-3">
-      <!-- Unified Breadcrumb + Share (모바일 badge는 PageHero eyebrow가 흡수) -->
-      <div class="flex items-center justify-between gap-2 order-1 md:order-1">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-14 flex flex-col gap-0">
+      <div class="order-1 min-w-0 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
         <Breadcrumb :items="breadcrumbItems" />
-        <button
-          class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-slate-600 hover:text-primary hover:border-primary transition-colors text-sm"
-          aria-label="이 건물 공유하기"
-          @click="handleShare"
-        >
-          <span class="material-symbols-outlined text-[16px]">share</span>
-          <span class="hidden sm:inline">공유</span>
-        </button>
       </div>
 
-      <!-- Hero: 모바일 헤더 / 데스크톱 PageHero -->
-      <MobileDetailHeader
-        class="order-2 md:order-2"
-        :title="buildingName"
-        :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
-        :stats="mobileHeaderStats"
-        :kakao-map-url="kakaoMapUrl"
-        :naver-map-url="naverMapUrl"
-        share-label="이 건물 공유하기"
-        @share="handleShare"
-        @directions="(p) => openNavigation(p === 'kakao' ? kakaoMapUrl : naverMapUrl)"
-      >
-        <template #address>
-          <AddressLine :address="fullAddress" />
-        </template>
-      </MobileDetailHeader>
-      <PageHero
-        class="hidden md:block order-2 md:order-2"
-        title-tag="div"
-        :eyebrow="getDetailEyebrow(propertyMeta?.label ?? '', currentTab)"
-        :title="buildingName"
-        :stats="heroStats"
-      >
-        <template #description>
-          <AddressLine :address="fullAddress" />
-        </template>
-      </PageHero>
+      <section class="estate-detail-head order-2" aria-labelledby="estate-detail-title">
+        <div class="estate-heading-line">
+          <div class="min-w-0">
+            <p class="estate-eyebrow">{{ getDetailEyebrow(propertyMeta?.label ?? '', currentTab) }}</p>
+            <h1 id="estate-detail-title" class="estate-title">{{ buildingName }}</h1>
+            <div v-if="hasReportedAddressAmbiguity" class="estate-address">
+              <a href="#reported-addresses" class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100">
+                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">info</span>
+                주소 후보 {{ reportedAddressCount }}건 · 위치 섹션에서 확인
+              </a>
+            </div>
+            <p v-else class="estate-address">
+              <AddressLine :address="fullAddress" />
+            </p>
+          </div>
+          <button
+            class="estate-share-button"
+            aria-label="이 건물 공유하기"
+            @click="handleShare"
+          >
+            <span class="material-symbols-outlined text-[18px]">share</span>
+            <span class="share-label">공유</span>
+          </button>
+        </div>
+
+        <div class="estate-summary" aria-label="실거래 요약">
+          <div>
+            <span class="estate-summary-label">최근 매매</span>
+            <strong class="estate-summary-price tabular-nums">{{ latestSaleAmountLabel }}</strong>
+            <small>{{ latestSaleDetailLine }}</small>
+          </div>
+          <div>
+            <span class="estate-summary-label">건축연도</span>
+            <strong class="tabular-nums">{{ overviewBuildYearLabel }}</strong>
+          </div>
+          <div>
+            <span class="estate-summary-label">거래된 전용면적</span>
+            <strong class="tabular-nums">{{ overviewAreaRangeLabel }}</strong>
+          </div>
+          <div>
+            <span class="estate-summary-label">6개월 매매 · 전체 면적</span>
+            <strong class="tabular-nums">{{ overviewSaleCount6mLabel }}</strong>
+          </div>
+        </div>
+        <div v-if="overviewError" class="estate-inline-error" role="alert">
+          <span>최근 매매 요약을 불러오지 못했습니다. 가격 흐름과 거래 내역은 마지막 성공 데이터를 유지합니다.</span>
+          <button type="button" @click="refreshOverview">요약 다시 불러오기</button>
+        </div>
+        <p class="estate-record-note">국토교통부 실거래 자료 기준 · 건축연도와 면적은 거래 신고 정보입니다.</p>
+        <nav class="estate-section-nav" aria-label="상세 정보 바로가기">
+          <a href="#trend">가격 흐름</a>
+          <a href="#transactions">거래 내역</a>
+          <a href="#location">위치</a>
+          <a href="#nearby">주변 정보</a>
+        </nav>
+      </section>
 
       <!-- Ad: Hero 직후 (fold 하단) — 모바일 실측 384px 로 폴드 안이라 규격 상한을 둔다.
            높이 미지정이면 AdSense 가 390×390(뷰포트의 46%)을 배정하고 full-bleed 로 번진다.
            시설 상세 첫 슬롯과 동일 조합. 폴드 아래 슬롯은 auto 유지. -->
-      <AdBanner class="order-3 md:order-3" sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+      <AdBanner class="estate-ad-slot estate-ad-slot--first order-3 md:order-3" sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock class="order-9 md:order-7" heading="위치와 로드뷰" :subtext="hasMapCoords ? '지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.' : '원본 자료에 좌표가 없어 지도를 표시하지 못합니다.'">
+      <SectionBlock id="location" class="estate-flat-section order-9 md:order-11" heading="위치" :subtext="locationSectionSubtext">
         <template #right>
           <div v-if="hasMapCoords" class="hidden md:flex items-center gap-1">
-            <button
-              class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
-              aria-label="이 건물 공유하기"
-              @click="handleShare"
-            >
-              <span class="material-symbols-outlined text-[18px]">share</span>
-              공유
-            </button>
             <div class="relative">
               <button
                 class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
@@ -130,30 +142,72 @@
         <EmptyState
           v-if="!hasMapCoords"
           icon="location_off"
-          title="지번 좌표가 실거래가 자료에 없습니다"
-          :description="`${buildingName}의 좌표가 원본에 등록되지 않아 지도·로드뷰를 표시하지 못합니다. 주소로 직접 찾아보세요.`"
+          :title="locationEmptyTitle"
+          :description="locationEmptyDescription"
         >
-          <AddressLine :address="fullAddress" class="justify-center" />
-          <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <a
-              :href="kakaoSearchUrl"
-              target="_blank"
-              rel="noopener"
-              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
-            >
-              <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
-              카카오맵에서 주소 검색
-            </a>
-            <a
-              :href="naverSearchUrl"
-              target="_blank"
-              rel="noopener"
-              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
-            >
-              <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
-              네이버맵에서 주소 검색
-            </a>
+          <div
+            v-if="hasReportedAddressAmbiguity"
+            id="reported-addresses"
+            class="mt-4 w-full max-w-2xl scroll-mt-24 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-left"
+            role="note"
+          >
+            <p class="text-sm font-semibold text-amber-900">주소가 여러 건 보고되었습니다</p>
+            <p class="mt-1 text-xs text-amber-800">원본 실거래 자료에 같은 건물명으로 여러 지번이 있어 주소별 검색 링크를 제공합니다.</p>
+            <ul class="mt-3 space-y-3">
+              <li
+                v-for="item in reportedAddressItems"
+                :key="item.key"
+                class="rounded-xl border border-amber-100 bg-white px-3 py-3"
+              >
+                <AddressLine :address="item.display" />
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a
+                    :href="kakaoAddressSearchUrl(item.searchQuery)"
+                    :aria-label="`카카오맵에서 ${shortAddressLabel(item.display)} 검색`"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-medium text-slate-800 transition-colors hover:bg-gray-50"
+                  >
+                    <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+                    카카오맵
+                  </a>
+                  <a
+                    :href="naverAddressSearchUrl(item.searchQuery)"
+                    :aria-label="`네이버맵에서 ${shortAddressLabel(item.display)} 검색`"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-medium text-slate-800 transition-colors hover:bg-gray-50"
+                  >
+                    <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+                    네이버맵
+                  </a>
+                </div>
+              </li>
+            </ul>
           </div>
+          <template v-else>
+            <AddressLine :address="fullAddress" class="justify-center" />
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <a
+                :href="kakaoSearchUrl"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+              >
+                <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+                카카오맵에서 주소 검색
+              </a>
+              <a
+                :href="naverSearchUrl"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
+              >
+                <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
+                네이버맵에서 주소 검색
+              </a>
+            </div>
+          </template>
         </EmptyState>
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- 지도: 모바일에서도 노출 (짧은 높이 + 크게 보기 버튼) -->
@@ -190,160 +244,126 @@
         <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
       </SectionBlock>
 
-      <!-- "시세 추이" 블록 — T1 고유 콘텐츠: 데스크톱·모바일 모두 헤더 광고 직후 최상단(order-4) -->
-      <SectionBlock class="order-4 md:order-4" :heading="getTrendSectionTitle(currentTab)" subtext="매매·전월세 탭과 기간별 추이로 가격 흐름을 비교합니다.">
-        <template #right>
-          <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-            <button
-              v-for="opt in periodOptions"
-              :key="opt.value ?? 'all'"
-              :aria-pressed="selectedMonths === opt.value"
-              :class="[
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                selectedMonths === opt.value
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              ]"
-              @click="selectedMonths = opt.value"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </template>
-
-        <!-- 매매/전월세 탭 -->
-        <TransactionModeTab v-model="currentTab" class="mb-4" />
-
-        <!-- 전월세 구분 토글 -->
-        <RentTypeToggle
-          v-if="currentTab === 'rent'"
-          v-model="selectedRentType"
-          class="mb-4"
-        />
-
-        <!-- 면적 선택 -->
-        <AreaSelector
-          v-if="areaGroups.length > 0"
-          v-model="selectedArea"
-          :areas="areaGroups"
-          class="mb-4"
-        />
-
-        <!-- 시세 요약: 차트 위에서 선택 기간의 거래 흐름을 데이터 카드로 먼저 요약 -->
-        <div
-          v-if="monthly.length > 0 && !statsLoading"
-          class="mb-4 rounded-xl border border-primary-100 bg-primary-50/40 p-4"
-        >
-          <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-faint text-xs font-bold">{{ periodTradeLabel }}</span>
-              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodTradeCount }}건</strong>
-            </div>
-            <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-faint text-xs font-bold">최근 평균가</span>
-              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ summaryLatestAvg }}</strong>
-            </div>
-            <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-faint text-xs font-bold">최고 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMaxPriceLabel }}</strong>
-            </div>
-            <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-faint text-xs font-bold">최저 거래가</span>
-              <strong class="block mt-1 text-base md:text-lg font-display font-extrabold text-strong tabular-nums truncate">{{ periodMinPriceLabel }}</strong>
-            </div>
-            <div class="rounded-lg border border-primary-100 bg-white p-3">
-              <span class="block text-faint text-xs font-bold">전월 대비</span>
-              <strong :class="['block mt-1 text-base md:text-lg font-display font-extrabold tabular-nums truncate', changeRateColor]">
-                {{ summaryChangeRate }}
-              </strong>
-            </div>
-          </div>
-
-          <div v-if="tradeFlowBadges.length > 0" class="mt-3 flex flex-wrap gap-2">
-            <span
-              v-for="badge in tradeFlowBadges"
-              :key="badge.label"
-              :class="['rounded-full px-2.5 py-1 text-xs font-bold', summaryBadgeClass(badge.tone)]"
-            >
-              {{ badge.label }}
-            </span>
+      <section id="trend" class="estate-flat-section order-4 md:order-4" aria-labelledby="trend-title">
+        <div class="estate-section-head">
+          <div>
+            <h2 id="trend-title">가격 흐름</h2>
+            <p>거래 유형과 전용면적을 함께 확인하세요.</p>
           </div>
         </div>
 
-        <!-- lowVolume 경고 -->
-        <p v-if="summary?.lowVolume === true && !statsLoading" class="mb-3 text-xs text-amber-600">
-          거래 건수가 적어 변동률이 부정확할 수 있습니다
+        <ExactDealFilters
+          v-if="snapshot"
+          class="estate-exact-filters"
+          :filters="snapshot.filters"
+          :options="snapshot.options"
+          :pending="pending"
+          @patch="handleExactFilterPatch"
+        />
+
+        <p
+          v-if="announcement"
+          class="mb-4 rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700"
+          role="status"
+          aria-live="polite"
+        >
+          {{ announcement }}
         </p>
 
-        <div v-if="statsLoading" class="flex justify-center py-8">
+        <div v-if="pending && !snapshot" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
-        <PriceTrendChart
-          v-else-if="monthly.length > 0"
-          :stats="monthly"
-          :loading="false"
-          :price-label="summary?.priceLabel"
-        />
-        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
+        <div v-else-if="snapshot" class="estate-chart-shell">
+          <DealPriceChart
+            :points="snapshot.points"
+            :window="snapshot.window"
+            :mode="snapshot.filters.mode"
+            :loading="pending"
+            :error="error"
+            @retry="refresh"
+          />
+          <div class="estate-chart-summary" aria-label="선택 조건 요약">
+            <div>
+              <span>기간 내 최고</span>
+              <strong class="tabular-nums">{{ periodMaxPriceLabel }}</strong>
+            </div>
+            <div>
+              <span>기간 내 최저</span>
+              <strong class="tabular-nums">{{ periodMinPriceLabel }}</strong>
+            </div>
+            <div>
+              <span>{{ periodTradeLabel }}</span>
+              <strong class="tabular-nums">{{ periodTradeCount }}건</strong>
+            </div>
+          </div>
+        </div>
+        <div v-else class="estate-empty">
           시세 데이터가 아직 없습니다.
         </div>
         <SourceStamp
-          v-if="monthly.length > 0"
-          class="mt-2"
+          v-if="snapshot"
+          class="mt-3"
           variant="plain"
           provider="국토교통부"
           :basis="txBasis"
           :synced-at="rawSyncDate"
           :stale-days="RE_STALE_DAYS"
         />
-        <p v-if="currentTab === 'rent' && monthly.length > 0" class="mt-2 text-xs text-slate-500">
-          ※ 월세 거래는 전환율 5% 기준 환산보증금으로 표시됩니다
-        </p>
-      </SectionBlock>
+        <p v-if="snapshot" class="estate-data-caveat">필수 신고 정보가 있는 거래 기준</p>
+      </section>
 
       <!-- Ad: 시세 추이/비중 ↔ 위치 사이 (데스크톱 md:order-6, 모바일 order-5는 비중 뒤로 tie-break) -->
-      <AdBanner class="order-5 md:order-6" />
+      <AdBanner class="estate-ad-slot order-5 md:order-6" />
 
-      <!-- "거래 내역" 블록 -->
-      <SectionBlock class="order-6 md:order-9" :heading="getTxSectionTitle(currentTab)" subtext="계약일·전용면적·층·거래금액을 바로 비교하세요.">
-        <template #right>
-          <SourceStamp
-            provider="국토교통부"
-            :synced-at="rawSyncDate"
-            :stale-days="RE_STALE_DAYS"
-            source-url="https://rt.molit.go.kr"
-            link-label="원본 보기"
-          />
-        </template>
-        <div v-if="txLoading" class="flex justify-center py-8">
+      <section id="transactions" class="estate-flat-section order-6 md:order-7" aria-labelledby="transactions-title">
+        <div class="estate-section-head">
+          <div>
+            <h2 id="transactions-title">거래 내역</h2>
+            <p>선택한 거래 유형·면적·기간의 내역입니다.</p>
+          </div>
+          <div class="estate-source-stack">
+            <SourceStamp
+              provider="국토교통부"
+              :synced-at="rawSyncDate"
+              :stale-days="RE_STALE_DAYS"
+              source-url="https://rt.molit.go.kr"
+              link-label="원본 보기"
+            />
+            <p class="estate-data-caveat">필수 신고 정보가 있는 거래 기준</p>
+          </div>
+        </div>
+        <div v-if="tableError" class="estate-inline-error mb-4" role="alert">
+          <span>거래 내역 페이지를 불러오지 못했습니다. 표는 마지막 성공 데이터를 유지합니다.</span>
+          <button type="button" @click="retryExactPage">거래 내역 다시 불러오기</button>
+        </div>
+        <div v-if="tablePending && table.items.length === 0" class="flex justify-center py-8">
           <div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
         <TransactionTable
-          v-else-if="transactions.items.length > 0"
-          :transactions="transactions.items"
+          v-else-if="table.items.length > 0"
+          :transactions="table.items"
           :type="currentTab"
-          :loading="false"
+          :loading="tablePending || pending"
           :hide-building="true"
+          presentation="detail"
         />
-        <div v-else class="rounded-xl bg-background-light p-8 text-center text-faint">
+        <div v-else class="estate-empty">
           {{ emptyFiltered('거래 내역') }}
         </div>
-
-        <!-- 페이지네이션 -->
         <Pagination
-          v-if="transactions.totalPages > 1"
-          :current-page="currentPage"
-          :total-pages="transactions.totalPages"
-          @page-change="goToPage"
+          v-if="table.totalPages > 1"
+          :current-page="table.page"
+          :total-pages="table.totalPages"
+          @page-change="goToExactPage"
           class="mt-4"
         />
-      </SectionBlock>
+      </section>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
-      <AdBanner class="order-7 md:order-10" />
+      <AdBanner class="estate-ad-slot order-7 md:order-8" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
-      <div class="flex flex-col gap-3 order-12 md:order-12">
+      <div id="nearby" class="estate-nearby-group flex flex-col gap-0 order-12 md:order-12">
         <SectionBlock
           v-if="nearbyByType.apt.length > 0"
           subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
@@ -357,7 +377,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
               v-for="item in nearbyByType.apt"
-              :key="`apt-${item.buildingName}-${item.bjdCode}`"
+              :key="item.buildingKey ?? `apt-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
               :item="item"
               property-type="apt"
               :mode="currentTab"
@@ -379,7 +399,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
               v-for="item in nearbyByType.offitel"
-              :key="`offitel-${item.buildingName}-${item.bjdCode}`"
+              :key="item.buildingKey ?? `offitel-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
               :item="item"
               property-type="offitel"
               :mode="currentTab"
@@ -401,7 +421,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <NearbyComplexCard
               v-for="item in nearbyByType.villa"
-              :key="`villa-${item.buildingName}-${item.bjdCode}`"
+              :key="item.buildingKey ?? `villa-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
               :item="item"
               property-type="villa"
               :mode="currentTab"
@@ -433,16 +453,14 @@
       <SectionBlock
         class="order-12 md:order-12"
         heading="주변 생활시설"
-        :subtext="hasMapCoords
-          ? '부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다.'
-          : '좌표가 없어 반경 검색을 할 수 없습니다.'"
+        :subtext="facilitySectionSubtext"
       >
         <NearbyFacilities v-if="hasMapCoords" :lat="buildingInfo!.lat!" :lng="buildingInfo!.lng!" />
         <EmptyState
           v-else
           icon="search_off"
-          title="반경 검색을 할 수 없습니다"
-          :description="`${buildingName}의 좌표가 없어 주변 인프라를 반경으로 찾지 못합니다. ${districtName} 전체 시설은 지역 페이지에서 볼 수 있습니다.`"
+          :title="facilityEmptyTitle"
+          :description="facilityEmptyDescription"
         >
           <NuxtLink
             :to="`/${citySlugParam}/${districtSlugParam}`"
@@ -455,7 +473,7 @@
       </SectionBlock>
 
       <!-- Ad: 주변 생활시설 이후 -->
-      <AdBanner class="order-12 md:order-12" />
+      <AdBanner class="estate-ad-slot order-12 md:order-12" />
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection
@@ -486,8 +504,10 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { UI_MESSAGES, emptyFiltered } from '~/utils/uiMessages'
 import { EMPTY_FIELD_TEXT } from '~/utils/emptyField'
 import type { FacilitySearchItem } from '~/types'
-import type { RealEstatePropertyType, TransactionMode, RealEstateSearchResponse, TransactionStats, BuildingInfo, StatsSummary, AreaGroup, ComplexInfo, PriceAnalysis, NearbyResponse } from '~/types/realEstate'
+import type { RealEstatePropertyType, TransactionMode, BuildingInfo, StatsSummary, NearbyResponse, RealEstateType } from '~/types/realEstate'
 import { toApiSlug } from '~/types/realEstate'
+import type { DealMode, DetailOverview, DetailQuery } from '~/types/housingRedesign'
+import { useRealEstateDetail } from '~/composables/useRealEstateDetail'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 import {
   isRegionMismatch,
@@ -499,49 +519,39 @@ import { buildOgMapImageUrl } from '~/utils/ogImageUrl'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { useNearbyComplexes } from '~/composables/useNearbyComplexes'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
-import { getDetailEyebrow, getTrendSectionTitle, getTxSectionTitle, getJeonsePct } from '~/utils/realEstateDetailLabels'
+import { getDetailEyebrow } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
-import { buildYearLabel, formatKoreanPrice } from '~/utils/formatters'
-import { resolveRecentDeal, formatLatestPrice } from '~/utils/realEstateRecentDeal'
+import { formatKoreanPrice } from '~/utils/formatters'
+import { resolveLatestSaleDeal } from '~/utils/realEstateRecentDeal'
 import { RE_STALE_DAYS, formatDotDate } from '~/utils/syncFreshness'
-import {
-  getPeriodTradeLabel,
-  getPriceExtremes,
-  getPriceRangeBadge,
-  getRecencyBadge,
-  getTradeActivityBadge,
-  normalizeFacilitySummary,
-  sumTransactionCount,
-  type RealEstateSummaryBadge,
-} from '~/utils/realEstateDetailSummary'
 import { PROPERTY_TYPE_META } from '~/utils/realEstateMeta'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getCurrentYear } from '~/utils/seoConstants'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { buildRealEstateDetailMeta } from '~/composables/useRealEstateDetailMeta'
 import { useAnalytics } from '~/composables/useAnalytics'
+import { useApiBase } from '~/composables/useApiBase'
 import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { toRealEstateUrl, toRealEstateListUrl, isRealEstateUrlType } from '~/utils/realEstateUrl'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
-import {
-  hasUsableRealEstateDetailData,
-  type RealEstateDetailData,
-} from '~/utils/realEstateDetailData'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { isDetailSsrDegraded } from '~/utils/detailSsrDegraded'
-import { suppressAds } from '~/composables/useAdsPolicy'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
-import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
 
+definePageMeta({
+  path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
+  key: route => route.path,
+})
+
 const route = useRoute()
 const router = useRouter()
+const apiBase = useApiBase()
 
 const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscription']
 
@@ -550,6 +560,13 @@ const PROPERTY_GUIDE_CATEGORIES: string[] = ['apt-sale', 'apt-rent', 'subscripti
 const realEstateTypeParam = route.params.realEstateType as string
 const citySlugParam = route.params.city as string
 const districtSlugParam = route.params.district as string
+const rawAddressSuffixParam = Array.isArray(route.params.addressSuffix)
+  ? route.params.addressSuffix[0]
+  : route.params.addressSuffix
+const hasAddressSuffix = typeof rawAddressSuffixParam === 'string'
+  && rawAddressSuffixParam.length > 0
+const hasHashAddressSuffix = typeof rawAddressSuffixParam === 'string'
+  && /^[a-f0-9]{64}$/i.test(rawAddressSuffixParam)
 
 // Validate realEstateType
 if (!isRealEstateUrlType(realEstateTypeParam)) {
@@ -578,46 +595,215 @@ const buildingName = computed(() =>
   decodeURIComponent(route.params.buildingName as string).normalize('NFC'),
 )
 
+type PublicUrlResolution =
+  | { mode: 'keyed'; canonicalPath: null }
+  | {
+    mode: 'preserved'
+    type: RealEstateUrlType
+    buildingKey?: string
+    bjdCode: string
+    buildingName: string
+    canonicalPath: string
+    redirect: boolean
+    legacyGrouped?: true
+  }
+
+function stringifyRouteQuery(query: Record<string, unknown>): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value == null) continue
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item != null) params.append(key, String(item))
+      }
+    } else {
+      params.set(key, String(value))
+    }
+  }
+  const serialized = params.toString()
+  return serialized ? `?${serialized}` : ''
+}
+
+function isSafeRealEstatePath(path: string | null | undefined): path is string {
+  return typeof path === 'string'
+    && path.startsWith('/real-estate/')
+    && !path.startsWith('//')
+}
+
+function decodePathSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment).normalize('NFC')
+  } catch {
+    return segment.normalize('NFC')
+  }
+}
+
+function normalizePublicUrlPath(path: string): string {
+  const [pathname = ''] = path.split('?', 1)
+  return pathname
+    .split('/')
+    .map((segment, index) => index === 0 ? '' : encodeURIComponent(decodePathSegment(segment)))
+    .join('/')
+}
+
+function toPublicUrlResolutionError(err: unknown): never {
+  const status = (err as { statusCode?: number; status?: number }).statusCode
+    ?? (err as { status?: number }).status
+  if (status === 404) {
+    throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+  }
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+async function fetchPublicUrlResolution(path: string): Promise<PublicUrlResolution> {
+  const res = await $fetch<{ success: boolean; data: PublicUrlResolution | null }>(
+    `${apiBase}/api/real-estate/resolve-url`,
+    { query: { path }, timeout: 8000 },
+  )
+  if (res.data?.mode === 'keyed') {
+    return { mode: 'keyed', canonicalPath: null }
+  }
+  if (res.data?.mode === 'preserved'
+    && (res.data.buildingKey || res.data.legacyGrouped)
+    && isSafeRealEstatePath(res.data.canonicalPath)) {
+    return res.data
+  }
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+const publicUrlPath = normalizePublicUrlPath(route.path)
+const { data: publicUrlResolution, error: publicUrlResolutionError } = await useAsyncData(
+  `re-public-url-resolution-${publicUrlPath}`,
+  () => fetchPublicUrlResolution(publicUrlPath),
+)
+
+if (publicUrlResolutionError.value) {
+  toPublicUrlResolutionError(publicUrlResolutionError.value)
+}
+if (!publicUrlResolution.value) {
+  throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+}
+
+if (publicUrlResolution.value?.mode === 'preserved' && publicUrlResolution.value.redirect) {
+  await navigateTo(
+    `${publicUrlResolution.value.canonicalPath}${stringifyRouteQuery(route.query)}`,
+    { redirectCode: 301 },
+  )
+}
+if (publicUrlResolution.value?.mode === 'keyed' && hasAddressSuffix) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+if (hasHashAddressSuffix) {
+  throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
+}
+
 // ── Derived values ────────────────────────────────────────────────────────────
 
 // Split realEstateType: e.g. "apt-sale" → propertyType="apt", tab="sale"
 const realEstateType = realEstateTypeParam as RealEstateUrlType
-const [propertyTypePart, tabPart] = realEstateType.split('-') as [string, string]
+const [propertyTypePart] = realEstateType.split('-') as [string, string]
 const propertyTypeParam = propertyTypePart as RealEstatePropertyType
+const routeRealEstateType = computed(() => route.params.realEstateType as RealEstateUrlType)
+const routePropertyTypePart = computed(() =>
+  routeRealEstateType.value.replace(/-(?:sale|rent)$/, '') as RealEstatePropertyType
+)
+const routeCurrentTab = computed<TransactionMode>(() =>
+  routeRealEstateType.value.endsWith('-sale') ? 'sale' : 'rent'
+)
 
 // Tab is canonical from URL — no ?tab= query param
 const currentTab = computed<TransactionMode>({
-  get: () => tabPart as TransactionMode,
+  get: () => routeCurrentTab.value,
   set: (val) => {
-    const siblingType = `${propertyTypePart}-${val}` as RealEstateUrlType
-    router.push(
-      toRealEstateUrl({
-        type: siblingType,
-        city: cityName,
-        district: districtName,
-        buildingName: buildingName.value,
-      }),
-    )
+    void pushTransactionTab(val)
   },
 })
 
-const apiSlug = computed(() => toApiSlug(propertyTypeParam, currentTab.value))
-const propertyMeta = computed(() => PROPERTY_TYPE_META[propertyTypeParam])
+const apiSlug = computed(() => toApiSlug(routePropertyTypePart.value, currentTab.value))
+const propertyMeta = computed(() => PROPERTY_TYPE_META[routePropertyTypePart.value])
 
 // ── SEO / Head ────────────────────────────────────────────────────────────────
 
 const buildingInfo = ref<BuildingInfo | null>(null)
+function isLegacyGroupedResolution(): boolean {
+  return publicUrlResolution.value?.mode === 'preserved'
+    && publicUrlResolution.value.legacyGrouped === true
+}
+function activeBuildingKey(): string | undefined {
+  if (isLegacyGroupedResolution()) return undefined
+  const resolvedKey = publicUrlResolution.value?.mode === 'preserved'
+    ? publicUrlResolution.value.buildingKey
+    : undefined
+  return resolvedKey ?? buildingInfo.value?.buildingKey
+}
+function activeCanonicalPath(): string | null {
+  const resolvedPath = publicUrlResolution.value?.mode === 'preserved'
+    ? publicUrlResolution.value.canonicalPath
+    : null
+  return resolvedPath ?? buildingInfo.value?.canonicalPath ?? null
+}
+
+async function canonicalPathForType(type: RealEstateUrlType, buildingKey: string | undefined): Promise<string | null> {
+  if (!buildingKey) return null
+  const res = await $fetch<{ success: boolean; data: { mode: 'preserved'; canonicalPath: string | null } | { mode: 'keyed'; canonicalPath: null } }>(
+    `${apiBase}/api/real-estate/canonical-url`,
+    { query: { type, buildingKey }, timeout: 8000 },
+  )
+  if (res.data?.mode !== 'preserved') return null
+  return isSafeRealEstatePath(res.data.canonicalPath) ? res.data.canonicalPath : null
+}
+
+async function canonicalPathForLegacyGroupedType(type: RealEstateUrlType): Promise<string | null> {
+  const basePath = toRealEstateUrl({
+    type,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+  })
+  const resolved = await fetchPublicUrlResolution(basePath)
+  if (resolved.mode !== 'preserved') return null
+  return isSafeRealEstatePath(resolved.canonicalPath) ? resolved.canonicalPath : null
+}
+
+async function pathForTransactionTab(tab: TransactionMode): Promise<string | null> {
+  const siblingType = `${routePropertyTypePart.value}-${tab}` as RealEstateUrlType
+  if (isLegacyGroupedResolution()) {
+    return canonicalPathForLegacyGroupedType(siblingType)
+  }
+  const buildingKey = activeBuildingKey()
+  const canonicalPath = await canonicalPathForType(siblingType, buildingKey)
+  if (publicUrlResolution.value?.mode === 'preserved' && !canonicalPath) {
+    return null
+  }
+  return toRealEstateUrl({
+    type: siblingType,
+    city: cityName,
+    district: districtName,
+    buildingName: buildingName.value,
+    buildingKey,
+    canonicalPath,
+  })
+}
+
+async function pushTransactionTab(tab: TransactionMode, query: Record<string, string> = {}): Promise<void> {
+  let path: string | null = null
+  try {
+    path = await pathForTransactionTab(tab)
+  } catch {
+    fetchFailed.value = true
+    return
+  }
+  if (!path) return
+  await router.push({
+    path,
+    query,
+  })
+}
 const fetchFailed = ref(false)   // SSR building-info 일시 실패 여부
 const summary = ref<StatsSummary | null>(null)
 const statsLoading = ref(true)
 const txLoading = ref(true)
 const facilitySummary = ref<string | null>(null)
-// useHead가 SSR/hydration 시점에 callback을 평가하므로 그 안에서 참조하는 ref는
-// useHead보다 위에 선언해야 한다. 아래로 옮기면 const TDZ ReferenceError가 발생해
-// page가 unmount → @unhead beforeUnmount의 dispose() throw → error.vue로 fallback.
-const areaGroups = ref<AreaGroup[]>([])
-const transactions = ref<RealEstateSearchResponse>({ items: [], total: 0, page: 1, totalPages: 0 })
-
 // 요청 지역 ≠ 실제 건물 지역인데 301 목적지도 만들 수 없는 경우(= 합칠 곳이 없는 중복 문서).
 // SSR 데이터가 도착하는 지점(아래 지역 통합 블록)에서 채운다. 선언이 noindex 위에 있어야
 // 하는 이유는 바로 아래 watchEffect 가 즉시 noindex 를 평가하기 때문이다(위 TDZ 주석 참조).
@@ -634,7 +820,12 @@ const noindex = computed(() =>
 )
 
 // degraded(503) 또는 noindex(빈 건물) 페이지에선 광고 발화를 억제한다 (SSR·클라 네비 모두).
-watchEffect(() => suppressAds(fetchFailed.value || noindex.value))
+// useState 는 setup 문맥에서 한 번만 잡고, reactive watcher 안에서는 ref 값만 바꾼다.
+// noindex 가 비동기 SSR 데이터 반영 뒤 true 로 바뀔 때 useState 를 다시 호출하면 Nuxt context 가 없어 500 이 날 수 있다.
+const adsSuppressed = useState<boolean>('ads:suppressed', () => false)
+watchEffect(() => {
+  adsSuppressed.value = fetchFailed.value || noindex.value
+})
 
 const tabLabel = computed(() => currentTab.value === 'sale' ? '매매' : '전월세')
 
@@ -654,30 +845,31 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
   })
 }
 
-// 최근 거래가 단일 소스: meta description·헤더(heroStats·latestPrice)가 반드시 동일 값을
-// 쓰도록 buildingInfo(latestDealAmount/Year/Month)에서만 산출한다. currentTab/apiSlug 가 URL
-// 고정이라 buildingInfo 는 페이지당 불변 → transactions 페이지네이션·필터와 무관하게 meta==헤더.
-const recentDealForDisplay = computed(() => resolveRecentDeal(buildingInfo.value))
+const detailOverview = ref<DetailOverview | null>(null)
+
+// 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
+const recentDealForDisplay = computed(() => resolveLatestSaleDeal(detailOverview.value))
 
 const detailMeta = computed(() => {
   const mode = currentTab.value
 
   let areaRange: { min: number; max?: number } | null = null
-  const areaValues = areaGroups.value
-    .map((g: AreaGroup) => Number(g.area))
-    .filter((n: number) => Number.isFinite(n) && n > 0)
-  if (areaValues.length > 0) {
-    const minA = Math.min(...areaValues)
-    const maxA = Math.max(...areaValues)
-    areaRange = maxA > minA ? { min: minA, max: maxA } : { min: minA }
+  const minArea = Number(detailOverview.value?.minArea ?? buildingInfo.value?.minArea)
+  const maxArea = Number(detailOverview.value?.maxArea ?? buildingInfo.value?.maxArea)
+  if (Number.isFinite(minArea) && minArea > 0) {
+    areaRange = Number.isFinite(maxArea) && maxArea > minArea ? { min: minArea, max: maxArea } : { min: minArea }
   }
 
-  // 헤더와 동일 소스(buildingInfo)에서만 최근 거래를 뽑는다 — transactions.items[0] 의존 제거.
+  // 헤더와 동일 소스(overview.latestSale)에서만 최근 매매를 뽑는다 — table.items[0] 의존 제거.
   // 보증금 0(무보증 월세)도 거래다. amount 를 truthy 로 거르면 통째로 사라진다.
   const rd = recentDealForDisplay.value
   const recentDeal: { amount: number; dealDate: string; monthlyRent?: number | null } | undefined =
-    rd.amount != null && rd.dealDate
+    currentTab.value === 'sale' && rd.amount != null && rd.dealDate
       ? { amount: rd.amount, dealDate: rd.dealDate, monthlyRent: rd.monthlyRent }
+      : undefined
+  const recentSale: { amount: number; dealDate: string } | undefined =
+    currentTab.value === 'rent' && rd.amount != null && rd.amount > 0 && rd.dealDate
+      ? { amount: rd.amount, dealDate: rd.dealDate }
       : undefined
 
   const totalCount = summary.value?.totalCount ?? 0
@@ -692,7 +884,7 @@ const detailMeta = computed(() => {
     },
     propertyType: propertyTypeParam,
     transactionMode: mode,
-    summary: summary.value ? { totalCount, recentDeal } : null,
+    summary: summary.value ? { totalCount, recentDeal, recentSale } : null,
     buildYear: buildYearVal,
     areaRange,
     facilitySummary: facilitySummary.value,
@@ -708,6 +900,8 @@ useHead(() => {
     city: cityName,
     district: districtName,
     buildingName: buildingName.value,
+    buildingKey: activeBuildingKey(),
+    canonicalPath: activeCanonicalPath(),
   })}`
 
   // 치수는 실제로 만들어진 URL 에서 되읽는다. 예전엔 좌표 유무를 truthy 로 따로 판정했는데,
@@ -737,6 +931,8 @@ useHead(() => {
   ]
   if (noindex.value) {
     meta.push({ name: 'robots', content: 'noindex, follow' })
+  } else if (fetchFailed.value) {
+    meta.push({ name: 'robots', content: 'index, follow' })
   }
   // noindex-canonical-policy.md: noindex 페이지는 canonical 을 출력하지 않는다 (신호 충돌 방지)
   return {
@@ -749,9 +945,7 @@ useHead(() => {
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const { useRealEstate } = await import('~/composables/useRealEstate')
-const { searchTransactions, getTransactionStats, getBuildingInfo, getAreaGroups, getComplexList, getApartmentPriceAnalysis, getNearby } = useRealEstate()
-const { useApiBase } = await import('~/composables/useApiBase')
-const apiBase = useApiBase()
+const { getBuildingInfo, getComplexList, getNearby } = useRealEstate()
 
 const { setBuildingPlaceSchema, setBreadcrumbSchema, setRealEstateListingSchema, setDetailProvenance } = useStructuredData()
 
@@ -764,7 +958,17 @@ setBreadcrumbSchema([
   { name: `${propertyMeta.value?.label ?? ''} ${tabLabel.value}`, url: typeHubPath },
   { name: cityName, url: `/real-estate/${realEstateType}/${citySlugParam}` },
   { name: districtName, url: listUrl },
-  { name: buildingName.value, url: toRealEstateUrl({ type: realEstateType, city: cityName, district: districtName, buildingName: buildingName.value }) },
+  {
+    name: buildingName.value,
+    url: toRealEstateUrl({
+      type: realEstateType,
+      city: cityName,
+      district: districtName,
+      buildingName: buildingName.value,
+      buildingKey: activeBuildingKey(),
+      canonicalPath: activeCanonicalPath(),
+    }),
+  },
 ])
 
 // Breadcrumb 컴포넌트용 아이템
@@ -881,12 +1085,93 @@ const txBasis = computed(() => {
 
 // ── Computed display values ───────────────────────────────────────────────────
 
+type ReportedAddressItem = { key: string; display: string; searchQuery: string }
+
+function rawAddressDetail(address: DetailOverview['addresses'][number]): string {
+  const jibunDetail = [address.dongName, address.jibun].filter(Boolean).join(' ')
+  if (address.roadName && jibunDetail) return `${address.roadName} (${jibunDetail})`
+  return address.roadName || jibunDetail
+}
+
+function formatReportedAddress(address: DetailOverview['addresses'][number]): string {
+  return `${cityName} ${districtName} ${rawAddressDetail(address)}`.trim()
+}
+
+function reportedAddressKey(address: DetailOverview['addresses'][number], index: number): string {
+  return [address.roadName ?? '', address.dongName, address.jibun ?? '', index].join('|')
+}
+
 const fullAddress = computed(() => {
   if (!buildingInfo.value) return '-'
   const { city, district, roadName, dongName, jibun } = buildingInfo.value
-  const detail = roadName || (dongName + (jibun ? ` ${jibun}` : ''))
-  return `${city} ${district} ${detail}`
+  const detail = roadName || [dongName, jibun].filter(Boolean).join(' ')
+  return `${city} ${district} ${detail}`.trim()
 })
+
+const reportedAddressItems = computed<ReportedAddressItem[]>(() => {
+  const raw = detailOverview.value?.addresses ?? []
+  const seen = new Set<string>()
+  const items = raw.flatMap((address, index) => {
+    const key = reportedAddressKey(address, index)
+    const identityKey = [address.roadName ?? '', address.dongName, address.jibun ?? ''].join('|')
+    if (seen.has(identityKey)) return []
+    seen.add(identityKey)
+    const display = formatReportedAddress(address)
+    return display ? [{ key, display, searchQuery: display }] : []
+  })
+  if (items.length > 0) return items
+  return fullAddress.value !== '-'
+    ? [{ key: 'fallback', display: fullAddress.value, searchQuery: fullAddress.value }]
+    : []
+})
+
+const reportedAddressCount = computed(() => reportedAddressItems.value.length)
+const hasReportedAddressAmbiguity = computed(() =>
+  !!detailOverview.value?.locationAmbiguous || reportedAddressCount.value > 1
+)
+const locationSectionSubtext = computed(() => {
+  if (hasMapCoords.value) return '지도와 로드뷰로 건물 주변을 바로 확인할 수 있습니다.'
+  if (hasReportedAddressAmbiguity.value) return '여러 주소가 보고되어 하나의 지도 위치를 선택하지 않습니다.'
+  return '원본 자료에 좌표가 없어 지도를 표시하지 못합니다.'
+})
+const locationEmptyTitle = computed(() =>
+  hasReportedAddressAmbiguity.value
+    ? '주소가 여러 건이라 대표 위치를 표시하지 않습니다'
+    : '지번 좌표가 실거래가 자료에 없습니다'
+)
+const locationEmptyDescription = computed(() =>
+  hasReportedAddressAmbiguity.value
+    ? `${buildingName.value}은 같은 건물명으로 여러 주소가 보고되어 하나의 대표 지도·로드뷰를 선택하지 않습니다. 주소 후보별 지도 검색으로 확인하세요.`
+    : `${buildingName.value}의 좌표가 원본에 등록되지 않아 지도·로드뷰를 표시하지 못합니다. 주소로 직접 찾아보세요.`
+)
+const facilitySectionSubtext = computed(() => {
+  if (hasMapCoords.value) return '부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다.'
+  if (hasReportedAddressAmbiguity.value) return '대표 위치를 고르지 않아 반경 검색을 하지 않습니다.'
+  return '좌표가 없어 반경 검색을 할 수 없습니다.'
+})
+const facilityEmptyTitle = computed(() =>
+  hasReportedAddressAmbiguity.value
+    ? '주소 후보별 지도 검색으로 확인하세요'
+    : '반경 검색을 할 수 없습니다'
+)
+const facilityEmptyDescription = computed(() =>
+  hasReportedAddressAmbiguity.value
+    ? `${buildingName.value}은 여러 주소가 보고되어 대표 좌표 기반 주변 인프라 검색을 생략합니다. 주소 후보별 지도 검색으로 위치를 확인하거나 ${districtName} 전체 시설을 볼 수 있습니다.`
+    : `${buildingName.value}의 좌표가 없어 주변 인프라를 반경으로 찾지 못합니다. ${districtName} 전체 시설은 지역 페이지에서 볼 수 있습니다.`
+)
+
+function shortAddressLabel(address: string): string {
+  const prefix = `${cityName} ${districtName} `
+  return address.startsWith(prefix) ? address.slice(prefix.length) : address
+}
+
+function kakaoAddressSearchUrl(address: string): string {
+  return `https://map.kakao.com/link/search/${encodeURIComponent(address)}`
+}
+
+function naverAddressSearchUrl(address: string): string {
+  return `https://map.naver.com/v5/search/${encodeURIComponent(address)}`
+}
 
 const buildingMarker = computed<FacilitySearchItem[]>(() => {
   if (!buildingInfo.value?.lat || !buildingInfo.value?.lng) return []
@@ -911,86 +1196,75 @@ const areaRange = computed(() => {
   return `${minArea ?? '?'}~${maxArea ?? '?'}㎡`
 })
 
-const latestPrice = computed(() => formatLatestPrice(recentDealForDisplay.value))
+const latestSaleAmountLabel = computed(() => {
+  const sale = detailOverview.value?.latestSale
+  return sale?.amount != null && sale.amount > 0 ? formatKoreanPrice(sale.amount) : EMPTY_FIELD_TEXT
+})
 
-const compactFacilitySummary = computed(() => normalizeFacilitySummary(facilitySummary.value))
+const latestSaleDetailLine = computed(() => {
+  const sale = detailOverview.value?.latestSale
+  if (!sale) return '최근 매매 신고 내역 없음'
+  const parts: string[] = []
+  if (sale.area) parts.push(`전용 ${sale.area}㎡`)
+  if (sale.floor !== null && sale.floor !== undefined) parts.push(`${sale.floor}층`)
+  const month = String(sale.month).padStart(2, '0')
+  const day = sale.day == null ? null : String(sale.day).padStart(2, '0')
+  parts.push(`${String(sale.year).slice(2)}.${month}${day ? `.${day}` : ''} 계약`)
+  return parts.join(' · ')
+})
+
+const overviewBuildYearLabel = computed(() => {
+  const year = detailOverview.value?.buildYear ?? buildingInfo.value?.buildYear
+  return year ? `${year}년` : EMPTY_FIELD_TEXT
+})
+
+const overviewAreaRangeLabel = computed(() => {
+  const minArea = detailOverview.value?.minArea ?? null
+  const maxArea = detailOverview.value?.maxArea ?? null
+  if (!minArea && !maxArea) return areaRange.value !== '-' ? areaRange.value.replace('~', '–') : EMPTY_FIELD_TEXT
+  if (minArea && maxArea && minArea !== maxArea) return `${minArea}–${maxArea}㎡`
+  return `${minArea ?? maxArea}㎡`
+})
+
+const overviewSaleCount6mLabel = computed(() => {
+  const count = detailOverview.value?.saleCount6m
+  return Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT
+})
+
 
 const rentRatioTotal = computed(
   () => (buildingInfo.value?.jeonseCount ?? 0) + (buildingInfo.value?.wolseCount ?? 0),
 )
-const rentRatioLabel = computed(() => {
-  const j = buildingInfo.value?.jeonseCount ?? 0
-  const w = buildingInfo.value?.wolseCount ?? 0
-  if (rentRatioTotal.value === 0) return EMPTY_FIELD_TEXT
-  const jPct = getJeonsePct(j, w)
-  return jPct >= 50 ? `전세 ${jPct}%` : `월세 ${100 - jPct}%`
-})
-const heroStats = computed(() => {
-  const PLACEHOLDER = EMPTY_FIELD_TEXT
-  const dealDate = recentDealForDisplay.value.dealDate ?? PLACEHOLDER
-  const area = { label: '전용면적', value: areaRange.value !== '-' ? areaRange.value : PLACEHOLDER }
-  const recent = latestPrice.value !== '-' ? latestPrice.value : PLACEHOLDER
-  if (currentTab.value === 'sale') {
-    return [
-      { label: '최근 거래가', value: recent },
-      { label: '최근 거래일', value: dealDate },
-      { label: '건축년도', value: buildYearLabel(buildingInfo.value?.buildYear, getCurrentYear()) ?? PLACEHOLDER },
-      area,
-    ]
-  }
-  return [
-    { label: '최근 거래', value: recent },
-    { label: '최근 거래일', value: dealDate },
-    { label: '전·월세 비중', value: rentRatioLabel.value },
-    area,
-  ]
-})
+// ── Exact detail snapshot display ─────────────────────────────────────────────
 
-// 모바일 헤더 칩 — heroStats 재사용, 빈값(EMPTY_FIELD_TEXT) 항목 제외, 최대 4개
-const mobileHeaderStats = computed(() =>
-  heroStats.value.filter(s => s.value && s.value !== EMPTY_FIELD_TEXT).slice(0, 4),
+const selectedRentType = computed<'jeonse' | 'wolse'>(() =>
+  snapshot.value?.filters.mode === 'wolse' ? 'wolse' : 'jeonse',
 )
 
-// ── Stats / Transactions ──────────────────────────────────────────────────────
+const exactAmounts = computed(() => snapshot.value?.points.map(point => point.amount) ?? [])
 
-const monthly = ref<TransactionStats[]>([])
-// `areaGroups`는 useHead TDZ 회피를 위해 파일 상단(useHead 위)에서 이미 선언됨.
-const selectedArea = ref<number | null>(null)
-const selectedRentType = ref<'all' | 'jeonse' | 'wolse'>('all')
-
-const selectedMonths = ref<number | null>(null)
-const periodOptions: { label: string; value: number | null }[] = [
-  { label: '전체', value: null },
-  { label: '6개월', value: 6 },
-  { label: '1년', value: 12 },
-  { label: '3년', value: 36 },
-  { label: '5년', value: 60 },
-]
-
-const summaryLatestAvg = computed(() => {
-  if (summary.value?.recentAvg == null) return '-'
-  return formatKoreanPrice(summary.value.recentAvg)
+const exactAverage = computed(() => {
+  if (exactAmounts.value.length === 0) return null
+  return exactAmounts.value.reduce((sum, amount) => sum + amount, 0) / exactAmounts.value.length
 })
 
-const summaryChangeRate = computed(() => {
-  if (summary.value?.changeRate == null) return '-'
-  const rate = summary.value.changeRate
-  const sign = rate > 0 ? '▲' : rate < 0 ? '▼' : ''
-  return `${sign} ${Math.abs(rate).toFixed(1)}%`
+const periodTradeLabel = computed(() => {
+  const months = snapshot.value?.filters.months ?? 0
+  if (months === 0) return '전체 기간 거래'
+  if (months === 6) return '최근 6개월 거래'
+  if (months === 12) return '최근 1년 거래'
+  return '최근 3년 거래'
 })
 
-const changeRateColor = computed(() => {
-  if (summary.value?.changeRate == null) return 'text-slate-500'
-  if (summary.value.changeRate > 0) return 'text-delta-up'
-  if (summary.value.changeRate < 0) return 'text-delta-down'
-  return 'text-slate-500'
+const periodTradeCount = computed(() => (snapshot.value?.points.length ?? 0).toLocaleString())
+
+const periodPriceExtremes = computed(() => {
+  if (exactAmounts.value.length === 0) return { maxPrice: null, minPrice: null }
+  return {
+    maxPrice: Math.max(...exactAmounts.value),
+    minPrice: Math.min(...exactAmounts.value),
+  }
 })
-
-const periodTradeLabel = computed(() => getPeriodTradeLabel(selectedMonths.value))
-
-const periodTradeCount = computed(() => sumTransactionCount(monthly.value).toLocaleString())
-
-const periodPriceExtremes = computed(() => getPriceExtremes(monthly.value))
 
 const periodMaxPriceLabel = computed(() => {
   const price = periodPriceExtremes.value.maxPrice
@@ -1002,78 +1276,51 @@ const periodMinPriceLabel = computed(() => {
   return price ? formatKoreanPrice(price) : '-'
 })
 
-const tradeFlowBadges = computed<RealEstateSummaryBadge[]>(() => {
-  const badges: RealEstateSummaryBadge[] = [
-    getTradeActivityBadge(sumTransactionCount(monthly.value)),
-  ]
-
-  const recency = getRecencyBadge(
-    buildingInfo.value?.latestDealYear,
-    buildingInfo.value?.latestDealMonth,
-  )
-  if (recency) badges.push(recency)
-
-  const range = getPriceRangeBadge(
-    periodPriceExtremes.value.maxPrice,
-    periodPriceExtremes.value.minPrice,
-    summary.value?.recentAvg,
-  )
-  if (range) badges.push(range)
-
-  return badges
+const trustedOverviewLocation = computed(() => {
+  const value = detailOverview.value
+  if (!value?.location || value.locationAmbiguous || overviewError.value) return null
+  return value.location
 })
 
-function summaryBadgeClass(tone: RealEstateSummaryBadge['tone']): string {
-  if (tone === 'green') return 'bg-emerald-50 text-emerald-700'
-  if (tone === 'blue') return 'bg-primary-50 text-primary-700'
-  if (tone === 'amber') return 'bg-amber-50 text-amber-700'
-  return 'bg-slate-100 text-slate-600'
-}
-
-// `transactions`는 useHead TDZ 회피를 위해 파일 상단(useHead 위)에서 이미 선언됨.
-const currentPage = ref(1)
-const nearbyComplexes = ref<ComplexInfo[]>([])
-
 /** 좌표·인근단지 결측 판정 — 섹션을 숨기는 대신 빈 상태로 렌더할지 가른다. */
-const hasMapCoords = computed(() => !!(buildingInfo.value?.lat && buildingInfo.value?.lng))
+const hasMapCoords = computed(() =>
+  !!trustedOverviewLocation.value
+  && !!(buildingInfo.value?.lat && buildingInfo.value?.lng),
+)
 
 // 좌표가 없을 때의 대안 — 길찾기(좌표 필요) 대신 주소 검색으로 보낸다.
-const kakaoSearchUrl = computed(() =>
-  `https://map.kakao.com/link/search/${encodeURIComponent(fullAddress.value)}`)
-const naverSearchUrl = computed(() =>
-  `https://map.naver.com/v5/search/${encodeURIComponent(fullAddress.value)}`)
-const isApt = computed(() => propertyTypeParam === 'apt')
-const priceAnalysis = ref<PriceAnalysis | null>(null)
-const showPriceAnalysis = computed(() => isApt.value && !!priceAnalysis.value && priceAnalysis.value.saleCount >= 5)
-
-const EMPTY_STATS_RESPONSE: RealEstateDetailData['statsResponse'] = { monthly: [], summary: null }
-const EMPTY_TRANSACTIONS: RealEstateSearchResponse = { items: [], total: 0, page: 1, totalPages: 0 }
+const kakaoSearchUrl = computed(() => kakaoAddressSearchUrl(fullAddress.value))
+const naverSearchUrl = computed(() => naverAddressSearchUrl(fullAddress.value))
 
 // ── bjdCode resolution ────────────────────────────────────────────────────────
 // Resolve bjdCode from complex list before initial data load
 
 const resolvedBjdCode = ref('')
 
-function buildTransactionSearchParams(
-  bjdCode: string,
-  page: number
-): Parameters<typeof searchTransactions>[1] {
-  return {
-    city: bjdCode ? undefined : cityName,
-    district: bjdCode ? undefined : districtName,
-    bjdCode: bjdCode || undefined,
-    buildingName: buildingName.value,
-    exclusiveArea: selectedArea.value ?? undefined,
-    rentType: getRentTypeParam(),
-    months: selectedMonths.value ?? undefined,
-    page,
-    limit: 10,
-  }
-}
-
 async function resolveBuildingContext(): Promise<{ bjdCode: string; building: BuildingInfo | null }> {
   if (resolvedBjdCode.value) {
     return { bjdCode: resolvedBjdCode.value, building: buildingInfo.value }
+  }
+
+  const buildingKey = activeBuildingKey()
+  if (buildingKey) {
+    const keyedBuilding = await getBuildingInfo(
+      apiSlug.value,
+      '',
+      buildingName.value,
+      buildingKey,
+    )
+    return {
+      bjdCode: keyedBuilding?.bjdCode ?? '',
+      building: keyedBuilding,
+    }
+  }
+
+  if (publicUrlResolution.value?.mode === 'preserved' && publicUrlResolution.value.legacyGrouped) {
+    return {
+      bjdCode: publicUrlResolution.value.bjdCode,
+      building: null,
+    }
   }
 
   // getComplexList: HTTP 에러(일시 장애)면 throw되어 상위 로더가 잡는다. 빈 목록은 정상 통과.
@@ -1101,8 +1348,9 @@ const FACILITY_SUMMARY_LABELS: Record<(typeof FACILITY_SUMMARY_CATS)[number], st
 
 // ── SSR initial data load ─────────────────────────────────────────────────────
 
+const detailPayloadKey = `re-detail-new-${realEstateType}-${publicUrlPath}`
 const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData(
-  `re-detail-new-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}`,
+  detailPayloadKey,
   async () => {
     let infoFetchFailed = false
     let bjdCode = ''
@@ -1115,64 +1363,24 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       infoFetchFailed = true   // bjdCode 해석 단계의 일시 장애
     }
 
-    const [statsResult, txResult, infoResult, areaResult] = await Promise.allSettled([
-      bjdCode
-        ? getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined)
-        : Promise.resolve(EMPTY_STATS_RESPONSE),
-      searchTransactions(apiSlug.value, buildTransactionSearchParams(bjdCode, 1)),
+    const [infoResult] = await Promise.allSettled([
       primedBuilding
         ? Promise.resolve(primedBuilding)
-        : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
-      bjdCode
-        ? getAreaGroups(apiSlug.value, bjdCode, buildingName.value)
-        : Promise.resolve([]),
+        : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value, activeBuildingKey()),
     ])
     const resolvedBuildingInfo = infoResult.status === 'fulfilled' ? infoResult.value : null
     if (infoResult.status === 'rejected') infoFetchFailed = true
-    let facilitySummarySSR: string | null = null
-    if (resolvedBuildingInfo?.lat && resolvedBuildingInfo?.lng) {
-      try {
-        // 개수 전용 엔드포인트를 쓴다. 예전에는 POST /api/facilities/search (radius 1000) 로
-        // 목록을 받아 그 안의 카테고리를 셌는데, 두 가지가 잘못돼 있었다:
-        //  1) 느림 — 15개 카테고리 전부를 최대 1000행씩 훑고 거리정렬·dedupe 까지 한 뒤
-        //     20건을 돌려준다. 강남 기준 0.22~0.37s 로 이 페이지 SSR 시간의 약 80% 였다.
-        //  2) 틀림 — 돌아온 "20건 페이지"에서 카테고리를 세다 보니 실제 개수와 어긋났다.
-        //     논현프라임아파트 1km 병원 실제 893곳이 "6곳" 으로 렌더되고 있었다.
-        // nearby-counts 는 lat/lng 두 컬럼만 훑어 개수만 센다.
-        const countsRes = await $fetch<{
-          data: { radius: number; counts: Record<string, { count: number; exact: boolean }> }
-        }>(`${apiBase}/api/facilities/nearby-counts`, {
-          query: {
-            lat: resolvedBuildingInfo.lat,
-            lng: resolvedBuildingInfo.lng,
-            // 도보권(약 4분). 1km 로 넓히면 도심에서 "병원 893곳" 같은 값이 나와
-            // 생활권 정보로 읽히지 않고, 스캔 비용도 반경 제곱으로 커진다.
-            radius: 300,
-            categories: FACILITY_SUMMARY_CATS.join(','),
-          },
-        })
-        const counts = countsRes?.data?.counts ?? {}
-        const parts = FACILITY_SUMMARY_CATS
-          .map(cat => ({ cat, entry: counts[cat] }))
-          .filter(({ entry }) => (entry?.count ?? 0) > 0)
-          .slice(0, 2)
-          .map(({ cat, entry }) =>
-            `${FACILITY_SUMMARY_LABELS[cat]} ${entry!.count}곳${entry!.exact ? '' : ' 이상'}`)
-        if (parts.length > 0) facilitySummarySSR = parts.join('·')
-      } catch {
-        // best-effort — facility summary is optional SEO enhancement
-      }
-    }
+    // 좌표 기반 생활시설 요약은 overview.location 이 확정된 뒤 별도 useAsyncData에서 읽는다.
+    // buildingInfo 좌표만으로 SSR에서 먼저 호출하면 동명이인/위치 모호 건물에서도 반경 요청이 나간다.
     // 인근 단지 — SSR best-effort. 내부링크·SEO 보조이므로 실패/지연이 페이지·noindex에 영향 X.
     // (Yeti는 client-only JS를 못 봐 기존엔 SSR HTML에 인근 섹션이 비어 나갔다)
     let nearbySSR = { nearby: { apt: [], villa: [], offitel: [] } as NearbyResponse, loaded: false }
     if (bjdCode) {
       const nearbyMode = currentTab.value
-      const nearbyRentType = nearbyMode === 'rent'
-        ? (selectedRentType.value === 'jeonse' ? 'jeonse'
-          : selectedRentType.value === 'wolse' ? 'wolse'
-            : 'all') as 'all' | 'jeonse' | 'wolse'
-        : undefined
+      // The exact-detail snapshot is initialized after this SSR loader. Rent pages start
+      // in the jeonse detail mode, then client/server hydration can refine nearby links
+      // from the serialized snapshot without reading that snapshot before declaration.
+      const nearbyRentType: 'jeonse' | undefined = nearbyMode === 'rent' ? 'jeonse' : undefined
       nearbySSR = await fetchNearbyForSsr(() => getNearby(bjdCode, nearbyMode, {
         rentType: nearbyRentType,
         dongName: resolvedBuildingInfo?.dongName,
@@ -1182,11 +1390,11 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     }
     return {
       bjdCode,
-      statsResponse: statsResult.status === 'fulfilled' ? statsResult.value : EMPTY_STATS_RESPONSE,
-      transactions: txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS,
+      statsResponse: { monthly: [], summary: null },
+      transactions: { items: [], total: 0, page: 1, totalPages: 0 },
       buildingInfo: resolvedBuildingInfo,
-      areaGroups: areaResult.status === 'fulfilled' ? areaResult.value : [],
-      facilitySummary: facilitySummarySSR,
+      areaGroups: [],
+      facilitySummary: null,
       nearby: nearbySSR.nearby,
       nearbyLoaded: nearbySSR.loaded,
       infoFetchFailed,
@@ -1232,6 +1440,8 @@ if (regionSourceInfo && !fetchFailed.value) {
   const redirectPath = resolveRegionRedirectPath({
     type: realEstateType,
     buildingName: buildingName.value,
+    buildingKey: activeBuildingKey(),
+    canonicalPath: activeCanonicalPath(),
     actualCity: regionSourceInfo.city,
     actualDistrict: regionSourceInfo.district,
     requestedCitySlug: citySlugParam,
@@ -1267,126 +1477,238 @@ const ssrLoading = computed(() => ssrStatus.value === 'pending')
 watch(ssrData, (data) => {
   if (!data) return
   resolvedBjdCode.value = data.bjdCode || data.buildingInfo?.bjdCode || ''
-  monthly.value = data.statsResponse.monthly as TransactionStats[]
-  summary.value = data.statsResponse.summary as StatsSummary | null
-  transactions.value = data.transactions as RealEstateSearchResponse
   buildingInfo.value = data.buildingInfo as BuildingInfo | null
-  areaGroups.value = (data.areaGroups ?? []) as AreaGroup[]
   facilitySummary.value = data.facilitySummary ?? null
   statsLoading.value = false
   txLoading.value = false
   fetchFailed.value = data.infoFetchFailed ?? false
-
-  if (import.meta.client && !hasUsableRealEstateDetailData(data)) {
-    loadData()
-    loadAreaGroups()
-  }
 }, { immediate: true })
 
-if (import.meta.client && !ssrData.value && ssrStatus.value !== 'pending') {
-  loadData()
-  loadAreaGroups()
-}
+const detailContext = computed(() => ({
+  type: routeRealEstateType.value as RealEstateType,
+  bjdCode: resolvedBjdCode.value,
+  buildingName: buildingName.value,
+  buildingKey: activeBuildingKey(),
+  initialMode: initialDetailMode.value,
+}))
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getRentTypeParam(): string | undefined {
-  if (selectedRentType.value === 'jeonse') return '전세'
-  if (selectedRentType.value === 'wolse') return '월세'
+function validateInitialDetailMode(type: RealEstateType, rawMode: unknown): DealMode | undefined {
+  const mode = Array.isArray(rawMode) ? rawMode[0] : rawMode
+  if (typeof mode !== 'string') return undefined
+  if (type.endsWith('-sale')) return mode === 'sale' ? 'sale' : undefined
+  if (mode === 'jeonse' || mode === 'wolse') return mode
   return undefined
 }
 
-async function loadAreaGroups() {
-  const { bjdCode } = await resolveBuildingContext()
-  resolvedBjdCode.value = bjdCode
-  if (!bjdCode) {
-    areaGroups.value = []
+const initialDetailMode = computed(() =>
+  validateInitialDetailMode(routeRealEstateType.value as RealEstateType, route.query.mode)
+)
+
+const {
+  overview,
+  snapshot,
+  table,
+  pending,
+  tablePending,
+  error,
+  overviewError,
+  tableError,
+  announcement,
+  setFilters,
+  goToPage,
+  refresh,
+  refreshOverview,
+} = await useRealEstateDetail(detailContext)
+
+async function resetDetailFiltersForRoute() {
+  await setFilters({
+    mode: initialDetailMode.value ?? (currentTab.value === 'sale' ? 'sale' : 'jeonse'),
+    months: 0,
+    area: undefined,
+    deposit: undefined,
+  })
+}
+
+if (import.meta.client) {
+  let disposedBeforeInitialDetailFallback = false
+  let initialDetailFallbackFrame: number | undefined
+
+  onMounted(() => {
+    if (snapshot.value) return
+    initialDetailFallbackFrame = requestAnimationFrame(() => {
+      if (disposedBeforeInitialDetailFallback || snapshot.value) return
+      void resetDetailFiltersForRoute()
+    })
+  })
+
+  onBeforeUnmount(() => {
+    disposedBeforeInitialDetailFallback = true
+    if (initialDetailFallbackFrame != null) {
+      cancelAnimationFrame(initialDetailFallbackFrame)
+    }
+  })
+
+  watch(
+    [
+      () => routeRealEstateType.value,
+      () => initialDetailMode.value,
+      () => activeBuildingKey(),
+    ],
+    resetDetailFiltersForRoute
+  )
+}
+
+function applyOverview(overviewValue: DetailOverview | null): void {
+  detailOverview.value = overviewValue
+  if (!overviewValue) return
+
+  const primaryAddress = overviewValue.addresses[0]
+  const lat = overviewValue.locationAmbiguous ? null : overviewValue.location?.lat ?? null
+  const lng = overviewValue.locationAmbiguous ? null : overviewValue.location?.lng ?? null
+  const latestSale = overviewValue.latestSale
+  const existing = buildingInfo.value
+
+  buildingInfo.value = {
+    buildingKey: overviewValue.identity.buildingKey ?? existing?.buildingKey,
+    canonicalPath: existing?.canonicalPath ?? activeCanonicalPath(),
+    bjdCode: overviewValue.identity.bjdCode || existing?.bjdCode || resolvedBjdCode.value,
+    buildingName: overviewValue.identity.buildingName || existing?.buildingName || buildingName.value,
+    city: existing?.city || cityName,
+    district: existing?.district || districtName,
+    dongName: primaryAddress?.dongName ?? existing?.dongName ?? null,
+    roadName: primaryAddress?.roadName ?? existing?.roadName ?? null,
+    jibun: primaryAddress?.jibun ?? existing?.jibun ?? null,
+    buildYear: overviewValue.buildYear ?? existing?.buildYear ?? null,
+    minArea: overviewValue.minArea != null ? Number(overviewValue.minArea) : existing?.minArea ?? null,
+    maxArea: overviewValue.maxArea != null ? Number(overviewValue.maxArea) : existing?.maxArea ?? null,
+    latestDealAmount: latestSale?.amount ?? existing?.latestDealAmount ?? null,
+    latestMonthlyRent: null,
+    latestDealYear: latestSale?.year ?? existing?.latestDealYear ?? null,
+    latestDealMonth: latestSale?.month ?? existing?.latestDealMonth ?? null,
+    lat,
+    lng,
+    jeonseCount: existing?.jeonseCount,
+    wolseCount: existing?.wolseCount,
+  }
+  if (overviewValue.locationAmbiguous) {
+    facilitySummary.value = null
+  }
+}
+
+applyOverview(overview.value)
+
+function overviewLocationKey(location: { lat: number; lng: number } | null): string | null {
+  return location ? `${location.lat}:${location.lng}` : null
+}
+
+async function loadOverviewFacilitySummaryForLocation(location: { lat: number; lng: number }): Promise<string | null> {
+  try {
+    const countsRes = await $fetch<{
+      data: { radius: number; counts: Record<string, { count: number; exact: boolean }> }
+    }>(`${apiBase}/api/facilities/nearby-counts`, {
+      query: {
+        lat: location.lat,
+        lng: location.lng,
+        radius: 300,
+        categories: FACILITY_SUMMARY_CATS.join(','),
+      },
+    })
+    const counts = countsRes?.data?.counts ?? {}
+    const parts = FACILITY_SUMMARY_CATS
+      .map(cat => ({ cat, entry: counts[cat] }))
+      .filter(({ entry }) => (entry?.count ?? 0) > 0)
+      .slice(0, 2)
+      .map(({ cat, entry }) =>
+        `${FACILITY_SUMMARY_LABELS[cat]} ${entry!.count}곳${entry!.exact ? '' : ' 이상'}`)
+    return parts.length > 0 ? parts.join('·') : null
+  } catch {
+    return null
+  }
+}
+
+async function loadOverviewFacilitySummary(): Promise<string | null> {
+  const location = trustedOverviewLocation.value
+  if (!location) return null
+  return await loadOverviewFacilitySummaryForLocation(location)
+}
+
+let facilitySummaryGeneration = 0
+
+async function refreshOverviewFacilitySummary(): Promise<void> {
+  const generation = ++facilitySummaryGeneration
+  const location = trustedOverviewLocation.value
+  const locationKey = overviewLocationKey(location)
+  if (!location || !locationKey) {
+    facilitySummary.value = null
     return
   }
-  try {
-    areaGroups.value = await getAreaGroups(apiSlug.value, bjdCode, buildingName.value)
-  } catch {
-    areaGroups.value = []
+  const value = await loadOverviewFacilitySummaryForLocation(location)
+  if (generation === facilitySummaryGeneration
+    && overviewLocationKey(trustedOverviewLocation.value) === locationKey) {
+    facilitySummary.value = value
   }
 }
 
-async function loadData() {
-  if (!buildingName.value) return
+watch(overview, (value) => {
+  applyOverview(value)
+  void refreshOverviewFacilitySummary()
+}, { deep: true })
 
-  statsLoading.value = true
-  txLoading.value = true
-
-  // SSR useAsyncData 팩토리(line 977~1074)와 동일한 fail-open 시맨틱:
-  // bjdCode 해석 단계의 일시 장애(throw)를 삼키지 말고 infoFetchFailed 로 추적한다.
-  let infoFetchFailed = false
-  let bjdCode = ''
-  let primedBuilding: BuildingInfo | null = null
-  try {
-    const ctx = await resolveBuildingContext()
-    bjdCode = ctx.bjdCode
-    primedBuilding = ctx.building
-  } catch {
-    infoFetchFailed = true
-  }
-  resolvedBjdCode.value = bjdCode
-  if (primedBuilding) {
-    buildingInfo.value = primedBuilding
-  }
-
-  const [statsResult, txResult, infoResult] = await Promise.allSettled([
-    bjdCode
-      ? getTransactionStats(apiSlug.value, bjdCode, buildingName.value, selectedMonths.value ?? undefined,
-        selectedArea.value ?? undefined, getRentTypeParam())
-      : Promise.resolve(EMPTY_STATS_RESPONSE),
-    searchTransactions(apiSlug.value, buildTransactionSearchParams(bjdCode, currentPage.value)),
-    primedBuilding
-      ? Promise.resolve(primedBuilding)
-      : getBuildingInfo(apiSlug.value, bjdCode, buildingName.value),
-  ])
-
-  if (statsResult.status === 'fulfilled') {
-    monthly.value = statsResult.value.monthly
-    summary.value = statsResult.value.summary
-  } else {
-    monthly.value = []
-    summary.value = null
-  }
-  transactions.value = txResult.status === 'fulfilled' ? txResult.value : EMPTY_TRANSACTIONS
-
-  // fail-open: building-info 재요청이 404 가 아닌 일시 장애(5xx/timeout/network)로 rejected 면
-  // buildingInfo 를 null 로 덮지 않고(직전 SSR/primed 값 유지) fetchFailed 로 표시한다.
-  // 진짜 없는 건물은 getBuildingInfo 가 fulfilled+null 로 주므로 그대로 confirmedEmpty→noindex 가 유지된다.
-  // 이 fail-open 이 빠져 있어(구: `... : null`) 클라 재요청 실패 시 멀쩡한 상세 페이지가
-  // noindex 로 뒤집히던 버그를 수정한다. (SSR 경로 line 987~1004,1074 와 동일 시맨틱)
-  if (infoResult.status === 'fulfilled') {
-    buildingInfo.value = infoResult.value
-  } else {
-    infoFetchFailed = true
-  }
-  fetchFailed.value = infoFetchFailed
-
-  statsLoading.value = false
-  txLoading.value = false
-}
-
-function goToPage(page: number) {
-  currentPage.value = page
-  loadData()
-}
-
-// Reload when URL changes (tab switch navigates to sibling URL)
-watch(() => [apiSlug.value, buildingName.value], () => {
-  currentPage.value = 1
-  selectedArea.value = null
-  selectedRentType.value = 'all'
-  resolvedBjdCode.value = ''
-  loadData()
-  loadAreaGroups()
+onBeforeUnmount(() => {
+  facilitySummaryGeneration++
 })
 
-watch(selectedMonths, () => { currentPage.value = 1; loadData() })
-watch(selectedArea, () => { currentPage.value = 1; loadData() })
-watch(selectedRentType, () => { currentPage.value = 1; loadData() })
+const { data: overviewFacilitySummary } = await useAsyncData(
+  `re-detail-overview-facility-summary-${realEstateType}-${citySlugParam}-${districtSlugParam}-${route.params.buildingName}${activeBuildingKey() ? `-${activeBuildingKey()}` : ''}`,
+  loadOverviewFacilitySummary,
+)
+
+watch(overviewFacilitySummary, (value) => {
+  if (facilitySummaryGeneration === 0) {
+    facilitySummary.value = value ?? null
+  }
+}, { immediate: true })
+
+watch(snapshot, (value) => {
+  const totalCount = value?.table.total ?? 0
+  summary.value = {
+    recentAvg: exactAverage.value,
+    previousAvg: null,
+    changeRate: null,
+    totalCount,
+    lowVolume: totalCount > 0 && totalCount < 3,
+    priceLabel: value?.filters.mode === 'wolse' ? '월세' : value?.filters.mode === 'jeonse' ? '전세가' : '매매가',
+  }
+  statsLoading.value = false
+  txLoading.value = false
+}, { immediate: true, deep: true })
+
+type FilterPatch = Partial<Pick<DetailQuery, 'mode' | 'months' | 'area' | 'deposit'>>
+
+const lastRequestedTablePage = ref<number | null>(null)
+
+async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
+  if (patch.mode) {
+    const nextTab: TransactionMode = patch.mode === 'sale' ? 'sale' : 'rent'
+    if (nextTab !== currentTab.value) {
+      await pushTransactionTab(nextTab, nextTab === 'rent' ? { mode: patch.mode } : {})
+      // 다른 탭 URL 로 이동하는 동안 같은 컴포넌트가 재사용될 수 있다.
+      // 이전 route/context 로 즉시 setFilters 를 호출하면 legacy grouped 상세에서
+      // 새 rent API 를 buildingKey 없이 요청할 수 있으므로, 새 route watcher 에 refetch 를 맡긴다.
+      return
+    }
+  }
+  await setFilters(patch)
+}
+
+async function goToExactPage(page: number): Promise<void> {
+  lastRequestedTablePage.value = page
+  await goToPage(page)
+}
+
+async function retryExactPage(): Promise<void> {
+  await goToExactPage(lastRequestedTablePage.value ?? table.value.page)
+}
 
 // ── Structured data + analytics ───────────────────────────────────────────────
 
@@ -1420,6 +1742,8 @@ setRealEstateListingSchema(() => {
       city: cityName,
       district: districtName,
       buildingName: buildingName.value,
+      buildingKey: activeBuildingKey(),
+      canonicalPath: activeCanonicalPath(),
     })}`,
     buildYear: info?.buildYear,
     totalCount: summary.value?.totalCount,
@@ -1455,16 +1779,6 @@ watch(() => buildingInfo.value, (info) => {
 
 // ── Nearby complexes ──────────────────────────────────────────────────────────
 
-// 가격 심화 분석 (아파트만, bjdCode 확보 후)
-watch(resolvedBjdCode, async (code) => {
-  if (!code || !isApt.value) return
-  try {
-    priceAnalysis.value = await getApartmentPriceAnalysis(code, buildingName.value)
-  } catch {
-    priceAnalysis.value = null
-  }
-}, { immediate: true })
-
 function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
   const label = propertyType === 'apt' ? '아파트' : propertyType === 'villa' ? '빌라' : '오피스텔'
   if (currentTab.value === 'sale') return `주변 ${label} 매매가`
@@ -1497,6 +1811,400 @@ const hasNearby = computed(() =>
 </script>
 
 <style scoped>
+.estate-detail-page {
+  --estate-ink: #101828;
+  --estate-muted: #667085;
+  --estate-line: #e5eaf2;
+  --estate-paper: #f7f8fb;
+}
+
+.estate-detail-head {
+  padding: 24px 0 10px;
+}
+
+.estate-heading-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.estate-eyebrow {
+  display: none;
+}
+
+.estate-title {
+  color: var(--estate-ink);
+  font-size: 27px;
+  font-weight: 720;
+  letter-spacing: -0.045em;
+  line-height: 1.25;
+}
+
+.estate-address {
+  margin-top: 12px;
+  color: var(--estate-muted);
+  font-size: 13px;
+}
+
+.estate-share-button {
+  display: inline-flex;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--estate-line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+  color: var(--estate-ink);
+  font-size: 14px;
+}
+
+.estate-summary {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px 16px;
+  margin: 22px 0 12px;
+  padding: 20px 0 10px;
+  border-top: 1px solid var(--estate-line);
+  align-items: start;
+}
+
+.estate-summary > div:first-child {
+  grid-column: 1 / -1;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--estate-line);
+}
+
+.estate-summary-label {
+  display: flex;
+  min-height: 36px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+  color: var(--estate-muted);
+  font-size: 12px;
+}
+
+.estate-summary strong {
+  display: block;
+  color: var(--estate-ink);
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.estate-summary .estate-summary-price {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.estate-summary small {
+  display: block;
+  margin-top: 6px;
+  color: var(--estate-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.estate-record-note {
+  margin: 8px 0 16px;
+  max-width: 36ch;
+  color: var(--estate-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.estate-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  padding: 12px 14px;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.estate-inline-error button {
+  min-height: 36px;
+  flex-shrink: 0;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 10px;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.estate-data-caveat {
+  margin-top: 6px;
+  color: var(--estate-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.estate-source-stack {
+  text-align: right;
+}
+
+.estate-section-nav {
+  display: flex;
+  gap: 22px;
+  overflow-x: auto;
+  border-top: 1px solid var(--estate-line);
+  padding-top: 14px;
+  color: var(--estate-muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estate-section-nav a:first-child {
+  color: var(--color-primary, #2450dc);
+}
+
+.estate-ad-slot {
+  margin: 18px 0;
+}
+
+.estate-flat-section,
+.estate-nearby-group :deep(section) {
+  border: 0;
+  border-bottom: 1px solid var(--estate-line);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 26px 0;
+}
+
+.estate-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.estate-section-head h2,
+.estate-flat-section :deep(h2),
+.estate-nearby-group :deep(h2),
+.estate-nearby-group :deep(header h3) {
+  color: var(--estate-ink);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.35;
+}
+
+.estate-section-head p,
+.estate-flat-section :deep(header p),
+.estate-nearby-group :deep(header p) {
+  margin-top: 7px;
+  color: var(--estate-muted);
+  font-size: 13px;
+}
+
+.estate-exact-filters {
+  margin-bottom: 22px;
+}
+
+.estate-exact-filters :deep(form) {
+  background: #fff;
+}
+
+.estate-exact-filters :deep(.grid) {
+  align-items: end;
+}
+
+.estate-exact-filters :deep(select) {
+  border-radius: 7px;
+}
+
+.estate-chart-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.estate-chart-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--estate-line);
+  padding-top: 18px;
+}
+
+.estate-chart-summary span {
+  color: var(--estate-muted);
+  font-size: 12px;
+}
+
+.estate-chart-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--estate-ink);
+  font-size: 19px;
+  font-weight: 650;
+}
+
+.estate-empty {
+  background: var(--estate-paper);
+  padding: 30px;
+  text-align: center;
+  color: var(--estate-muted);
+}
+
+.estate-detail-page :deep(.shadow-card),
+.estate-detail-page :deep(.shadow-sm),
+.estate-detail-page :deep(.shadow-md) {
+  box-shadow: none;
+}
+
+.estate-detail-page :deep(.bg-background-light) {
+  background: var(--estate-paper);
+}
+
+.estate-detail-page :deep(.rounded-xl) {
+  border-radius: 10px;
+}
+
+.estate-detail-page :deep(table) {
+  border-top: 1px solid var(--estate-line);
+}
+
+.estate-detail-page :deep(th) {
+  background: var(--estate-paper);
+}
+
+@media (min-width: 768px) {
+  .estate-detail-head {
+    padding: 32px 0 10px;
+  }
+
+  .estate-title {
+    font-size: 36px;
+  }
+
+  .estate-address {
+    font-size: 14px;
+  }
+
+  .estate-share-button {
+    padding: 9px 13px;
+  }
+
+  .estate-summary {
+    grid-template-columns: 1.55fr 0.8fr 1fr 1fr;
+    gap: 24px;
+    margin: 28px 0 12px;
+    padding: 24px 0;
+    align-items: center;
+  }
+
+  .estate-summary > div:first-child {
+    grid-column: auto;
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .estate-summary > div + div {
+    border-left: 1px solid var(--estate-line);
+    padding-left: 26px;
+  }
+
+  .estate-summary-label {
+    display: block;
+    min-height: 0;
+    font-size: 13px;
+  }
+
+  .estate-summary strong {
+    font-size: 21px;
+  }
+
+  .estate-summary small {
+    font-size: 13px;
+  }
+
+  .estate-record-note {
+    margin-bottom: 24px;
+    max-width: none;
+    font-size: 13px;
+  }
+
+  .estate-section-nav {
+    gap: 28px;
+    padding-top: 16px;
+  }
+
+  .estate-ad-slot {
+    margin: 22px 0;
+  }
+
+  .estate-ad-slot--first {
+    min-height: 280px;
+  }
+
+  .estate-flat-section,
+  .estate-nearby-group :deep(section) {
+    padding: 32px 0;
+  }
+
+  .estate-section-head {
+    align-items: baseline;
+    margin-bottom: 22px;
+  }
+
+  .estate-section-head h2,
+  .estate-flat-section :deep(h2),
+  .estate-nearby-group :deep(h2),
+  .estate-nearby-group :deep(header h3) {
+    font-size: 24px;
+  }
+
+  .estate-section-head p,
+  .estate-flat-section :deep(header p),
+  .estate-nearby-group :deep(header p) {
+    font-size: 14px;
+  }
+
+  .estate-chart-shell {
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: 36px;
+  }
+
+  .estate-chart-summary {
+    display: block;
+    border-top: 0;
+    border-left: 1px solid var(--estate-line);
+    padding: 8px 0 0 26px;
+  }
+
+  .estate-chart-summary > div {
+    margin-bottom: 24px;
+  }
+
+  .estate-chart-summary span {
+    font-size: 13px;
+  }
+
+  .estate-chart-summary strong {
+    font-size: 23px;
+  }
+
+  .estate-flat-section :deep(section.bg-white.border.border-line.rounded-xl.shadow-card),
+  .estate-nearby-group :deep(section.bg-white.border.border-line.rounded-xl.shadow-card) {
+    border-left-width: 0;
+    border-right-width: 0;
+    border-radius: 0;
+  }
+}
+
 .roadview-wrapper :deep(> div) {
   height: 100% !important;
 }

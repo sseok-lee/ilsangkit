@@ -12,14 +12,14 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockQueryRaw, mockFindMany } = vi.hoisted(() => ({
+const { mockQueryRaw, mockQueryRawUnsafe } = vi.hoisted(() => ({
   mockQueryRaw: vi.fn(),
-  mockFindMany: vi.fn(),
+  mockQueryRawUnsafe: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: { $queryRaw: mockQueryRaw, realEstateBuildingSummary: { findMany: mockFindMany } },
-  default: { $queryRaw: mockQueryRaw, realEstateBuildingSummary: { findMany: mockFindMany } },
+  prisma: { $queryRaw: mockQueryRaw, $queryRawUnsafe: mockQueryRawUnsafe },
+  default: { $queryRaw: mockQueryRaw, $queryRawUnsafe: mockQueryRawUnsafe },
 }));
 
 import { getNearbyByBjd } from '../../src/services/realEstateService.js';
@@ -35,14 +35,14 @@ const flush = () => new Promise((r) => setImmediate(r));
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
-  mockFindMany.mockReset();
+  mockQueryRawUnsafe.mockReset();
 });
 
 describe('getNearbyByBjd 병렬 조회', () => {
   it('sale: 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
     const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
     let started = 0;
-    mockFindMany.mockImplementation(() => gates[started++].promise);
+    mockQueryRawUnsafe.mockImplementation(() => gates[started++].promise);
 
     const pending = getNearbyByBjd('11680', 'sale', { limitPerType: 4 });
     await flush();
@@ -58,7 +58,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     // rentType 기본값 'all' 은 2026-08-03 부터 summary 경로다(findMany).
     const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
     let started = 0;
-    mockFindMany.mockImplementation(() => gates[started++].promise);
+    mockQueryRawUnsafe.mockImplementation(() => gates[started++].promise);
 
     const pending = getNearbyByBjd('11680', 'rent', { limitPerType: 4 });
     await flush();
@@ -79,7 +79,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     await flush();
 
     expect(started).toBe(3);
-    expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
 
     gates.forEach((g) => g.resolve([]));
     await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
@@ -94,7 +94,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     });
     const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
     let started = 0;
-    mockFindMany.mockImplementation(() => gates[started++].promise);
+    mockQueryRawUnsafe.mockImplementation(() => gates[started++].promise);
 
     const pending = getNearbyByBjd('11680', 'sale', { limitPerType: 4 });
     await flush();
@@ -113,17 +113,14 @@ describe('getNearbyByBjd 병렬 조회', () => {
   it('sale 조회에 type·bjdCode 필터와 정렬이 그대로 유지된다 (인덱스 전제)', async () => {
     // 추가한 @@index([type, bjdCode, latestDealYear, latestDealMonth, transactionCount]) 가
     // 실제로 쓰이려면 이 where/orderBy 형태가 유지돼야 한다.
-    mockFindMany.mockResolvedValue([]);
+    mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getNearbyByBjd('11680', 'sale', { limitPerType: 4, dongName: '역삼동' });
 
-    const call = mockFindMany.mock.calls[0][0];
-    expect(call.where).toMatchObject({ type: 'apt-sale', bjdCode: '11680', dongName: '역삼동' });
-    expect(call.orderBy).toEqual([
-      { latestDealYear: 'desc' },
-      { latestDealMonth: 'desc' },
-      { transactionCount: 'desc' },
-    ]);
-    expect(call.take).toBe(4);
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(String(sql)).toContain('FROM RealEstateBuildingSummaryV2');
+    expect(String(sql)).toContain('WHERE type = ? AND bjdCode = ? AND dongName = ?');
+    expect(String(sql)).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC');
+    expect(params).toEqual(['apt-sale', '11680', '역삼동', 4]);
   });
 });

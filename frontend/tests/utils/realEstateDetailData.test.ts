@@ -73,4 +73,27 @@ describe('hasUsableRealEstateDetailData', () => {
       })
     ).toBe(true)
   })
+
+  it('returns true for a valid exact snapshot even when it has zero rows', () => {
+    expect(
+      hasUsableRealEstateDetailData({
+        snapshot: {
+          filters: {
+            bjdCode: '11680',
+            buildingName: '반포자이',
+            mode: 'sale',
+            months: 6,
+            area: '84.90',
+            deposit: null,
+          },
+          window: { from: '2026-03-21', to: '2026-09-21' },
+          options: { areas: ['84.90'], deposits: [] },
+          points: [],
+          table: { items: [], total: 0, page: 1, totalPages: 0 },
+          generatedAt: '2026-09-21T00:00:00.000Z',
+          adjustment: null,
+        },
+      })
+    ).toBe(true)
+  })
 })

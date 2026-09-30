@@ -2,8 +2,8 @@ import prisma from '../lib/prisma.js';
 import { kstCalendarToday } from '../lib/kstDate.js';
 import { NotFoundError } from '../lib/errors.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, FULL_TO_SLUG, SHORT_TO_SLUG } from './cityMapping.js';
-import type { SubscriptionListParams } from '../schemas/subscription.js';
-import type { Prisma } from '@prisma/client';
+import type { SubscriptionListParams, SubscriptionSort, SubscriptionStatus } from '../schemas/subscription.js';
+import { Prisma } from '@prisma/client';
 
 /**
  * Decimal → Number 변환 (JSON 직렬화 호환)
@@ -34,7 +34,7 @@ export function computeSubscriptionStatus(
   receptionStartDate: Date | null | undefined,
   receptionEndDate: Date | null | undefined,
   now: Date = new Date(),
-): 'ongoing' | 'upcoming' | 'closed' {
+): Exclude<SubscriptionStatus, 'unknown'> {
   if (!receptionStartDate) return 'closed';
   // 접수일은 시각 없는 날짜(KST 달력 날짜가 UTC 자정으로 저장)라 현재 "시각"과
   // 직접 비교하면 안 된다 — 마감일 당일 09:00 KST(=00:00Z)부터 closed 로 뒤집힌다.
@@ -46,7 +46,7 @@ export function computeSubscriptionStatus(
 }
 
 export function dateBasedStatusFilter(
-  status: 'ongoing' | 'upcoming' | 'closed',
+  status: SubscriptionStatus,
   now: Date = new Date(),
 ): Prisma.SubscriptionWhereInput {
   // computeSubscriptionStatus 와 같은 경계를 써야 한다 — 목록(SQL)과 상세(재계산)가
@@ -70,19 +70,37 @@ export function dateBasedStatusFilter(
     case 'closed':
       return {
         OR: [
-          { receptionStartDate: null },
+          { receptionStartDate: null, NOT: { sourceType: 'PUBLIC_RENT', status: 'unknown' } },
           { receptionEndDate: { lt: today } },
         ],
       };
+    case 'unknown':
+      return { sourceType: 'PUBLIC_RENT', receptionStartDate: null, status: 'unknown' };
   }
 }
 
-type SubscriptionSort = 'announcement' | 'deadline' | 'startSoon';
+function buildOrderBy(
+  sort?: SubscriptionSort,
+  status?: SubscriptionStatus,
+): Prisma.SubscriptionOrderByWithRelationInput[] {
+  const field = sort === 'deadline' || (sort === 'priority' && status === 'ongoing')
+    ? 'receptionEndDate'
+    : sort === 'startSoon' || (sort === 'priority' && status === 'upcoming')
+      ? 'receptionStartDate'
+      : 'announcementDate';
+  return [{ [field]: { sort: field === 'announcementDate' ? 'desc' : 'asc', nulls: 'last' } }, { id: 'desc' }];
+}
 
-function buildOrderBy(sort?: SubscriptionSort): Prisma.SubscriptionOrderByWithRelationInput {
-  if (sort === 'deadline') return { receptionEndDate: { sort: 'asc', nulls: 'last' } };
-  if (sort === 'startSoon') return { receptionStartDate: { sort: 'asc', nulls: 'last' } };
-  return { announcementDate: 'desc' };
+function currentRowStatus(row: {
+  sourceType: string;
+  status: string;
+  receptionStartDate: Date | null;
+  receptionEndDate: Date | null;
+}, now: Date): SubscriptionStatus {
+  if (row.sourceType === 'PUBLIC_RENT' && !row.receptionStartDate) {
+    return row.status === 'closed' ? 'closed' : 'unknown';
+  }
+  return computeSubscriptionStatus(row.receptionStartDate, row.receptionEndDate, now);
 }
 
 function buildContainsAnyRegionClause(terms: string[]): Prisma.SubscriptionWhereInput {
@@ -113,16 +131,61 @@ function buildSubscriptionRegionClauses(region: string): Prisma.SubscriptionWher
   return clauses;
 }
 
-export async function getSubscriptionList(params: SubscriptionListParams) {
-  const { status, region, houseType, rentType, sourceType, category, page, limit, sort } = params;
+async function publicRentalIdsInRegion(region: string): Promise<number[]> {
+  const normalized = region.trim().replace(/\s+/g, ' ');
+  const [city, ...rest] = normalized.split(' ');
+  const slug = SHORT_TO_SLUG[city] || FULL_TO_SLUG[city];
+  const groups = slug
+    ? [[CITY_SLUG_TO_FULL[slug], CITY_SLUG_TO_SHORT[slug]], ...(rest.length ? [[rest.join(' ')]] : [])]
+    : [[normalized]];
+  // Match city and district against the same supply row, not separate areas of a nationwide notice.
+  const location = Prisma.sql`COALESCE(NULLIF(CONCAT_WS(' ', offer.region, offer.address), ''), CONCAT_WS(' ', notice.regionName, notice.supplyLocation))`;
+  const conditions = groups.map(terms => Prisma.sql`(${Prisma.join(terms.map(term => Prisma.sql`LOCATE(${term}, ${location}) > 0`), ' OR ')})`);
+  const rows = await prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
+    SELECT DISTINCT notice.id FROM Subscription notice
+    LEFT JOIN JSON_TABLE(notice.publicRental, '$.supplies[*]' COLUMNS (
+      region VARCHAR(500) PATH '$.region', address VARCHAR(1000) PATH '$.address'
+    )) AS offer ON TRUE
+    WHERE notice.sourceType = 'PUBLIC_RENT' AND notice.supersededById IS NULL
+      AND ${Prisma.join(conditions, ' AND ')}
+  `);
+  return rows.map(row => row.id);
+}
 
-  const where: Prisma.SubscriptionWhereInput = {};
+async function findSubscriptionKeywordIds(q: string): Promise<number[]> {
+  const rows = await prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
+    SELECT DISTINCT notice.id FROM Subscription notice
+    LEFT JOIN JSON_TABLE(notice.publicRental, '$.supplies[*]' COLUMNS (
+      region VARCHAR(500) PATH '$.region', address VARCHAR(1000) PATH '$.address'
+    )) AS offer ON notice.sourceType = 'PUBLIC_RENT'
+    WHERE notice.supersededById IS NULL AND (
+      LOCATE(${q}, COALESCE(notice.houseName, '')) > 0 OR
+      LOCATE(${q}, COALESCE(notice.regionName, '')) > 0 OR
+      LOCATE(${q}, COALESCE(notice.supplyLocation, '')) > 0 OR
+      LOCATE(${q}, COALESCE(offer.region, '')) > 0 OR
+      LOCATE(${q}, COALESCE(offer.address, '')) > 0
+    )
+  `);
+  return rows.map(row => row.id);
+}
+
+export async function getSubscriptionList(params: SubscriptionListParams) {
+  const now = new Date();
+  const { status, region, houseType, rentType, sourceType, category, q, page, limit, sort } = params;
+
+  let where: Prisma.SubscriptionWhereInput = { supersededById: null };
   // 공공임대 실제 rentType 값 (청약홈 API가 '임대주택' 대신 이 값들을 반환함)
-  const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대'];
+  const PUBLIC_RENT_TYPES = ['분양전환 가능임대', '분양전환 불가임대', '임대주택'];
 
   if (region) {
     const regionClauses = buildSubscriptionRegionClauses(region);
-    if (regionClauses.length > 0) where.AND = regionClauses;
+    if (regionClauses.length > 0) {
+      const ids = await publicRentalIdsInRegion(region);
+      where.AND = [{ OR: [
+        { sourceType: { not: 'PUBLIC_RENT' }, AND: regionClauses },
+        { id: { in: ids } },
+      ] }];
+    }
   }
   if (houseType) where.houseType = houseType;
   if (rentType) {
@@ -150,19 +213,22 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     where.OR = [
       { sourceType: 'PRIVATE_RENT' },
       { sourceType: 'APT', rentType: { in: PUBLIC_RENT_TYPES } },
+      { sourceType: 'PUBLIC_RENT' },
     ];
   }
+
+  if (q) where = { AND: [where, { id: { in: await findSubscriptionKeywordIds(q) } }] };
 
   const skip = (page - 1) * limit;
 
   if (status) {
     const filteredWhere: Prisma.SubscriptionWhereInput = {
-      AND: [where, dateBasedStatusFilter(status)],
+      AND: [where, dateBasedStatusFilter(status, now)],
     };
     const [items, total] = await Promise.all([
       prisma.subscription.findMany({
         where: filteredWhere,
-        orderBy: buildOrderBy(sort),
+        orderBy: buildOrderBy(sort, status),
         skip,
         take: limit,
       }),
@@ -171,18 +237,37 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
 
     // 필터가 날짜 기반 동적 분류 — 응답에 담는 row 의 status 도 그 그룹값으로 덮어써야 카드 라벨 일치.
     return {
-      items: items.map((row) => ({ ...row, status })),
+      items: items.map((row) => ({ ...row, status: currentRowStatus(row, now) })),
       total,
       page,
       totalPages: Math.ceil(total / limit),
     };
   }
 
-  const statusOrder = ['ongoing', 'upcoming', 'closed'] as const;
+  if (sort === 'recent') {
+    const [items, total] = await Promise.all([
+      prisma.subscription.findMany({
+        where,
+        orderBy: buildOrderBy(sort),
+        skip,
+        take: limit,
+      }),
+      prisma.subscription.count({ where }),
+    ]);
+
+    return {
+      items: items.map((row) => ({ ...row, status: currentRowStatus(row, now) })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  const statusOrder = ['ongoing', 'upcoming', 'unknown', 'closed'] as const;
   const counts = await Promise.all([
     prisma.subscription.count({ where }),
     ...statusOrder.map((statusKey) =>
-      prisma.subscription.count({ where: { AND: [where, dateBasedStatusFilter(statusKey)] } })
+      prisma.subscription.count({ where: { AND: [where, dateBasedStatusFilter(statusKey, now)] } })
     ),
   ]);
 
@@ -192,7 +277,7 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
       acc[statusKey] = statusCounts[index] ?? 0;
       return acc;
     },
-    { ongoing: 0, upcoming: 0, closed: 0 }
+    { ongoing: 0, upcoming: 0, unknown: 0, closed: 0 }
   );
 
   let remainingSkip = skip;
@@ -214,8 +299,8 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
     if (take <= 0) break;
 
     const batch = await prisma.subscription.findMany({
-      where: { AND: [where, dateBasedStatusFilter(statusKey)] },
-      orderBy: buildOrderBy(sort),
+      where: { AND: [where, dateBasedStatusFilter(statusKey, now)] },
+      orderBy: buildOrderBy(sort, statusKey),
       skip: remainingSkip,
       take,
     });
@@ -236,7 +321,9 @@ export async function getSubscriptionList(params: SubscriptionListParams) {
   };
 }
 
-export async function getSubscriptionDetail(id: number) {
+export async function getSubscriptionDetail(id: number, visited = new Set<number>()): Promise<Prisma.SubscriptionGetPayload<{ include: { unitTypes: true; competitions: true; scores: true; specialStatuses: true } }>> {
+  if (visited.has(id) || visited.size >= 10) throw new NotFoundError('청약 공고 연결을 확인할 수 없습니다');
+  visited.add(id);
   const subscription = await prisma.subscription.findUnique({
     where: { id },
     include: {
@@ -250,9 +337,12 @@ export async function getSubscriptionDetail(id: number) {
   if (!subscription) {
     throw new NotFoundError('청약 공고를 찾을 수 없습니다');
   }
+  if (subscription.supersededById) return getSubscriptionDetail(subscription.supersededById, visited);
 
   // status 동적 재계산 (sync 시점 stale 방지 — 목록과 동일한 정책)
-  const status = computeSubscriptionStatus(
+  const status = subscription.sourceType === 'PUBLIC_RENT' && !subscription.receptionStartDate
+    ? (subscription.status === 'closed' ? 'closed' : 'unknown')
+    : computeSubscriptionStatus(
     subscription.receptionStartDate,
     subscription.receptionEndDate,
   );
@@ -261,7 +351,7 @@ export async function getSubscriptionDetail(id: number) {
 
 export async function getUpcomingSubscriptions(limit = 5) {
   return prisma.subscription.findMany({
-    where: dateBasedStatusFilter('upcoming'),
+    where: { AND: [{ supersededById: null }, dateBasedStatusFilter('upcoming')] },
     orderBy: { receptionStartDate: 'asc' },
     take: limit,
   });

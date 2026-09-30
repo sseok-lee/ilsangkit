@@ -9,6 +9,7 @@ vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setItemListSchema }),
 }))
 vi.stubGlobal('useHead', vi.fn())
+vi.stubGlobal('useRouter', () => ({ push: vi.fn() }))
 vi.stubGlobal('useSeoMeta', vi.fn())
 vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
   const data = ref<any>({ items: [
@@ -16,7 +17,7 @@ vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
     { id: 2, slug: 'b', title: '가이드 B', category: 'apt-sale', summary: '', thumbnailUrl: null, createdAt: '2026-01-01', viewCount: 0 },
   ] })
   const status = ref('success')
-  return Object.assign(Promise.resolve({ data, status }), { data, status, pending: ref(false), error: ref(null), refresh: vi.fn() })
+  return Object.assign(Promise.resolve({ data, status, error: ref(null), refresh: vi.fn() }), { data, status, pending: ref(false), error: ref(null), refresh: vi.fn() })
 })
 
 const stubs = { NuxtLink: { template: '<a><slot /></a>', props: ['to'] }, Breadcrumb: true, PageHero: true, SectionBlock: { template: '<section><slot /></section>' }, AdBanner: true, Pagination: true }

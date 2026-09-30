@@ -1,13 +1,28 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+  <div class="bg-white text-strong">
+  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
     <StaticPageHeader
       title="개인정보처리방침"
       lead="일상킷이 개인정보를 어떻게 처리하는지 안내합니다."
       updated-at="2026.06.01"
     />
 
-    <div class="space-y-5 md:space-y-6 text-slate-600 text-sm md:text-base leading-relaxed">
-      <section>
+    <LegalDocumentNav current="privacy" />
+    <div class="grid min-w-0 gap-8 md:grid-cols-[220px_minmax(0,1fr)] md:gap-12">
+      <aside class="min-w-0">
+        <details class="border-y border-line md:hidden">
+          <summary class="min-h-11 cursor-pointer py-3 text-sm font-semibold">문서 목차</summary>
+          <nav aria-label="문서 목차" class="pb-3">
+            <a v-for="(heading, index) in headings" :key="heading" :href="`#clause-${index + 1}`" class="flex min-h-11 items-center py-2 text-sm text-muted hover:text-primary">{{ heading }}</a>
+          </nav>
+        </details>
+        <nav aria-label="문서 목차" class="hidden md:sticky md:top-28 md:block">
+          <p class="mb-3 text-sm font-bold">목차</p>
+          <a v-for="(heading, index) in headings" :key="heading" :href="`#clause-${index + 1}`" class="flex min-h-11 items-center py-2 text-sm text-muted hover:text-primary">{{ heading }}</a>
+        </nav>
+      </aside>
+    <div class="min-w-0 space-y-8 text-muted text-sm leading-7 md:text-base md:leading-8">
+      <section id="clause-1" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           1. 개인정보의 처리 목적
         </h2>
@@ -23,7 +38,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-2" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           2. 수집하는 개인정보 항목
         </h2>
@@ -36,7 +51,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-3" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           3. 개인정보의 처리 및 보유 기간
         </h2>
@@ -46,7 +61,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-4" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           4. 개인정보의 제3자 제공
         </h2>
@@ -67,7 +82,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-5" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           5. 쿠키의 사용
         </h2>
@@ -78,7 +93,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-6" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           6. 개인정보의 안전성 확보 조치
         </h2>
@@ -89,7 +104,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-7" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           7. 이용자의 권리
         </h2>
@@ -98,7 +113,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="clause-8" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           8. 개인정보 보호책임자 및 문의
         </h2>
@@ -111,7 +126,7 @@
         </ul>
       </section>
 
-      <section>
+      <section id="clause-9" class="scroll-mt-28 border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-slate-900 mb-3">
           9. 개인정보처리방침의 변경
         </h2>
@@ -121,10 +136,15 @@
         </p>
       </section>
     </div>
+    </div>
+  </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import LegalDocumentNav from '~/components/common/LegalDocumentNav.vue'
+const headings = ['1. 개인정보의 처리 목적', '2. 수집하는 개인정보 항목', '3. 개인정보의 처리 및 보유 기간', '4. 개인정보의 제3자 제공', '5. 쿠키의 사용', '6. 개인정보의 안전성 확보 조치', '7. 이용자의 권리', '8. 개인정보 보호책임자 및 문의', '9. 개인정보처리방침의 변경']
+
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -142,3 +162,11 @@ setBreadcrumbSchema([
   { name: '개인정보처리방침', url: '/privacy' },
 ])
 </script>
+
+<style scoped>
+.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
+.help-page :deep(h1 + p) { margin-top: 16px; }
+.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
+.help-page :deep(table) { min-width: 540px; }
+@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
+</style>

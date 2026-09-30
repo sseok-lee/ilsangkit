@@ -48,3 +48,20 @@ describe('Nitro swr 캐시 저장소', () => {
     expect(src).toMatch(/swr:\s*\d+/)
   })
 })
+
+describe('홈 SSR 캐시와 실거래 API 서비스워커 정책', () => {
+  it('홈 루트는 사용자별 지역 쿠키 SSR을 위해 private no-store로 둔다', () => {
+    expect(src).toMatch(/'\/':\s*\{\s*swr:\s*false,\s*cache:\s*false,\s*headers:\s*\{\s*'cache-control':\s*'private, no-store'\s*\}/)
+  })
+
+  it('home-market/detail API는 일반 API NetworkFirst보다 먼저 NetworkOnly로 둔다', () => {
+    const networkOnlyAt = src.indexOf("handler: 'NetworkOnly'")
+    const networkFirstAt = src.indexOf("handler: 'NetworkFirst'")
+
+    expect(networkOnlyAt, '실거래 home-market/detail API NetworkOnly 규칙이 없다').toBeGreaterThan(-1)
+    expect(networkFirstAt, '일반 API NetworkFirst 규칙이 없다').toBeGreaterThan(-1)
+    expect(networkOnlyAt).toBeLessThan(networkFirstAt)
+    expect(src.slice(Math.max(0, networkOnlyAt - 260), networkOnlyAt + 80))
+      .toContain('/\\/api\\/real-estate\\/(home-market|[^/]+\\/detail')
+  })
+})

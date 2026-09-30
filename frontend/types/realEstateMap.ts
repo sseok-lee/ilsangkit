@@ -1,4 +1,5 @@
 import type { RealEstateType } from '~/types/realEstate'
+import type { LatestDeals } from '~/types/realEstateExploration'
 
 export type Granularity = 'city' | 'district' | 'dong' | 'building'
 
@@ -26,10 +27,14 @@ export interface MapRegionItem {
 }
 
 export interface MapBuildingItem {
+  buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
+  bjdCode: string
   city: string
   district: string
   dongName: string
+  jibun?: string | null
   lat: number | null
   lng: number | null
   /** 매매=거래금액, 전월세=보증금 (만원) */
@@ -50,6 +55,7 @@ export interface MapBuildingItem {
   /** 위 거래일 YYYYMMDD. */
   wolseDealKey: number | null
   transactionCount: number
+  latestDeals?: LatestDeals
 }
 
 export type MapItem = MapRegionItem | MapBuildingItem

@@ -1,18 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // These must be declared with vi.hoisted so they're available inside vi.mock factory
-const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst, mockQueryRaw, mockExecuteRawUnsafe } = vi.hoisted(() => ({
+const { mockFindMany, mockCount, mockFindUnique, mockUpdate, mockFindFirst, mockRegionFindMany, mockGroupBy, mockQueryRaw, mockExecuteRawUnsafe } = vi.hoisted(() => ({
   mockExecuteRawUnsafe: vi.fn().mockResolvedValue(1),
   mockFindMany: vi.fn(),
   mockCount: vi.fn(),
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn().mockResolvedValue({}),
   mockFindFirst: vi.fn(),
+  mockRegionFindMany: vi.fn(),
+  mockGroupBy: vi.fn(),
   mockQueryRaw: vi.fn(),
 }));
 
 const { mockFtIds, mockFtCount } = vi.hoisted(() => ({
   mockFtIds: vi.fn(), mockFtCount: vi.fn(),
+}));
+
+const { mockListWasteAreas } = vi.hoisted(() => ({
+  mockListWasteAreas: vi.fn(),
 }));
 
 vi.mock('../../src/services/search/fulltextKeyword.js', async (orig) => {
@@ -38,6 +44,7 @@ vi.mock('../../src/lib/prisma.js', () => {
     count: mockCount,
     findUnique: mockFindUnique,
     update: mockUpdate,
+    groupBy: mockGroupBy,
   };
   const prismaClient = {
     toilet: model,
@@ -55,7 +62,7 @@ vi.mock('../../src/lib/prisma.js', () => {
     evCharger: model,
     sports: model,
     wasteSchedule: model,
-    region: { findFirst: mockFindFirst },
+    region: { findFirst: mockFindFirst, findMany: mockRegionFindMany },
     $queryRawUnsafe: mockQueryRaw,
     $executeRawUnsafe: mockExecuteRawUnsafe,
   };
@@ -65,7 +72,12 @@ vi.mock('../../src/lib/prisma.js', () => {
   };
 });
 
-import { search, getDetail, getAllIds, getByRegion, getNearbyFacilities, CATEGORY_REGISTRY, flushViewCounts } from '../../src/services/facilityService.js';
+vi.mock('../../src/services/wasteAreaService.js', () => ({
+  isWasteAreaDiscoveryEnabled: () => process.env.WASTE_AREA_DISCOVERY_ENABLED === 'true',
+  listWasteAreas: mockListWasteAreas,
+}));
+
+import { search, searchGrouped, getDetail, getAllIds, getByRegion, getByRegionAll, getNearbyFacilities, getRegionCategoryCombinations, CATEGORY_REGISTRY, flushViewCounts } from '../../src/services/facilityService.js';
 
 const sampleRecord = {
   id: 'test-1',
@@ -94,6 +106,7 @@ const sampleRecord = {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
   mockUpdate.mockResolvedValue({});
   mockExecuteRawUnsafe.mockResolvedValue(1);
   // 이전 테스트에서 남은 viewCount 버퍼 비우기
@@ -106,6 +119,18 @@ beforeEach(async () => {
   mockFtCount.mockResolvedValue(0);
   // 한글 우선 정렬 raw SQL 기본값 (id 없음)
   mockQueryRaw.mockResolvedValue([]);
+  mockListWasteAreas.mockResolvedValue({
+    generationId: 'generation-1',
+    items: [
+      { areaId: 7, name: '역삼1동', city: '서울특별시', district: '강남구', href: '/trash/areas/7', matchReason: 'region', scheduleCount: 1, conditionalCount: 1, summary: '역삼1동 전체', dataDate: '2026-09-28T00:00:00.000Z' },
+      { areaId: 8, name: '역삼2동', city: '서울특별시', district: '강남구', href: '/trash/areas/8', matchReason: 'region', scheduleCount: 1, conditionalCount: 1, summary: '역삼2동 전체', dataDate: null },
+      { areaId: 9, name: '삼성1동', city: '서울특별시', district: '강남구', href: '/trash/areas/9', matchReason: 'region', scheduleCount: 2, conditionalCount: 2, summary: '삼성1동 전체', dataDate: null },
+    ],
+    total: 16,
+    page: 1,
+    totalPages: 1,
+    unresolved: { count: 0, href: null },
+  });
 });
 
 describe('CATEGORY_REGISTRY', () => {
@@ -266,10 +291,89 @@ describe('search', () => {
     expect(result.items.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('searches trash category as waste areas with explicit destinations and nullable coordinates', async () => {
+    mockCount.mockResolvedValue(0);
+
+    const result = await search({ category: 'trash', keyword: '역삼', page: 1, limit: 20 });
+
+    expect(result.total).toBe(16);
+    expect(result.items[0]).toMatchObject({
+      id: '7',
+      category: 'trash',
+      name: '역삼1동',
+      address: '서울특별시 강남구',
+      lat: null,
+      lng: null,
+      destination: { kind: 'waste-area', href: '/trash/areas/7' },
+    });
+    expect(mockListWasteAreas).toHaveBeenCalledWith({
+      city: undefined,
+      district: undefined,
+      keyword: '역삼',
+      page: 1,
+      limit: 20,
+    });
+    expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockCount).not.toHaveBeenCalled();
+  });
+
+  it('keeps trash area 503s as grouped search failures instead of zero results', async () => {
+    mockCount.mockResolvedValue(0);
+    mockListWasteAreas.mockRejectedValueOnce(new Error('area api unavailable'));
+
+    await expect(searchGrouped({ keyword: '쓰레기', page: 1, limit: 3 }))
+      .rejects.toThrow('area api unavailable');
+  });
+
+  it('keeps legacy trash schedule search when waste area discovery is disabled', async () => {
+    delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+    mockFindMany.mockResolvedValue([
+      { id: 11, targetRegion: '역삼1동', emissionPlace: '집 앞', city: '서울특별시', district: '강남구' },
+    ]);
+    mockCount.mockResolvedValue(1);
+
+    const result = await search({ category: 'trash', keyword: '역삼', page: 1, limit: 20 });
+
+    expect(result).toMatchObject({ total: 1, page: 1, totalPages: 1 });
+    expect(result.items[0]).toMatchObject({
+      id: '11',
+      category: 'trash',
+      name: '역삼1동',
+      address: '집 앞',
+      lat: 0,
+      lng: 0,
+    });
+    expect(result.items[0].destination).toBeUndefined();
+    expect(mockListWasteAreas).not.toHaveBeenCalled();
+    expect(mockFindMany.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+    expect(mockCount.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+  });
+
+  it('excludes staged trash candidates before fulltext grouped preview limits', async () => {
+    delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+    mockQueryRaw.mockResolvedValue([{ id: 11 }]);
+    mockFindMany.mockResolvedValue([
+      { id: 11, targetRegion: '역삼1동', emissionPlace: '집 앞', city: '서울특별시', district: '강남구' },
+    ]);
+    mockCount.mockResolvedValue(1);
+
+    await searchGrouped({ keyword: '역삼동', page: 1, limit: 3 });
+
+    const sql = mockQueryRaw.mock.calls.find((call) =>
+      typeof call[0] === 'string' && call[0].includes('MATCH(targetRegion, emissionPlace)')
+    )?.[0] as string;
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('WasteStagedSchedule');
+    expect(mockFindMany.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+    expect(mockCount.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+  });
+
   it('searches with keyword filter', async () => {
     mockFtIds.mockResolvedValue(['t1', 't2']);
     mockFtCount.mockResolvedValue(2);
-    mockFindMany.mockResolvedValue([]);
+  mockFindMany.mockResolvedValue([]);
+  mockRegionFindMany.mockResolvedValue([]);
+  mockGroupBy.mockResolvedValue([]);
 
     await search({ category: 'toilet', keyword: '역삼', page: 1, limit: 20 });
 
@@ -639,5 +743,103 @@ describe('getByRegion', () => {
 
     expect(result.items).toHaveLength(0);
     expect(result.total).toBe(0);
+  });
+
+  it('returns trash region pages from waste areas', async () => {
+    mockFindFirst.mockResolvedValue({
+      city: '서울특별시',
+      district: '강남구',
+      bjdCode: '1168000000',
+    });
+
+    const result = await getByRegion('서울특별시', '강남구', 'trash', { page: 1, limit: 20 });
+
+    expect(result).toMatchObject({
+      category: 'trash',
+      total: 16,
+      page: 1,
+      totalPages: 1,
+    });
+    expect(result.items[0]).toMatchObject({
+      id: '7',
+      destination: { kind: 'waste-area', href: '/trash/areas/7' },
+    });
+    expect(mockListWasteAreas).toHaveBeenCalledWith({
+      city: '서울특별시',
+      district: '강남구',
+      keyword: undefined,
+      page: 1,
+      limit: 20,
+    });
+  });
+
+  it('keeps staged trash candidates out of flag-off region category pages', async () => {
+    delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+    mockFindFirst.mockResolvedValue({
+      city: '서울특별시',
+      district: '강남구',
+      bjdCode: '1168000000',
+    });
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await getByRegion('서울특별시', '강남구', 'trash', { page: 1, limit: 20 });
+
+    expect(mockFindMany.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+    expect(mockCount.mock.calls.at(-1)?.[0].where.stagedMarker).toBeNull();
+  });
+});
+
+describe('getByRegionAll', () => {
+  it('adds the waste area total to the all-category regional aggregate', async () => {
+    mockFindFirst.mockResolvedValue({
+      city: '서울특별시',
+      district: '강남구',
+      bjdCode: '1168000000',
+    });
+    mockCount.mockResolvedValue(0);
+
+    const result = await getByRegionAll('서울특별시', '강남구', { page: 1, limit: 20 });
+
+    expect(result.total).toBe(16);
+    expect(result.items[0]).toMatchObject({
+      id: '7',
+      category: 'trash',
+      destination: { kind: 'waste-area', href: '/trash/areas/7' },
+    });
+    expect(mockListWasteAreas).toHaveBeenCalledWith({
+      city: '서울특별시',
+      district: '강남구',
+      keyword: undefined,
+      page: 1,
+      limit: 20,
+    });
+  });
+
+  it('keeps staged trash candidates out of flag-off regional all aggregate', async () => {
+    delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
+    mockFindFirst.mockResolvedValue({
+      city: '서울특별시',
+      district: '강남구',
+      bjdCode: '1168000000',
+    });
+    for (let i = 0; i < 14; i++) mockCount.mockResolvedValueOnce(0);
+    mockCount.mockResolvedValueOnce(1);
+    mockFindMany.mockResolvedValue([]);
+
+    await getByRegionAll('서울특별시', '강남구', { page: 1, limit: 20 });
+
+    const wasteCountCall = mockCount.mock.calls.at(-1);
+    const wasteFindCall = mockFindMany.mock.calls.at(-1);
+    expect(wasteCountCall?.[0].where.stagedMarker).toBeNull();
+    expect(wasteFindCall?.[0].where.stagedMarker).toBeNull();
+  });
+
+  it('keeps staged-only regions out of region/category combinations', async () => {
+    mockRegionFindMany.mockResolvedValue([]);
+    await getRegionCategoryCombinations();
+
+    const wasteRegionCall = mockFindMany.mock.calls.at(-1);
+    expect(wasteRegionCall?.[0].where.stagedMarker).toBeNull();
   });
 });

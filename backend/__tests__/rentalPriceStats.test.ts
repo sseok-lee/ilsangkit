@@ -1,20 +1,17 @@
+import './integration/housingSetup.js';
+import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import prisma from '../src/lib/prisma.js';
 import { getRentalPriceStats } from '../src/services/subscriptionService.js';
 
+const fixtureIds = Array.from({ length: 4 }, () => `remaining-rental-${randomUUID()}`);
+
 describe('getRentalPriceStats', () => {
   beforeAll(async () => {
     // Insert test data: 서울 강남구 전월세 데이터
-    // 최근 3개월 범위: 2025년 01, 02, 03월
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-
-    // 지난 3개월 범위 계산
-    let year = currentYear;
-    let month = currentMonth;
-    const threeMonthsAgo = new Date(now);
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
     await prisma.aptRentTransaction.createMany({
       data: [
@@ -31,7 +28,7 @@ describe('getRentalPriceStats', () => {
           rentType: '전세',
           deposit: 800000000n, // 8억
           monthlyRent: null,
-          sourceId: `seoul-gangnam-jeonse-1-${Date.now()}`,
+          sourceId: fixtureIds[0],
         },
         {
           city: '서울',
@@ -45,7 +42,7 @@ describe('getRentalPriceStats', () => {
           rentType: '전세',
           deposit: 700000000n, // 7억
           monthlyRent: null,
-          sourceId: `seoul-gangnam-jeonse-2-${Date.now()}`,
+          sourceId: fixtureIds[1],
         },
         // 월세 데이터 (monthlyRent > 0)
         {
@@ -60,7 +57,7 @@ describe('getRentalPriceStats', () => {
           rentType: '월세',
           deposit: 200000000n, // 2억
           monthlyRent: 3000000, // 300만원
-          sourceId: `seoul-gangnam-wolse-1-${Date.now()}`,
+          sourceId: fixtureIds[2],
         },
         {
           city: '서울',
@@ -74,7 +71,7 @@ describe('getRentalPriceStats', () => {
           rentType: '월세',
           deposit: 300000000n, // 3억
           monthlyRent: 2500000, // 250만원
-          sourceId: `seoul-gangnam-wolse-2-${Date.now()}`,
+          sourceId: fixtureIds[3],
         },
       ],
     });
@@ -85,7 +82,7 @@ describe('getRentalPriceStats', () => {
     await prisma.aptRentTransaction.deleteMany({
       where: {
         sourceId: {
-          contains: 'seoul-gangnam',
+          in: fixtureIds,
         },
       },
     });

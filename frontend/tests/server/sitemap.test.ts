@@ -204,6 +204,16 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
         },
       })
     }
+    if (path.includes('/api/sitemap/waste-areas')) {
+      return Promise.resolve({
+        success: true,
+        data: {
+          areas: [
+            { areaId: 101, contentUpdatedAt: '2026-04-03T00:00:00Z' },
+          ],
+        },
+      })
+    }
     if (path.includes('/api/sitemap/waste-schedules')) {
       return Promise.resolve({ success: true, data: [] })
     }
@@ -319,13 +329,16 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     expect(firstChunk as string).toContain('<loc>https://ilsangkit.co.kr/aed/1</loc>')
   })
 
-  it('trash 사이트맵은 구·군 집계 URL만 내보내고 개별 /trash/[id]는 0건이다', async () => {
+  it('trash 사이트맵은 구·군 집계 URL과 eligible area URL만 내보내고 source/query URL은 0건이다', async () => {
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
     const xml = (await chunkHandler(createMockEvent('/sitemap/trash.xml') as never)) as string
     // buildTrashRegionPath 출력 = 개별 상세 301 타겟 = 집계 페이지 canonical (byte-match)
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/seoul/gangnam/trash</loc>')
     expect(xml).toContain('<loc>https://ilsangkit.co.kr/gyeonggi/gapyeong/trash</loc>')
-    // 개별 /trash/{id} 형태는 존재하지 않아야 한다
+    expect(xml).toContain('<loc>https://ilsangkit.co.kr/trash/areas/101</loc>')
+    expect(xml).toContain('<lastmod>2026-04-03</lastmod>')
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1])
+    expect(locs.every((loc) => !loc.includes('?'))).toBe(true)
     expect(xml).not.toMatch(/\/trash\/\d+</)
   })
 
@@ -340,6 +353,63 @@ describe('sitemap coverage parity (index ↔ dynamic chunk)', () => {
     const overflowEvent = createMockEvent('/sitemap/trash-2.xml')
     await chunkHandler(overflowEvent as never)
     expect(overflowEvent.node.res.statusCode).toBe(404)
+  })
+
+
+
+  it('trash sitemap fails closed when one waste upstream fails instead of publishing partial XML', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/waste-areas')) {
+        return Promise.reject(new Error('mock: waste areas down'))
+      }
+      return mockSsrFetchImpl(path)
+    }) as typeof ssrFetch)
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const chunkEvent = createMockEvent('/sitemap/trash.xml')
+    const chunkBody = await chunkHandler(chunkEvent as never)
+    expect(chunkEvent.node.res.statusCode).toBe(503)
+    expect(chunkBody).toContain('upstream empty: waste-sitemap')
+
+    const indexEvent = createMockEvent('/sitemap.xml')
+    const indexBody = await indexHandler(indexEvent as never)
+    expect(indexEvent.node.res.statusCode).toBe(503)
+    expect(indexBody).toBe('')
+  })
+
+  it('trash sitemap uses a trash-specific 50,000 URL chunk boundary', async () => {
+    vi.mocked(ssrFetch).mockImplementation(((path: string) => {
+      if (path.includes('/api/sitemap/waste-schedule-regions')) {
+        return Promise.resolve({ success: true, data: { regions: [{ city: '서울특별시', district: '강남구', updatedAt: '2026-04-01T00:00:00Z' }] } })
+      }
+      if (path.includes('/api/sitemap/waste-areas')) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            areas: Array.from({ length: 50000 }, (_, index) => ({
+              areaId: index + 1,
+              contentUpdatedAt: '2026-04-03T00:00:00Z',
+            })),
+          },
+        })
+      }
+      return mockSsrFetchImpl(path)
+    }) as typeof ssrFetch)
+    const { default: indexHandler } = await import('../../server/routes/sitemap.xml')
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+
+    const indexXml = (await indexHandler(createMockEvent('/sitemap.xml') as never)) as string
+    expect(countChunksForCategory(indexXml, 'trash')).toBe(2)
+
+    const secondEvent = createMockEvent('/sitemap/trash-2.xml')
+    const secondXml = (await chunkHandler(secondEvent as never)) as string
+    expect(secondEvent.node.res.statusCode).toBeUndefined()
+    expect(secondXml).toContain('<loc>https://ilsangkit.co.kr/trash/areas/')
+
+    const thirdEvent = createMockEvent('/sitemap/trash-3.xml')
+    await chunkHandler(thirdEvent as never)
+    expect(thirdEvent.node.res.statusCode).toBe(404)
   })
 
   // static.xml.ts 는 utils/sitemap.ts 의 fetch 헬퍼를 쓰지 않고 ssrFetch 를 직접 호출한다.
@@ -669,7 +739,17 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
       return Promise.resolve({ success: true, data: hubData })
     }
     if (path.includes('/api/sitemap/waste-schedule-regions')) {
-      return Promise.resolve({ success: true, data: { regions: [] } })
+      return Promise.resolve({
+        success: true,
+        data: {
+          regions: [
+            { city: '서울특별시', district: '강남구', updatedAt: '2026-04-01T00:00:00Z' },
+          ],
+        },
+      })
+    }
+    if (path.includes('/api/sitemap/waste-areas')) {
+      return Promise.resolve({ success: true, data: { areas: [] } })
     }
     if (
       path.includes('/api/sitemap/real-estate-buildings') ||
@@ -757,7 +837,7 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
 
 describe('real-estate sitemap — invalid building name filtering', () => {
   const buildingData = [
-    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700', lastmod: '2026-06-15' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700', buildingKey: 'a'.repeat(64), lastmod: '2026-06-15' },
     { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '(535-3)', bjdCode: '1168011701', lastmod: '2026-06-15' },
     { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '123-4', bjdCode: '1168011702', lastmod: '2026-06-15' },
     { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700', lastmod: '2026-03-01' },
@@ -803,6 +883,15 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
     const urlCount = (xml.match(/<url>/g) ?? []).length
     expect(urlCount).toBe(2)
+  })
+
+  it('buildingKey가 있어도 부동산 상세 URL에는 해시 segment를 방출하지 않는다', async () => {
+    const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
+    const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
+    expect(xml).toContain(
+      `https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('래미안강남')}`,
+    )
+    expect(xml).not.toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
   })
 
   it('건물별 최근 실거래월(item.lastmod)이 per-URL lastmod로 방출된다', async () => {
@@ -960,7 +1049,17 @@ describe('land sitemap — isIndexable quality gate', () => {
         return Promise.resolve({ success: true, data: [] })
       }
       if (path.includes('/api/sitemap/waste-schedule-regions')) {
-        return Promise.resolve({ success: true, data: { regions: [] } })
+        return Promise.resolve({
+          success: true,
+          data: {
+            regions: [
+              { city: '서울특별시', district: '강남구', updatedAt: '2026-04-01T00:00:00Z' },
+            ],
+          },
+        })
+      }
+      if (path.includes('/api/sitemap/waste-areas')) {
+        return Promise.resolve({ success: true, data: { areas: [] } })
       }
       if (path.includes('/api/sitemap/waste-schedules')) {
         return Promise.resolve({ success: true, data: [] })

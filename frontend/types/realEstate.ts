@@ -1,3 +1,5 @@
+import type { LatestDeals } from './realEstateExploration'
+
 // 카테고리 (camelCase, 내부 사용)
 export type RealEstateCategory = 'aptSale' | 'aptRent' | 'villaSale' | 'villaRent' | 'offitelSale' | 'offitelRent'
 
@@ -21,6 +23,7 @@ export type RealEstateHubType = (typeof HUB_TYPES)[number]
 
 // 매매 거래 (아파트, 빌라, 오피스텔)
 export interface SaleTransaction {
+  buildingKey?: string
   id: number
   city: string
   district: string
@@ -49,6 +52,7 @@ export interface SaleTransaction {
 
 // 전월세 거래
 export interface RentTransaction {
+  buildingKey?: string
   id: number
   city: string
   district: string
@@ -112,9 +116,12 @@ export interface StatsResponse {
 // 건물 정보
 export interface ComplexInfo {
   type?: RealEstateType
+  buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
   bjdCode: string
   dongName: string
+  jibun?: string | null
   city: string
   district: string
   latestPrice: number | null
@@ -124,10 +131,14 @@ export interface ComplexInfo {
   lastDealYear: number | null
   lastDealMonth: number | null
   buildYear: number | null
+  latestDeals?: LatestDeals
 }
 
 // 건물 상세 정보
 export interface BuildingInfo {
+  buildingKey?: string
+  canonicalPath?: string | null
+  legacyGrouped?: boolean
   bjdCode: string
   buildingName: string
   city: string
@@ -264,11 +275,14 @@ export interface PriceAnalysis {
 
 // 인근 단지 아이템
 export interface NearbyComplexItem {
+  buildingKey?: string
+  canonicalPath?: string | null
   buildingName: string
   bjdCode: string
   city: string
   district: string
   dongName: string
+  jibun?: string | null
   buildYear: number | null
   transactionCount: number
   /** sale: 매매가(만원). rent: 보증금(만원). */

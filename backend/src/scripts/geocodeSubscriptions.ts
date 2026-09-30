@@ -138,6 +138,8 @@ export async function getSubscriptionsToGeocode(
   const results = await prisma.subscription.findMany({
     where: {
       lat: null,
+      sourceType: { not: 'PUBLIC_RENT' },
+      supersededById: null,
       supplyLocation: { not: null },
       // MAX 도달한 주소는 영구 스킵 — 무한 재시도로 시간예산 태우는 것 방지.
       geocodeAttempts: { lt: MAX_GEOCODE_ATTEMPTS },

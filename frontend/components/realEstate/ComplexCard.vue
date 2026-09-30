@@ -20,7 +20,7 @@
           {{ complex.buildingName }}
         </h3>
         <p class="text-faint text-xs truncate mt-0.5">
-          {{ complex.city }} {{ complex.district }} {{ complex.dongName }}
+          {{ complex.city }} {{ complex.district }} {{ complex.dongName }} {{ complex.jibun }}
         </p>
       </div>
     </div>
@@ -85,7 +85,14 @@ const isRenderable = computed(() => {
 const linkUrl = computed(() => {
   const { buildingName, city, district } = props.complex
   const type = `${props.propertyType}-${props.tab}` as RealEstateUrlType
-  return toRealEstateUrl({ type, city: city as string, district: district as string, buildingName })
+  return toRealEstateUrl({
+    type,
+    city: city as string,
+    district: district as string,
+    buildingName,
+    buildingKey: props.complex.buildingKey,
+    canonicalPath: props.complex.canonicalPath,
+  })
 })
 
 const PROPERTY_ICONS: Record<string, { img: string; bg: string }> = {

@@ -53,4 +53,22 @@ describe('HomeTrendingBuildings', () => {
     const saleLink = wrapper.find(`a[href*="/real-estate/apt-sale/seoul/songpa/"]`);
     expect(saleLink.exists()).toBe(true);
   });
+
+  it('keeps the original public detail path and displays dong/jibun when supplied', () => {
+    const buildingKey = 'a'.repeat(64);
+    const wrapper = mount(HomeTrendingBuildings, {
+      props: {
+        buildings: {
+          sale: [{ ...buildings.sale[0], buildingKey, dongName: '가락동', jibun: '479' }],
+          jeonse: [],
+          wolse: [],
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain('송파구 가락동 479');
+    expect(wrapper.get('a[href*="/real-estate/apt-sale/"]').attributes('href')).toBe(
+      `/real-estate/apt-sale/seoul/songpa/${encodeURIComponent('헬리오시티')}`,
+    );
+  });
 });

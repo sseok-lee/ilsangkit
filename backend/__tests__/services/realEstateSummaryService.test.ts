@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { mockExecuteRawUnsafe, mockQueryRawUnsafe, mockTransaction } = vi.hoisted(() => ({
   mockExecuteRawUnsafe: vi.fn(),
@@ -15,7 +18,7 @@ vi.mock('../../src/lib/prisma.js', () => {
   return { prisma, default: prisma };
 });
 
-import { refreshSummary, refreshAllSummaries } from '../../src/services/realEstateSummaryService.js';
+import { refreshSummary, refreshAllSummaries, refreshAddressSummaries, refreshSummariesForActiveMode } from '../../src/services/realEstateSummaryService.js';
 import { TABLE_NAME_MAP } from '../../src/services/realEstateService.js';
 
 // 기본 동작: $transaction은 콜백을 그대로 실행하고 결과를 반환.
@@ -28,11 +31,36 @@ function setupTransactionPassthrough() {
 }
 
 describe('refreshSummary (city-chunked)', () => {
+  let lockDir: string;
+
   beforeEach(() => {
+    lockDir = mkdtempSync(join(tmpdir(), 'summary-lock-'));
+    process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();
     mockQueryRawUnsafe.mockReset();
     mockTransaction.mockReset();
     setupTransactionPassthrough();
+  });
+
+  afterEach(() => {
+    delete process.env.REAL_ESTATE_SUMMARY_MODE;
+    delete process.env.REAL_ESTATE_URL_MODE;
+    delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+    delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
+    rmSync(lockDir, { recursive: true, force: true });
+  });
+
+  it('does not report a city refresh as published when its URL registry cannot be prepared', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+    // This transaction deliberately has no readable registry. Summary publication
+    // must fail inside its transaction rather than commit URLs that cannot resolve.
+    const result = await refreshAddressSummaries(['apt-sale']);
+    expect(result.complete).toBe(false);
+    expect(result.batches).toEqual([expect.objectContaining({
+      type: 'apt-sale', city: '서울', status: 'failed', rowCount: 0,
+    })]);
   });
 
   it('알 수 없는 타입은 throw', async () => {
@@ -61,9 +89,9 @@ describe('refreshSummary (city-chunked)', () => {
 
     await refreshSummary('villa-rent');
 
-    // 서울, 경기 2개 city만 처리. villa-rent는 전월세 타입이라 city당
-    // 기본 갱신 트랜잭션 + 분리 UPDATE 트랜잭션 2개씩 실행된다.
-    expect(mockTransaction).toHaveBeenCalledTimes(4);
+    // 서울, 경기 2개 city만 처리. V2 refresh는 DELETE+INSERT+rent UPDATE를
+    // city당 하나의 atomic transaction으로 실행한다.
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
   });
 
   it('각 city마다 별도 $transaction으로 SET lock_wait_timeout + DELETE + INSERT 순차 실행', async () => {
@@ -79,9 +107,9 @@ describe('refreshSummary (city-chunked)', () => {
 
     const calls = mockExecuteRawUnsafe.mock.calls.map((c) => String(c[0]));
     expect(calls[0]).toContain('SET SESSION innodb_lock_wait_timeout');
-    expect(calls[1]).toContain('DELETE FROM RealEstateBuildingSummary');
+    expect(calls[1]).toContain('DELETE FROM RealEstateBuildingSummaryV2');
     expect(calls[1]).toContain('city = ?');
-    expect(calls[2]).toContain('INSERT INTO RealEstateBuildingSummary');
+    expect(calls[2]).toContain('INSERT INTO RealEstateBuildingSummaryV2');
     expect(calls[2]).toContain('WHERE city = ?');
 
     // city 인자 전달 확인
@@ -101,8 +129,8 @@ describe('refreshSummary (city-chunked)', () => {
     const outerMatch = insertSql.match(/SELECT([\s\S]+?)FROM\s+\(/i);
     expect(outerMatch).not.toBeNull();
     expect(outerMatch![1]).toContain('_txCount AS transactionCount');
-    expect(outerMatch![1]).toContain('_maxLat AS lat');
-    expect(outerMatch![1]).toContain('_maxLng AS lng');
+    expect(outerMatch![1]).toContain('_lat AS lat');
+    expect(outerMatch![1]).toContain('_lng AS lng');
     expect(outerMatch![1]).not.toMatch(/COUNT\(\*\)\s+OVER/i);
 
     // inner 서브쿼리에 ROW_NUMBER + COUNT + MAX 모두 존재
@@ -110,8 +138,30 @@ describe('refreshSummary (city-chunked)', () => {
     expect(innerMatch).not.toBeNull();
     expect(innerMatch![1]).toMatch(/ROW_NUMBER\(\)\s+OVER/i);
     expect(innerMatch![1]).toMatch(/COUNT\(\*\)\s+OVER[\s\S]+?AS\s+_txCount/i);
-    expect(innerMatch![1]).toMatch(/MAX\(lat\)\s+OVER[\s\S]+?AS\s+_maxLat/i);
-    expect(innerMatch![1]).toMatch(/MAX\(lng\)\s+OVER[\s\S]+?AS\s+_maxLng/i);
+    expect(innerMatch![1]).toMatch(/FIRST_VALUE\(lat\)\s+OVER/i);
+    expect(innerMatch![1]).toMatch(/FIRST_VALUE\(lng\)\s+OVER/i);
+    expect(innerMatch![1]).toContain('(lat IS NULL OR lng IS NULL) ASC');
+    expect(innerMatch![1]).not.toMatch(/MAX\(lat\)\s+OVER/i);
+    expect(innerMatch![1]).not.toMatch(/MAX\(lng\)\s+OVER/i);
+  });
+
+  it('summary 행은 건물명/법정동/동/지번 단위로 생성하고 한 원본 행의 좌표쌍을 보존한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+
+    await refreshSummary('villa-sale');
+
+    const insertSql = String(mockExecuteRawUnsafe.mock.calls[2][0]);
+    expect(insertSql).toContain('buildingKey');
+    expect(insertSql).toContain('jibun');
+    expect(insertSql).toContain('SHA2(CONCAT_WS(CHAR(31)');
+    expect(insertSql).toContain('TRIM(jibun)');
+    expect(insertSql).toContain('PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), \'\')');
+    expect(insertSql).toContain('COUNT(*) OVER (PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), \'\'))');
+    expect(insertSql).toContain('_lat AS lat');
+    expect(insertSql).toContain('_lng AS lng');
+    expect(insertSql).not.toContain('MAX(lat) OVER');
+    expect(insertSql).not.toContain('MAX(lng) OVER');
   });
 
   // monthlyRent: 전월세는 소스 컬럼을 담고, 매매는 NULL 이어야 한다.
@@ -152,7 +202,7 @@ describe('refreshSummary (city-chunked)', () => {
 
     // SQL 주석(-- …)에도 콤마가 있어(예: "outer에 있으므로,") 먼저 걷어낸다.
     const sql = String(mockExecuteRawUnsafe.mock.calls[2][0]).replace(/--[^\n]*/g, '');
-    const cols = sql.match(/RealEstateBuildingSummary\s*\(([\s\S]+?)\)\s*SELECT/i);
+    const cols = sql.match(/RealEstateBuildingSummaryV2\s*\(([\s\S]+?)\)\s*SELECT/i);
     expect(cols).not.toBeNull();
     const colCount = cols![1].split(',').length;
 
@@ -235,20 +285,86 @@ describe('refreshSummary (city-chunked)', () => {
     errorSpy.mockRestore();
   });
 
-  it('DISTINCT city 조회 자체가 실패하면 에러 전파', async () => {
+
+  it('V2 refresh reports rent update failure and rolls back that city while later cities continue', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }, { city: '경기' }]);
+    let txCall = 0;
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      txCall++;
+      const tx = {
+        $executeRawUnsafe: vi.fn(async (sql: string) => {
+          if (txCall === 1 && String(sql).includes('UPDATE RealEstateBuildingSummaryV2')) {
+            throw new Error('rent update failed');
+          }
+          if (String(sql).trim().startsWith('INSERT')) return 2;
+          return 0;
+        }),
+      };
+      return await cb(tx);
+    });
+
+    const result = await refreshAddressSummaries(['apt-rent']);
+
+    expect(result.complete).toBe(false);
+    expect(result.batches).toEqual([
+      expect.objectContaining({ type: 'apt-rent', city: '서울', status: 'failed', rowCount: 0, error: expect.stringContaining('rent update failed') }),
+      expect.objectContaining({ type: 'apt-rent', city: '경기', status: 'complete', rowCount: 2 }),
+    ]);
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it('DISTINCT city 조회 자체가 실패하면 failed batch로 격리하고 0을 반환', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockQueryRawUnsafe.mockRejectedValueOnce(new Error('table not exists'));
 
-    await expect(refreshSummary('apt-sale')).rejects.toThrow('table not exists');
+    await expect(refreshSummary('apt-sale')).resolves.toBe(0);
     expect(mockTransaction).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('apt-sale city inventory failed'),
+      expect.any(Error),
+    );
+
+    errorSpy.mockRestore();
+  });
+
+  it('compatibility mode refreshes V2 and legacy summaries under one service entrypoint', async () => {
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
+    mockQueryRawUnsafe.mockResolvedValue([{ city: '서울' }]);
+    mockExecuteRawUnsafe.mockResolvedValue(2);
+
+    const result = await refreshSummariesForActiveMode(['apt-rent']);
+
+    expect(result.complete).toBe(true);
+    expect(result.batches).toEqual([
+      expect.objectContaining({ type: 'apt-rent', city: '서울', status: 'complete' }),
+      expect.objectContaining({ type: 'apt-rent', city: '서울', status: 'complete' }),
+    ]);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(2);
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
+    const executed = mockExecuteRawUnsafe.mock.calls.map((call) => String(call[0]));
+    expect(executed.some((sql) => sql.includes('INSERT INTO RealEstateBuildingSummaryV2'))).toBe(true);
+    expect(executed.some((sql) => sql.includes('INSERT INTO RealEstateBuildingSummary\n'))).toBe(true);
+    expect(process.env.REAL_ESTATE_WRITE_LOCK_TOKEN).toBeUndefined();
   });
 });
 
 describe('refreshAllSummaries', () => {
+  let lockDir: string;
+
   beforeEach(() => {
+    lockDir = mkdtempSync(join(tmpdir(), 'summary-lock-'));
+    process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();
     mockQueryRawUnsafe.mockReset();
     mockTransaction.mockReset();
     setupTransactionPassthrough();
+  });
+
+  afterEach(() => {
+    delete process.env.REAL_ESTATE_SUMMARY_MODE;
+    delete process.env.REAL_ESTATE_WRITE_LOCK_TOKEN;
+    delete process.env.REAL_ESTATE_WRITE_LOCK_DIR;
+    rmSync(lockDir, { recursive: true, force: true });
   });
 
   it('TABLE_NAME_MAP의 모든 타입에 대해 refreshSummary를 호출', async () => {
@@ -261,9 +377,8 @@ describe('refreshAllSummaries', () => {
     const types = Object.keys(TABLE_NAME_MAP);
     // 타입 수만큼 DISTINCT city 쿼리
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
-    // city 1개씩: 매매는 기본 갱신 트랜잭션 1개, 전월세는 기본 갱신 + 분리 UPDATE 2개.
-    const expectedTx = types.reduce((sum, t) => sum + (t.endsWith('-rent') ? 2 : 1), 0);
-    expect(mockTransaction).toHaveBeenCalledTimes(expectedTx);
+    // V2 refresh keeps DELETE+INSERT+rent UPDATE atomic in one transaction per type/city.
+    expect(mockTransaction).toHaveBeenCalledTimes(types.length);
   });
 
   it('한 타입의 DISTINCT city 쿼리가 실패해도 나머지 타입은 계속', async () => {
@@ -282,12 +397,8 @@ describe('refreshAllSummaries', () => {
 
     // 모든 타입에 대해 DISTINCT city 시도
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(types.length);
-    // 첫 타입(쿼리 실패)은 트랜잭션 없음, 나머지 타입은 처리됨 — 매매는 1개,
-    // 전월세는 기본 갱신 + 분리 UPDATE 2개.
-    const expectedTx = types
-      .slice(1)
-      .reduce((sum, t) => sum + (t.endsWith('-rent') ? 2 : 1), 0);
-    expect(mockTransaction).toHaveBeenCalledTimes(expectedTx);
+    // 첫 타입(쿼리 실패)은 트랜잭션 없음, 나머지 타입은 처리됨.
+    expect(mockTransaction).toHaveBeenCalledTimes(types.length - 1);
     expect(errorSpy).toHaveBeenCalled();
 
     errorSpy.mockRestore();
@@ -345,20 +456,19 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     return mockExecuteRawUnsafe.mock.calls.map((c) => String(c[0]));
   }
 
-  it('전월세 타입은 city 배치마다 DELETE, INSERT, UPDATE 순으로 실행한다 — UPDATE 는 별도 트랜잭션', async () => {
+  it('전월세 타입은 city 배치마다 DELETE, INSERT, UPDATE 순으로 한 트랜잭션에서 실행한다', async () => {
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }]);
     mockExecuteRawUnsafe.mockResolvedValue(1);
 
     await refreshSummary('apt-rent');
 
     const sql = executedSql();
-    // [0] 첫 트랜잭션 SET, [1] DELETE, [2] INSERT, [3] 두번째 트랜잭션 SET, [4] UPDATE.
-    // B-2: 분리 UPDATE는 DELETE+INSERT 트랜잭션이 커밋된 뒤 별도 $transaction으로 실행된다.
-    expect(sql[1]).toContain('DELETE FROM RealEstateBuildingSummary');
-    expect(sql[2]).toContain('INSERT INTO RealEstateBuildingSummary');
-    expect(sql[3]).toContain('SET SESSION innodb_lock_wait_timeout');
-    expect(sql[4]).toContain('UPDATE RealEstateBuildingSummary');
-    expect(mockTransaction).toHaveBeenCalledTimes(2);
+    // [0] SET, [1] DELETE, [2] INSERT, [3] UPDATE.
+    expect(sql[0]).toContain('SET SESSION innodb_lock_wait_timeout');
+    expect(sql[1]).toContain('DELETE FROM RealEstateBuildingSummaryV2');
+    expect(sql[2]).toContain('INSERT INTO RealEstateBuildingSummaryV2');
+    expect(sql[3]).toContain('UPDATE RealEstateBuildingSummaryV2');
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('매매 타입은 UPDATE 패스를 건너뛴다 — 매매 테이블에는 rentType 컬럼이 없다', async () => {
@@ -378,7 +488,10 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
 
     const update = executedSql().find((s) => s.includes('UPDATE RealEstateBuildingSummary'))!;
     // rentType 축을 넣은 ROW_NUMBER 로 종류별 최신을 고른 뒤 rn=1 만 남긴다.
-    expect(update).toContain('PARTITION BY buildingName, bjdCode, rentType');
+    expect(update).toContain('PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), \'\'), rentType');
+    expect(update).toContain('GROUP BY buildingName, bjdCode, dongKey, jibunKey');
+    expect(update).toContain('t.dongKey = TRIM(s.dongName)');
+    expect(update).toContain("t.jibunKey = COALESCE(TRIM(s.jibun), '')");
     expect(update).toContain('rn = 1');
     for (const col of ['jeonseDeposit', 'jeonseDealKey', 'wolseDeposit', 'wolseMonthlyRent', 'wolseDealKey']) {
       expect(update).toContain(col);
@@ -420,7 +533,7 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
     errorSpy.mockRestore();
   });
 
-  it('UPDATE 가 던져도 DELETE+INSERT 트랜잭션은 별도로 이미 커밋된 채 남고 total 에 반영된다 (B-2)', async () => {
+  it('UPDATE 가 던지면 해당 city 전체를 실패 처리하고 다음 city 로 계속한다', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockQueryRawUnsafe.mockResolvedValueOnce([{ city: '서울' }, { city: '경기' }]);
     mockExecuteRawUnsafe.mockImplementation(async (sql: string) => {
@@ -434,17 +547,11 @@ describe('refreshSummary — 전세/월세 분리 컬럼 UPDATE 패스', () => {
 
     const total = await refreshSummary('apt-rent');
 
-    // UPDATE 가 매번 실패해도 INSERT 결과(city당 5)는 살아서 합산된다 —
-    // 즉 DELETE+INSERT 트랜잭션이 UPDATE 실패로 롤백되지 않았다는 뜻이다.
-    expect(total).toBe(10);
-    // city마다 기본 갱신 + 분리 UPDATE 두 트랜잭션씩, 2개 city 모두 처리(루프가 안 멈춤).
-    expect(mockTransaction).toHaveBeenCalledTimes(4);
+    // V2 refresh는 DELETE+INSERT+UPDATE를 한 트랜잭션으로 묶으므로 UPDATE 실패 city는
+    // rowCount 0으로 격리되고 complete batch만 refreshSummary 합계에 반영된다.
+    expect(total).toBe(0);
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('전월세 분리 UPDATE 실패'),
-      expect.any(Error),
-    );
-    // 기본 갱신 실패 로그(`실패:`)는 찍히지 않는다 — UPDATE 실패는 base 트랜잭션과 무관하다.
-    expect(errorSpy).not.toHaveBeenCalledWith(
       expect.stringMatching(/apt-rent\/(서울|경기) 실패:/),
       expect.any(Error),
     );
