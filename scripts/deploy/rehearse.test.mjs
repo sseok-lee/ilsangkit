@@ -37,6 +37,11 @@ const baseProbe = {
   },
 }
 
+function isHashDetailRequestPath(path) {
+  const segments = String(path).split('/').filter(Boolean)
+  return segments.length === 6 && segments[0] === 'real-estate' && /^[a-f0-9]{64}$/i.test(segments[5] ?? '')
+}
+
 function requiredProbes() {
   const typeProbes = ['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'].map((type) => ({
     name: `${type}-list`,
@@ -49,15 +54,17 @@ function requiredProbes() {
     { name: 'sitemap', path: '/sitemap.xml', expect: { status: 200, releaseId: 'address-a' } },
     { name: 'same-name-address-a', path: '/api/real-estate/apt-sale/building-info?bjdCode=1168010100&buildingName=같은이름검증&buildingKey=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', expect: { status: 200, releaseId: 'address-a', addressKey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } },
     { name: 'same-name-address-b', path: '/api/real-estate/apt-sale/building-info?bjdCode=1168010100&buildingName=같은이름검증&buildingKey=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', expect: { status: 200, releaseId: 'address-a', addressKey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' } },
-    { name: 'same-name-address-a-html', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } },
-    { name: 'same-name-address-b-html', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' } },
+    { name: 'same-name-address-a-html', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } },
+    { name: 'same-name-address-b-html', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/%EC%97%AD%EC%82%BC%EB%8F%99-124-1', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' } },
+    { name: 'same-name-address-a-hash-404', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', expect: { status: 404 } },
+    { name: 'same-name-address-b-hash-404', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', expect: { status: 404 } },
     { name: 'land-query-a', path: '/api/real-estate/land/transactions?keyword=A', expect: { status: 200, releaseId: 'address-a', total: 2, minItems: 1 } },
     { name: 'land-query-b', path: '/api/real-estate/land/transactions?keyword=B', expect: { status: 200, releaseId: 'address-a', total: 2, minItems: 1 } },
     { name: 'land-query-a-html', path: '/real-estate/land/seoul/gangnam/역삼동?q=A', expect: { status: 200, releaseId: 'address-a', bodyIncludes: '토지' } },
     { name: 'land-query-b-html', path: '/real-estate/land/seoul/gangnam/역삼동?q=B', expect: { status: 200, releaseId: 'address-a', bodyIncludes: '토지' } },
     { name: 'hashed-asset', path: '/_nuxt/app.abc123.js', expect: { status: 200, releaseId: 'address-a', assetStatus: 200 } },
     { name: 'old-unkeyed-detail', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증', expect: { status: 200, releaseId: 'address-a' } },
-    { name: 'new-keyed-retention', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } },
+    { name: 'new-keyed-retention', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증', expect: { status: 200, releaseId: 'address-a', bodyIncludes: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } },
     { name: 'retained-old-asset', path: '/_nuxt/oldhash.js', expect: { status: 200, releaseId: 'address-a', assetStatus: 200 } },
     { name: 'retained-old-html-hash', path: '/real-estate/apt-sale/seoul/gangnam/같은이름검증', extractAsset: true, expect: { status: 200, releaseId: 'address-a', oldHash: 'oldhash' } },
     { name: 'long-inflight-switch', path: '/api/rehearsal/slow', longInflight: true, expect: { status: 200, releaseId: 'old-main', completedAfterCommand: true } },
@@ -106,6 +113,9 @@ function validInventory(extra = {}) {
     inventoryPath: '/tmp/ilsangkit-c3/release-inventory.json',
     manifestPath: '/tmp/ilsangkit-c3/address-manifest.json',
     compatibilityManifestPath: '/tmp/ilsangkit-c3/compat-manifest.json',
+    urlBaselinePath: '/tmp/ilsangkit-c3/url-baseline.json',
+    expectedUrlFingerprint: 'f'.repeat(64),
+    expectedUrlPlanFingerprint: 'p'.repeat(64),
     summaryTransitionReportPath: '/tmp/ilsangkit-c3/summary-transition-report.json',
     phaseDurationMs: 200,
     longInflightStartSignalPath: null,
@@ -118,7 +128,7 @@ function validInventory(extra = {}) {
     retention: {
       rollbackReleaseId: 'compat-a',
       oldUnkeyedUrl: '/real-estate/apt-sale/seoul/gangnam/같은이름검증',
-      newKeyedUrl: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      newKeyedUrl: '/real-estate/apt-sale/seoul/gangnam/같은이름검증',
       oldAssetPath: '/_nuxt/oldhash.js',
       oldAssetHash: 'oldhash',
       longInflightUrl: '/api/rehearsal/slow',
@@ -335,6 +345,15 @@ test('validateRehearsalInventory requires six types, address identity, failure m
 
   const oneDeploy = validInventory({ normalDeploys: [{ name: 'only-deploy', expectSummaryPrepareCalls: 0, expectAssetDeleteCalls: 0 }] })
   assert.throws(() => validateRehearsalInventory(oneDeploy), /two normal deploy/)
+
+  const missingUrlBaseline = validInventory({ urlBaselinePath: undefined })
+  assert.throws(() => validateRehearsalInventory(missingUrlBaseline), /urlBaselinePath is required/)
+
+  const relativeUrlBaseline = validInventory({ urlBaselinePath: 'url-baseline.json' })
+  assert.throws(() => validateRehearsalInventory(relativeUrlBaseline), /urlBaselinePath must be an absolute path/)
+
+  const missingUrlFingerprints = validInventory({ expectedUrlFingerprint: '', expectedUrlPlanFingerprint: '' })
+  assert.throws(() => validateRehearsalInventory(missingUrlFingerprints), /expectedUrlFingerprint is required[\s\S]*expectedUrlPlanFingerprint is required/)
 })
 
 test('buildRuntimePlan prepares guarded real release orchestration without executing runtime', () => {
@@ -384,6 +403,7 @@ test('executeRuntimePlan can run summary transition from explicit backend cwd wi
   const fetch = async (url) => {
     const path = new URL(String(url)).pathname
     const isApi = path.startsWith('/api/')
+    const hash404 = isHashDetailRequestPath(path)
     const releaseId = path === '/api/rehearsal/slow' ? 'old-main' : 'address-a'
     const key = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     const json = { data: { releaseId, buildingKey: key, identity: { buildingKey: key }, pagination: { total: 2 }, items: [{ id: 1 }] } }
@@ -391,7 +411,7 @@ test('executeRuntimePlan can run summary transition from explicit backend cwd wi
       ? '<html><main>토지 C3 검증</main></html>'
       : `<html><script src="/_nuxt/oldhash.js"></script><main>${key}</main></html>`
     return {
-      status: 200,
+      status: hash404 ? 404 : 200,
       headers: { get: (name) => (String(name).toLowerCase() === 'content-type' ? (isApi ? 'application/json' : 'text/html') : releaseId) },
       text: async () => isApi ? JSON.stringify(json) : html,
     }
@@ -430,6 +450,9 @@ test('executeRuntimePlan can run summary transition from explicit backend cwd wi
   assert.equal(transitionRun.cwd, backendCwd)
   assert.equal(transitionRun.args[0], resolve(process.cwd(), inventory.summaryTransitionScriptPath))
   assert.equal(transitionRun.args[transitionRun.args.indexOf('--release-script') + 1], resolve(process.cwd(), inventory.releaseScriptPath))
+  assert.equal(transitionRun.args[transitionRun.args.indexOf('--url-baseline') + 1], inventory.urlBaselinePath)
+  assert.equal(transitionRun.args[transitionRun.args.indexOf('--expected-url-fingerprint') + 1], inventory.expectedUrlFingerprint)
+  assert.equal(transitionRun.args[transitionRun.args.indexOf('--expected-url-plan-fingerprint') + 1], inventory.expectedUrlPlanFingerprint)
 })
 
 test('executeRuntimePlan validates preflight, runs failure matrix, and asserts measured normal deploy counts', async () => {
@@ -441,6 +464,7 @@ test('executeRuntimePlan validates preflight, runs failure matrix, and asserts m
     const isSlow = String(url).includes('/api/rehearsal/slow')
     if (isSlow) await new Promise((resolve) => setTimeout(resolve, 5))
     const isApi = path.startsWith('/api/')
+    const hash404 = isHashDetailRequestPath(path)
     const releaseId = isSlow ? 'old-main' : 'address-a'
     const key = path.includes('/building-info') && String(url).includes('bbbbbbbb')
       ? 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
@@ -450,8 +474,8 @@ test('executeRuntimePlan validates preflight, runs failure matrix, and asserts m
       : `<html><script src="/_nuxt/oldhash.js"></script><main>${key}</main></html>`
     const json = { data: { releaseId, buildingKey: key, identity: { buildingKey: key }, pagination: { total: 2 }, items: [{ id: 1, buildingName: 'C3공통주택' }] } }
     return {
-      status: 200,
-      ok: true,
+      status: hash404 ? 404 : 200,
+      ok: !hash404,
       headers: { get: (name) => (String(name).toLowerCase() === 'content-type' ? (isApi ? 'application/json' : 'text/html') : releaseId) },
       json: async () => json,
       text: async () => isApi ? JSON.stringify(json) : html,
@@ -498,6 +522,12 @@ test('executeRuntimePlan validates preflight, runs failure matrix, and asserts m
   assert.ok(transitionCommand)
   assert.ok(transitionCommand.includes('--compatibility-manifest'))
   assert.ok(transitionCommand.includes(inventory.compatibilityManifestPath))
+  assert.ok(transitionCommand.includes('--url-baseline'))
+  assert.ok(transitionCommand.includes(inventory.urlBaselinePath))
+  assert.ok(transitionCommand.includes('--expected-url-fingerprint'))
+  assert.ok(transitionCommand.includes(inventory.expectedUrlFingerprint))
+  assert.ok(transitionCommand.includes('--expected-url-plan-fingerprint'))
+  assert.ok(transitionCommand.includes(inventory.expectedUrlPlanFingerprint))
   assert.ok(transitionCommand.includes('--report-out'))
   assert.ok(transitionCommand.includes(inventory.summaryTransitionReportPath))
   assert.ok(commands.some((command) => command.includes('rollback')))
@@ -538,6 +568,7 @@ test('executeRuntimePlan starts long inflight from address journal signal by def
         await new Promise((resolve) => setTimeout(resolve, 10))
       }
       const isApi = path.startsWith('/api/')
+      const hash404 = isHashDetailRequestPath(path)
       const releaseId = isSlow ? 'old-main' : 'address-a'
       const key = path.includes('/building-info') && String(url).includes('bbbbbbbb')
         ? 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
@@ -547,7 +578,7 @@ test('executeRuntimePlan starts long inflight from address journal signal by def
         ? '<html><main>토지 C3 검증</main></html>'
         : `<html><script src="/_nuxt/oldhash.js"></script><main>${key}</main></html>`
       return {
-        status: 200,
+        status: hash404 ? 404 : 200,
         headers: { get: (name) => (String(name).toLowerCase() === 'content-type' ? (isApi ? 'application/json' : 'text/html') : releaseId) },
         json: async () => json,
         text: async () => isApi ? JSON.stringify(json) : html,
@@ -1159,8 +1190,8 @@ test('executeRuntimePlan rejects normal deploy results that only echo expected c
 
 
 test('generateRehearsalProbes derives real 64-hex keyed URLs, real asset path, and phase release contracts', () => {
-  const addressA = { label: 'a', type: 'apt-sale', propertyType: 'apt', citySlug: 'seoul', districtSlug: 'gangnam', buildingName: '같은이름검증', bjdCode: '1168010100', dongName: '역삼동', jibun: '123' }
-  const addressB = { ...addressA, label: 'b', jibun: '124-1' }
+  const addressA = { label: 'a', type: 'apt-sale', propertyType: 'apt', citySlug: 'seoul', districtSlug: 'gangnam', buildingName: '같은이름검증', bjdCode: '1168010100', dongName: '역삼동', jibun: '123', currentUrl: '/real-estate/apt-sale/seoul/gangnam/같은이름검증' }
+  const addressB = { ...addressA, label: 'b', jibun: '124-1', currentUrl: '/real-estate/apt-sale/seoul/gangnam/같은이름검증/%EC%97%AD%EC%82%BC%EB%8F%99-124-1' }
   const seedReport = {
     releaseIds: { old: 'old-main', compatibility: 'compat-a', address: 'address-a' },
     sameNameBuildings: [addressA, addressB],
@@ -1201,8 +1232,13 @@ test('generateRehearsalProbes derives real 64-hex keyed URLs, real asset path, a
   assert.equal(probes.find((probe) => probe.name === 'apt-sale-list').expectByPhase['rollback-retention'].total, 1)
   assert.equal(probes.find((probe) => probe.name === 'apt-sale-html-list').path, '/real-estate/apt-sale/seoul/gangnam')
   assert.equal(probes.find((probe) => probe.name === 'old-unkeyed-detail').path, '/real-estate/apt-sale/seoul/gangnam/첫번째-old-unique')
-  assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-html').path, `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('같은이름검증')}/${key}`)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-html').path, addressA.currentUrl)
   assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-html').expectByPhase['post-switch-address'].bodyIncludes, key)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-b-html').path, addressB.currentUrl)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-hash-404').path, `/real-estate/apt-sale/seoul/gangnam/${encodeURIComponent('같은이름검증')}/${key}`)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-hash-404').expectByPhase['post-switch-address'].status, 404)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-a-hash-404').expectByPhase['rollback-retention'].status, 404)
+  assert.equal(probes.find((probe) => probe.name === 'same-name-address-b-hash-404').expectByPhase['rollback-transition'].status, 404)
   assert.equal(probes.find((probe) => probe.name === 'new-keyed-retention').path, probes.find((probe) => probe.name === 'same-name-address-a-html').path)
   assert.equal(probes.find((probe) => probe.name === 'new-keyed-retention').expectByPhase['post-switch-address'].bodyIncludes, key)
   assert.deepEqual(probes.find((probe) => probe.name === 'new-keyed-retention').expectByPhase['rollback-transition'].releaseIds, ['address-a', 'compat-a'])

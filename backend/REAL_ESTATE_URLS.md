@@ -51,6 +51,58 @@
 주소 모드의 `/api/internal/release-readiness`는 `preserved` 활성화와 매핑 준비가
 모두 확인되어야 통과한다. 준비 단계의 `keyed`로는 주소 모드 배포를 진행할 수 없다.
 
+## 보류된 동명 단지의 주소 분리
+
+이미 `legacy-deferred`로 준비된 그룹은 baseline만 추가하면 분리되지 않는다.
+운영 상세 화면/API에서 현재 표시하는 동·지번을 캡처해 baseline에 기록한 뒤,
+`--resolve-deferred`로 그 그룹의 보류를 명시적으로 해제한다. 한 단지는 기존
+`/{건물명}`을 유지하고 나머지는 `/{건물명}/{동명}-{지번}`을 사용한다.
+기존 경로를 주소 선택 화면으로 바꾸거나 두 단지 모두에 접미사를 붙이지 않는다.
+
+```sh
+npx tsx src/scripts/realEstateUrls.ts --dry-run --resolve-deferred \
+  --baseline /path/to/captured-baseline.json \
+  --report-out /path/to/resolution-report.json --plan-out /path/to/resolution-plan.jsonl
+
+npx tsx src/scripts/realEstateUrls.ts --apply --resolve-deferred \
+  --baseline /path/to/captured-baseline.json \
+  --expected-fingerprint SOURCE_FINGERPRINT \
+  --expected-plan-fingerprint PLAN_FINGERPRINT \
+  --report-out /path/to/resolution-applied.json
+```
+
+- baseline에 없는 보류 그룹과 이미 확정된 매핑은 변경하지 않는다.
+- 전체 그룹의 기존 매핑과 현재 후보가 일치하고, 기존 경로의 소유자가 단 하나로
+  확인되며, 나머지 주소의 접미사가 유일할 때만 분리한다. 일부 주소가 빠졌거나
+  새 주소가 추가되었다면 먼저 일반 준비 절차로 후보·매핑을 맞추고 다시 검토한다.
+- 분리 실패를 다시 `defer`로 숨기지 않는다. 충돌은 적용을 차단한다.
+- 보고서의 `toUpdate`는 기존 경로 소유자의 보류 해제를 포함한 수정 행 수다.
+  그룹별 트랜잭션으로 변경하고 검증이 끝난 뒤 준비 상태를 `ready`로 기록한다.
+- 적용은 URL 레지스트리만 수정한다. 원본 거래와 요약 집계는 다시 쓰지 않는다.
+  운영 반영은 배포 준비 절차에서 별도로 수행하며 로컬 검증을 운영 적용으로
+  보고하지 않는다.
+
+## 표시 주소가 섞인 그룹의 일회성 대표 주소 선정
+
+운영 함수의 표시 주소가 실제 최신 거래 주소와 충돌하는 그룹에 한해,
+승인된 `approved-fixed-owner-policy-v1` 정책으로 기존 URL 소유자를 준비한다.
+
+1. 기존 대표 동 안에서 거래 수가 가장 많은 동·지번을 선택한다.
+2. 거래 수가 같으면 최상위 동률 주소 중 최신 거래일이 가장 늦은 주소를 선택한다.
+   최신 날짜도 같으면 행 ID나 정렬 순서로 임의 결정하지 않고 보류한다.
+3. 날짜를 추가 조회한 경우 전체 주소 집합과 거래 수가 최초 관측과 일치해야 한다.
+   주소 누락, 원본/매핑 불일치, 같은 도로명의 여러 지번 등 다른 보류 사유에는
+   이 정책을 적용하지 않는다.
+
+이 기준은 과거 URL 소유권을 확인한 사실과 구분한다. 정책으로 선정한 baseline의
+`provenance`는 `approved-fixed-owner-policy-v1 `로 시작하며, 레지스트리 근거는
+`approved-fixed-owner-policy`로 기록한다. 실제 관측으로 확인한 소유자는 기존
+`legacy-exact-address` 근거를 유지한다.
+
+선정은 오프라인 매핑 준비 시 한 번 수행한다. 적용된 레지스트리가 URL 소유권의
+기준이며 이후 거래 수·최신 날짜·baseline이 달라져도 이미 확정된 URL은 재배정하지
+않는다. 자동 수집이나 요청 처리 경로에서 대표 주소를 다시 계산하지 않는다.
+
 ## 검증
 
 - 양쪽 패키지의 `npm run test`, `npm run lint`, `npm run build`

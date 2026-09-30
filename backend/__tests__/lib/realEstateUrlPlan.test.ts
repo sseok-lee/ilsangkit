@@ -115,6 +115,124 @@ describe('explicit deferred legacy groups', () => {
   });
 });
 
+describe('resolving previously deferred addresses', () => {
+  function resolutionInput(): RealEstateUrlPlanInput {
+    const input = deferredInput();
+    input.existing = planRealEstatePublicUrls(input).mappings;
+    input.resolveDeferred = true;
+    input.legacyBaseline = [
+      {
+        type: 'villa-sale',
+        basePath: deferredBase,
+        dongName: '역삼동',
+        jibun: '1',
+        provenance: 'captured-production-detail',
+      },
+    ];
+    return input;
+  }
+
+  it('keeps the evidenced owner at the base and gives the other address a readable suffix', () => {
+    const input = resolutionInput();
+    const result = planRealEstatePublicUrls(input);
+    expect(result.blockers).toEqual([]);
+    expect(result.toCreate).toEqual([]);
+    expect(result.toUpdate).toHaveLength(2);
+    expect(result.mappings.map((row) => row.canonicalPath)).toEqual([
+      deferredBase,
+      `${deferredBase}/${encodeURIComponent('역삼동-2')}`,
+    ]);
+    expect(result.mappings.map((row) => row.evidence.source)).toEqual([
+      'legacy-exact-address',
+      'readable-address-suffix',
+    ]);
+    const again = planRealEstatePublicUrls({ ...input, existing: result.mappings });
+    expect(again.toUpdate).toEqual([]);
+    expect(again.toCreate).toEqual([]);
+    expect(again.mappings.map((row) => row.canonicalPath)).toEqual(
+      result.mappings.map((row) => row.canonicalPath)
+    );
+  });
+
+  it('requires explicit resolution and leaves groups outside the baseline unchanged', () => {
+    const input = resolutionInput();
+    expect(planRealEstatePublicUrls({ ...input, resolveDeferred: false }).toUpdate).toEqual([]);
+    const untouched = planRealEstatePublicUrls({ ...input, legacyBaseline: [] });
+    expect(untouched.toUpdate).toEqual([]);
+    expect(untouched.mappings.every((row) => row.canonicalPath === deferredBase)).toBe(true);
+  });
+
+  it.each([
+    'ambiguous',
+    'missing-suffix',
+    'missing-candidate',
+    'missing-group',
+    'new-candidate',
+    'settled-owner',
+    'clashing-suffix',
+  ])('fails the entire resolution group for %s without falling back to defer', (problem) => {
+    const input = resolutionInput();
+    if (problem === 'ambiguous')
+      input.legacyBaseline.push({ ...input.legacyBaseline[0], jibun: '2' });
+    if (problem === 'missing-suffix') input.current[1].jibun = null;
+    if (problem === 'missing-candidate') input.current.pop();
+    if (problem === 'missing-group') input.current = [];
+    if (problem === 'new-candidate')
+      input.current.push({ ...input.current[1], buildingKey: 'c'.repeat(64), jibun: '3' });
+    if (problem === 'settled-owner')
+      input.existing[1].evidence = { source: 'legacy-exact-address' };
+    if (problem === 'clashing-suffix')
+      input.existing.push({
+        ...input.existing[1],
+        buildingKey: 'outside',
+        basePath: '/other',
+        canonicalPath: `${deferredBase}/${encodeURIComponent('역삼동-2')}`,
+        evidence: {},
+      });
+    const result = planRealEstatePublicUrls(input);
+    expect(result.blockers.length).toBeGreaterThan(0);
+    expect(result.toUpdate).toEqual([]);
+    expect(result.toCreate).toEqual([]);
+    expect(result.mappings).toEqual([]);
+  });
+
+  it('does not reassign an already settled owner even if a different baseline is provided', () => {
+    const input = resolutionInput();
+    const resolved = planRealEstatePublicUrls(input);
+    const changed = planRealEstatePublicUrls({
+      ...input,
+      existing: resolved.mappings,
+      legacyBaseline: [{ ...input.legacyBaseline[0], jibun: '2' }],
+    });
+    expect(changed.toUpdate).toEqual([]);
+    expect(changed.mappings.map((row) => row.canonicalPath)).toEqual(
+      resolved.mappings.map((row) => row.canonicalPath)
+    );
+  });
+
+  it('records an approved policy separately from historical evidence and never reassigns it', () => {
+    const input = resolutionInput();
+    input.legacyBaseline[0].provenance =
+      'approved-fixed-owner-policy-v1 reason=latest-tied-transaction observation=2026-09-30';
+    const resolved = planRealEstatePublicUrls(input);
+    expect(resolved.blockers).toEqual([]);
+    expect(resolved.mappings[0].evidence).toMatchObject({
+      source: 'approved-fixed-owner-policy',
+      baselineProvenance: [input.legacyBaseline[0].provenance],
+    });
+    const refreshed = planRealEstatePublicUrls({
+      ...input,
+      existing: resolved.mappings,
+      legacyBaseline: [{ ...input.legacyBaseline[0], jibun: '2' }],
+    });
+    expect(refreshed.toUpdate).toEqual([]);
+    expect(refreshed.toCreate).toEqual([]);
+    expect(refreshed.mappings.map((row) => row.canonicalPath)).toEqual(
+      resolved.mappings.map((row) => row.canonicalPath)
+    );
+  });
+});
+
 describe('planRealEstatePublicUrls', () => {
   it('keeps an existing mapping immutable even when the readable path would change', () => {
     const result = planRealEstatePublicUrls({

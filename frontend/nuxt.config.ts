@@ -21,9 +21,9 @@ const wasteRegionalNoCacheRules = Object.fromEntries(
 
 const explorationDistrictNoCacheRules = Object.fromEntries(
   explorationRealEstateTypes.flatMap((type) =>
-    Object.values(CITY_SLUGS).map((city) => [
-      `/real-estate/${type}/${city}/*`,
-      { swr: false, cache: false },
+    Object.values(CITY_SLUGS).flatMap((city) => [
+      [`/real-estate/${type}/${city}/*`, { swr: false, cache: false }],
+      [`/real-estate/${type}/${city}/*/**`, { swr: false, cache: false }],
     ] as const)
   )
 )
@@ -203,10 +203,11 @@ export default defineNuxtConfig({
       ...wasteRegionalNoCacheRules,
       // 부동산 — 5분
       '/real-estate/**': { swr: 300 },
-      // 구군 목록은 ?page=N 별 SSR payload가 달라야 한다. SWR이 켜지면 Nuxt의 추출
-      // payload 요청에서 query가 빠져 page 1 payload로 수화되므로 이 깊이만 캐시를 끈다.
+      // 구군 목록의 ?page=N과 상세의 ?mode=wolse는 쿼리별 SSR payload가 필요하다.
+      // SWR의 추출 payload 요청은 query를 잃어 기본 페이지/전세 데이터로 수화된다.
+      // 주소 접미사가 붙은 상세도 포함해 HTML 안에 해당 요청의 payload를 유지한다.
       // 유형·시도는 유효 slug로 고정해 단일 placeholder가 구군 한 단계에만 매치되게 한다.
-      // 전국/시도/상세 경로는 위의 기존 5분 SWR을 그대로 유지한다.
+      // 전국/시도 경로는 위의 기존 5분 SWR을 유지한다.
       ...explorationDistrictNoCacheRules,
       // 가이드 — 1시간
       '/guide/**': { swr: 3600 },

@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toRealEstateUrl } from '../../src/lib/realEstateUrl.js';
 import { assertLocalTestDatabaseUrl } from '../../src/utils/testDatabaseGuard.js';
 
 const dedicatedUrl = assertLocalTestDatabaseUrl(
@@ -81,11 +82,65 @@ function resetDatabase(): void {
     DROP TABLE IF EXISTS RealEstatePublicUrl;
     DROP TABLE IF EXISTS RealEstateSummaryState;
     DROP TABLE IF EXISTS RealEstateBuildingSummaryV2;
+    DROP TABLE IF EXISTS RealEstateBuildingSummary;
+    DROP TABLE IF EXISTS Region;
     DROP TABLE IF EXISTS VillaSaleTransaction;
     SET FOREIGN_KEY_CHECKS = 1;
   `);
   mysqlInDatabase(readFileSync(resolve('prisma/sql/20260929_summary_v2.sql'), 'utf8'));
   mysqlInDatabase(readFileSync(resolve(publicUrlRegistryMigrationPath), 'utf8'));
+  mysqlInDatabase(`
+    CREATE TABLE Region (
+      id INT NOT NULL AUTO_INCREMENT,
+      bjdCode VARCHAR(5) NOT NULL,
+      city VARCHAR(50) NOT NULL,
+      district VARCHAR(50) NOT NULL,
+      slug VARCHAR(50) NOT NULL,
+      lat DECIMAL(10,7) NOT NULL,
+      lng DECIMAL(10,7) NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY Region_bjdCode_key (bjdCode),
+      UNIQUE KEY Region_city_district_key (city, district),
+      UNIQUE KEY Region_city_slug_key (city, slug)
+    );
+    INSERT INTO Region (bjdCode, city, district, slug, lat, lng)
+    VALUES
+      ('11680', '서울특별시', '강남구', 'gangnam', 37.5172000, 127.0473000),
+      ('28177', '인천광역시', '미추홀구', 'michuhol', 37.4636000, 126.6503000);
+  `);
+  mysqlInDatabase(`
+    CREATE TABLE RealEstateBuildingSummary (
+      id INT NOT NULL AUTO_INCREMENT,
+      type VARCHAR(20) NOT NULL,
+      buildingName VARCHAR(200) NOT NULL,
+      bjdCode VARCHAR(10) NOT NULL,
+      city VARCHAR(50) NOT NULL,
+      district VARCHAR(50) NOT NULL,
+      dongName VARCHAR(50) NOT NULL,
+      latestPrice BIGINT NULL,
+      latestDealYear INT NULL,
+      latestDealMonth INT NULL,
+      latestDealDay INT NULL,
+      buildYear INT NULL,
+      lat DECIMAL(10,7) NULL,
+      lng DECIMAL(10,7) NULL,
+      transactionCount INT NOT NULL DEFAULT 0,
+      monthlyRent INT NULL,
+      jeonseDeposit INT NULL,
+      jeonseDealKey INT NULL,
+      wolseDeposit INT NULL,
+      wolseMonthlyRent INT NULL,
+      wolseDealKey INT NULL,
+      updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+      PRIMARY KEY (id),
+      UNIQUE KEY RealEstateBuildingSummary_type_buildingName_bjdCode_key (type, buildingName, bjdCode),
+      KEY RealEstateBuildingSummary_type_transactionCount_idx (type, transactionCount),
+      KEY RealEstateBuildingSummary_type_city_district_tx_idx (type, city, district, transactionCount),
+      KEY RealEstateBuildingSummary_type_buildingName_idx (type, buildingName),
+      KEY RealEstateBuildingSummary_type_bjd_latest_tx_idx (type, bjdCode, latestDealYear, latestDealMonth, transactionCount),
+      KEY RealEstateBuildingSummary_type_lat_lng_idx (type, lat, lng)
+    );
+  `);
   mysqlInDatabase(`
     CREATE TABLE VillaSaleTransaction (
       id INT NOT NULL AUTO_INCREMENT,
@@ -145,6 +200,15 @@ function seedSummaryRows(order: 'original' | 'reversed' = 'original'): void {
     INSERT INTO RealEstateBuildingSummaryV2
       (type, buildingKey, buildingName, bjdCode, city, district, dongName, jibun, latestPrice, latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng, transactionCount)
     VALUES ${(order === 'original' ? rows : rows.reverse()).join(',')};
+  `);
+}
+
+function seedLegacySummaryRows(): void {
+  mysqlInDatabase(`
+    INSERT INTO RealEstateBuildingSummary
+      (type, buildingName, bjdCode, city, district, dongName, latestPrice, latestDealYear, latestDealMonth, latestDealDay, buildYear, lat, lng, transactionCount)
+    VALUES
+      ('villa-sale', 'BSVIEW', '2817710100', '인천광역시', '미추홀구', '도화동', 50000, 2026, 8, 31, 2010, 37.4600000, 126.6600000, 3);
   `);
 }
 
@@ -403,6 +467,44 @@ describe('real estate URL preservation integration', () => {
     expect(snapshot.table.total).toBe(2);
   });
 
+  it('resolves a prepared deferred group into one preserved base and one address-specific detail', async () => {
+    await applyDeferredRegistry();
+    const baselinePath = join(tempDir, 'resolved-baseline.json');
+    writeFileSync(baselinePath, JSON.stringify({ provenance: 'captured-production-detail', entries: [
+      { type: 'villa-sale', basePath: deferredBasePath, dongName: '도화동', jibun: '100-1', provenance: 'captured-production-detail' },
+    ] }));
+    const args = ['--baseline', baselinePath, '--resolve-deferred'];
+    const before = await publicUrlRows();
+    const dry = await runRegistryCli(['--dry-run', ...args]);
+    expect(dry.toUpdate).toBe(2);
+    expect(await publicUrlRows()).toEqual(before);
+    const applied = await runRegistryCli(['--apply', ...args,
+      '--expected-fingerprint', dry.sourceFingerprint,
+      '--expected-plan-fingerprint', dry.planFingerprint]);
+    expect(applied.toUpdate).toBe(2);
+    const app = (await import('../../src/app.js')).default;
+    const suffixPath = `${deferredBasePath}/${encodeURIComponent('도화동-100-2')}`;
+    const { getDetailPage } = await import('../../src/services/realEstateDetailService.js');
+    for (const [path, key, expectedId] of [[deferredBasePath, deferredFirstKey, 1], [suffixPath, deferredSecondKey, 2]] as const) {
+      const resolved = await request(app).get('/api/real-estate/resolve-url').query({ path });
+      expect(resolved.status).toBe(200);
+      expect(resolved.body.data).toMatchObject({ buildingKey: key, canonicalPath: path });
+      expect(resolved.body.data.legacyGrouped).not.toBe(true);
+      const detail = await getDetailPage('villa-sale', {
+        bjdCode: deferredBjdCode, buildingName: deferredBuildingName, buildingKey: key,
+        mode: 'sale', months: 6, area: '59.50', page: 1,
+      }, new Date('2026-09-29T00:00:00.000Z'));
+      expect(detail.items.map(item => item.id)).toEqual([expectedId]);
+      expect(detail.total).toBe(1);
+    }
+    const hash = await request(app).get('/api/real-estate/resolve-url').query({ path: deferredFirstHashAliasPath });
+    expect(hash.status).toBe(404);
+    const repeat = await runRegistryCli(['--dry-run', ...args]);
+    expect(repeat.toUpdate).toBe(0);
+    expect(repeat.toCreate).toBe(0);
+    expect(await publicUrlRows()).toEqual(expect.arrayContaining(before.filter(row => ![deferredFirstKey, deferredSecondKey].includes(row.buildingKey))));
+  });
+
   it('returns all deferred legacy group transactions in the keyless detail page', async () => {
     await applyDeferredRegistry();
     const { getDetailPage } = await import('../../src/services/realEstateDetailService.js');
@@ -507,12 +609,37 @@ describe('real estate URL preservation integration', () => {
     expect(new Set(rows.map((row) => row.canonicalPath)).size).toBe(3);
   });
 
-  it('appends a new city summary building URL inside the refresh batch transaction', async () => {
+  it('appends a new city summary building URL through the active address refresh path', async () => {
     await applyRegistry();
     seedVillaSaleSourceRows('appendable');
-    const { refreshSummary } = await import('../../src/services/realEstateSummaryService.js');
+    const { refreshSummariesForActiveMode } = await import('../../src/services/realEstateSummaryService.js');
 
-    await expect(refreshSummary('villa-sale')).resolves.toBe(3);
+    const result = await refreshSummariesForActiveMode(['villa-sale']);
+    expect(result.complete).toBe(true);
+    expect(result.batches).toEqual([
+      { type: 'villa-sale', city: '인천광역시', rowCount: 3, status: 'complete' },
+    ]);
+
+    await expect(publicUrlRows()).resolves.toEqual(expect.arrayContaining([
+      { type: 'villa-sale', buildingKey: legacyOwnerKey, canonicalPath: legacyBasePath },
+      { type: 'villa-sale', buildingKey: suffixOwnerKey, canonicalPath: suffixCanonicalPath },
+      { type: 'villa-sale', buildingKey: appendedVillaKey, canonicalPath: appendedVillaCanonicalPath },
+    ]));
+  });
+
+  it('appends a new city summary building URL through the active compatibility refresh path', async () => {
+    await applyRegistry();
+    seedVillaSaleSourceRows('appendable');
+    vi.stubEnv('REAL_ESTATE_SUMMARY_MODE', 'compatibility');
+    vi.stubEnv('REAL_ESTATE_URL_MODE', 'preserved');
+    const { refreshSummariesForActiveMode } = await import('../../src/services/realEstateSummaryService.js');
+
+    const result = await refreshSummariesForActiveMode(['villa-sale']);
+    expect(result.complete).toBe(true);
+    expect(result.batches).toEqual([
+      { type: 'villa-sale', city: '인천광역시', rowCount: 3, status: 'complete' },
+      { type: 'villa-sale', city: '인천광역시', rowCount: 3, status: 'complete' },
+    ]);
 
     await expect(publicUrlRows()).resolves.toEqual(expect.arrayContaining([
       { type: 'villa-sale', buildingKey: legacyOwnerKey, canonicalPath: legacyBasePath },
@@ -567,6 +694,68 @@ describe('real estate URL preservation integration', () => {
       buildingKey: uniqueKey,
       canonicalPath: uniqueCanonicalPath,
       redirect: false,
+    }));
+  });
+
+  it('keeps preserved registry readiness and legacy list/search fallbacks while keyed detail uses V2 during compatibility rollback', async () => {
+    await applyRegistry();
+    seedLegacySummaryRows();
+    seedVillaSaleSourceRows('appendable');
+    vi.stubEnv('REAL_ESTATE_SUMMARY_MODE', 'compatibility');
+    vi.stubEnv('REAL_ESTATE_URL_MODE', 'preserved');
+    const { assertActiveSummaryReady } = await import('../../src/services/realEstateSummaryReadiness.js');
+    const app = (await import('../../src/app.js')).default;
+
+    await expect(assertActiveSummaryReady()).resolves.toEqual(expect.objectContaining({
+      mode: 'compatibility',
+      ready: true,
+    }));
+
+    const list = await request(app).get('/api/real-estate/villa-sale/complexes').query({
+      city: '인천광역시',
+      district: '미추홀구',
+      page: 1,
+      limit: 10,
+    });
+    expect(list.status).toBe(200);
+    expect(list.body.data.items[0]).toEqual(expect.objectContaining({
+      buildingName: 'BSVIEW',
+      buildingKey: null,
+      bjdCode: '2817710100',
+      city: '인천광역시',
+      district: '미추홀구',
+      dongName: '도화동',
+    }));
+    expect(list.body.data.items[0].canonicalPath).toBeUndefined();
+    expect(toRealEstateUrl({ ...list.body.data.items[0], type: 'villa-sale' })).toBe(legacyBasePath);
+
+    const search = await request(app).get('/api/real-estate/villa-sale/complexes').query({
+      keyword: 'BSVIEW',
+      page: 1,
+      limit: 10,
+    });
+    expect(search.status).toBe(200);
+    expect(search.body.data.items[0]).toEqual(expect.objectContaining({
+      buildingName: 'BSVIEW',
+      buildingKey: null,
+      bjdCode: '2817710100',
+    }));
+    expect(search.body.data.items[0].canonicalPath).toBeUndefined();
+    expect(toRealEstateUrl({ ...search.body.data.items[0], type: 'villa-sale' })).toBe(legacyBasePath);
+
+    const detail = await request(app).get('/api/real-estate/villa-sale/building-info').query({
+      bjdCode: '2817710100',
+      buildingName: 'BSVIEW',
+      buildingKey: legacyOwnerKey,
+    });
+    expect(detail.status).toBe(200);
+    expect(detail.body.data).toEqual(expect.objectContaining({
+      buildingKey: legacyOwnerKey,
+      bjdCode: '2817710100',
+      buildingName: 'BSVIEW',
+      canonicalPath: legacyBasePath,
+      dongName: '도화동',
+      jibun: '369-1',
     }));
   });
 

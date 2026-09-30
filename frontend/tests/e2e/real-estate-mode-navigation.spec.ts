@@ -114,6 +114,10 @@ test('preserved base stays 200 and an unpublished hash suffix is not accepted', 
 })
 
 test('preserved transaction tabs use the target address path and keep identity through reload and back', async ({ page, request }) => {
+  const hydrationMessages: string[] = []
+  page.on('console', message => {
+    if (/hydration/i.test(message.text())) hydrationMessages.push(message.text())
+  })
   await page.goto(preservedSalePath)
   await hydrated(page)
   await page.getByLabel('거래 유형').selectOption('wolse')
@@ -126,11 +130,39 @@ test('preserved transaction tabs use the target address path and keep identity t
   await page.goBack()
   await hydrated(page)
   await expect(page).toHaveURL(`http://127.0.0.1:13000${preservedSalePath}`)
+  await expect(page.getByLabel('거래 유형')).toHaveValue('sale')
+  // A restored SSR payload need not make a fresh API request. Change a filter
+  // to verify the restored sale identity independently of payload reuse.
+  await page.getByLabel('조회 기간').selectOption('12')
+  await expect.poll(async () => (await modeLog(request))
+    .some(item => item.buildingName === '보존아파트' && item.type === 'apt-sale' && item.mode === 'sale'))
+    .toBe(true)
   const requests = (await modeLog(request)).filter(item => item.buildingName === '보존아파트')
   expect(requests.some(item => item.type === 'apt-sale')).toBe(true)
   expect(requests.some(item => item.type === 'apt-rent' && item.mode === 'wolse')).toBe(true)
   expect(new Set(requests.map(item => item.buildingKey))).toEqual(new Set([preservedKey]))
+  expect(hydrationMessages).toEqual([])
 })
+
+for (const mode of ['jeonse', 'wolse'] as const) {
+  test(`direct ${mode} detail and reload hydrate the selected mode without a replacement API request`, async ({ page }) => {
+    const hydrationMessages: string[] = []
+    page.on('console', message => {
+      if (/hydration/i.test(message.text())) hydrationMessages.push(message.text())
+    })
+    // Initial content must come from the matching SSR payload, even when a client
+    // retry is unavailable. This catches query-free extracted payloads under SWR.
+    await page.route('**/api/real-estate/apt-rent/detail?**', route => route.abort('failed'))
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`${rentPath}?mode=${mode}`)
+    await hydrated(page)
+    await expectRenderedDetailState(page, mode)
+    await page.reload()
+    await hydrated(page)
+    await expectRenderedDetailState(page, mode)
+    expect(hydrationMessages).toEqual([])
+  })
+}
 
 test('initial mobile detail hydration does not emit Vue hydration mismatch while preserving internally keyed sale state', async ({
   page,
