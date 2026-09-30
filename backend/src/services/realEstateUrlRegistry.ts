@@ -156,18 +156,23 @@ export async function appendRealEstateUrlsForSummaryBatch(
   type: string,
   city: string,
   env: RealEstateUrlEnv = process.env,
+  options: { bjdCodes?: string[] } = {},
 ): Promise<{ scanned: number; inserted: number; blockers: Array<{ kind: string; basePath: string; buildingKeys: string[] }> }> {
   if (!isPreservedRealEstateUrlMode(env)) return { scanned: 0, inserted: 0, blockers: [] };
+  if (options.bjdCodes?.length === 0) return { scanned: 0, inserted: 0, blockers: [] };
   const state = await assertReadyWithDb(tx, false);
+  const scopedBjdCodes = options.bjdCodes ?? [];
+  const bjdPredicate = scopedBjdCodes.length > 0 ? ` AND s.bjdCode IN (${scopedBjdCodes.map(() => '?').join(', ')})` : '';
   const current = await tx.$queryRawUnsafe<RealEstateUrlCandidate[]>(
     `SELECT s.type, s.buildingKey, s.bjdCode, s.city, s.district, s.buildingName, s.dongName, s.jibun
        FROM RealEstateBuildingSummaryV2 s
        LEFT JOIN RealEstatePublicUrl u
          ON u.type = s.type AND u.buildingKey = s.buildingKey
-      WHERE s.type = ? AND s.city = ? AND u.id IS NULL
+      WHERE s.type = ? AND s.city = ?${bjdPredicate} AND u.id IS NULL
       ORDER BY s.id`,
     type,
     city,
+    ...scopedBjdCodes,
   );
   if (current.length === 0) return { scanned: 0, inserted: 0, blockers: [] };
 
