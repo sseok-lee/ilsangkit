@@ -25,7 +25,8 @@ const REQUIRED_PROBES = new Set([
 ])
 
 const READINESS_PROBE_NAME = 'release-readiness'
-const DEFAULT_READINESS_ATTEMPTS = 5
+// Allow startup validation and module loading to finish before probing business requests.
+const DEFAULT_READINESS_ATTEMPTS = 30
 const DEFAULT_READINESS_DELAY_MS = 1000
 const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_ATTEMPTS = 5
@@ -468,7 +469,7 @@ export async function retainHashedAssets(manifest, inventory) {
   const retained = []
   for (const asset of assets) {
     assertAbsolutePath(asset.path, 'hashed asset path')
-    if (!String(asset.fileName ?? '').split('/').every(part => /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(part))) {
+    if (!String(asset.fileName ?? '').split('/').every(part => /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/.test(part))) {
       throw new Error('hashed asset fileName must be a safe relative path')
     }
     if (asset.fileName === 'builds/latest.json') throw new Error('mutable latest metadata must be served by the active frontend')

@@ -788,7 +788,7 @@ test('runReleaseCommand check validates candidate nginx through the active inclu
 })
 
 
-test('runReleaseCommand check retries spaced readiness until delayed backend startup succeeds', async () => {
+test('runReleaseCommand check default startup budget tolerates delayed backend binding', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
   const inventory = createInventory(workspace)
@@ -807,7 +807,7 @@ test('runReleaseCommand check retries spaced readiness until delayed backend sta
       if (String(url).includes(':18001/api/health')) {
         assert.ok(options.signal, 'readiness fetch receives an abort signal')
         backendReadinessAttempts += 1
-        if (backendReadinessAttempts < 3) throw new Error('ECONNREFUSED backend port')
+        if (backendReadinessAttempts < 10) throw new Error('ECONNREFUSED backend port')
         return {
           ok: true,
           status: 200,
@@ -830,8 +830,8 @@ test('runReleaseCommand check retries spaced readiness until delayed backend sta
     readinessSleep: async (ms) => { delays.push(ms) },
   })
 
-  assert.equal(backendReadinessAttempts, 3)
-  assert.deepEqual(delays, [25, 25])
+  assert.equal(backendReadinessAttempts, 10)
+  assert.deepEqual(delays, Array(9).fill(25))
   assert.equal(backendReadinessBodyConsumed, true)
   assert.ok(events.includes('check-business-responses'))
 })
@@ -1488,6 +1488,8 @@ test('retained Nuxt build metadata keeps its relative path and refuses traversal
   const asset = { path: source, fileName: 'builds/meta/build-one.json', sha256: sha256(readFileSync(source)) }
   await retainHashedAssets({hashedAssets:[asset]},inventory)
   assert.equal(readFileSync(join(inventory.assets.publicDir,'_nuxt/builds/meta/build-one.json'),'utf8'),'{"id":"build-one"}')
+  await retainHashedAssets({hashedAssets:[{...asset,fileName:'-U8MxH1t.js'}]},inventory)
+  assert.equal(readFileSync(join(inventory.assets.publicDir,'_nuxt/-U8MxH1t.js'),'utf8'),'{"id":"build-one"}')
   for(const fileName of ['../escape.json','builds/../../escape.json','/absolute.json','builds/latest.json']) {
     await assert.rejects(retainHashedAssets({hashedAssets:[{...asset,fileName}]},inventory), /relative|mutable/)
   }
