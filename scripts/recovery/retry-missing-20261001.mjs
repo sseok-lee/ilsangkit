@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -32,6 +32,7 @@ if (process.env.REAL_ESTATE_WRITE_LOCK_DIR !== '/home/project2/run/real-estate-l
 const { prisma } = await load('dist/lib/prisma.js')
 const { recoverRealEstateWriteLock, withRealEstateWriteLock } = await load('dist/utils/realEstateWriteLock.js')
 const { createSyncStats } = await load('dist/services/baseSyncService.js')
+const { fetchRealEstateData } = await load('dist/services/syncRealEstateBase.js')
 const key = process.env.OPENAPI_SERVICE_KEY
 if (!key) throw new Error('Missing source API key')
 
@@ -46,6 +47,11 @@ async function countTarget(target) {
 }
 
 async function retryVillaRent(target) {
+  const items = await fetchRealEstateData('RTMSDataSvcRHRent/getRTMSDataSvcRHRent', target.lawd, target.ym, key)
+  if (items.length === 0) {
+    console.info(JSON.stringify({ target, sourceItems: 0, stage: 'source-empty' }))
+    return
+  }
   await new Promise((resolvePromise, rejectPromise) => {
     let output = ''
     const child = spawn(process.execPath, [
@@ -69,16 +75,30 @@ async function retryVillaRent(target) {
 }
 
 try {
-  const ownerPath = join(process.env.REAL_ESTATE_WRITE_LOCK_DIR, 'real-estate-write.lock', 'owner.json')
-  const owner = JSON.parse(await readFile(ownerPath, 'utf8'))
-  if (owner.pid !== 3393128 || owner.hostname !== hostname() || typeof owner.token !== 'string') {
-    throw new Error('Writer lock owner changed; inspect before recovery')
+  const lockPath = join(process.env.REAL_ESTATE_WRITE_LOCK_DIR, 'real-estate-write.lock')
+  let owner
+  try {
+    owner = JSON.parse(await readFile(join(lockPath, 'owner.json'), 'utf8'))
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+    const lockExists = await stat(lockPath).then(() => true, statError => {
+      if (statError?.code === 'ENOENT') return false
+      throw statError
+    })
+    if (lockExists) throw new Error('Writer lock exists without owner metadata; inspect before recovery')
   }
-  // The recovery helper rechecks the exact token, host, and owner process identity
-  // under its recovery guard. The application DB account cannot inspect INNODB_TRX.
-  const recovered = await recoverRealEstateWriteLock(owner.token)
-  if (!recovered) throw new Error('Writer lock recovery refused by owner identity guard')
-  console.info(JSON.stringify({ recoveredWriterLock: true, ownerPid: owner.pid }))
+  if (owner !== undefined) {
+    if (owner?.pid !== 3393128 || owner.hostname !== hostname() || typeof owner.token !== 'string') {
+      throw new Error('Writer lock owner changed; inspect before recovery')
+    }
+    // The recovery helper rechecks the exact token, host, and owner process identity
+    // under its recovery guard. The application DB account cannot inspect INNODB_TRX.
+    const recovered = await recoverRealEstateWriteLock(owner.token)
+    if (!recovered) throw new Error('Writer lock recovery refused by owner identity guard')
+    console.info(JSON.stringify({ recoveredWriterLock: true, ownerPid: owner.pid }))
+  } else {
+    console.info(JSON.stringify({ priorWriterLockAbsent: true }))
+  }
 
   await withRealEstateWriteLock('recoverMissingRegionMonths20261001', async () => {
     const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } })
