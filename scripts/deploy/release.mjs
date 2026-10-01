@@ -32,6 +32,8 @@ const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_ATTEMPTS = 5
 const DEFAULT_PUBLIC_CONVERGENCE_DELAY_MS = 1000
 const DEFAULT_PUBLIC_CONVERGENCE_REQUEST_TIMEOUT_MS = 1000
+const DEFAULT_CANDIDATE_PROBE_ATTEMPTS = 3
+const DEFAULT_CANDIDATE_PROBE_RETRY_DELAY_MS = 1000
 const FRONTEND_PROCESS_READINESS_PATH = '/favicon.ico'
 
 const LIST_PROBE_TYPES = new Map([
@@ -918,6 +920,12 @@ class ProbeReleaseIdMismatchError extends Error {
   }
 }
 
+class ProbeTimeoutError extends Error {
+  constructor(phase, name, timeoutMs, cause) {
+    super(`${phase} probe timed out: ${name} after ${timeoutMs}ms`, { cause })
+  }
+}
+
 function isReleaseIdMismatch(error) {
   return error instanceof ProbeReleaseIdMismatchError
 }
@@ -994,11 +1002,12 @@ function isRetryablePublicReleaseMismatch(context, error) {
   return expectedReleaseIdsForPublicConvergence(context).has(error.actualReleaseId)
 }
 
-async function runHttpProbes(context, probes, phase) {
+async function runHttpProbes(context, probes, phase, { reportTimeout = false } = {}) {
   const fetchImpl = context.fetch
   for (const probe of asArray(probes)) {
     const url = probeUrl(context.manifest, probe, phase)
-    const timeout = createProbeTimeout(probe.requestTimeoutMs ?? context.requestTimeoutMs)
+    const requestTimeoutMs = probe.requestTimeoutMs ?? context.requestTimeoutMs
+    const timeout = createProbeTimeout(requestTimeoutMs)
     try {
       const response = await fetchImpl(url, {
         method: probe.method ?? 'GET', signal: timeout.signal,
@@ -1062,6 +1071,11 @@ async function runHttpProbes(context, probes, phase) {
       } else if (!probe.expectBodyIncludes) {
         await consumeProbeBody(response)
       }
+    } catch (error) {
+      if (reportTimeout && timeout.signal?.aborted) {
+        throw new ProbeTimeoutError(phase, probe.name ?? url, requestTimeoutMs, error)
+      }
+      throw error
     } finally {
       timeout.clear()
     }
@@ -1075,7 +1089,17 @@ async function verifyRollbackReadiness(context) {
 
 async function checkBusinessResponses(context) {
   await step(context.runner, 'check-business-responses', { probes: context.manifest.probes.length })
-  await runHttpProbes(context, context.manifest.probes, 'candidate')
+  const attempts = finitePositiveInteger(context.candidateProbeAttempts, DEFAULT_CANDIDATE_PROBE_ATTEMPTS, 'candidateProbeAttempts')
+  const delayMs = finiteNonnegativeNumber(context.candidateProbeRetryDelayMs, DEFAULT_CANDIDATE_PROBE_RETRY_DELAY_MS, 'candidateProbeRetryDelayMs')
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await runHttpProbes(context, context.manifest.probes, 'candidate', { reportTimeout: true })
+      return
+    } catch (error) {
+      if (!(error instanceof ProbeTimeoutError) || attempt >= attempts) throw error
+      if (delayMs > 0) await sleep(delayMs)
+    }
+  }
 }
 
 async function publicSmoke(context) {
@@ -1122,6 +1146,8 @@ export async function runReleaseCommand(command, options = {}) {
     readinessDelayMs: options.readinessDelayMs,
     readinessRequestTimeoutMs: options.readinessRequestTimeoutMs,
     readinessSleep: options.readinessSleep,
+    candidateProbeAttempts: options.candidateProbeAttempts,
+    candidateProbeRetryDelayMs: options.candidateProbeRetryDelayMs,
     publicConvergenceAttempts: options.publicConvergenceAttempts,
     publicConvergenceDelayMs: options.publicConvergenceDelayMs,
     publicConvergenceRequestTimeoutMs: options.publicConvergenceRequestTimeoutMs,
