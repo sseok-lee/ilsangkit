@@ -37,7 +37,7 @@ grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$headers"
 echo '[fixed-retire] only canonical PM2 processes remain'
 
 # Keep exactly the current successful attempt, which contains the previous
-# canonical build for one-step rollback. Older verified stages are disposable.
+# canonical build for one-step rollback. Older uploaded stages are disposable.
 successful_attempt="$(cat "$STAGE/successful-attempt")"
 [[ "$successful_attempt" =~ ^attempt\.[A-Za-z0-9]{8}$ ]]
 test -d "$STAGE/$successful_attempt/previous"
@@ -50,7 +50,7 @@ for candidate in "$ROOT"/run/fixed-deploy/*; do
   test -d "$candidate" || continue
   [ "$candidate" = "$STAGE" ] && continue
   [[ "$(basename "$candidate")" =~ ^[0-9a-f]{12}$ ]] || continue
-  test -f "$candidate/SHA256SUMS" && test -f "$candidate/successful-attempt" || continue
+  test -f "$candidate/SHA256SUMS" || continue
   find "$candidate" -depth -delete
 done
 echo '[fixed-retire] retained one successful fixed deployment stage'

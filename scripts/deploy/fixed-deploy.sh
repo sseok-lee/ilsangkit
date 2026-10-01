@@ -200,11 +200,23 @@ fi
 nginx -t
 systemctl reload nginx
 
-curl -fsS -m 30 -D "$ATTEMPT/public-health.headers" 'https://ilsangkit.co.kr/api/health' -o "$ATTEMPT/public-health.json"
-grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$ATTEMPT/public-health.headers"
-curl -fsS -m 30 -D "$ATTEMPT/public-page.headers" 'https://ilsangkit.co.kr/real-estate/apt-sale/gyeongnam' -o "$ATTEMPT/public-page.html"
+wait_for_public_release() {
+  local label="$1" url="$2" headers="$3" body="$4" attempt observed
+  for attempt in $(seq 1 30); do
+    if curl -fsS -m 15 -D "$headers" "$url" -o "$body" &&
+       grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$headers"; then
+      echo "[fixed-deploy] public $label serves $FIXED_ID after $attempt probe(s)"
+      return 0
+    fi
+    sleep 2
+  done
+  observed="$(grep -i '^x-ilsangkit-release-id:' "$headers" | tr -d '\r' | tail -n 1 || true)"
+  fail "public $label did not serve $FIXED_ID after nginx reload; last $observed"
+}
+
+wait_for_public_release health 'https://ilsangkit.co.kr/api/health' "$ATTEMPT/public-health.headers" "$ATTEMPT/public-health.json"
+wait_for_public_release page 'https://ilsangkit.co.kr/real-estate/apt-sale/gyeongnam' "$ATTEMPT/public-page.headers" "$ATTEMPT/public-page.html"
 grep -q '경남' "$ATTEMPT/public-page.html"
-grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$ATTEMPT/public-page.headers"
 asset_path="$(node "$HELPER" asset-path "$ATTEMPT/public-page.html")"
 curl -fsS -m 30 "https://ilsangkit.co.kr$asset_path" -o /dev/null
 curl -fsS -m 30 -D "$ATTEMPT/public-sitemap.headers" 'https://ilsangkit.co.kr/sitemap.xml' -o "$ATTEMPT/public-sitemap.xml"
