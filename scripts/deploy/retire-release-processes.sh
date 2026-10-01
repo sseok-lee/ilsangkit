@@ -84,6 +84,7 @@ for candidate in "$ROOT"/deploy/releases/*; do
 done
 for candidate in "$ROOT"/release-inbox/*; do
   test -d "$candidate" || continue
+  [ "$(basename "$candidate")" = "$keep_release" ] && continue
   [[ "$(basename "$candidate")" =~ ^(address|compat)-[a-z0-9-]+$ ]] || continue
   test -f "$candidate/manifest.json" || continue
   assert_no_process_cwd "$candidate"

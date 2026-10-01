@@ -43,6 +43,7 @@ test('fixed deploy stages verified artifacts and preserves the active release un
   assert.match(retire, /assert_no_process_cwd/)
   assert.match(retire, /keep_release/)
   assert.match(retire, /\.release-manifest\.json/)
+  assert.match(retire, /release-inbox\/\*; do\n\s+test -d "\$candidate" \|\| continue\n\s+\[ "\$\(basename "\$candidate"\)" = "\$keep_release" \] && continue/)
   assert.doesNotMatch(retire, /rm -rf/)
 })
 
