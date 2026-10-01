@@ -1048,6 +1048,85 @@ test('runReleaseCommand check fails closed on candidate HTTP probe failure befor
   assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
 })
 
+test('candidate business probe retries a timed out response body and reports the probe name on exhaustion', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  manifest.probes = manifest.probes.map(probe => probe.name === 'frontend-ssr'
+    ? { ...probe, requestTimeoutMs: 1 }
+    : probe)
+  const events = []
+  let frontendSsrAttempts = 0
+  const fetch = async (url, options) => {
+    if (new URL(url).port === '13001' && new URL(url).pathname === FRONTEND_SSR_PATH) {
+      frontendSsrAttempts += 1
+      if (frontendSsrAttempts <= 2) {
+        return {
+          ok: true,
+          status: 200,
+          headers: semanticHeadersForUrl(url),
+          text: () => new Promise((resolve, reject) => {
+            options.signal.addEventListener('abort', () => reject(new Error('body aborted')), { once: true })
+          }),
+        }
+      }
+    }
+    return okFetch(events)(url)
+  }
+
+  await runReleaseCommand('check', {
+    inventory, manifest, runner: createRunner(events), fetch,
+    portChecker: async () => true,
+    candidateProbeRetryDelayMs: 0,
+  })
+  assert.equal(frontendSsrAttempts, 3)
+
+  frontendSsrAttempts = 0
+  await assert.rejects(() => runReleaseCommand('check', {
+    inventory, manifest, runner: createRunner([]),
+    fetch: async (url, options) => {
+      if (new URL(url).port === '13001' && new URL(url).pathname === FRONTEND_SSR_PATH) {
+        frontendSsrAttempts += 1
+        return {
+          ok: true,
+          status: 200,
+          headers: semanticHeadersForUrl(url),
+          text: () => new Promise((resolve, reject) => {
+            options.signal.addEventListener('abort', () => reject(new Error('body aborted')), { once: true })
+          }),
+        }
+      }
+      return okFetch()(url)
+    },
+    portChecker: async () => true,
+    candidateProbeRetryDelayMs: 0,
+  }), /candidate probe timed out: frontend-ssr after 1ms/)
+  assert.equal(frontendSsrAttempts, 3)
+})
+
+test('candidate business probe does not retry a semantic HTTP failure', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  let candidateAttempts = 0
+
+  await assert.rejects(() => runReleaseCommand('check', {
+    inventory, manifest, runner: createRunner([]),
+    fetch: async url => {
+      if (new URL(url).port === '13001' && new URL(url).pathname === FRONTEND_SSR_PATH) {
+        candidateAttempts += 1
+        return okFetch(undefined, 503)(url)
+      }
+      return okFetch()(url)
+    },
+    portChecker: async () => true,
+    candidateProbeRetryDelayMs: 0,
+  }), /candidate probe failed: frontend-ssr status 503/)
+  assert.equal(candidateAttempts, 1)
+})
+
 test('runReleaseCommand check fails closed when static sitemap response header is missing', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
