@@ -37,7 +37,7 @@ jobs:
           changed_paths="$(git diff --name-only HEAD^ HEAD)"
           while IFS= read -r path; do
             case "$path" in
-              .github/workflows/deploy.yml|scripts/deploy/release.mjs|scripts/deploy/release.test.mjs|scripts/deploy/workflow.test.mjs) ;;
+              .github/workflows/deploy.yml|.github/workflows/recover-missing-20261001.yml|scripts/deploy/release.mjs|scripts/deploy/release.test.mjs|scripts/deploy/workflow.test.mjs|scripts/recovery/retry-missing-20261001.mjs|scripts/recovery/retry-targets-20261001.json) ;;
               *) echo 'deploy_required=true' >> "$GITHUB_OUTPUT"; exit 0 ;;
             esac
           done <<< "$changed_paths"

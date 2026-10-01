@@ -6,6 +6,7 @@ import test from 'node:test'
 const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8')
 const sync = readFileSync('.github/workflows/sync-real-estate.yml', 'utf8')
 const regen = readFileSync('.github/workflows/regen-sitemaps.yml', 'utf8')
+const recovery = readFileSync('.github/workflows/recover-missing-20261001.yml', 'utf8')
 
 test('deploy workflow is pinned to tested SHA and uses release commands instead of mutable production writes', () => {
   assert.match(deploy, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/)
@@ -29,6 +30,24 @@ test('failed pre-switch deploy can resume only the identified staged release thr
   assert.match(deploy, /node "\$CONTROLLER" resume --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
   assert.match(deploy, /node "\$CONTROLLER" reconcile --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
   assert.match(deploy, /deploy_required=false/)
+})
+
+test('incident recovery dispatch is scoped to the active release and reviewed targets', () => {
+  const targets = JSON.parse(readFileSync('scripts/recovery/retry-targets-20261001.json', 'utf8'))
+  const keys = targets.map(target => `${target.kind}/${target.lawd}/${target.ym}`)
+  assert.deepEqual(keys, [
+    'villaSale/26170/202609', 'villaSale/47940/202610', 'villaRent/52730/202610',
+    'offitelSale/41800/202609', 'offitelSale/44825/202610',
+    'offitelSale/47830/202610', 'offitelSale/51170/202609',
+    'offitelRent/12840/202609', 'offitelRent/43750/202610',
+    'offitelRent/47280/202610', 'offitelRent/48127/202610',
+    'offitelRent/52210/202609', 'landSale/41220/202609',
+  ])
+  assert.match(recovery, /workflow_dispatch:/)
+  assert.match(recovery, /test "\$ACTIVE_BACKEND_DIR" = '\/home\/project2\/deploy\/releases\/address-f80a26c09cb5\/backend'/)
+  assert.match(recovery, /sha256sum -c SHA256SUMS/)
+  assert.match(recovery, /retry-missing-20261001\.mjs/)
+  assert.doesNotMatch(recovery, /sync-real-estate\.yml|rm -rf .*real-estate-write\.lock/)
 })
 
 test('scheduled sync resolves the active backend once before running writers', () => {
@@ -70,7 +89,7 @@ test('sitemap generation workflows use active release runtime with a 20 minute g
 
 
 test('workflow YAML files parse with a real YAML parser', () => {
-  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml', '.github/workflows/regen-sitemaps.yml']) {
+  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml', '.github/workflows/regen-sitemaps.yml', '.github/workflows/recover-missing-20261001.yml']) {
     const result = spawnSync('python3', ['-c', 'import sys, yaml; yaml.safe_load(open(sys.argv[1], encoding="utf-8"))', file], { encoding: 'utf8' })
     assert.equal(result.status, 0, `${file} failed YAML parse: ${result.stderr}`)
   }
