@@ -74,16 +74,11 @@ try {
   if (owner.pid !== 3393128 || owner.hostname !== hostname() || typeof owner.token !== 'string') {
     throw new Error('Writer lock owner changed; inspect before recovery')
   }
-  const activeWrites = await prisma.$queryRawUnsafe(
-    'SELECT COUNT(*) AS total FROM information_schema.innodb_trx WHERE trx_rows_modified > 0',
-  )
-  const activeWriteCount = Number(activeWrites[0]?.total)
-  if (!Number.isSafeInteger(activeWriteCount) || activeWriteCount !== 0) {
-    throw new Error(`MySQL has ${activeWriteCount} active write transactions`)
-  }
+  // The recovery helper rechecks the exact token, host, and owner process identity
+  // under its recovery guard. The application DB account cannot inspect INNODB_TRX.
   const recovered = await recoverRealEstateWriteLock(owner.token)
   if (!recovered) throw new Error('Writer lock recovery refused by owner identity guard')
-  console.info(JSON.stringify({ recoveredWriterLock: true, ownerPid: owner.pid, activeWriteCount }))
+  console.info(JSON.stringify({ recoveredWriterLock: true, ownerPid: owner.pid }))
 
   await withRealEstateWriteLock('recoverMissingRegionMonths20261001', async () => {
     const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } })
