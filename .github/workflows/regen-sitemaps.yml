@@ -31,50 +31,18 @@ jobs:
           command_timeout: 25m
           script: |
             set -euo pipefail
-            ACTIVE_BACKEND_LINK="${ILSK_ACTIVE_BACKEND_LINK:-/home/project2/backend}"
-            if [ -L /home/project2/current-backend ]; then
-              ACTIVE_BACKEND_LINK="/home/project2/current-backend"
-            fi
-            ACTIVE_BACKEND_DIR="$(cd "$ACTIVE_BACKEND_LINK" && pwd -P)"
+            ACTIVE_BACKEND_DIR="/home/project2/backend"
             cd "$ACTIVE_BACKEND_DIR"
             echo "[regen] active backend: $ACTIVE_BACKEND_DIR"
-
-            INVENTORY="${ILSK_DEPLOY_INVENTORY:-/home/project2/deploy/inventory.json}"
-            SYNC_RUNTIME_SCRIPT="${ILSK_SYNC_RUNTIME_SCRIPT:-}"
-            if [ -z "$SYNC_RUNTIME_SCRIPT" ]; then
-              ACTIVE_RELEASE_ROOT="$(dirname "$ACTIVE_BACKEND_DIR")"
-              SYNC_RUNTIME_SCRIPT="$ACTIVE_RELEASE_ROOT/scripts/deploy/sync-runtime.mjs"
-            fi
-            if [ -f "$SYNC_RUNTIME_SCRIPT" ]; then
-              SYNC_RUNTIME_MODE="release"
-              node "$SYNC_RUNTIME_SCRIPT" print --active-backend-link "$ACTIVE_BACKEND_LINK" --inventory "$INVENTORY" || exit $?
-              run_backend_node_timed() {
-                RUNTIME_LIMIT="$1"
-                shift
-                timeout --kill-after=30s "$RUNTIME_LIMIT" node "$SYNC_RUNTIME_SCRIPT" run --active-backend-link "$ACTIVE_BACKEND_LINK" --inventory "$INVENTORY" -- node "$@"
-              }
-            else
-              if [ -L /home/project2/current-backend ]; then
-                echo "[error] current-backend is active but sync runtime helper was not found: $SYNC_RUNTIME_SCRIPT"
-                exit 2
-              fi
-              SYNC_RUNTIME_MODE="legacy"
-              LEGACY_BACKEND_ENV_FILE="${ILSK_BACKEND_ENV_FILE:-$ACTIVE_BACKEND_DIR/.env}"
-              run_backend_node_timed() {
-                RUNTIME_LIMIT="$1"
-                shift
-                if [ -f "$LEGACY_BACKEND_ENV_FILE" ]; then
-                  timeout --kill-after=30s "$RUNTIME_LIMIT" node --env-file "$LEGACY_BACKEND_ENV_FILE" "$@"
-                else
-                  timeout --kill-after=30s "$RUNTIME_LIMIT" node "$@"
-                fi
-              }
-            fi
-
-            if [ "$SYNC_RUNTIME_MODE" = "legacy" ]; then
-              export SITEMAP_DIR="${SITEMAP_DIR:-/home/project2/sitemaps}"
-              export SITEMAP_REGEN_BASE="${SITEMAP_REGEN_BASE:-http://127.0.0.1:3000}"
-            fi
+            BACKEND_ENV_FILE="$ACTIVE_BACKEND_DIR/.env"
+            test -f "$BACKEND_ENV_FILE" || { echo '[error] fixed backend env missing'; exit 2; }
+            run_backend_node_timed() {
+              RUNTIME_LIMIT="$1"
+              shift
+              timeout --kill-after=30s "$RUNTIME_LIMIT" node --env-file "$BACKEND_ENV_FILE" "$@"
+            }
+            export SITEMAP_DIR="${SITEMAP_DIR:-/home/project2/sitemaps}"
+            export SITEMAP_REGEN_BASE="${SITEMAP_REGEN_BASE:-http://127.0.0.1:3000}"
             export SITEMAP_REGEN_TOKEN="${{ secrets.SITEMAP_REGEN_TOKEN }}"
             if [ "${{ inputs.force }}" = "true" ]; then
               export SITEMAP_FORCE_SWAP=1
