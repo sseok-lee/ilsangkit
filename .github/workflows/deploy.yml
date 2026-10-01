@@ -12,35 +12,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  plan:
+  deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    outputs:
-      deploy_required: ${{ steps.scope.outputs.deploy_required }}
-    steps:
-      - name: Checkout tested commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
-      - name: Skip automatic release for controller-only changes
-        id: scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_paths="$(git diff --name-only HEAD^ HEAD)"
-          while IFS= read -r path; do
-            case "$path" in
-              .github/workflows/*|scripts/recovery/*|scripts/deploy/release.mjs|scripts/deploy/release.test.mjs|scripts/deploy/workflow.test.mjs) ;;
-              *) echo 'deploy_required=true' >> "$GITHUB_OUTPUT"; exit 0 ;;
-            esac
-          done <<< "$changed_paths"
-          echo 'deploy_required=false' >> "$GITHUB_OUTPUT"
-
-  deploy:
-    needs: plan
-    runs-on: ubuntu-latest
-    if: ${{ needs.plan.outputs.deploy_required == 'true' }}
 
     steps:
       - name: Checkout tested commit
@@ -77,70 +51,30 @@ jobs:
           NCP_MAP_CLIENT_ID: ${{ secrets.NCP_MAP_CLIENT_ID }}
           NCP_MAP_CLIENT_SECRET: ${{ secrets.NCP_MAP_CLIENT_SECRET }}
 
-      - name: Package release artifacts
+      - name: Package fixed-path build
         env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          RELEASE_ID="address-${HEAD_SHA:0:12}"
-          mkdir -p release-out/backend release-out/frontend release-out/scripts/deploy
-          cp -R backend/dist backend/package*.json backend/prisma release-out/backend/
-          cp -R frontend/.output release-out/frontend/
-          cp scripts/deploy/release.mjs scripts/deploy/deployment-state.mjs scripts/deploy/sync-runtime.mjs scripts/deploy/nginx-release.conf.template release-out/scripts/deploy/
-          cp ecosystem.release.config.cjs release-out/
-          node - "$RELEASE_ID" <<'NODE'
-          const fs = require('node:fs')
-          const path = require('node:path')
-          const crypto = require('node:crypto')
-          const releaseId = process.argv[2]
-          const nuxtDir = path.resolve('frontend/.output/public/_nuxt')
-          const assets = []
-          function walk(dir) {
-            if (!fs.existsSync(dir)) return
-            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-              const full = path.join(dir, entry.name)
-              if (entry.isDirectory()) walk(full)
-              else if (entry.isFile()) {
-                const relativePath = path.relative(nuxtDir, full).split(path.sep).join('/')
-                if (relativePath === 'builds/latest.json') continue
-                assets.push({
-                  path: `/home/project2/deploy/releases/${releaseId}/frontend/.output/public/_nuxt/${relativePath}`,
-                  fileName: relativePath,
-                  sha256: crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex'),
-                })
-              }
-            }
-          }
-          walk(nuxtDir)
-          if (assets.length === 0) throw new Error('no hashed frontend _nuxt assets found')
-          fs.writeFileSync('release-out/hashed-assets.json', JSON.stringify(assets, null, 2) + '\n')
-          NODE
-          tar -C release-out/backend -czf release-out/backend.tgz .
-          tar -C release-out/frontend -czf release-out/frontend.tgz .
-          BACKEND_SHA="$(sha256sum release-out/backend.tgz | awk '{print $1}')"
-          FRONTEND_SHA="$(sha256sum release-out/frontend.tgz | awk '{print $1}')"
-          cat > release-out/manifest.json <<JSON
-          {
-            "releaseId": "${RELEASE_ID}",
-            "commitSha": "${HEAD_SHA}",
-            "workflowSha": "${HEAD_SHA}",
-            "backendArtifact": { "path": "/home/project2/release-inbox/${RELEASE_ID}/backend.tgz", "sha256": "${BACKEND_SHA}" },
-            "frontendArtifact": { "path": "/home/project2/release-inbox/${RELEASE_ID}/frontend.tgz", "sha256": "${FRONTEND_SHA}" }
-          }
-          JSON
-          echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
+          mkdir -p deploy-bundle/scripts/deploy
+          tar -czf deploy-bundle/backend.tgz -C backend dist package.json package-lock.json prisma
+          tar -czf deploy-bundle/frontend.tgz -C frontend .output
+          cp scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh deploy-bundle/scripts/deploy/
+          cp ecosystem.config.js deploy-bundle/
+          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh > SHA256SUMS)
+          echo "DEPLOY_ID=${TESTED_SHA:0:12}" >> "$GITHUB_ENV"
 
-      - name: Upload immutable release bundle
+      - name: Upload staged build
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "release-out/*"
-          target: "/home/project2/release-inbox/${{ env.RELEASE_ID }}"
+          source: "deploy-bundle/*"
+          target: "/home/project2/run/fixed-deploy/${{ env.DEPLOY_ID }}"
           strip_components: 1
 
-      - name: Validate and switch release on server
+      - name: Verify and activate fixed paths
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -149,35 +83,22 @@ jobs:
           command_timeout: 30m
           script: |
             set -euo pipefail
-            RELEASE_ID="${{ env.RELEASE_ID }}"
-            INBOX="/home/project2/release-inbox/${RELEASE_ID}"
-            INVENTORY="/home/project2/deploy/inventory.json"
-            MANIFEST="${INBOX}/manifest.json"
-            RELEASE_SCRIPT="${INBOX}/scripts/deploy/release.mjs"
-            HASHED_ASSETS="${INBOX}/hashed-assets.json"
-            if [ ! -f "$INVENTORY" ]; then
-              echo "[deploy] missing C1 inventory: $INVENTORY" >&2
-              exit 2
-            fi
-            if [ ! -f "$HASHED_ASSETS" ]; then
-              echo "[deploy] missing hashed asset manifest: $HASHED_ASSETS" >&2
-              exit 2
-            fi
+            DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
+            export DEPLOY_SHA
+            bash "/home/project2/run/fixed-deploy/${DEPLOY_SHA:0:12}/scripts/deploy/fixed-deploy.sh"
 
-            SUMMARY_READY="$(node - "$INVENTORY" <<'NODE'
-            const fs = require('node:fs')
-            const inventory = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-            const activeBackendPort = inventory.active?.backend?.port || 8000
-            process.stdout.write(`http://127.0.0.1:${activeBackendPort}/api/internal/release-readiness`)
-            NODE
-            )"
-            SUMMARY_READINESS="$(curl -fsS "$SUMMARY_READY")"
+      - name: Retire release PM2 processes after public verification
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
+            export DEPLOY_SHA
+            bash "/home/project2/run/fixed-deploy/${DEPLOY_SHA:0:12}/scripts/deploy/retire-release-processes.sh"
 
-            printf '%s' "$SUMMARY_READINESS" > "$INBOX/readiness.json"
-            node "$INBOX/scripts/deploy/deployment-state.mjs" "$INVENTORY" "$MANIFEST" "$HASHED_ASSETS" "$INBOX/readiness.json"
-
-            node "$RELEASE_SCRIPT" deploy --inventory "$INVENTORY" --manifest "$MANIFEST"
-            node "$RELEASE_SCRIPT" reconcile --inventory "$INVENTORY" --manifest "$MANIFEST"
-
-      - name: Deployment Status
-        run: echo "✅ Release switch completed"
+      - name: Deployment status
+        run: echo "Fixed backend/frontend deployment and generated-release cleanup verified"
