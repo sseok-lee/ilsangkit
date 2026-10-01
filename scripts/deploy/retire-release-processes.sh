@@ -57,13 +57,47 @@ echo '[fixed-retire] retained one successful fixed deployment stage'
 
 # Only generated release directories are removed. Keep the former active
 # release as an offline rollback until the fixed path has operated normally.
-inventory_release="$(node -e 'process.stdout.write(require(process.argv[1]).activeReleaseId)' "$ROOT/deploy/inventory.json")"
-linked_backend="$(readlink -f "$ROOT/current-backend")"
-linked_frontend="$(readlink -f "$ROOT/current-frontend")"
-keep_release="$(basename "$(dirname "$linked_backend")")"
-test "$inventory_release" = "$keep_release"
-test "$linked_backend" = "$ROOT/deploy/releases/$keep_release/backend"
-test "$linked_frontend" = "$ROOT/deploy/releases/$keep_release/frontend"
+keep_release="$(node -e 'process.stdout.write(require(process.argv[1]).activeReleaseId)' "$ROOT/deploy/inventory.json")"
+[[ "$keep_release" =~ ^(address|compat)-[a-z0-9-]+$ ]]
+test -f "$ROOT/deploy/releases/$keep_release/.release-manifest.json"
+
+retire_current_pointers() {
+  local backend_link="$ROOT/current-backend" frontend_link="$ROOT/current-frontend"
+  local backend_present=0 frontend_present=0
+  if [ -e "$backend_link" ] || [ -L "$backend_link" ]; then backend_present=1; fi
+  if [ -e "$frontend_link" ] || [ -L "$frontend_link" ]; then frontend_present=1; fi
+  if [ "$backend_present" -ne "$frontend_present" ]; then
+    echo '[fixed-retire] legacy current pointers must be present or absent as a pair' >&2
+    return 2
+  fi
+  [ "$backend_present" -eq 1 ] || return 0
+  if [ ! -L "$backend_link" ] || [ ! -L "$frontend_link" ] ||
+     [ "$(readlink "$backend_link")" != "$ROOT/deploy/releases/$keep_release/backend" ] ||
+     [ "$(readlink "$frontend_link")" != "$ROOT/deploy/releases/$keep_release/frontend" ]; then
+    echo '[fixed-retire] legacy current pointers differ from the retained release' >&2
+    return 2
+  fi
+  if [ ! -d "$ROOT/deploy/releases/$keep_release/backend" ] ||
+     [ ! -d "$ROOT/deploy/releases/$keep_release/frontend" ]; then
+    echo '[fixed-retire] retained release directories are missing' >&2
+    return 2
+  fi
+  if [ -e "$STAGE/retired-current-backend" ] || [ -L "$STAGE/retired-current-backend" ] ||
+     [ -e "$STAGE/retired-current-frontend" ] || [ -L "$STAGE/retired-current-frontend" ]; then
+    echo '[fixed-retire] legacy current pointer archive already exists' >&2
+    return 2
+  fi
+  [ "${1:-}" = check ] && return 0
+  mv "$backend_link" "$STAGE/retired-current-backend" || return 2
+  if ! mv "$frontend_link" "$STAGE/retired-current-frontend"; then
+    mv "$STAGE/retired-current-backend" "$backend_link"
+    echo '[fixed-retire] could not move both legacy current pointers' >&2
+    return 2
+  fi
+  echo '[fixed-retire] archived verified legacy current pointers'
+}
+
+retire_current_pointers check
 
 assert_no_process_cwd() {
   local directory="$1" cwd
@@ -103,4 +137,6 @@ curl -fsS -m 20 "https://ilsangkit.co.kr$asset_path" -o /dev/null
 curl -fsS -m 20 -D "$headers" 'https://ilsangkit.co.kr/sitemap.xml' -o "$page"
 grep -q '<loc>' "$page"
 grep -iq '^x-sitemap-source: static' "$headers"
+assert_no_process_cwd "$ROOT/deploy/releases/$keep_release"
+retire_current_pointers
 echo "[fixed-retire] kept offline rollback release $keep_release"

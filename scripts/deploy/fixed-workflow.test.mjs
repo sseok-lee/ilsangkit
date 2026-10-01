@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -94,6 +94,63 @@ test('public cutover tolerates stale nginx workers and fails closed if they pers
     }
   } finally {
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('legacy current pointers retire only as a verified pair and tolerate later absence', () => {
+  const script = readFileSync('scripts/deploy/retire-release-processes.sh', 'utf8')
+  const start = script.indexOf('retire_current_pointers() {')
+  const end = script.indexOf('\n}\n', start)
+  assert.ok(start >= 0 && end > start, 'retirement must have a testable pointer guard')
+  const retirePointers = script.slice(start, end + 2)
+  const release = 'address-f80a26c09cb5'
+
+  for (const scenario of ['valid', 'absent', 'backend-only', 'wrong-target', 'regular-file', 'archive-exists']) {
+    const dir = mkdtempSync(join(tmpdir(), 'ilsangkit-current-retire-'))
+    try {
+      const root = join(dir, 'project2')
+      const stage = join(dir, 'stage')
+      const backend = join(root, 'current-backend')
+      const frontend = join(root, 'current-frontend')
+      const releaseBackend = join(root, 'deploy/releases', release, 'backend')
+      const releaseFrontend = join(root, 'deploy/releases', release, 'frontend')
+      mkdirSync(releaseBackend, { recursive: true })
+      mkdirSync(releaseFrontend, { recursive: true })
+      mkdirSync(stage)
+      if (scenario === 'valid' || scenario === 'backend-only' || scenario === 'archive-exists') symlinkSync(releaseBackend, backend)
+      if (scenario === 'valid' || scenario === 'archive-exists') symlinkSync(releaseFrontend, frontend)
+      if (scenario === 'wrong-target') {
+        const wrong = join(dir, 'wrong-backend')
+        mkdirSync(wrong)
+        symlinkSync(wrong, backend)
+        symlinkSync(releaseFrontend, frontend)
+      }
+      if (scenario === 'regular-file') {
+        writeFileSync(backend, 'do not replace')
+        symlinkSync(releaseFrontend, frontend)
+      }
+      if (scenario === 'archive-exists') writeFileSync(join(stage, 'retired-current-backend'), 'keep this file')
+
+      const result = spawnSync('bash', ['-c', `set -euo pipefail\nkeep_release="$KEEP_RELEASE"\n${retirePointers}\nretire_current_pointers`], {
+        encoding: 'utf8',
+        env: { ...process.env, ROOT: root, STAGE: stage, KEEP_RELEASE: release },
+      })
+      if (scenario === 'valid') {
+        assert.equal(result.status, 0, result.stderr)
+        assert.equal(existsSync(backend), false)
+        assert.equal(existsSync(frontend), false)
+        assert.ok(lstatSync(join(stage, 'retired-current-backend')).isSymbolicLink())
+        assert.equal(readlinkSync(join(stage, 'retired-current-frontend')), releaseFrontend)
+      } else if (scenario === 'absent') {
+        assert.equal(result.status, 0, result.stderr)
+      } else {
+        assert.equal(result.status, 2, `${scenario}: ${result.stderr}`)
+        assert.equal(existsSync(backend), true)
+        if (scenario !== 'backend-only') assert.equal(existsSync(frontend), true)
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   }
 })
 
