@@ -1190,26 +1190,13 @@ export async function runReleaseCommand(command, options = {}) {
     }
   }
 
-  if (command === 'switch' || command === 'resume') {
+  if (command === 'switch') {
     let lock
     try {
       lock = await acquireDeployLock(context.inventory, context.now(), context.runner)
       await validateAndVerify(context)
-      if (command === 'resume') {
-        if (!existsSync(join(context.releaseRoot, '.install-manifest.json'))) {
-          throw new Error('resume requires an existing immutable candidate install')
-        }
-        const installed = await installArtifacts(context)
-        if (!installed.reused) throw new Error('resume must not install candidate artifacts')
-      }
       await retainHashedAssets(context.manifest, context.inventory)
-      if (command === 'resume') await checkBusinessResponses(context)
       const includePath = await validateProxy(context)
-      if (command === 'resume') {
-        atomicWriteJson(join(context.releaseRoot, '.release-manifest.json'), context.manifest)
-        await writeJournal(context, 'validated')
-        updateDeployLockStage(lock, 'validated')
-      }
       try {
         await switchPointer(context, includePath)
         await publicSmoke(context)
@@ -1317,7 +1304,7 @@ function parseCliArgs(argv) {
 async function main() {
   const args = parseCliArgs(process.argv.slice(2))
   if (!args.command || !args.inventoryPath || !args.manifestPath) {
-    throw new Error('usage: node scripts/deploy/release.mjs <prepare|check|switch|resume|rollback|deploy|reconcile> --inventory inventory.json --manifest manifest.json')
+    throw new Error('usage: node scripts/deploy/release.mjs <prepare|check|switch|rollback|deploy|reconcile> --inventory inventory.json --manifest manifest.json')
   }
   const inventory = JSON.parse(readFileSync(args.inventoryPath, 'utf8'))
   const manifest = JSON.parse(readFileSync(args.manifestPath, 'utf8'))
