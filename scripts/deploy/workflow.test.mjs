@@ -21,6 +21,16 @@ test('deploy workflow is pinned to tested SHA and uses release commands instead 
   assert.match(deploy, /node "\$RELEASE_SCRIPT" reconcile --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
 })
 
+test('failed pre-switch deploy can resume only the identified staged release through Actions', () => {
+  assert.match(deploy, /workflow_dispatch:/)
+  assert.match(deploy, /test "\$RELEASE_ID" = 'address-f80a26c09cb5'/)
+  assert.match(deploy, /manifest\.commitSha !== candidateCommit \|\| manifest\.workflowSha !== candidateCommit/)
+  assert.match(deploy, /inventory\.active\?\.releaseId !== activeReleaseId/)
+  assert.match(deploy, /node "\$CONTROLLER" resume --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
+  assert.match(deploy, /node "\$CONTROLLER" reconcile --inventory "\$INVENTORY" --manifest "\$MANIFEST"/)
+  assert.match(deploy, /deploy_required=false/)
+})
+
 test('scheduled sync resolves the active backend once before running writers', () => {
   assert.match(sync, /ACTIVE_BACKEND_LINK="\$\{ILSK_ACTIVE_BACKEND_LINK:-\/home\/project2\/backend\}"/)
   assert.match(sync, /ACTIVE_BACKEND_DIR="\$\(cd "\$ACTIVE_BACKEND_LINK" && pwd -P\)"/)
