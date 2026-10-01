@@ -7,6 +7,7 @@ const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8')
 const sync = readFileSync('.github/workflows/sync-real-estate.yml', 'utf8')
 const regen = readFileSync('.github/workflows/regen-sitemaps.yml', 'utf8')
 const recovery = readFileSync('.github/workflows/recover-missing-20261001.yml', 'utf8')
+const summaryRecovery = readFileSync('.github/workflows/refresh-summary-20261001.yml', 'utf8')
 
 test('deploy workflow is pinned to tested SHA and uses release commands instead of mutable production writes', () => {
   assert.match(deploy, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/)
@@ -50,6 +51,15 @@ test('incident recovery dispatch is scoped to the active release and reviewed ta
   assert.doesNotMatch(recovery, /sync-real-estate\.yml|rm -rf .*real-estate-write\.lock/)
 })
 
+test('incident summary dispatch refreshes only the active release and verifies URL mappings', () => {
+  assert.match(summaryRecovery, /workflow_dispatch:/)
+  assert.match(summaryRecovery, /test "\$ACTIVE_BACKEND_DIR" = '\/home\/project2\/deploy\/releases\/address-f80a26c09cb5\/backend'/)
+  assert.match(summaryRecovery, /dist\/scripts\/refreshRealEstateSummary\.js/)
+  assert.match(summaryRecovery, /sha256sum -c SHA256SUMS/)
+  assert.match(summaryRecovery, /verify-summary-20261001\.mjs/)
+  assert.doesNotMatch(summaryRecovery, /sync-real-estate\.yml|SITEMAP_FORCE_SWAP|rm -rf .*real-estate-write\.lock/)
+})
+
 test('scheduled sync resolves the active backend once before running writers', () => {
   assert.match(sync, /ACTIVE_BACKEND_LINK="\$\{ILSK_ACTIVE_BACKEND_LINK:-\/home\/project2\/backend\}"/)
   assert.match(sync, /ACTIVE_BACKEND_DIR="\$\(cd "\$ACTIVE_BACKEND_LINK" && pwd -P\)"/)
@@ -89,7 +99,7 @@ test('sitemap generation workflows use active release runtime with a 20 minute g
 
 
 test('workflow YAML files parse with a real YAML parser', () => {
-  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml', '.github/workflows/regen-sitemaps.yml', '.github/workflows/recover-missing-20261001.yml']) {
+  for (const file of ['.github/workflows/deploy.yml', '.github/workflows/sync-real-estate.yml', '.github/workflows/regen-sitemaps.yml', '.github/workflows/recover-missing-20261001.yml', '.github/workflows/refresh-summary-20261001.yml']) {
     const result = spawnSync('python3', ['-c', 'import sys, yaml; yaml.safe_load(open(sys.argv[1], encoding="utf-8"))', file], { encoding: 'utf8' })
     assert.equal(result.status, 0, `${file} failed YAML parse: ${result.stderr}`)
   }
