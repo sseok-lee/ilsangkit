@@ -580,6 +580,72 @@ test('runReleaseCommand deploy executes safe release sequence and retains previo
   assert.ok(existsSync(join(inventory.deployRoot, 'journal', `${manifest.releaseId}.json`)))
 })
 
+test('resume validates running candidate business responses before switching without restarting processes', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const events = []
+  await runReleaseCommand('prepare', { inventory, manifest, runner: createRunner([]), fetch: okFetch() })
+
+  const result = await runReleaseCommand('resume', {
+    inventory, manifest, runner: createRunner(events), fetch: okFetch(events),
+    portChecker: async () => { throw new Error('resume must not inspect free candidate ports') },
+  })
+
+  assert.equal(result.releaseId, manifest.releaseId)
+  assert.deepEqual(stepEvents(events), [
+    'validate-manifest',
+    'verify-artifacts',
+    'verify-rollback-readiness',
+    'reuse-installed-artifacts',
+    'check-business-responses',
+    'validate-proxy',
+    'switch-pointer',
+    'reload-proxy',
+    'public-smoke',
+    'retain-previous',
+  ])
+  assert.ok(!events.some(event => event === 'start-backend' || event === 'start-frontend' || event === 'install-artifacts'))
+  assert.ok(existsSync(join(inventory.releasesRoot, manifest.releaseId, '.release-manifest.json')))
+})
+
+test('resume keeps the active release when a running candidate fails business validation', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const events = []
+  await runReleaseCommand('prepare', { inventory, manifest, runner: createRunner([]), fetch: okFetch() })
+
+  await assert.rejects(() => runReleaseCommand('resume', {
+    inventory, manifest, runner: createRunner(events),
+    fetch: async url => {
+      if (new URL(url).port === '13001' && new URL(url).pathname === FRONTEND_SSR_PATH) return okFetch(undefined, 503)(url)
+      return okFetch()(url)
+    },
+  }), /candidate probe failed: frontend-ssr status 503/)
+
+  assert.ok(!events.includes('switch-pointer'))
+  assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
+  assert.equal(existsSync(join(inventory.releasesRoot, manifest.releaseId, '.release-manifest.json')), false)
+})
+
+test('resume refuses a candidate without a verified install marker', async () => {
+  const workspace = makeWorkspace()
+  const artifacts = createArtifacts(workspace)
+  const inventory = createInventory(workspace)
+  const manifest = createManifest(workspace, artifacts)
+  const events = []
+
+  await assert.rejects(() => runReleaseCommand('resume', {
+    inventory, manifest, runner: createRunner(events), fetch: okFetch(events),
+  }), /resume requires an existing immutable candidate install/)
+
+  assert.ok(!events.includes('switch-pointer'))
+  assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
+})
+
 test('business probes send the real JSON search request instead of a bodyless POST', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
@@ -1295,7 +1361,7 @@ test('runReleaseCommand refuses concurrent deploy lock and releases it after fai
 })
 
 
-test('standalone switch and rollback are blocked by the deploy lock before pointer mutation', async () => {
+test('standalone switch, resume, and rollback are blocked by the deploy lock before pointer mutation', async () => {
   const workspace = makeWorkspace()
   const artifacts = createArtifacts(workspace)
   const inventory = createInventory(workspace)
@@ -1305,6 +1371,14 @@ test('standalone switch and rollback are blocked by the deploy lock before point
   writeFileSync(join(lockPath, 'owner.json'), JSON.stringify({ pid: process.pid, token: 'live-token', startedAtMs: Date.now(), processStartTimeMs: Date.now() }))
 
   await assert.rejects(() => runReleaseCommand('switch', {
+    inventory,
+    manifest,
+    runner: createRunner([]),
+    fetch: okFetch([]),
+  }), /deploy lock/)
+  assert.equal(readFileSync(inventory.nginxIncludePath, 'utf8'), 'old include')
+
+  await assert.rejects(() => runReleaseCommand('resume', {
     inventory,
     manifest,
     runner: createRunner([]),
