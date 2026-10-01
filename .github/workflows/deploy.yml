@@ -6,15 +6,47 @@ on:
     branches: [main]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Staged release to resume after a failed pre-switch deploy'
+        required: true
+        type: string
 
 concurrency:
   group: cafe24-db
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  plan:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      deploy_required: ${{ steps.scope.outputs.deploy_required }}
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - name: Skip automatic release for controller-only changes
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_paths="$(git diff --name-only HEAD^ HEAD)"
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/deploy.yml|scripts/deploy/release.mjs|scripts/deploy/release.test.mjs|scripts/deploy/workflow.test.mjs) ;;
+              *) echo 'deploy_required=true' >> "$GITHUB_OUTPUT"; exit 0 ;;
+            esac
+          done <<< "$changed_paths"
+          echo 'deploy_required=false' >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: plan
+    runs-on: ubuntu-latest
+    if: ${{ needs.plan.outputs.deploy_required == 'true' }}
 
     steps:
       - name: Checkout tested commit
@@ -155,3 +187,70 @@ jobs:
 
       - name: Deployment Status
         run: echo "✅ Release switch completed"
+
+  resume:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Validate staged release identity
+        env:
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$RELEASE_ID" = 'address-f80a26c09cb5'
+
+      - name: Checkout tested controller
+        uses: actions/checkout@v4
+
+      - name: Package resume controller
+        run: |
+          mkdir -p resume-out/scripts/deploy
+          cp scripts/deploy/release.mjs scripts/deploy/deployment-state.mjs resume-out/scripts/deploy/
+
+      - name: Upload resume controller
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "resume-out/*"
+          target: "/home/project2/run/recovery-20261001/controller-${{ github.sha }}"
+          strip_components: 1
+
+      - name: Recheck and resume staged release
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            RELEASE_ID='address-f80a26c09cb5'
+            INBOX="/home/project2/release-inbox/${RELEASE_ID}"
+            INVENTORY='/home/project2/deploy/inventory.json'
+            MANIFEST="${INBOX}/manifest.json"
+            CONTROLLER='/home/project2/run/recovery-20261001/controller-${{ github.sha }}/scripts/deploy/release.mjs'
+
+            node - "$INVENTORY" "$MANIFEST" <<'NODE'
+            const fs = require('node:fs')
+            const path = require('node:path')
+            const inventory = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+            const manifest = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'))
+            const activeReleaseId = 'address-8a4f145951c6'
+            const candidateReleaseId = 'address-f80a26c09cb5'
+            const candidateCommit = 'f80a26c09cb5cefd08e776e87e9c8034584eeb4d'
+            if (inventory.active?.releaseId !== activeReleaseId) throw new Error('active release changed; inspect before resuming')
+            if (manifest.releaseId !== candidateReleaseId || manifest.commitSha !== candidateCommit || manifest.workflowSha !== candidateCommit) throw new Error('staged manifest identity mismatch')
+            if (manifest.rollbackReleaseId !== activeReleaseId) throw new Error('rollback release mismatch')
+            if (manifest.ports?.backend !== 18002 || manifest.ports?.frontend !== 13002) throw new Error('staged candidate ports changed')
+            for (const kind of ['backend', 'frontend']) {
+              const expected = path.join(inventory.releasesRoot, activeReleaseId, kind)
+              if (fs.realpathSync(inventory.activePointers[kind]) !== expected) throw new Error(`active ${kind} pointer changed`)
+            }
+            if (!fs.existsSync(path.join(inventory.releasesRoot, candidateReleaseId))) throw new Error('staged candidate install missing')
+            if (fs.existsSync(path.join(inventory.deployRoot, 'locks', 'release.lock'))) throw new Error('deploy lock is held')
+            NODE
+
+            node "$CONTROLLER" resume --inventory "$INVENTORY" --manifest "$MANIFEST"
+            node "$CONTROLLER" reconcile --inventory "$INVENTORY" --manifest "$MANIFEST"
