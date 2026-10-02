@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-background-light">
+  <div class="min-h-screen flex flex-col bg-white text-ink">
     <Head>
       <Title>{{ title }} - 일상킷</Title>
       <Meta name="description" :content="description" />
@@ -15,40 +15,35 @@
     <main class="flex-1 flex items-center justify-center px-4 py-12">
       <div class="max-w-xl w-full text-center">
         <p class="text-7xl md:text-8xl font-black text-primary/20 mb-2">{{ statusCode }}</p>
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-3">{{ title }}</h1>
-        <p class="text-slate-500 mb-8">{{ description }}</p>
+        <h1 class="ui-h1 text-strong mb-3">{{ title }}</h1>
+        <p class="text-muted mb-8">{{ description }}</p>
 
         <!-- 410 은 폐업·폐원한 시설이므로 같은 카테고리 목록이 홈보다 유용한 다음 행동이다.
              그때만 CTA 순서를 바꾸고, 나머지 상태에서는 기존대로 홈이 primary 다. -->
         <div class="flex flex-wrap items-center justify-center gap-3">
-          <a
+          <UiButton
             v-if="copy.categoryCta"
+            variant="primary"
             :href="copy.categoryCta.href"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium shadow-sm"
           >
-            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">grid_view</span>
             {{ copy.categoryCta.label }}
-          </a>
-          <a
-            href="/"
-            :class="copy.categoryCta
-              ? 'inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-primary/30 hover:shadow-md transition-all font-medium'
-              : 'inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium shadow-sm'"
-          >
-            <span class="material-symbols-outlined text-[20px]">home</span>
+          </UiButton>
+          <UiButton :variant="copy.categoryCta ? 'secondary' : 'primary'" href="/">
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">home</span>
             홈으로 돌아가기
-          </a>
+          </UiButton>
         </div>
 
         <!-- 영구 응답(404·410)일 때만 탈출구를 띄운다. 5xx 는 재시도가 정답이라 제외. -->
-        <div v-if="copy.showRecovery" class="mt-12">
-          <p class="text-sm text-slate-500 mb-5">찾으시는 정보가 있으신가요?</p>
+        <div v-if="copy.showRecovery" class="mt-12 border-t border-line pt-10">
+          <p class="text-sm text-muted mb-5">찾으시는 정보가 있으신가요?</p>
 
           <!-- 재검색 -->
           <form class="mb-8 text-left" @submit.prevent="onSearch">
             <div class="relative">
               <span
-                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]"
+                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-faint text-[20px]"
                 aria-hidden="true"
               >search</span>
               <input
@@ -58,11 +53,11 @@
                 enterkeyhint="search"
                 aria-label="사이트 검색"
                 :placeholder="searchPlaceholder"
-                class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-20 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                class="w-full min-h-[48px] rounded-[10px] border border-line bg-white py-3 pl-11 pr-20 text-sm text-ink placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
               />
               <button
                 type="submit"
-                class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-[36px] rounded-[7px] bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
               >
                 검색
               </button>
@@ -71,13 +66,13 @@
 
           <!-- 부동산 -->
           <div class="mb-4">
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">부동산</h2>
+            <h2 class="text-[13px] font-semibold text-muted mb-3">부동산</h2>
             <div class="grid grid-cols-3 gap-2">
               <a
                 v-for="re in realEstateLinks"
                 :key="re.slug"
                 :href="re.slug"
-                class="p-3 bg-white border border-slate-200 rounded-xl hover:shadow-md hover:border-primary/30 transition-all text-center text-sm font-medium text-slate-700"
+                class="flex min-h-[44px] items-center justify-center p-3 bg-white border border-line rounded-[10px] hover:border-primary transition-colors text-center text-sm font-medium text-ink"
               >
                 {{ re.label }}
               </a>
@@ -86,13 +81,13 @@
 
           <!-- 생활시설 -->
           <div>
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">생활시설</h2>
+            <h2 class="text-[13px] font-semibold text-muted mb-3">생활시설</h2>
             <div class="grid grid-cols-3 gap-2">
               <a
                 v-for="cat in facilityLinks"
                 :key="cat.slug"
                 :href="`/${cat.slug}`"
-                class="p-3 bg-white border border-slate-200 rounded-xl hover:shadow-md hover:border-primary/30 transition-all text-center text-sm font-medium text-slate-700"
+                class="flex min-h-[44px] items-center justify-center p-3 bg-white border border-line rounded-[10px] hover:border-primary transition-colors text-center text-sm font-medium text-ink"
               >
                 {{ cat.label }}
               </a>
@@ -111,6 +106,7 @@
 import { ref } from 'vue'
 import AppHeader from '~/components/common/AppHeader.vue'
 import AppFooter from '~/components/common/AppFooter.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import { resolveErrorPageCopy, errorPagePath, facilityCategoryFromPath } from '~/utils/errorPageCopy'
 import { resolveSearchScope, buildSearchDestination, scopePlaceholder } from '~/utils/searchScope'
 

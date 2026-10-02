@@ -48,6 +48,16 @@ export const FILES = [
   'pages/trash/areas/[areaId].vue',
   'pages/subway/[slug].vue',
   'pages/subway/index.vue',
+  'error.vue',
+  'pages/about.vue',
+  'pages/contact.vue',
+  'pages/privacy.vue',
+  'pages/terms.vue',
+  'pages/faq.vue',
+  'pages/subscription/sale/index.vue',
+  'pages/subscription/sale/[type].vue',
+  'pages/subscription/rent/index.vue',
+  'pages/subscription/rent/[type].vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/
