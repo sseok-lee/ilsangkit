@@ -74,4 +74,47 @@ describe('DetailNearby', () => {
     })
     expect(wrapper.findAll('.animate-pulse').length).toBeGreaterThan(0)
   })
+
+  it('sectionVariant="flat" 을 모든 SectionBlock 에 variant 로 전달한다', () => {
+    const wrapper = mount(DetailNearby, {
+      props: {
+        nearbyFacilities: [makeFacility('a', '가까운 화장실 A')],
+        nearbyLoading: false,
+        crossFacilitiesGrouped: [
+          {
+            category: 'parking',
+            meta: { label: '주차장', icon: 'local_parking' },
+            items: [makeFacility('p1', '근처 주차장', 'parking')],
+          },
+        ],
+        crossLoading: false,
+        categoryMeta: { label: '화장실', icon: 'wc' },
+        sectionVariant: 'flat' as const,
+      },
+      global: globalConfig,
+    })
+    const sections = wrapper.findAll('section')
+    expect(sections.length).toBeGreaterThan(0)
+    expect(sections.every((s) => s.attributes('variant') === 'flat')).toBe(true)
+  })
+
+  it('sectionVariant 미지정이면 card 를 전달한다', () => {
+    const wrapper = mount(DetailNearby, {
+      props: {
+        nearbyFacilities: [makeFacility('a', '가까운 화장실 A')],
+        nearbyLoading: false,
+        crossFacilitiesGrouped: [
+          {
+            category: 'parking',
+            meta: { label: '주차장', icon: 'local_parking' },
+            items: [makeFacility('p1', '근처 주차장', 'parking')],
+          },
+        ],
+        crossLoading: false,
+        categoryMeta: { label: '화장실', icon: 'wc' },
+      },
+      global: globalConfig,
+    })
+    expect(wrapper.findAll('section').every((s) => s.attributes('variant') === 'card')).toBe(true)
+  })
 })

@@ -53,4 +53,19 @@ describe('PageHead', () => {
     expect(w.find('.od-hero-stats').exists()).toBe(false)
     expect(w.find('dl').exists()).toBe(false)
   })
+
+  it('기본 슬롯은 .page-head 안, 설명 뒤에 렌더된다', () => {
+    const w = mount(PageHead, {
+      props: { title: '병원', description: '설명' },
+      slots: { default: '<div data-testid="extra">요약</div>' },
+    })
+    const extra = w.get('.page-head [data-testid="extra"]')
+    expect(extra.text()).toBe('요약')
+    expect(w.get('.page-head__desc').element.compareDocumentPosition(extra.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('기본 슬롯이 없으면 추가 DOM 이 없다', () => {
+    const w = mount(PageHead, { props: { title: '병원' } })
+    expect(w.find('.page-head').element.children.length).toBe(1)
+  })
 })

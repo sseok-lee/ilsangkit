@@ -1,14 +1,15 @@
 <template>
-  <div class="flex flex-col gap-3 md:gap-4">
+  <div :class="sectionVariant === 'flat' ? 'flex flex-col' : 'flex flex-col gap-3 md:gap-4'">
     <!-- Same-category nearby -->
     <SectionBlock
       v-if="nearbyLoading || nearbyFacilities.length > 0"
+      :variant="sectionVariant"
       :heading="`주변 ${categoryMeta.label}`"
       subtext="같은 카테고리 주변 시설입니다."
     >
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <template v-if="nearbyLoading">
-          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
+          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-background-light h-[72px]"></div>
         </template>
         <template v-else>
           <FacilityCard
@@ -23,9 +24,9 @@
 
     <!-- Cross-category nearby -->
     <template v-if="crossLoading">
-      <SectionBlock>
+      <SectionBlock :variant="sectionVariant">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
+          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-background-light h-[72px]"></div>
         </div>
       </SectionBlock>
     </template>
@@ -33,6 +34,7 @@
       <SectionBlock
         v-for="group in crossFacilitiesGrouped"
         :key="group.category"
+        :variant="sectionVariant"
         :heading="`주변 ${group.meta.label}`"
         subtext="관련 카테고리의 주변 시설입니다."
       >
@@ -65,11 +67,12 @@ interface CrossGroup {
   items: Facility[]
 }
 
-defineProps<{
+withDefaults(defineProps<{
   nearbyFacilities: Facility[]
   nearbyLoading: boolean
   crossFacilitiesGrouped: CrossGroup[]
   crossLoading: boolean
   categoryMeta: CategoryMetaLike
-}>()
+  sectionVariant?: 'card' | 'flat'
+}>(), { sectionVariant: 'card' })
 </script>

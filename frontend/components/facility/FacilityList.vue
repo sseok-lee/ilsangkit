@@ -6,14 +6,14 @@
         v-for="i in 5"
         :key="i"
         data-testid="skeleton"
-        class="p-5 bg-white border border-slate-200 rounded-xl animate-pulse"
+        class="p-5 bg-white border border-line rounded-xl animate-pulse"
       >
         <div class="flex items-start justify-between gap-3 mb-3">
-          <div class="h-7 w-24 bg-slate-200 rounded-full"></div>
-          <div class="h-6 w-16 bg-slate-200 rounded-full"></div>
+          <div class="h-7 w-24 bg-line rounded-full"></div>
+          <div class="h-6 w-16 bg-line rounded-full"></div>
         </div>
-        <div class="h-6 bg-slate-200 rounded mb-2 w-3/4"></div>
-        <div class="h-4 bg-slate-200 rounded w-full"></div>
+        <div class="h-6 bg-line rounded mb-2 w-3/4"></div>
+        <div class="h-4 bg-line rounded w-full"></div>
       </div>
     </div>
 
@@ -23,35 +23,35 @@
       class="flex flex-col items-center justify-center py-16 px-4"
     >
       <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-xl font-bold text-slate-900 mb-2">{{ UI_MESSAGES.emptySearch }}</h3>
-      <p class="text-slate-600 text-center">
+      <h3 class="text-xl font-bold text-ink mb-2">{{ UI_MESSAGES.emptySearch }}</h3>
+      <p class="text-muted text-center">
         다른 검색어나 필터로 다시 시도해보세요
       </p>
     </div>
 
     <!-- Facility List -->
-    <div v-else-if="variant === 'rows'" class="divide-y divide-[#e6e9f0] overflow-hidden rounded-xl border border-[#e6e9f0] bg-white">
+    <div v-else-if="variant === 'rows'" class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
       <HardLink
         v-for="facility in facilities"
         :key="facility.id"
         :to="`/${facility.category}/${facility.id}`"
         :aria-label="`${facility.name} 상세보기`"
         data-testid="facility-row"
-        class="group flex min-h-[96px] items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary md:items-center md:px-5"
+        class="group flex min-h-[96px] items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-background-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary md:items-center md:px-5"
       >
         <span class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary md:mt-0">
           <CategoryIcon :category-id="facility.category" size="sm" />
         </span>
         <span class="min-w-0 flex-1">
           <span class="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4">
-            <strong class="text-base font-bold leading-snug text-[#15213b] group-hover:text-primary">
+            <strong class="text-base font-bold leading-snug text-ink group-hover:text-primary">
               {{ facility.name }}
             </strong>
             <span v-if="facility.distance !== undefined" class="shrink-0 text-sm font-semibold text-primary">
               {{ formatDistance(facility.distance) }}
             </span>
           </span>
-          <span v-if="displayAddress(facility)" class="mt-1 block text-sm leading-relaxed text-[#56627a]">
+          <span v-if="displayAddress(facility)" class="mt-1 block text-sm leading-relaxed text-muted">
             {{ displayAddress(facility) }}
           </span>
           <span class="mt-2 flex flex-wrap items-center gap-2">
@@ -62,13 +62,13 @@
             <span
               v-for="detail in rowDetails(facility)"
               :key="detail"
-              class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-[#56627a]"
+              class="inline-flex rounded-full bg-background-light px-2.5 py-1 text-xs font-medium text-muted"
             >
               {{ detail }}
             </span>
           </span>
         </span>
-        <span class="material-symbols-outlined mt-1 text-[18px] text-slate-300 transition-colors group-hover:text-primary md:mt-0">chevron_right</span>
+        <span class="material-symbols-outlined mt-1 text-[18px] text-faint transition-colors group-hover:text-primary md:mt-0">chevron_right</span>
       </HardLink>
     </div>
 

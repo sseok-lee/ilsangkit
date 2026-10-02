@@ -1,5 +1,48 @@
 <template>
-  <section v-if="guides.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <section v-if="guides.length > 0 && variant === 'flat'" class="section-flat">
+    <div class="flex items-center justify-between mb-4 md:mb-[22px]">
+      <h2 class="ui-h2 text-strong">관련 가이드</h2>
+      <NuxtLink
+        to="/guide"
+        class="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+      >
+        더보기
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+      </NuxtLink>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <NuxtLink
+        v-for="guide in guides"
+        :key="guide.id"
+        :to="`/guide/${guide.slug}`"
+        class="group flex flex-col rounded-lg border border-line overflow-hidden hover:border-primary/30 transition-colors duration-200"
+      >
+        <div class="aspect-video bg-background-light overflow-hidden">
+          <img
+            v-if="guide.thumbnailUrl"
+            :src="`${publicApiBase}${guide.thumbnailUrl}`"
+            :alt="guide.title"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            width="400"
+            height="225"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-[36px] text-faint" aria-hidden="true">article</span>
+          </div>
+        </div>
+        <div class="p-3">
+          <h3 class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors">
+            {{ guide.title }}
+          </h3>
+          <p class="text-xs text-muted mt-1 line-clamp-1">
+            {{ guide.summary }}
+          </p>
+        </div>
+      </NuxtLink>
+    </div>
+  </section>
+  <section v-else-if="guides.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
       <h2 class="text-slate-900 text-display-2 flex items-center gap-2">
         <span class="material-symbols-outlined text-primary text-[20px]">menu_book</span>
@@ -57,8 +100,10 @@ const props = withDefaults(defineProps<{
   categories?: string[]
   excludeSlug?: string
   limit?: number
+  variant?: 'card' | 'flat'
 }>(), {
   limit: 3,
+  variant: 'card',
 })
 
 const config = useRuntimeConfig()

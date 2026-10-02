@@ -2,7 +2,7 @@
   <div class="space-y-3">
     <!-- 충전기 요약 뱃지 -->
     <div v-if="displayChargers?.length" class="flex items-center gap-2 flex-wrap">
-      <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-slate-100 text-slate-800">
+      <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-background-light text-ink">
         총 {{ displayChargers.length }}대
       </span>
       <span v-if="rapidCount > 0" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-primary-100 text-primary-800">
@@ -28,41 +28,41 @@
     <!-- 주차/이용제한 정보 -->
     <div
       v-if="details.parkingFree != null || details.limitYn != null"
-      class="pt-3 border-t border-slate-200"
+      class="pt-3 border-t border-line"
     >
-      <p class="text-xs font-medium text-slate-500 mb-2">이용 정보</p>
+      <p class="text-xs font-medium text-muted mb-2">이용 정보</p>
       <div class="flex flex-col gap-2">
-        <div v-if="details.parkingFree != null" class="flex items-center gap-1.5 text-sm text-slate-700">
-          <span :class="details.parkingFree === 'Y' ? 'text-green-600' : 'text-slate-500'">{{ details.parkingFree === 'Y' ? '✓' : '✗' }}</span>
+        <div v-if="details.parkingFree != null" class="flex items-center gap-1.5 text-sm text-ink">
+          <span :class="details.parkingFree === 'Y' ? 'text-green-600' : 'text-muted'">{{ details.parkingFree === 'Y' ? '✓' : '✗' }}</span>
           <span>{{ details.parkingFree === 'Y' ? '무료주차' : '유료주차' }}</span>
         </div>
-        <div v-if="details.limitYn != null" class="flex items-center gap-1.5 text-sm text-slate-700">
+        <div v-if="details.limitYn != null" class="flex items-center gap-1.5 text-sm text-ink">
           <span :class="details.limitYn === 'Y' ? 'text-red-500' : 'text-green-600'">{{ details.limitYn === 'Y' ? '✓' : '✗' }}</span>
           <span>이용제한 {{ details.limitYn === 'Y' ? '있음' : '없음' }}</span>
         </div>
-        <p v-if="details.limitYn === 'Y' && details.limitDetail" class="text-sm text-slate-500 ml-5">{{ details.limitDetail }}</p>
+        <p v-if="details.limitYn === 'Y' && details.limitDetail" class="text-sm text-muted ml-5">{{ details.limitDetail }}</p>
       </div>
     </div>
 
     <!-- 위치 정보 -->
-    <div v-if="details.addrDetail || details.location" class="pt-3 border-t border-slate-200">
-      <p class="text-xs font-medium text-slate-500 mb-2">위치 정보</p>
+    <div v-if="details.addrDetail || details.location" class="pt-3 border-t border-line">
+      <p class="text-xs font-medium text-muted mb-2">위치 정보</p>
       <div class="flex flex-col gap-1">
-        <p v-if="details.addrDetail" class="text-sm text-slate-900">{{ details.addrDetail }}</p>
-        <p v-if="details.location" class="text-sm text-slate-500">{{ details.location }}</p>
+        <p v-if="details.addrDetail" class="text-sm text-ink">{{ details.addrDetail }}</p>
+        <p v-if="details.location" class="text-sm text-muted">{{ details.location }}</p>
       </div>
     </div>
 
     <!-- 안내사항 -->
-    <div v-if="details.note" class="pt-3 border-t border-slate-200">
-      <p class="text-xs font-medium text-slate-500 mb-2">안내사항</p>
-      <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ details.note }}</p>
+    <div v-if="details.note" class="pt-3 border-t border-line">
+      <p class="text-xs font-medium text-muted mb-2">안내사항</p>
+      <p class="text-sm text-ink whitespace-pre-wrap">{{ details.note }}</p>
     </div>
 
     <!-- 충전기 목록 -->
-    <div v-if="displayChargers?.length" class="pt-3 border-t border-slate-200">
+    <div v-if="displayChargers?.length" class="pt-3 border-t border-line">
       <div class="flex items-center justify-between mb-3">
-        <p class="text-xs font-medium text-slate-500">충전기 현황</p>
+        <p class="text-xs font-medium text-muted">충전기 현황</p>
         <span v-if="freshnessLabel" class="text-xs font-medium" :class="freshnessClass">
           {{ freshnessLabel }}
         </span>
@@ -71,18 +71,18 @@
         <div
           v-for="(charger, index) in displayChargers"
           :key="charger.chgerId || index"
-          class="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+          class="flex items-center justify-between p-3 bg-background-light rounded-lg"
         >
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-mono text-slate-500">#{{ charger.chgerId || index + 1 }}</span>
+            <span class="text-xs font-mono text-muted">#{{ charger.chgerId || index + 1 }}</span>
             <span
               class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
               :class="getTypeBadgeClass(charger)"
             >
               {{ getTypeLabel(charger) }}
             </span>
-            <span v-if="charger.output" class="text-xs text-slate-600">{{ charger.output }}kW</span>
-            <span v-if="charger.method" class="text-xs text-slate-500">{{ charger.method }}</span>
+            <span v-if="charger.output" class="text-xs text-muted">{{ charger.output }}kW</span>
+            <span v-if="charger.method" class="text-xs text-muted">{{ charger.method }}</span>
           </div>
           <span
             class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
@@ -236,6 +236,6 @@ function getStatBadgeClass(charger: EvChargerItem): string {
   if (stat === '2') return 'bg-green-100 text-green-800'
   if (stat === '3') return 'bg-yellow-100 text-yellow-800'
   if (stat === '4') return 'bg-red-100 text-red-800'
-  return 'bg-slate-100 text-slate-800'
+  return 'bg-background-light text-ink'
 }
 </script>

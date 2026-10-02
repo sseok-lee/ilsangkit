@@ -9,24 +9,24 @@
       <section
         v-for="group in result.groups"
         :key="group.category"
-        class="border-t border-[#E6E9F0] pt-6"
+        class="border-t border-line pt-6"
       >
         <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-sm font-semibold text-[#56627A]">생활시설 목록</p>
-            <h2 class="mt-1 text-xl font-bold text-[#15213B]">
+            <p class="text-sm font-semibold text-muted">생활시설 목록</p>
+            <h2 class="mt-1 text-xl font-bold text-ink">
               {{ group.label }}
-              <span class="ml-2 text-base font-semibold text-[#56627A]">{{ group.count.toLocaleString() }} {{ group.unit }}</span>
+              <span class="ml-2 text-base font-semibold text-muted">{{ group.count.toLocaleString() }} {{ group.unit }}</span>
             </h2>
           </div>
           <NuxtLink
             :to="listHref(group.category)"
-            class="inline-flex min-h-11 items-center justify-center rounded-md border border-[#D5DCE8] px-4 text-sm font-bold text-[#15213B] hover:border-[#2450DC]/40"
+            class="inline-flex min-h-11 items-center justify-center rounded-md border border-line-2 px-4 text-sm font-bold text-ink hover:border-primary/40"
           >
             {{ group.label }} 전체 보기
           </NuxtLink>
         </div>
-        <div class="divide-y divide-[#E6E9F0]">
+        <div class="divide-y divide-line">
           <FacilityBrowseRow
             v-for="item in group.items"
             :key="`${item.category}:${item.id}`"
@@ -37,18 +37,18 @@
     </div>
 
     <div v-else class="space-y-4">
-      <div class="border-t border-[#E6E9F0] pt-6">
+      <div class="border-t border-line pt-6">
         <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-sm font-semibold text-[#2450DC]">{{ result.unit }} 목록</p>
-            <h2 class="mt-1 text-xl font-bold text-[#15213B]">
+            <p class="text-sm font-semibold text-primary">{{ result.unit }} 목록</p>
+            <h2 class="mt-1 text-xl font-bold text-ink">
               {{ listLabel }}
-              <span class="ml-2 text-base font-semibold text-[#56627A]">{{ result.total.toLocaleString() }} {{ result.unit }}</span>
+              <span class="ml-2 text-base font-semibold text-muted">{{ result.total.toLocaleString() }} {{ result.unit }}</span>
             </h2>
           </div>
           <NuxtLink
             :to="groupedHref"
-            class="inline-flex min-h-11 items-center justify-center rounded-md border border-[#D5DCE8] px-4 text-sm font-bold text-[#15213B] hover:border-[#2450DC]/40"
+            class="inline-flex min-h-11 items-center justify-center rounded-md border border-line-2 px-4 text-sm font-bold text-ink hover:border-primary/40"
           >
             전체 미리보기
           </NuxtLink>
@@ -58,7 +58,7 @@
           title="조건에 맞는 생활시설이 없습니다"
           description="검색어를 줄이거나 다른 구·군을 선택해 보세요."
         />
-        <div v-else class="divide-y divide-[#E6E9F0]">
+        <div v-else class="divide-y divide-line">
           <FacilityBrowseRow
             v-for="item in result.items"
             :key="`${item.category}:${item.id}`"

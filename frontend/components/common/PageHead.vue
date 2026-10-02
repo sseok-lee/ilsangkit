@@ -23,12 +23,13 @@
         <slot name="actions" />
       </div>
     </div>
+    <slot />
   </div>
 </template>
 
 <script setup lang="ts">
 // 흰색 평면형 페이지 머리(스펙 2026-10-02 §3.4). 목록 페이지에는 요약 줄을 두지 않는다(D6) —
-// 상세 페이지는 이 컴포넌트 아래에 SummaryRow 를 따로 둔다.
+// 상세 페이지는 기본 슬롯에 SummaryRow 를 넣어 머리 블록 안에 둔다(바깥에 두면 아래 테두리와 겹쳐 2px 선이 된다).
 withDefaults(defineProps<{
   eyebrow?: string
   title?: string

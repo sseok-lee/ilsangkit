@@ -1,16 +1,16 @@
 <template>
   <NuxtLink
     :to="href"
-    class="block py-5 transition-colors hover:bg-[#F7F8FA] focus:outline-none focus:ring-2 focus:ring-[#2450DC]/20"
+    class="block py-5 transition-colors hover:bg-background-light focus:outline-none focus:ring-2 focus:ring-primary/20"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="min-w-0">
-        <p class="text-base font-bold text-[#15213B]">{{ item.name }}</p>
-        <p v-if="displayAddress" class="mt-1 text-sm text-[#56627A]">{{ displayAddress }}</p>
+        <p class="text-base font-bold text-ink">{{ item.name }}</p>
+        <p v-if="displayAddress" class="mt-1 text-sm text-muted">{{ displayAddress }}</p>
       </div>
       <div class="flex items-center gap-3 text-sm">
-        <span v-if="primaryExtra" class="text-[#56627A]">{{ primaryExtra }}</span>
-        <span class="rounded bg-[#F1F4F8] px-2.5 py-1 font-semibold text-[#56627A]">{{ categoryLabel }}</span>
+        <span v-if="primaryExtra" class="text-muted">{{ primaryExtra }}</span>
+        <span class="rounded bg-background-light px-2.5 py-1 font-semibold text-muted">{{ categoryLabel }}</span>
       </div>
     </div>
   </NuxtLink>
