@@ -53,6 +53,8 @@ describe('RegionFacilityCategoryGrid', () => {
     })
     const links = wrapper.findAll('a')
     expect(links[0].find('[data-test="top-mark"]').text()).toBe('많은 시설')
+    // 링크 텍스트(앵커·접근 이름)에서 카테고리명과 표식이 붙지 않아야 한다
+    expect(links[0].text()).toMatch(/\S 많은 시설/)
     expect(links[1].find('[data-test="top-mark"]').exists()).toBe(false)
   })
 

@@ -62,6 +62,7 @@ describe('RegionTrashSchedule 조회 실패 표시', () => {
     })
     expect(wrapper.find('.section-flat').exists()).toBe(true)
     expect(wrapper.html()).not.toMatch(/rounded-full bg-primary\/10|slate-/)
-    expect(wrapper.text()).toContain('12건')
+    // subtext 에도 "12건" 이 있으므로 #right 슬롯 자체를 확인한다
+    expect(wrapper.get('header strong').text()).toBe('12')
   })
 })

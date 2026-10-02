@@ -56,6 +56,8 @@ describe('DistrictSummaryCard', () => {
     expect(text).toContain('장애인 화장실')
     expect(text).toContain('29')
     expect(text).toContain('60%')
+    // 개수와 비율이 붙어 읽히지 않게("120곳35%" 방지)
+    expect(text).toMatch(/곳 \d+%/)
     expect(text).toContain('24시간 개방')
   })
 

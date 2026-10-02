@@ -22,7 +22,7 @@
       >
         <dt class="min-w-0 truncate text-muted">{{ h.label }}</dt>
         <dd class="shrink-0 text-ink tabular-nums">
-          {{ h.count.toLocaleString() }}곳<span class="ml-1.5 font-semibold text-primary">{{ h.percent }}%</span>
+          {{ h.count.toLocaleString() }}곳 <span class="ml-1.5 font-semibold text-primary">{{ h.percent }}%</span>
         </dd>
       </div>
     </dl>

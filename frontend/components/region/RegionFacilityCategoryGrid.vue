@@ -13,7 +13,7 @@
         <img :src="`/icons/category/${cat}.webp?v2`" :alt="CATEGORY_META[cat as FacilityCategory]?.label" class="size-8 shrink-0" width="32" height="32" loading="lazy" />
         <span class="min-w-0 flex-1">
           <span class="block text-sm font-semibold text-ink group-hover:text-primary">
-            {{ CATEGORY_META[cat as FacilityCategory]?.label }}<span
+            {{ CATEGORY_META[cat as FacilityCategory]?.label }} <span
               v-if="topCategories.includes(String(cat))"
               data-test="top-mark"
               class="ml-1.5 text-[12px] font-semibold text-primary"
