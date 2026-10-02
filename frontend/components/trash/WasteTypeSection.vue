@@ -1,19 +1,19 @@
 <template>
-  <section class="bg-white rounded-lg p-4 shadow-none border border-line">
+  <section class="rounded-[10px] border border-line bg-white p-4">
     <div class="flex items-center gap-3 mb-3">
       <div
         class="w-9 h-9 rounded-lg flex items-center justify-center"
         :class="iconBgClass"
       >
-        <span class="material-symbols-outlined text-[20px]" :class="iconTextClass">{{ icon }}</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[20px]" :class="iconTextClass">{{ icon }}</span>
       </div>
-      <h3 class="font-bold text-slate-900">{{ title }}</h3>
+      <h3 class="font-bold text-ink">{{ title }}</h3>
     </div>
-    <div class="text-sm text-slate-600 space-y-3">
+    <div class="text-sm text-muted space-y-3">
       <div v-if="info.dayOfWeek" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-1">calendar_month</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted shrink-0 mt-1">calendar_month</span>
         <div>
-          <span class="font-medium text-slate-700">배출 요일</span>
+          <span class="font-medium text-ink">배출 요일</span>
           <div class="flex flex-wrap gap-1 mt-1">
             <span
               v-for="day in parseDays(info.dayOfWeek)"
@@ -26,24 +26,24 @@
       </div>
       <ClientOnly>
         <div v-if="nextCollectionText" class="flex items-start gap-2">
-          <span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5" :class="iconTextClass">event_upcoming</span>
+          <span aria-hidden="true" class="material-symbols-outlined text-[18px] shrink-0 mt-0.5" :class="iconTextClass">event_upcoming</span>
           <p>
             <span class="font-medium" :class="iconTextClass">다음 배출일:</span>
-            <span class="ml-1 font-medium text-slate-800">{{ nextCollectionText }}</span>
+            <span class="ml-1 font-medium text-ink">{{ nextCollectionText }}</span>
           </p>
         </div>
       </ClientOnly>
       <div v-if="timeRange" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">schedule</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted shrink-0 mt-0.5">schedule</span>
         <p>
-          <span class="font-medium text-slate-700">배출 시간:</span>
+          <span class="font-medium text-ink">배출 시간:</span>
           <span class="ml-1">{{ timeRange }}</span>
         </p>
       </div>
       <div v-if="info.method" class="flex items-start gap-2">
-        <span class="material-symbols-outlined text-[18px] text-slate-500 shrink-0 mt-0.5">info</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted shrink-0 mt-0.5">info</span>
         <p>
-          <span class="font-medium text-slate-700">배출 방법:</span>
+          <span class="font-medium text-ink">배출 방법:</span>
           <span class="ml-1">{{ info.method }}</span>
         </p>
       </div>
@@ -88,7 +88,7 @@ function parseDays(raw: string): string[] {
 function dayChipClass(day: string): string {
   if (day === '토') return 'bg-primary-100 text-primary-700'
   if (day === '일') return 'bg-red-100 text-red-700'
-  return 'bg-slate-100 text-slate-700'
+  return 'bg-background-light text-ink'
 }
 
 const timeRange = computed(() => {

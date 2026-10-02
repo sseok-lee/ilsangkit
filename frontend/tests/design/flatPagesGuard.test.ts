@@ -39,6 +39,15 @@ export const FILES = [
   'pages/real-estate/[realEstateType]/index.vue',
   'pages/real-estate/[realEstateType]/[city]/index.vue',
   'pages/real-estate/[realEstateType]/[city]/[district]/index.vue',
+  'components/trash/WasteScheduleContent.vue',
+  'components/trash/WasteTypeSection.vue',
+  'components/trash/WasteAreaRow.vue',
+  'components/trash/WasteAreaList.vue',
+  'components/facility/WasteScheduleCard.vue',
+  'pages/trash/[id].vue',
+  'pages/trash/areas/[areaId].vue',
+  'pages/subway/[slug].vue',
+  'pages/subway/index.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/

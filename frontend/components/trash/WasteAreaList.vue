@@ -1,23 +1,21 @@
 <template>
-  <SectionBlock heading="동별 배출 안내" :subtext="headingSubtext">
+  <SectionBlock variant="flat" heading="동별 배출 안내" :subtext="headingSubtext">
     <template #right>
-      <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-        {{ list.total.toLocaleString('ko-KR') }}지역
-      </span>
+      <span data-testid="list-count" class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ list.total.toLocaleString('ko-KR') }}</strong>지역</span>
     </template>
 
     <form class="mb-4 grid gap-2 md:grid-cols-[1fr_1fr_1.5fr_auto]" @submit.prevent="submit">
       <input
         v-model.trim="draft.city"
         name="city"
-        class="min-h-[44px] rounded-lg border border-[#E6E9F0] bg-white px-3 text-sm text-[#15213B]"
+        class="min-h-[44px] rounded-[7px] border border-line bg-white px-3 text-sm text-ink"
         placeholder="시도"
         aria-label="시도"
       >
       <input
         v-model.trim="draft.district"
         name="district"
-        class="min-h-[44px] rounded-lg border border-[#E6E9F0] bg-white px-3 text-sm text-[#15213B]"
+        class="min-h-[44px] rounded-[7px] border border-line bg-white px-3 text-sm text-ink"
         placeholder="시군구"
         aria-label="시군구"
       >
@@ -25,19 +23,17 @@
         v-model.trim="draft.keyword"
         name="keyword"
         maxlength="100"
-        class="min-h-[44px] rounded-lg border border-[#E6E9F0] bg-white px-3 text-sm text-[#15213B]"
+        class="min-h-[44px] rounded-[7px] border border-line bg-white px-3 text-sm text-ink"
         placeholder="동 이름 검색"
         aria-label="동 이름 검색"
       >
-      <button type="submit" class="btn-primary min-h-[44px] whitespace-nowrap px-4 text-sm">
-        검색
-      </button>
+      <UiButton type="submit" variant="primary" class="whitespace-nowrap">검색</UiButton>
     </form>
 
     <div v-if="pending" class="flex items-center justify-center py-10" role="status" aria-live="polite" aria-busy="true">
       <div class="text-center">
         <div class="mb-2 inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-        <p class="text-sm text-[#56627A]">동별 배출 안내 조회 중...</p>
+        <p class="text-sm text-muted">동별 배출 안내 조회 중...</p>
       </div>
     </div>
 
@@ -53,7 +49,7 @@
     </div>
 
     <template v-else>
-      <div v-if="list.items.length > 0" class="border-t border-[#E6E9F0]">
+      <div v-if="list.items.length > 0" class="border-t border-line">
         <WasteAreaRow v-for="area in list.items" :key="area.areaId" :area="area" />
       </div>
 
@@ -64,19 +60,13 @@
         description="다른 지역이나 동 이름으로 검색해보세요"
       />
 
-      <div v-if="list.unresolved.count > 0" class="mt-4 rounded-lg border border-[#E6E9F0] bg-[#F7F8FA] p-4">
+      <div v-if="list.unresolved.count > 0" class="mt-4 rounded-[10px] bg-background-light p-4">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p class="font-semibold text-[#15213B]">동 연결 확인이 필요한 원문</p>
-            <p class="mt-1 text-sm text-[#56627A]">{{ list.unresolved.count.toLocaleString('ko-KR') }}건</p>
+            <p class="font-semibold text-ink">동 연결 확인이 필요한 원문</p>
+            <p class="mt-1 text-sm text-muted">{{ list.unresolved.count.toLocaleString('ko-KR') }}건</p>
           </div>
-          <NuxtLink
-            v-if="unresolvedHref"
-            :to="unresolvedHref"
-            class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-[#E6E9F0] bg-white px-4 text-sm font-semibold text-[#2450DC] hover:bg-[#F7F8FA]"
-          >
-            원문 보기
-          </NuxtLink>
+          <UiButton v-if="unresolvedHref" variant="secondary" :to="unresolvedHref">원문 보기</UiButton>
         </div>
       </div>
 
@@ -92,6 +82,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
+import UiButton from '~/components/common/UiButton.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import Pagination from '~/components/common/Pagination.vue'
