@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -38,5 +38,10 @@ describe('토지·공매 공통 부품 이전', () => {
     expect(block).toContain('.row-list {')
     expect(block).toContain('.row-list__link {')
     expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+  })
+  it('PageHero·remaining-property.css·.od-hero-stats 가 남아 있지 않다', () => {
+    expect(existsSync(resolve(root, 'components/common/PageHero.vue'))).toBe(false)
+    expect(existsSync(resolve(root, 'assets/css/remaining-property.css'))).toBe(false)
+    expect(readFileSync(resolve(root, 'assets/css/main.css'), 'utf8')).not.toContain('.od-hero-stats')
   })
 })

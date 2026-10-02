@@ -10,7 +10,7 @@
 | File | Description |
 |------|-------------|
 | `AppHeader.vue` / `AppFooter.vue` | 전역 헤더/푸터 (레이아웃에서 사용) |
-| `PageHero.vue` | 페이지 상단 히어로 섹션 |
+| `PageHead.vue` | 페이지 머리(이동 경로·분류 라벨·h1·설명) |
 | `SectionBlock.vue` | 섹션 래퍼 (제목 + 설명 + 콘텐츠) |
 | `Pagination.vue` | 페이지네이션 |
 | `CategoryIcon.vue` | 카테고리 → SVG 아이콘 (glyph auto-resolve) |

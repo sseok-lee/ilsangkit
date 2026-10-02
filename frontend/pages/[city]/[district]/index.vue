@@ -204,7 +204,7 @@ const realEstateCards = computed(() => {
   ]
 })
 
-// 서술형 설명 (PageHero description으로 통합)
+// 서술형 설명 (PageHead description으로 통합)
 const heroDescription = computed(() => {
   const primary = `${cityName.value} ${districtName.value}의 부동산 시세와 생활시설을 한눈에 확인하세요`
   if (!areaData.value?.facilities) return primary

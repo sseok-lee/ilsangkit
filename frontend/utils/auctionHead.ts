@@ -102,7 +102,7 @@ const LIST_USAGE_LABEL: Record<string, string> = {
 
 /**
  * 목록 페이지의 화면 제목(H1). 사이트명 suffix 를 붙이지 않는다.
- * ⚠️ PageHero 등 화면 제목엔 반드시 이 쪽을 쓸 것 —
+ * ⚠️ PageHead 등 화면 제목엔 반드시 이 쪽을 쓸 것 —
  *    buildAuctionListTitle 을 H1 에 재사용하면 "… | 일상킷" 이 그대로 노출된다.
  */
 export function buildAuctionListHeading(usage: string): string {
