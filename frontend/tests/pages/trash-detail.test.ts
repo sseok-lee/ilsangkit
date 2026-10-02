@@ -66,4 +66,15 @@ describe('TrashDetailPage - 원본 상세 직접 접근', () => {
     expect(source).toMatch(/consumeLegacyTrashFromFragment\s*\(\s*scheduleId\.value/)
     expect(source).toContain('readTrashReturnContext(scheduleId.value)')
   })
+
+  it('흰색 평면형: PageHead·평면 섹션·정렬 컨테이너를 쓰고 :deep 덮어쓰기가 없다', () => {
+    expect(source).toContain('<PageHead')
+    expect(source).not.toContain('<PageHero')
+    expect(source).toContain('page-container')
+    expect(source).not.toContain('max-w-[1120px]')
+    expect(source).not.toMatch(/:deep\(/)
+    expect(source.match(/<SectionBlock\b/g)?.length).toBe(source.match(/<SectionBlock\b[^>]*variant="flat"/g)?.length)
+    expect(source).toContain('<DataSourceSection domain="facility" category="trash" variant="flat"')
+    expect(source).not.toMatch(/<DataSourceSection[^>]*\bcompact\b/)
+  })
 })
