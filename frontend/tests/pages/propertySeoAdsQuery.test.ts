@@ -11,7 +11,7 @@ let empty = false
 vi.mock('~/composables/useStructuredData', () => ({ useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setFAQSchema: vi.fn(), setDetailProvenance: vi.fn() }) }))
 const section = defineComponent({ setup: (_, { slots }) => () => h('section', [slots.heading?.(), slots.default?.(), slots.right?.()]) })
 const ad = defineComponent({ setup() { const { shouldServeAds } = useAdsPolicy(); return () => shouldServeAds.value ? h('div', { 'data-ad': true }) : null } })
-const stubs = { AdBanner: ad, SectionBlock: section, PageHero: true, PageHead: true, Breadcrumb: true, MobileDetailHeader: true, DataSourceSection: true, AuctionFilters: true, AuctionRankingTable: true, AuctionCard: true, Pagination: true, EmptyState: true }
+const stubs = { AdBanner: ad, SectionBlock: section, PageHead: true, Breadcrumb: true, MobileDetailHeader: true, DataSourceSection: true, AuctionFilters: true, AuctionRankingTable: true, AuctionCard: true, Pagination: true, EmptyState: true }
 
 beforeEach(() => {
   fail = false; empty = false; heads.length = 0; route.query = {}
@@ -85,7 +85,7 @@ it('land failure suppresses all existing ad slots and preserves an explicit retr
 
 it('land filters belong only to transactions while the regional summary stays unfiltered', async () => {
   const clean = await page('land')
-  const summaryText = clean.find('.property-stat').text()
+  const summaryText = clean.find('[data-testid="land-headline"]').text()
   clean.unmount()
   vi.mocked(globalThis.$fetch).mockClear()
   route.query = { q: '검증', jimok: '대', landUse: '제2종일반주거지역', page: '2' }
@@ -98,7 +98,7 @@ it('land filters belong only to transactions while the regional summary stays un
   expect(region).toBeDefined()
   for (const key of ['keyword', 'jimok', 'landUse']) expect(region.searchParams.has(key)).toBe(false)
   expect(region.searchParams.get('page')).toBe('1')
-  expect(filtered.find('.property-stat').text()).toBe(summaryText)
+  expect(filtered.find('[data-testid="land-headline"]').text()).toBe(summaryText)
   expect(filtered.findAll('tbody').at(0)?.findAll('tr')).toHaveLength(5)
   filtered.unmount()
 })
