@@ -60,6 +60,9 @@ const WIRED: Record<string, [string, string]> = {
   park: ['c-park', '#22A95B'],
   market: ['c-market', '#F2730C'],
   sports: ['c-sports', '#8B5CF6'],
+  'brand-line': ['brand-line', '#C9D6FB'],
+  track: ['track', '#EEF1F5'],
+  'line-strong': ['line-strong', '#DFE4ED'],
 }
 
 function configColor(path: string): string {

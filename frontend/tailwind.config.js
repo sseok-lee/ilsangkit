@@ -80,6 +80,10 @@ export default {
         // Card border (OD)
         line: v('border'),
         'line-2': v('border-2'),
+        // 평면형 보조 토큰(main.css --brand-line/--track/--line-strong 의 이름만 부여, 새 값 아님)
+        'brand-line': v('brand-line'),
+        track: v('track'),
+        'line-strong': v('line-strong'),
       },
       fontFamily: {
         // Public Sans 는 로드되지 않아 폴백으로 떨어진다. Pretendard 를 폴백에 넣어
