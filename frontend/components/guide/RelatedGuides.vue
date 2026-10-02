@@ -7,7 +7,7 @@
         class="text-sm text-primary font-medium hover:underline flex items-center gap-1"
       >
         더보기
-        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
       </NuxtLink>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -28,7 +28,7 @@
             height="225"
           />
           <div v-else class="w-full h-full flex items-center justify-center">
-            <span class="material-symbols-outlined text-[36px] text-faint">article</span>
+            <span class="material-symbols-outlined text-[36px] text-faint" aria-hidden="true">article</span>
           </div>
         </div>
         <div class="p-3">

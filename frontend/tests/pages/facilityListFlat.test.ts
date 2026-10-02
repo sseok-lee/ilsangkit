@@ -15,7 +15,7 @@ describe('시설 목록 페이지 평면형', () => {
 
   it('PageHero 대신 PageHead(요약 줄 없음, D6)', () => {
     expect(template).not.toContain('<PageHero')
-    expect(template).toMatch(/<PageHead[\s\S]*?:title="pageTitle"/)
+    expect(template).toMatch(/<PageHead\b[^>]*:title="pageTitle"/)
     expect(src).toContain("import PageHead from '~/components/common/PageHead.vue'")
   })
 
@@ -26,8 +26,8 @@ describe('시설 목록 페이지 평면형', () => {
   })
 
   it('지역 칩·진료과목 필터는 flat 변형', () => {
-    expect(template).toMatch(/<RegionChips[\s\S]*?variant="flat"/)
-    expect(template).toMatch(/<HospitalDepartmentFilter[\s\S]*?variant="flat"/)
+    expect(template).toMatch(/<RegionChips\b[^>]*variant="flat"/)
+    expect(template).toMatch(/<HospitalDepartmentFilter\b[^>]*variant="flat"/)
   })
 
   it('목록 개수는 제목 옆 글자("N곳"), 알약 배지 없음', () => {

@@ -16,15 +16,25 @@ describe('시설 상세 페이지 평면형', () => {
 
   it('데스크톱 머리는 PageHead(div 강등) + SummaryRow', () => {
     expect(template).not.toContain('<PageHero')
-    expect(template).toMatch(/<PageHead[\s\S]*?title-tag="div"/)
-    expect(template).toMatch(/<SummaryRow[\s\S]*?desktopSummaryItems/)
+    expect(template).toMatch(/<PageHead\b[^>]*title-tag="div"/)
+    expect(template).toMatch(/<SummaryRow\b[^>]*desktopSummaryItems/)
+  })
+
+  it('데스크톱 요약 줄은 PageHead 안에 있다(이중선 방지)', () => {
+    expect(template).toMatch(/<PageHead\b[^>]*>[\s\S]*?<SummaryRow\b[\s\S]*?<\/PageHead>/)
   })
 
   it('모바일 헤더·주변 시설·위치 섹션은 flat', () => {
-    expect(template).toMatch(/<MobileDetailHeader[\s\S]*?variant="flat"/)
-    expect(template).toMatch(/<DetailNearby[\s\S]*?section-variant="flat"/)
-    expect(template).toMatch(/<BlogReviewSection[\s\S]*?variant="flat"/)
+    expect(template).toMatch(/<MobileDetailHeader\b[^>]*variant="flat"/)
+    expect(template).toMatch(/<DetailNearby\b[^>]*section-variant="flat"/)
+    expect(template).toMatch(/<BlogReviewSection\b[^>]*variant="flat"/)
     expect(template).toContain('<SectionBlock id="facility-location" variant="flat"')
+  })
+})
+
+describe('시설 상세 광고', () => {
+  it('광고는 4개 그대로', () => {
+    expect((template.match(/<AdBanner\b/g) ?? []).length).toBe(4)
   })
 })
 

@@ -42,6 +42,11 @@ describe('designPaletteCodemod.mapPalette', () => {
     expect(mapPalette(src).out).toBe(src)
   })
 
+  it('방향 테두리·그라데이션 접두 회색도 leftovers 로 보고한다', () => {
+    const { leftovers } = mapPalette('border-t-slate-100 from-gray-50')
+    expect(leftovers).toEqual(['border-t-slate-100', 'from-gray-50'])
+  })
+
   it('치환 규칙 밖의 회색·hex 를 leftovers 로 보고한다', () => {
     const { leftovers } = mapPalette('bg-slate-900 text-slate-100 bg-[#123456]')
     expect(leftovers).toEqual(['bg-slate-900', 'text-slate-100', 'bg-[#123456]'])

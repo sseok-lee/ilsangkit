@@ -15,14 +15,14 @@
           :to="regionLink.href"
           class="flex items-center gap-2 text-primary hover:text-primary-dark text-sm font-medium transition-colors"
         >
-          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
           {{ regionLink.label }}
         </NuxtLink>
         <NuxtLink
           :to="regionLink.cityHref"
           class="flex items-center gap-2 text-muted hover:text-primary text-sm font-medium transition-colors"
         >
-          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
           {{ regionLink.cityLabel }}
         </NuxtLink>
       </nav>
@@ -50,7 +50,7 @@
           :to="realEstateHref"
           class="inline-flex items-center gap-1.5 px-4 py-2 bg-background-light border border-line text-ink rounded-full text-sm font-medium hover:bg-primary hover:text-white hover:border-primary transition-colors"
         >
-          <span class="material-symbols-outlined text-[16px]">apartment</span>
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">apartment</span>
           이 지역 부동산 시세
         </NuxtLink>
       </nav>
@@ -65,7 +65,7 @@
     >
       <ul class="flex flex-col gap-2.5">
         <li v-for="(tip, i) in categoryTips" :key="i" class="flex items-start gap-2 text-sm text-muted leading-relaxed">
-          <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">check</span>
+          <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5" aria-hidden="true">check</span>
           {{ tip }}
         </li>
       </ul>

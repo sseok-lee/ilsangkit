@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 디자인 통일(스펙 2026-10-02 §3) — 원시 회색 팔레트와 토큰과 같은 값의 hex 를 토큰 클래스로 바꾼다.
 // 의미 색(emerald·teal·red 등)과 primary-* 는 건드리지 않는다. 규칙 밖의 회색·hex 는 leftovers 로 보고해 사람이 고른다.
+// leftover 가 있어도 치환 결과는 파일에 쓰고 exit 1 로 끝난다(가드 RAW_GRAY 보다 넓거나 같은 범위를 탐지).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -25,7 +26,7 @@ export const PALETTE_RULES = [
   [/\bbg-\[#1e43ba\]/gi, 'bg-primary-dark'],
 ]
 
-const LEFTOVER = /\b(?:text|bg|border|divide|ring)-(?:(?:gray|slate)-\d{2,3}|\[#[0-9a-fA-F]{3,8}\])/g
+const LEFTOVER = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder|outline)-(?:(?:gray|slate)-\d{2,3}|\[#[0-9a-fA-F]{3,8}\])/g
 
 export function mapPalette(src) {
   let out = src

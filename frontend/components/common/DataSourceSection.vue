@@ -40,7 +40,7 @@
         </a>
       </div>
       <div class="mt-1 flex items-start gap-1.5 text-xs text-muted">
-        <span class="material-symbols-outlined text-[14px] mt-px">info</span>
+        <span class="material-symbols-outlined text-[14px] mt-px" aria-hidden="true">info</span>
         <span>
           공표된 원본 데이터 기준입니다<span v-if="source.kogl"> · 공공누리 제{{ source.kogl }}유형</span>
         </span>
