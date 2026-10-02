@@ -4,9 +4,9 @@
       v-for="guide in guides"
       :key="guide.id"
       :to="`/guide/${guide.slug}`"
-      class="group bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+      class="group block bg-white border border-line rounded-[10px] overflow-hidden transition-colors hover:border-primary"
     >
-      <div class="aspect-video bg-slate-100 overflow-hidden">
+      <div class="aspect-video bg-background-light overflow-hidden">
         <img
           v-if="guide.thumbnailUrl"
           :src="`${publicApiBase}${guide.thumbnailUrl}`"
@@ -17,14 +17,14 @@
           height="225"
         />
         <div v-else class="w-full h-full flex items-center justify-center">
-          <span class="material-symbols-outlined text-[36px] text-slate-300">article</span>
+          <span class="material-symbols-outlined text-[36px] text-faint" aria-hidden="true">article</span>
         </div>
       </div>
       <div class="p-3">
-        <h3 class="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors">
           {{ guide.title }}
         </h3>
-        <p class="text-xs text-slate-500 mt-1 line-clamp-1">
+        <p class="text-xs text-muted mt-1 line-clamp-1">
           {{ guide.summary }}
         </p>
       </div>

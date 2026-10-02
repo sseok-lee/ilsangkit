@@ -12,11 +12,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 
 // 버튼 3종(스펙 2026-10-02 §3.6). 기존 .btn-primary 등은 PR7 에서 이 컴포넌트로 옮긴 뒤 정리한다.
 const props = withDefaults(defineProps<{
   variant?: 'primary' | 'secondary' | 'link'
-  to?: string
+  to?: RouteLocationRaw
   href?: string
   external?: boolean
   type?: 'button' | 'submit'

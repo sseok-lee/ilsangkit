@@ -34,4 +34,15 @@ describe('UiButton', () => {
     expect(w.get('button').attributes('type')).toBe('submit')
     expect(w.get('button').attributes('disabled')).toBeDefined()
   })
+
+  it('to 에 쿼리 객체를 넘기면 NuxtLink 에 그대로 전달한다', () => {
+    const NuxtLinkStub = { props: ['to'], template: '<a :data-to="JSON.stringify(to)"><slot /></a>' }
+    const w = mount(UiButton, {
+      props: { variant: 'secondary', to: { path: '/facilities', query: { city: 'seoul' } } },
+      slots: { default: '생활시설 전체 보기' },
+      global: { stubs: { NuxtLink: NuxtLinkStub } },
+    })
+    expect(JSON.parse(w.get('a').attributes('data-to')!)).toEqual({ path: '/facilities', query: { city: 'seoul' } })
+    expect(w.get('a').classes()).toContain('ui-btn--secondary')
+  })
 })

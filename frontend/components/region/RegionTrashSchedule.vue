@@ -1,16 +1,14 @@
 <template>
-  <SectionBlock heading="배출 일정" :subtext="`${total.toLocaleString('ko-KR')}건 · 지역별 배출 요일과 방법`">
+  <SectionBlock variant="flat" heading="배출 일정" :subtext="`${total.toLocaleString('ko-KR')}건 · 지역별 배출 요일과 방법`">
     <template #right>
-      <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-        {{ total.toLocaleString('ko-KR') }}건
-      </span>
+      <span class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ total.toLocaleString('ko-KR') }}</strong>건</span>
     </template>
 
     <!-- 로딩 -->
     <div v-if="loading" class="flex items-center justify-center py-10">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-        <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
+        <p class="text-muted text-sm">배출 일정 조회 중...</p>
       </div>
     </div>
 
@@ -30,7 +28,7 @@
       <!-- 담당 부서 연락처 -->
       <div v-if="contact" class="bg-primary-50 rounded-xl p-4 border border-primary-100 mb-4">
         <div class="flex items-center gap-2 mb-1">
-          <span class="material-symbols-outlined text-primary-500 text-[18px]">support_agent</span>
+          <span class="material-symbols-outlined text-primary-500 text-[18px]" aria-hidden="true">support_agent</span>
           <span class="font-semibold text-primary-900 text-sm">{{ contact.name }}</span>
         </div>
         <a
@@ -38,7 +36,7 @@
           :href="`tel:${contact.phone}`"
           class="text-primary text-sm hover:underline flex items-center gap-1"
         >
-          <span class="material-symbols-outlined text-[16px]">call</span>
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">call</span>
           {{ contact.phone }}
         </a>
       </div>
@@ -54,11 +52,11 @@
 
       <!-- 결과 없음 -->
       <div v-else class="py-12 text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[32px] text-slate-500">delete</span>
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-background-light flex items-center justify-center">
+          <span class="material-symbols-outlined text-[32px] text-muted" aria-hidden="true">delete</span>
         </div>
-        <p class="text-slate-700 font-semibold text-lg">등록된 배출 일정이 없습니다</p>
-        <p class="text-slate-500 text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
+        <p class="text-ink font-semibold text-lg">등록된 배출 일정이 없습니다</p>
+        <p class="text-muted text-sm mt-1">해당 지역의 배출 정보가 아직 등록되지 않았어요</p>
       </div>
 
       <!-- 페이지네이션 -->

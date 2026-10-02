@@ -48,10 +48,6 @@ vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
 const stubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: true,
-  PageHero: {
-    props: ['stats'],
-    template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>',
-  },
   AdBanner: true,
   RegionRealEstatePrices: true,
   RegionRealEstateCta: true,
