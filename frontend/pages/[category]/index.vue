@@ -28,7 +28,7 @@
       <div
         v-if="facilityError"
         role="alert"
-        class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
+        class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
       >
         {{ facilityError }}
       </div>
