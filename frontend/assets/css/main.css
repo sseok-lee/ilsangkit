@@ -323,6 +323,18 @@
   .ui-btn--link { padding: 0 2px; background: transparent; color: rgb(var(--brand-rgb)); font-size: 14px; }
   .ui-btn--link:hover { text-decoration: underline; }
 
+  /* 칩(§3.6). 선택 = 틴트 바탕 + 브랜드 글자. 검정·브랜드 채움 선택 상태는 쓰지 않는다 */
+  .ui-chip {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; padding: 8px 14px; border: 1px solid rgb(var(--border-rgb)); border-radius: 7px;
+    background: #fff; color: rgb(var(--ink-rgb)); font-size: 14px; font-weight: 500; line-height: 1.3; white-space: nowrap;
+    transition: color .15s, border-color .15s, background-color .15s;
+  }
+  .ui-chip:hover { border-color: rgb(var(--brand-rgb)); color: rgb(var(--brand-rgb)); }
+  .ui-chip:focus-visible { outline: 3px solid rgb(var(--brand-rgb)); outline-offset: 3px; }
+  .ui-chip--selected { background: rgb(var(--brand-tint-rgb)); border-color: rgb(var(--brand-line-rgb)); color: rgb(var(--brand-rgb)); font-weight: 650; }
+  @media (min-width: 768px) { .ui-chip { padding: 8px 18px; } }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
