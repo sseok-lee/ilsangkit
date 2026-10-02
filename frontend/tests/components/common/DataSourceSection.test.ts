@@ -139,6 +139,11 @@ describe('DataSourceSection — variant', () => {
     expect(w.html()).not.toMatch(/shadow-|rounded-xl|slate-|gray-/)
   })
 
+  it('real-estate + flat(full) 은 국토교통부 출처를 표기한다', () => {
+    const w = mountSection({ domain: 'real-estate', variant: 'flat' })
+    expect(w.text()).toContain('국토교통부')
+  })
+
   it('compact 기본(card)은 기존 상자 그대로', () => {
     const w = mountSection({ domain: 'facility', compact: true })
     expect(w.get('div').classes()).toEqual(expect.arrayContaining(['shadow-sm', 'border-slate-200']))

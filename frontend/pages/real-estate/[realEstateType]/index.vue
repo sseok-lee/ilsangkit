@@ -60,7 +60,7 @@
               class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
               @click="retryLoad"
             >
-              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
               다시 시도
             </button>
           </div>
@@ -106,7 +106,7 @@
       </template>
 
       <!-- FAQ -->
-      <SectionBlock variant="flat" v-if="faqs.length > 0" heading="자주 묻는 질문">
+      <SectionBlock v-if="faqs.length > 0" variant="flat" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details
             v-for="(faq, i) in faqs"
@@ -115,7 +115,7 @@
           >
             <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
+              <span class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform" aria-hidden="true">expand_more</span>
             </summary>
             <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
           </details>
@@ -123,7 +123,7 @@
       </SectionBlock>
 
       <!-- 데이터 출처 -->
-      <DataSourceSection domain="real-estate" compact variant="flat" />
+      <DataSourceSection domain="real-estate" variant="flat" />
     </div>
   </div>
 </template>

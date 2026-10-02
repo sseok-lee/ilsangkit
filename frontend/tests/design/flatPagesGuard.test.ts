@@ -46,7 +46,7 @@ const HEX_CLASS = /-\[#[0-9a-fA-F]{3,8}\]/
 const SHADOW = /\bshadow-(?:subtle|sm|md|lg|xl|2xl)\b|\bshadow-card(?!-2)\b/
 
 // scoped CSS 안 hex 도 토큰 우회다. PR4 부터 대상 파일은 rgb(var(--*-rgb)) 만 쓴다.
-const STYLE_HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b/
+const STYLE_HEX = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/
 
 describe('평면형 페이지 가드', () => {
   it.each(FILES)('%s', (file) => {

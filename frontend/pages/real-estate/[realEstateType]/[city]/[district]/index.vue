@@ -103,7 +103,7 @@
         </div>
       </SectionBlock>
 
-      <DataSourceSection domain="real-estate" compact variant="flat" />
+      <DataSourceSection domain="real-estate" variant="flat" />
     </div>
   </div>
 </template>
