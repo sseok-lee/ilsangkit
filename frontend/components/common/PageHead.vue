@@ -6,7 +6,7 @@
         <p v-if="eyebrow" class="page-head__eyebrow" data-testid="page-head-eyebrow">{{ eyebrow }}</p>
         <!--
           title-tag 기본 'h1'. 모바일 전용 헤더가 이미 h1 을 갖는 상세 페이지는 'div' 로 강등해
-          raw HTML 의 literal <h1> 을 1개로 유지한다(PageHero 와 같은 규칙).
+          raw HTML 의 literal <h1> 을 1개로 유지한다(MobileDetailHeader 와 짝).
         -->
         <component
           :is="titleTag"

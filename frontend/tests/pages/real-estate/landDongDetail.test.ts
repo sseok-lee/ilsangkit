@@ -231,8 +231,8 @@ function resolveHead(arg: any): any {
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  // PageHero: title-tag prop을 받아 h1 미렌더(데스크톱 제목은 div 강등). 단일 h1 불변식 검증용.
-  PageHero: {
+  // PageHead: title-tag prop을 받아 h1 미렌더(데스크톱 제목은 div 강등). 단일 h1 불변식 검증용.
+  PageHead: {
     template: '<div data-stub="hero" :data-title-tag="titleTag" :class="$attrs.class" />',
     props: ['titleTag'],
     inheritAttrs: false,

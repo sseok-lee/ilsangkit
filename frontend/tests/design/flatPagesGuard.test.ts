@@ -58,6 +58,21 @@ export const FILES = [
   'pages/subscription/sale/[type].vue',
   'pages/subscription/rent/index.vue',
   'pages/subscription/rent/[type].vue',
+  'pages/auction/index.vue',
+  'pages/auction/list.vue',
+  'pages/auction/ranking.vue',
+  'pages/auction/[city]/index.vue',
+  'pages/auction/[city]/[district]/index.vue',
+  'pages/auction/item/[cltrMngNo].vue',
+  'pages/real-estate/land/index.vue',
+  'pages/real-estate/land/[city]/index.vue',
+  'pages/real-estate/land/[city]/[district]/index.vue',
+  'pages/real-estate/land/[city]/[district]/[dong].vue',
+  'components/auction/AuctionCard.vue',
+  'components/auction/AuctionStatusBadge.vue',
+  'components/auction/AuctionBidHistory.vue',
+  'components/auction/AuctionPriceCompare.vue',
+  'components/auction/AuctionDetailInfo.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/

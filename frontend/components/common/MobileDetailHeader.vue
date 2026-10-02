@@ -1,6 +1,6 @@
 <!-- frontend/components/common/MobileDetailHeader.vue
      시설·부동산·토지·공매·청약·공공임대 상세의 공용 모바일 핵심정보 헤더.
-     literal <h1> 1개 소유(단일 h1 불변식). 데스크톱은 PageHero(title-tag="div")가 대체. -->
+     literal <h1> 1개 소유(단일 h1 불변식). 데스크톱은 PageHead(title-tag="div")가 대체. -->
 <template>
   <section v-if="variant === 'flat'" class="md:hidden page-head" data-variant="flat">
     <p v-if="eyebrow" data-test="eyebrow" class="page-head__eyebrow">{{ eyebrow }}</p>
@@ -59,7 +59,7 @@
       <OperatingStatusBadge v-if="status" :status="status" class="mt-1 shrink-0" />
     </div>
 
-    <!-- 주소 등 부가 정보 (데스크톱 PageHero #description 대응). RE 상세는 AddressLine(핀+복사)를 여기에 넣는다. -->
+    <!-- 주소 등 부가 정보 (데스크톱 PageHead #description 대응). RE 상세는 AddressLine(핀+복사)를 여기에 넣는다. -->
     <div v-if="$slots.address" data-test="address" class="mt-2 text-body text-muted">
       <slot name="address" />
     </div>

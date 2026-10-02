@@ -131,34 +131,6 @@
     }
   }
 
-  /* 4칸 통계 그리드 (PageHero) — 테두리 분할 + 모바일 2열 */
-  .od-hero-stats {
-    display: grid;
-    grid-template-columns: repeat(var(--od-cols, 4), 1fr);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    overflow: hidden;
-  }
-  /* min-width:0 — 그리드 셀이 콘텐츠 min-content 이하로 줄 수 있게 해 1fr 트랙이 균등 분할되도록.
-     없으면 NBSP가 포함된 긴 값(분양가 등)이 트랙을 밀어내 그리드가 넘쳐 잘림. */
-  .od-hero-stats > .s { padding: 14px 16px; border-right: 1px solid var(--border); min-width: 0; }
-  .od-hero-stats > .s:last-child { border-right: 0; }
-  .od-hero-stats > .s .k { font-size: 12px; color: var(--faint); font-weight: 600; }
-  .od-hero-stats > .s .v {
-    font-family: 'Public Sans', 'Pretendard Variable', sans-serif;
-    font-weight: 800; font-size: 17px; color: var(--strong);
-    margin-top: 5px; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
-  }
-  @media (max-width: 640px) {
-    .od-hero-stats { grid-template-columns: 1fr 1fr; }
-    .od-hero-stats > .s:nth-child(2n) { border-right: 0; }
-    .od-hero-stats > .s:nth-child(1), .od-hero-stats > .s:nth-child(2) { border-bottom: 1px solid var(--border); }
-    /* 값이 긴 마지막 단독 스탯(분양가 등)은 모바일에서 한 행 전체를 차지해 잘리지 않게 */
-    .od-hero-stats > .s:nth-child(3):last-child { grid-column: 1 / -1; }
-  }
-
   /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */
   .od-amen {
     display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
@@ -283,7 +255,7 @@
     .page-head__desc { font-size: 16px; }
   }
 
-  /* 상세 전용 요약 줄(§3.5) — .od-hero-stats 를 대체. 그림자·박스 없음 */
+  /* 상세 전용 요약 줄(§3.5) — od-hero-stats 를 대체. 그림자·박스 없음 */
   .summary-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -311,6 +283,16 @@
   /* SectionBlock variant="flat"(§3.1) — 박스 없이 위아래 여백 + 아래 구분선 */
   .section-flat { padding: 26px 0; border-bottom: 1px solid rgb(var(--border-rgb)); }
   @media (min-width: 768px) { .section-flat { padding: 32px 0; } }
+  /* 행 목록(지역 → 하위 지역) — 토지·공매 허브. remaining-property.css 의 property-region-* 를 토큰으로 옮김(값 동일) */
+  .row-list { display: flex; flex-direction: column; border-top: 1px solid rgb(var(--border-rgb)); }
+  .row-list__link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 72px; padding: 20px 4px; border-bottom: 1px solid rgb(var(--border-rgb)); }
+  .row-list__link > :first-child { flex-basis: 100%; font-size: 17px; font-weight: 700; }
+  .row-list__link:hover { background: rgb(var(--paper-rgb)); }
+  .row-list__link:focus-visible { outline: 2px solid rgb(var(--brand-rgb)); outline-offset: 3px; }
+  @media (min-width: 768px) {
+    .row-list__link { gap: 12px 24px; }
+    .row-list__link > :first-child { flex: 1; flex-basis: auto; }
+  }
 
   /* 버튼 3종(§3.6). 최소 높이 44px 터치 영역. 그림자·scale 없음 */
   .ui-btn {

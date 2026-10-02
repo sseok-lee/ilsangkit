@@ -17,8 +17,9 @@ import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionPriceCompare from '~/components/auction/AuctionPriceCompare.vue'
 import NearbyFacilities from '~/components/realEstate/NearbyFacilities.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 // useRoute/useAsyncData/createError/useHead 는 Nuxt auto-import (land [dong].vue와 동일)
@@ -178,19 +179,20 @@ if (item.value) {
 </script>
 
 <template>
-  <div class="property-redesign bg-white min-h-screen">
+  <div class="bg-white text-ink min-h-screen">
     <!-- fail-open: 일시 장애(503)면 item 이 null 이다. 빈 본문 200 대신 재시도 안내를 그린다. -->
     <div v-if="!item" class="mx-auto max-w-[1200px] px-4 md:px-6 py-20 text-center">
-      <p class="text-slate-600 font-medium">공매 물건 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <p class="text-muted font-medium">공매 물건 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
       <NuxtLink to="/auction" class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm">
         공매 목록으로
       </NuxtLink>
     </div>
-    <div v-else class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+    <div v-else class="page-container pt-3 md:pt-5 pb-10 flex flex-col">
       <Breadcrumb :items="breadcrumbItems" />
 
       <!-- 모바일: 공용 핵심정보 헤더(literal h1 1개 소유) -->
       <MobileDetailHeader
+        variant="flat"
         :title="item.address"
         :eyebrow="headerEyebrow"
         :stats="headerStats"
@@ -199,9 +201,9 @@ if (item.value) {
         @share="handleShare"
         @directions="openNavigation"
       />
-      <!-- 데스크톱: PageHero(title-tag=div 로 강등 → 단일 h1 유지) -->
-      <PageHero
-        class="property-hero hidden md:block"
+      <!-- 데스크톱: PageHead(title-tag=div 로 강등 → 단일 h1 유지) -->
+      <PageHead
+        class="hidden md:block"
         title-tag="div"
         :description="[item.usage, item.orgNm].filter(Boolean).join(' · ')"
       >
@@ -212,7 +214,7 @@ if (item.value) {
           </span>
           {{ item.address }}
         </template>
-      </PageHero>
+      </PageHead>
 
       <AdBanner />
 
@@ -221,7 +223,7 @@ if (item.value) {
         <AuctionBidHistory
           :item="item"
           data-test="tier-bid-history"
-          class="property-section order-1 md:order-1"
+          class="order-1 md:order-1"
         />
 
         <!-- T1b: 실거래가 시세 비교 (입찰정보 직후 상향) -->
@@ -231,7 +233,7 @@ if (item.value) {
           :market-avg="marketCompare.marketAvg"
           :market-label="marketCompare.label"
           data-test="tier-price-compare"
-          class="property-section order-2 md:order-2"
+          class="order-2 md:order-2"
         />
 
         <!-- Ad②: 입찰정보·시세비교 이후 (단 사이 위치 보존) -->
@@ -248,7 +250,7 @@ if (item.value) {
           :lat="item.lat"
           :lng="item.lng"
           :address="item.address"
-          class="property-section order-5 md:order-5"
+          class="order-5 md:order-5"
         />
 
         <p v-else class="order-5 py-5 text-sm text-muted">위치 좌표가 제공되지 않아 지도를 표시할 수 없습니다.</p>
@@ -258,19 +260,21 @@ if (item.value) {
 
         <!-- T4: 같은 지역 공매 물건 -->
         <SectionBlock
+          variant="flat"
           v-if="nearby.length"
           heading="같은 지역 공매 물건"
-          class="property-section order-7 md:order-7"
+          class="order-7 md:order-7"
         >
           <div class="flex flex-col"><AuctionCard variant="row" v-for="n in nearby" :key="n.cltrMngNo" :item="n" /></div>
         </SectionBlock>
 
         <!-- T4: 주변 생활시설 — 부동산 상세와 동일 컴포넌트 -->
         <SectionBlock
+          variant="flat"
           v-if="item.lat != null && item.lng != null"
           heading="주변 생활시설"
           subtext="부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다."
-          class="property-section order-8 md:order-8"
+          class="order-8 md:order-8"
         >
           <NearbyFacilities :lat="item.lat" :lng="item.lng" />
         </SectionBlock>
@@ -280,39 +284,41 @@ if (item.value) {
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock class="property-section" heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
+      <SectionBlock variant="flat" heading="자주 묻는 질문" subtext="공매와 관련된 자주 묻는 질문입니다.">
         <div class="space-y-1">
           <details
             v-for="faq in AUCTION_FAQ"
             :key="faq.q"
             class="group border-b border-line last:border-b-0"
           >
-            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+            <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
-            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+            <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
           </details>
         </div>
       </SectionBlock>
 
       <!-- 온비드 입찰 외부 CTA (order-9) -->
       <div class="order-9">
-        <a :href="onbidSearchUrl"
-           target="_blank" rel="noopener noreferrer"
-           class="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
-          <span class="material-symbols-outlined text-[20px]">gavel</span>
+        <UiButton
+          variant="primary"
+          :href="onbidSearchUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-full justify-center"
+        >
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">gavel</span>
           온비드에서 물건번호로 검색하기
-        </a>
+        </UiButton>
         <p class="mt-2 text-center text-caption text-faint">
           물건관리번호 {{ item.cltrMngNo }}<template v-if="item.pbctCdtnNo"> · 공매조건번호 {{ item.pbctCdtnNo }}</template><template v-if="item.plnmNo"> · 공고번호 {{ item.plnmNo }}</template>
         </p>
       </div>
 
 
-      <DataSourceSection domain="auction" :last-sync-date="null" />
+      <DataSourceSection variant="flat" domain="auction" :last-sync-date="null" />
     </div>
   </div>
 </template>
-
-<style src="~/assets/css/remaining-property.css"></style>
