@@ -1,6 +1,6 @@
 <template>
   <footer
-    :class="['bg-background-light border-t border-line-2', props.compact ? 'py-5' : 'py-6 md:py-10']"
+    :class="['bg-background-light border-t border-line', props.compact ? 'py-5' : 'py-6 md:py-10']"
     :role="props.compact ? 'contentinfo' : undefined"
   >
     <!--
@@ -12,9 +12,9 @@
       템플릿을 멀티-루트 Fragment로 만들어 vue-test-utils 의 wrapper.element 가 footer
       대신 마운트 컨테이너 div 를 가리키게 된다. 실측: AppFooter.test.ts 4개 테스트 회귀.)
     -->
-    <div :class="props.compact ? 'px-4' : 'container mx-auto px-4'">
+    <div :class="props.compact ? 'px-4' : 'page-container'">
       <!-- 기본 4열 / compact 1열 (사이드바 320px 폭에 4열은 들어가지 않는다) -->
-      <div :class="['grid gap-8', props.compact ? 'grid-cols-1 mb-5' : 'grid-cols-2 md:grid-cols-4 mb-8 max-w-4xl mx-auto']">
+      <div :class="['grid gap-8', props.compact ? 'grid-cols-1 mb-5' : 'grid-cols-2 md:grid-cols-4 mb-8']">
         <!-- 브랜드 -->
         <div :class="props.compact ? 'col-span-1' : 'col-span-2 md:col-span-1'">
           <HardLink to="/" class="text-base font-semibold text-strong hover:text-primary transition-colors">
@@ -82,7 +82,7 @@
       </div>
 
       <!-- 하단 바 -->
-      <div class="border-t border-line-2 pt-6 space-y-1 text-center">
+      <div class="border-t border-line pt-6 space-y-1 text-center">
         <p class="text-xs text-muted">
           © {{ currentYear }} 일상킷. All rights reserved.
         </p>

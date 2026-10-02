@@ -131,6 +131,21 @@ describe('AppFooter', () => {
       const wrapper = mount(AppFooter)
       expect(wrapper.classes()).toContain('py-6')
     })
+
+    it('기본 모드는 헤더 로고 선과 같은 page-container 를 쓴다', () => {
+      const wrapper = mount(AppFooter)
+      const inner = wrapper.find('footer > div')
+      expect(inner.classes()).toContain('page-container')
+      expect(inner.classes()).not.toContain('container')
+      expect(wrapper.find('footer div.grid').classes()).not.toContain('max-w-4xl')
+    })
+
+    it('구분선은 border-line(#E6E9F0) 이다', () => {
+      const wrapper = mount(AppFooter)
+      expect(wrapper.classes()).toContain('border-line')
+      expect(wrapper.classes()).not.toContain('border-line-2')
+      expect(wrapper.html()).not.toContain('border-line-2')
+    })
   })
 
   describe('Public Data Attribution', () => {
