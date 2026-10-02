@@ -103,3 +103,45 @@ describe('common/MobileDetailHeader', () => {
     expect(mount(MobileDetailHeader, { props: base }).find('[data-test="address"]').exists()).toBe(false)
   })
 })
+
+describe('MobileDetailHeader variant="flat"', () => {
+  const flatBase = {
+    title: '가가성형외과의원',
+    eyebrow: '병원',
+    stats: [{ label: '종별', value: '의원' }, { label: '의사', value: '3명', color: 'text-primary' }],
+    phone: '053-427-8877',
+    copyable: true,
+    variant: 'flat' as const,
+  }
+
+  it('h1 하나, 라벨은 글자, 박스·그림자 없음', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.findAll('h1').length).toBe(1)
+    expect(w.get('h1').classes()).toEqual(expect.arrayContaining(['ui-h1', 'min-w-0', '[overflow-wrap:anywhere]']))
+    const eyebrow = w.get('[data-test="eyebrow"]')
+    expect(eyebrow.classes()).toContain('page-head__eyebrow')
+    expect(eyebrow.attributes('style')).toBeUndefined()
+    expect(w.html()).not.toMatch(/shadow-|rounded-xl|bg-slate-|text-slate-/)
+  })
+
+  it('stats 를 SummaryRow 로 렌더하고 text-primary 는 brand tone 으로', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.findAll('dt').map((d) => d.text())).toEqual(['종별', '의사'])
+    expect(w.findAll('dd')[1].classes()).toContain('summary-row__value--brand')
+  })
+
+  it('동작 줄은 UiButton 이고 data-test·emit 을 유지한다', async () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.get('[data-test="call-pill"]').attributes('href')).toBe('tel:053-427-8877')
+    expect(w.get('[data-test="call-pill"]').classes()).toContain('ui-btn--secondary')
+    await w.get('[data-test="copy-pill"]').trigger('click')
+    await w.get('[data-test="share-pill"]').trigger('click')
+    expect(w.emitted('copy')).toHaveLength(1)
+    expect(w.emitted('share')).toHaveLength(1)
+    const dir = w.get('[data-test="directions-pill"]')
+    expect(dir.classes()).toContain('ui-btn--primary')
+    await dir.trigger('click')
+    await w.get('[data-test="directions-kakao"]').trigger('click')
+    expect(w.emitted('directions')).toEqual([['kakao']])
+  })
+})
