@@ -283,6 +283,26 @@
     .page-head__desc { font-size: 16px; }
   }
 
+  /* 상세 전용 요약 줄(§3.5) — .od-hero-stats 를 대체. 그림자·박스 없음 */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 16px;
+    margin: 0;
+    padding: 20px 0;
+    border-top: 1px solid rgb(var(--border-rgb));
+  }
+  .summary-row__item:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .summary-row__label { display: block; margin-bottom: 8px; font-size: 13px; color: rgb(var(--muted-rgb)); }
+  .summary-row__value { margin: 0; font-size: 1.25rem; font-weight: 650; line-height: 1.5; color: rgb(var(--strong-rgb)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .summary-row__unit { margin-left: 2px; font-size: 0.875rem; font-weight: 500; color: rgb(var(--muted-rgb)); }
+  @media (min-width: 768px) {
+    .summary-row { grid-template-columns: repeat(var(--summary-cols, 4), minmax(0, 1fr)); gap: 24px; padding: 24px 0; }
+    .summary-row__item:last-child:nth-child(odd) { grid-column: auto; }
+    .summary-row__item + .summary-row__item { border-left: 1px solid rgb(var(--border-rgb)); padding-left: 24px; }
+    .summary-row__value { font-size: 1.3125rem; }
+  }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
