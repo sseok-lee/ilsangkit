@@ -335,6 +335,20 @@
   .ui-chip--selected { background: rgb(var(--brand-tint-rgb)); border-color: rgb(var(--brand-line-rgb)); color: rgb(var(--brand-rgb)); font-weight: 650; }
   @media (min-width: 768px) { .ui-chip { padding: 8px 18px; } }
 
+  /* 세그먼트(§3.6, D5) — 회색 트랙 + 흰 선택 칸. 검정 채움 버튼 묶음을 대체 */
+  .ui-segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: 7px; background: rgb(var(--track-rgb)); }
+  .ui-segmented__item {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 38px; padding: 7px 14px; border: 1px solid transparent; border-radius: 5px;
+    background: transparent; color: rgb(var(--muted-rgb)); font-size: 13px; font-weight: 600; white-space: nowrap;
+    transition: color .15s, background-color .15s, border-color .15s;
+  }
+  .ui-segmented__item:hover { color: rgb(var(--ink-rgb)); }
+  .ui-segmented__item:focus-visible { outline: 3px solid rgb(var(--brand-rgb)); outline-offset: 2px; }
+  .ui-segmented__item--selected { background: #fff; border-color: rgb(var(--line-strong-rgb)); color: rgb(var(--brand-rgb)); }
+  .ui-segmented__item--selected:hover { color: rgb(var(--brand-rgb)); }
+  @media (min-width: 768px) { .ui-segmented__item { font-size: 14px; } }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
