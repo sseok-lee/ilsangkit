@@ -36,4 +36,28 @@ describe('SectionBlock', () => {
     });
     expect(wrapper.text()).toContain('시·도로 좁히기');
   });
+
+  it('기본 variant 는 기존 카드 그대로다(PR7 전까지 사용처 화면 불변)', () => {
+    const cls = mount(SectionBlock).get('section').classes()
+    expect(cls).toEqual(expect.arrayContaining(['bg-white', 'border', 'border-line', 'rounded-xl', 'shadow-card']))
+  })
+
+  it('variant="flat" 은 박스·그림자 없이 아래 구분선만 쓴다', () => {
+    const w = mount(SectionBlock, { props: { heading: '기본정보', variant: 'flat' } })
+    const cls = w.get('section').classes()
+    expect(cls).toContain('section-flat')
+    for (const c of ['bg-white', 'border', 'rounded-xl', 'shadow-card', 'p-4', 'md:p-5']) {
+      expect(cls).not.toContain(c)
+    }
+    expect(w.get('h2').classes()).toContain('ui-h2')
+  })
+
+  it('flat 에서도 subtext·right 슬롯을 렌더한다', () => {
+    const w = mount(SectionBlock, {
+      props: { heading: '지역', subtext: '시·도로 좁히기', variant: 'flat' },
+      slots: { right: '<a data-testid="more">전체 보기</a>' },
+    })
+    expect(w.text()).toContain('시·도로 좁히기')
+    expect(w.find('[data-testid="more"]').exists()).toBe(true)
+  })
 });
