@@ -220,19 +220,19 @@
                   v-if="station.phoneNumber"
                   data-test="sidebar-call"
                   :href="`tel:${station.phoneNumber}`"
-                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors flex items-center justify-center gap-2 border border-line"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors whitespace-nowrap flex items-center justify-center gap-2 border border-line"
                   aria-label="전화 걸기"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">call</span>
                   전화
                 </a>
                 <button
-                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors flex items-center justify-center gap-2 border border-line"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors whitespace-nowrap flex items-center justify-center gap-2 border border-line"
                   aria-label="공유하기"
                   @click="handleShare"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">share</span>
-                  공유하기
+                  공유
                 </button>
                 <div class="relative flex-[2]">
                   <button

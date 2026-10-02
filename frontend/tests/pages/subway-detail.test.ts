@@ -112,6 +112,12 @@ describe('subway/[slug].vue 흰색 평면형', () => {
     expect(headline).toMatch(/backgroundColor: lineColor\(ln\)/)
   })
 
+  it('사이드바 전화·공유 버튼은 줄바꿈되지 않고 공유 라벨은 짧다', () => {
+    expect(content).toMatch(/aria-label="공유하기"[\s\S]{0,300}?<\/span>\s*공유\s*<\/button>/)
+    const row = content.slice(content.indexOf('data-test="sidebar-call"'), content.indexOf('aria-label="공유하기"') + 1)
+    expect(row.match(/whitespace-nowrap/g)?.length).toBe(2)
+  })
+
   it('길찾기 드롭다운 버튼은 aria-expanded 로 상태를 알린다', () => {
     expect(content).toMatch(/:aria-expanded="showNavDropdown"/)
   })
