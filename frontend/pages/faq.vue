@@ -1,20 +1,20 @@
 <template>
-  <div class="bg-white text-strong font-display min-h-screen">
-    <div class="faq-page max-w-[1040px] mx-auto px-5 md:px-8 py-8 md:py-12">
-      <StaticPageHeader
+  <div class="bg-white text-ink min-h-screen">
+    <div class="faq-page page-container pb-12">
+      <div class="max-w-[760px]">
+      <PageHead
         title="자주 묻는 질문"
-        lead="일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다."
+        description="일상킷에서 제공하는 부동산 실거래가와 생활시설 정보에 대해 자주 묻는 질문을 모았습니다."
       />
 
-      <nav aria-label="질문 주제" class="my-8 flex flex-wrap gap-2 border-b border-line pb-6">
-        <button v-for="tab in tabs" :key="tab.key" type="button" :aria-pressed="activeTab === tab.key" class="min-h-11 rounded-full border px-5 text-sm font-semibold" :class="activeTab === tab.key ? 'border-primary bg-primary text-white' : 'border-line text-muted hover:text-primary'" @click="activeTab = tab.key">{{ tab.label }}</button>
+      <nav aria-label="질문 주제" class="mt-6 mb-6">
+        <SegmentedControl v-model="activeTab" :items="tabItems" aria-label="질문 주제 선택" />
       </nav>
       <AdBanner class="my-3" />
 
       <!-- 부동산 실거래가 FAQ -->
       <div v-show="activeTab !== 'facility'" class="mb-10">
-        <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[20px]">apartment</span>
+        <h2 class="text-display-2 text-strong mb-3">
           부동산 실거래가
         </h2>
 
@@ -30,6 +30,7 @@
               <span>Q. {{ faq.question }}</span>
               <span
                 class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
+                aria-hidden="true"
               >expand_more</span>
             </summary>
             <div class="px-1 pb-5 text-sm text-muted leading-relaxed">
@@ -41,19 +42,19 @@
 
       <!-- 시설 카테고리 FAQ -->
       <div v-for="group in groups" v-show="activeTab !== 'real-estate'" :key="group.title" class="mb-10">
-        <h2 class="text-display-2 text-strong mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[20px]">{{ group.icon }}</span>
+        <h2 class="text-display-2 text-strong mb-3">
           {{ group.title }}
         </h2>
 
         <div v-for="cat in group.categories" :key="cat" class="mb-4">
-          <h3 class="text-base font-semibold text-strong mb-3 flex items-center gap-2">
+          <div class="mb-3 flex items-center gap-2">
             <span
               class="material-symbols-outlined text-[18px]"
               :class="categoryColorClass(cat)"
+              aria-hidden="true"
             >{{ CATEGORY_META[cat].icon }}</span>
-            {{ CATEGORY_META[cat].label }}
-          </h3>
+            <h3 class="text-base font-semibold text-strong">{{ CATEGORY_META[cat].label }}</h3>
+          </div>
 
           <div class="space-y-2">
             <details
@@ -67,6 +68,7 @@
                 <span>Q. {{ faq.question }}</span>
                 <span
                   class="material-symbols-outlined text-[18px] text-muted transition-transform group-open:rotate-180 shrink-0"
+                  aria-hidden="true"
                 >expand_more</span>
               </summary>
               <div class="px-1 pb-5 text-sm text-muted leading-relaxed">
@@ -76,6 +78,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -84,7 +87,9 @@
 import { ref } from 'vue'
 const tabs = [{ key: 'all', label: '전체' }, { key: 'real-estate', label: '부동산' }, { key: 'facility', label: '생활시설' }] as const
 const activeTab = ref<typeof tabs[number]['key']>('all')
-import StaticPageHeader from '~/components/common/StaticPageHeader.vue'
+const tabItems = tabs.map((tab) => ({ value: tab.key, label: tab.label }))
+import PageHead from '~/components/common/PageHead.vue'
+import SegmentedControl from '~/components/common/SegmentedControl.vue'
 import type { FacilityCategory } from '~/types/facility'
 import { CATEGORY_META, CATEGORY_GROUPS } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
@@ -143,7 +148,5 @@ function categoryColorClass(cat: FacilityCategory): string {
 </script>
 
 <style scoped>
-.faq-page :deep(h1) { font-size: 28px; line-height: 1.25; }
-.faq-page summary:focus-visible, .faq-page button:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
-@media (min-width: 768px) { .faq-page :deep(h1) { font-size: 36px; } }
+.faq-page summary:focus-visible { outline: 2px solid rgb(var(--brand-rgb)); outline-offset: 3px; }
 </style>
