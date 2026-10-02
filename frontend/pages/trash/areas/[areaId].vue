@@ -1,48 +1,42 @@
 <template>
-  <main class="mx-auto flex max-w-[1120px] flex-col gap-3 px-4 pb-8 pt-5 md:px-6 md:pb-10 md:pt-6">
-    <Breadcrumb :items="breadcrumbItems" />
+  <div class="bg-white text-ink min-h-screen">
+  <div class="page-container pb-10">
+    <PageHead eyebrow="동별 쓰레기 배출 안내" :title="heroTitle" :description="heroDescription">
+      <template #breadcrumb>
+        <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+      </template>
+    </PageHead>
 
-    <PageHero
-      eyebrow="동별 쓰레기 배출 안내"
-      :title="heroTitle"
-      :description="heroDescription"
-    />
-
-    <div v-if="returnContext" class="flex flex-wrap gap-2">
-      <a
-        :href="returnContext.href"
-        class="inline-flex min-h-[44px] items-center rounded-lg border border-[#E6E9F0] bg-white px-4 text-sm font-semibold text-[#2450DC] hover:bg-[#F7F8FA]"
-        @click="returnToContext"
-      >
-        {{ returnContext.label }}
-      </a>
+    <div v-if="returnContext" class="mt-6 flex flex-wrap gap-2">
+      <UiButton variant="secondary" :href="returnContext.href" @click="returnToContext">{{ returnContext.label }}</UiButton>
     </div>
 
-    <SectionBlock heading="적용 대상" :subtext="areaSubtext">
-      <div class="rounded-lg border border-[#E6E9F0] bg-white p-4">
+    <SectionBlock variant="flat" heading="적용 대상" :subtext="areaSubtext">
+      <div>
         <dl class="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt class="font-semibold text-[#56627A]">지역</dt>
-            <dd class="mt-1 font-bold text-[#15213B]">{{ detail.area.city }} {{ detail.area.district }} {{ detail.area.name }}</dd>
+            <dt class="font-semibold text-muted">지역</dt>
+            <dd class="mt-1 font-bold text-ink">{{ detail.area.city }} {{ detail.area.district }} {{ detail.area.name }}</dd>
           </div>
           <div>
-            <dt class="font-semibold text-[#56627A]">확인 일정</dt>
-            <dd class="mt-1 text-[#15213B]">{{ detail.area.scheduleCount.toLocaleString('ko-KR') }}건</dd>
+            <dt class="font-semibold text-muted">확인 일정</dt>
+            <dd class="mt-1 text-ink">{{ detail.area.scheduleCount.toLocaleString('ko-KR') }}건</dd>
           </div>
           <div v-if="detail.area.conditionalCount > 0">
-            <dt class="font-semibold text-[#56627A]">조건별 일정</dt>
-            <dd class="mt-1 text-[#15213B]">{{ detail.area.conditionalCount.toLocaleString('ko-KR') }}건</dd>
+            <dt class="font-semibold text-muted">조건별 일정</dt>
+            <dd class="mt-1 text-ink">{{ detail.area.conditionalCount.toLocaleString('ko-KR') }}건</dd>
           </div>
           <div v-if="detail.contentUpdatedAt || detail.area.dataDate">
-            <dt class="font-semibold text-[#56627A]">자료 기준일</dt>
-            <dd class="mt-1 text-[#15213B]">{{ formattedDate }}</dd>
+            <dt class="font-semibold text-muted">자료 기준일</dt>
+            <dd class="mt-1 text-ink">{{ formattedDate }}</dd>
           </div>
         </dl>
-        <p v-if="detail.area.summary" class="mt-3 break-words text-sm leading-6 text-[#56627A]">{{ detail.area.summary }}</p>
+        <p v-if="detail.area.summary" class="mt-3 break-words text-sm leading-6 text-muted">{{ detail.area.summary }}</p>
       </div>
     </SectionBlock>
 
     <SectionBlock
+      variant="flat"
       heading="배출 일정"
       :subtext="detail.schedules.length > 0 ? '적용 조건을 먼저 확인한 뒤 배출 요일과 시간을 확인하세요.' : '현재 이 동에 연결된 배출 일정이 없습니다.'"
     >
@@ -55,37 +49,26 @@
           :condition-text="item.conditionText"
         />
       </div>
-      <div v-else class="rounded-lg border border-[#E6E9F0] bg-white p-6 text-center">
-        <p class="font-semibold text-[#15213B]">확인된 배출 일정이 없습니다</p>
-        <p class="mt-1 text-sm text-[#56627A]">구·군 원문 목록에서 아직 연결이 필요한 자료를 확인할 수 있습니다.</p>
+      <div v-else class="rounded-[10px] bg-background-light p-6 text-center">
+        <p class="font-semibold text-ink">확인된 배출 일정이 없습니다</p>
+        <p class="mt-1 text-sm text-muted">구·군 원문 목록에서 아직 연결이 필요한 자료를 확인할 수 있습니다.</p>
       </div>
     </SectionBlock>
 
     <SectionBlock
       v-if="detail.predecessorOrSuccessorLinks.length > 0 || detail.unresolved.href"
+      variant="flat"
       heading="관련 안내"
     >
       <div class="flex flex-wrap gap-2">
-        <NuxtLink
-          v-for="link in detail.predecessorOrSuccessorLinks"
-          :key="link.href"
-          :to="link.href"
-          class="inline-flex min-h-[44px] items-center rounded-lg border border-[#E6E9F0] bg-white px-4 text-sm font-semibold text-[#2450DC] hover:bg-[#F7F8FA]"
-        >
-          {{ link.name }}
-        </NuxtLink>
-        <NuxtLink
-          v-if="detail.unresolved.href"
-          :to="detail.unresolved.href"
-          class="inline-flex min-h-[44px] items-center rounded-lg border border-[#E6E9F0] bg-white px-4 text-sm font-semibold text-[#2450DC] hover:bg-[#F7F8FA]"
-        >
-          연결 확인이 필요한 원문 {{ detail.unresolved.count.toLocaleString('ko-KR') }}건
-        </NuxtLink>
+        <UiButton v-for="link in detail.predecessorOrSuccessorLinks" :key="link.href" variant="secondary" :to="link.href">{{ link.name }}</UiButton>
+        <UiButton v-if="detail.unresolved.href" variant="secondary" :to="detail.unresolved.href">연결 확인이 필요한 원문 {{ detail.unresolved.count.toLocaleString('ko-KR') }}건</UiButton>
       </div>
     </SectionBlock>
 
-    <DataSourceSection domain="facility" category="trash" :last-sync-date="formattedDate" />
-  </main>
+    <DataSourceSection domain="facility" category="trash" variant="flat" :last-sync-date="formattedDate" />
+  </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -93,7 +76,8 @@ import { computed, onMounted, ref } from 'vue'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { useWasteAreas } from '~/composables/useWasteAreas'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import WasteScheduleContent from '~/components/trash/WasteScheduleContent.vue'
