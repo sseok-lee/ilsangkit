@@ -1,58 +1,53 @@
 <template>
-  <div class="bg-background-light text-strong font-display min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <!-- Hero -->
-      <PageHero
-        eyebrow="생활시설 목록"
-        :title="pageTitle"
-        :description="pageDescription"
-        :stats="heroStats"
-      />
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead eyebrow="생활시설 목록" :title="pageTitle" :description="pageDescription">
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- Error -->
-      <div v-if="error" role="alert" class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+      <div v-if="error" role="alert" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
         지하철역 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
       </div>
 
       <!-- 지역과 키워드 필터 -->
-      <SectionBlock heading="지역과 키워드" subtext="지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.">
+      <SectionBlock variant="flat" heading="지역과 키워드" subtext="지역을 먼저 선택하면 정확한 목록을 빠르게 찾을 수 있어요.">
         <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1.4fr]">
           <div class="relative">
-            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">시/도</label>
+            <label class="block text-[13px] font-semibold text-muted mb-1.5 hidden md:block">시/도</label>
             <select
               v-model="selectedCitySlug"
               aria-label="시/도 선택"
-              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
+              class="w-full bg-white border border-line rounded-[7px] min-h-[44px] py-2 pl-3 pr-9 text-ink text-base md:text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer"
             >
               <option value="">시/도 선택</option>
               <option v-for="c in cityOptions" :key="c.slug" :value="c.slug">{{ c.name }}</option>
             </select>
-            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-muted pointer-events-none text-[18px]">expand_more</span>
+            <span class="material-symbols-outlined absolute right-3 bottom-3 text-muted pointer-events-none text-[18px]" aria-hidden="true">expand_more</span>
           </div>
           <div class="relative">
-            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">구/군</label>
+            <label class="block text-[13px] font-semibold text-muted mb-1.5 hidden md:block">구/군</label>
             <select
               v-model="selectedDistrict"
               :disabled="!selectedCitySlug"
               aria-label="구/군 선택"
-              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 px-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full bg-white border border-line rounded-[7px] min-h-[44px] py-2 pl-3 pr-9 text-ink text-base md:text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">구/군 선택</option>
               <option v-for="d in districtOptions" :key="d" :value="d">{{ d }}</option>
             </select>
-            <span class="material-symbols-outlined absolute right-3 bottom-2.5 text-muted pointer-events-none text-[18px]">expand_more</span>
+            <span class="material-symbols-outlined absolute right-3 bottom-3 text-muted pointer-events-none text-[18px]" aria-hidden="true">expand_more</span>
           </div>
           <div class="relative">
-            <label class="block text-xs font-medium text-muted mb-1 hidden md:block">키워드</label>
-            <div class="absolute left-3 bottom-2.5 pointer-events-none">
-              <span class="material-symbols-outlined text-muted text-[18px]">search</span>
+            <label class="block text-[13px] font-semibold text-muted mb-1.5 hidden md:block">키워드</label>
+            <div class="absolute left-3 bottom-3 pointer-events-none">
+              <span class="material-symbols-outlined text-muted text-[18px]" aria-hidden="true">search</span>
             </div>
             <input
               v-model="keyword"
-              class="w-full bg-surface-2 border border-line rounded-lg py-2.5 pl-9 pr-3 text-strong text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              class="w-full bg-white border border-line rounded-[7px] min-h-[44px] py-2 pl-9 pr-3 text-ink text-base md:text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               type="search"
               placeholder="역 이름 검색 (예: 강남)"
             />
@@ -64,11 +59,9 @@
       <AdBanner />
 
       <!-- 결과 목록 -->
-      <SectionBlock :heading="`${resultTitle} 지하철역 목록`" subtext="환승역은 1건으로 묶여 노선 배지로 표시됩니다.">
+      <SectionBlock variant="flat" :heading="`${resultTitle} 지하철역 목록`" subtext="환승역은 1건으로 묶여 노선 배지로 표시됩니다.">
         <template #right>
-          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-            {{ (stations?.total ?? 0).toLocaleString('ko-KR') }}건
-          </span>
+          <span data-testid="list-count" class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ (stations?.total ?? 0).toLocaleString('ko-KR') }}</strong>곳</span>
         </template>
 
         <!-- Loading Skeleton -->
@@ -92,18 +85,12 @@
             description="다른 지역이나 검색어를 시도해보세요"
           >
             <div class="flex items-center justify-center gap-3">
-              <button
+              <UiButton
                 v-if="selectedCitySlug || selectedDistrict || keyword"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                variant="secondary"
                 @click="resetFilters"
-              >
-                <span class="material-symbols-outlined text-[16px]">refresh</span>
-                필터 초기화
-              </button>
-              <NuxtLink to="/" class="btn-primary inline-flex items-center gap-1.5 text-sm">
-                <span class="material-symbols-outlined text-[16px]">home</span>
-                홈으로 돌아가기
-              </NuxtLink>
+              >필터 초기화</UiButton>
+              <UiButton variant="primary" to="/">홈으로 돌아가기</UiButton>
             </div>
           </EmptyState>
 
@@ -118,24 +105,18 @@
       <!-- 관련 탐색 -->
       <SectionBlock
         v-if="relatedCategories.length > 0"
+        variant="flat"
         heading="관련 탐색"
         subtext="비슷한 카테고리로 탐색을 이어가세요."
       >
         <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
-          <NuxtLink
-            v-for="cat in relatedCategories"
-            :key="cat.slug"
-            :to="`/${cat.slug}`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {{ cat.label }}
-          </NuxtLink>
+          <span class="text-[13px] font-semibold text-muted pr-1">관련 카테고리</span>
+          <UiChip v-for="cat in relatedCategories" :key="cat.slug" :to="`/${cat.slug}`">{{ cat.label }}</UiChip>
         </div>
       </SectionBlock>
 
       <!-- FAQ -->
-      <SectionBlock v-if="faqItems.length > 0" heading="자주 묻는 질문">
+      <SectionBlock v-if="faqItems.length > 0" variant="flat" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
             <summary class="py-3 cursor-pointer font-medium text-ink hover:text-primary">
@@ -148,7 +129,7 @@
 
 
       <!-- 데이터 출처 -->
-      <DataSourceSection domain="facility" category="subway" />
+      <DataSourceSection domain="facility" category="subway" variant="flat" />
     </div>
   </div>
 </template>
@@ -159,7 +140,9 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { useStructuredData } from '~/composables/useStructuredData'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -302,11 +285,6 @@ const pageTitle = computed(() => {
 })
 
 const pageDescription = '역 위치·노선·환승 정보를 한눈에 확인하세요. 환승역은 모든 노선이 함께 표시됩니다.'
-
-const heroStats = computed(() => {
-  if (!stations.value) return []
-  return [{ label: '총 역수', value: stations.value.total.toLocaleString('ko-KR') }]
-})
 
 const resultTitle = computed(() => pageTitle.value)
 
