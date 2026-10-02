@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref, defineComponent, h, Suspense } from 'vue'
@@ -113,5 +115,14 @@ describe('GuidePage - 관련 정보 섹션', () => {
     } else {
       expect(true).toBe(true)
     }
+  })
+
+  it('정렬 컨테이너 + 760px 읽기 칼럼(가운데 정렬 아님)', () => {
+    const src = readFileSync(resolve(__dirname, '../../pages/guide/[slug].vue'), 'utf8')
+    expect(src).toMatch(/<article v-else-if="guide" class="content-reading page-container/)
+    expect(src).not.toContain('max-w-[1024px]')
+    expect(src).toContain('max-w-[760px]')
+    expect(src).toMatch(/md:grid-cols-\[190px_minmax\(0,760px\)\]/)
+    expect(src).not.toMatch(/text-\[#15213B\]|bg-\[#F0F4FD\]/i)
   })
 })
