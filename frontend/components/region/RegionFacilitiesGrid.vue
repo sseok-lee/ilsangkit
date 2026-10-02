@@ -1,15 +1,13 @@
 <template>
-  <SectionBlock :heading="`${categoryName} 목록`" :subtext="`${districtName} 지역 ${categoryName} 정보`">
+  <SectionBlock variant="flat" :heading="`${categoryName} 목록`" :subtext="`${districtName} 지역 ${categoryName} 정보`">
     <template #right>
-      <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-        {{ (total || 0).toLocaleString('ko-KR') }}건
-      </span>
+      <span class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ (total || 0).toLocaleString('ko-KR') }}</strong>곳</span>
     </template>
 
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-10">
       <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-      <p class="mt-4 text-slate-500 text-sm">{{ UI_MESSAGES.loading }}</p>
+      <p class="mt-4 text-muted text-sm">{{ UI_MESSAGES.loading }}</p>
     </div>
 
     <!-- Error State -->
@@ -30,14 +28,14 @@
         :title="emptyFiltered('시설')"
         description="다른 지역이나 카테고리를 선택해보세요"
       >
-        <NuxtLink
+        <UiButton
           v-if="categorySlug"
+          variant="primary"
           :to="`/${categorySlug}`"
-          class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
         >
-          <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">travel_explore</span>
           전국으로
-        </NuxtLink>
+        </UiButton>
       </EmptyState>
 
       <FacilityList
@@ -68,6 +66,7 @@
 
 <script setup lang="ts">
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import Pagination from '~/components/common/Pagination.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
 import FacilityList from '~/components/facility/FacilityList.vue'

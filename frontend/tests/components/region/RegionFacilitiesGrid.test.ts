@@ -81,4 +81,13 @@ describe('RegionFacilitiesGrid', () => {
     expect(wrapper.text()).not.toContain('검색 결과가 없습니다')
   })
 
+  it('평면 섹션 + 제목 옆 개수 글자 "N곳"(알약 배지 없음)', () => {
+    const wrapper = mount(RegionFacilitiesGrid, {
+      props: { ...baseProps, total: 2431 },
+      global: { stubs: { ...globalConfig.stubs, FacilityCard: { template: '<article />', props: ['facility'] } } },
+    })
+    expect(wrapper.get('section').attributes('variant')).toBe('flat')
+    expect(wrapper.html()).not.toMatch(/rounded-full bg-primary\/10|slate-/)
+    expect(wrapper.text()).toContain('2,431곳')
+  })
 })

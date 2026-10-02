@@ -1,47 +1,31 @@
 <template>
-  <section
-    class="bg-white rounded-xl p-5 shadow-sm border border-slate-200"
-    aria-label="지역 요약"
-  >
-    <!-- 헤더 -->
-    <div class="flex items-start justify-between flex-wrap gap-2 mb-4">
+  <section aria-label="지역 요약">
+    <div class="flex items-start justify-between flex-wrap gap-2 mb-3">
       <div>
-        <h2 class="text-slate-900 text-display-2">
-          {{ districtName }} {{ categoryLabel }} 요약
-        </h2>
-        <p v-if="relativeUpdated" class="text-xs text-slate-500 mt-0.5">
-          업데이트: {{ relativeUpdated }}
-        </p>
+        <h3 class="ui-h3 text-strong">{{ districtName }} {{ categoryLabel }} 요약</h3>
+        <p v-if="relativeUpdated" class="text-[13px] text-muted mt-0.5">업데이트: {{ relativeUpdated }}</p>
       </div>
       <div v-if="summary.countDiff > 0" class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
         <span aria-hidden="true">↑</span>
         <span>최근 30일 +{{ summary.countDiff }}</span>
       </div>
     </div>
-
-    <!-- 총 시설 수 -->
-    <div class="mb-5">
-      <p class="text-[11px] text-slate-500 tracking-wide font-medium">총 시설</p>
-      <p class="text-slate-900 font-bold">
-        <span class="text-3xl">{{ summary.count.toLocaleString() }}</span>
-        <span class="text-base text-slate-600 ml-1">곳</span>
-      </p>
-    </div>
-
-    <!-- Highlights (인라인 summary-grid) -->
-    <div
-      v-if="summary.highlights.length > 0"
-      class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-line"
-    >
-      <div v-for="h in summary.highlights" :key="h.key">
-        <span class="block text-slate-500 text-xs font-bold truncate">{{ h.label }}</span>
-        <div class="flex items-baseline gap-1.5 mt-1">
-          <strong class="text-lg md:text-xl font-bold text-slate-900">{{ h.count.toLocaleString() }}</strong>
-          <span class="text-sm text-slate-500">곳</span>
-          <span class="ml-auto text-xs font-semibold text-primary">{{ h.percent }}%</span>
-        </div>
+    <dl class="border-t border-line text-sm">
+      <div class="flex items-center justify-between gap-3 py-2.5 border-b border-line">
+        <dt class="text-muted">총 시설</dt>
+        <dd class="font-semibold text-ink tabular-nums">{{ summary.count.toLocaleString() }}곳</dd>
       </div>
-    </div>
+      <div
+        v-for="h in summary.highlights"
+        :key="h.key"
+        class="flex items-center justify-between gap-3 py-2.5 border-b border-line"
+      >
+        <dt class="min-w-0 truncate text-muted">{{ h.label }}</dt>
+        <dd class="shrink-0 text-ink tabular-nums">
+          {{ h.count.toLocaleString() }}곳<span class="ml-1.5 font-semibold text-primary">{{ h.percent }}%</span>
+        </dd>
+      </div>
+    </dl>
   </section>
 </template>
 

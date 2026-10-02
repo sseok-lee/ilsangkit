@@ -28,6 +28,11 @@ export const FILES = [
   'components/city/RecentGuides.vue',
   'components/region/RegionFacilityCategoryGrid.vue',
   'pages/[city]/[district]/index.vue',
+  'components/region/RegionFacilitiesGrid.vue',
+  'components/region/RegionTrashSchedule.vue',
+  'components/region/RegionRelatedCategories.vue',
+  'components/region/DistrictSummaryCard.vue',
+  'components/region/NearbyDistrictsNav.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/

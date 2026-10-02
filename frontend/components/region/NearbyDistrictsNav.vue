@@ -1,27 +1,23 @@
 <template>
   <nav
     v-if="districts.length > 0"
-    class="bg-white rounded-xl p-4 shadow-sm border border-slate-200"
     :aria-label="`주변 지역 ${categoryLabel}`"
   >
-    <h2 class="text-slate-900 text-base font-bold mb-3">
-      주변 지역 {{ categoryLabel }}
-    </h2>
+    <h3 class="ui-h3 text-strong mb-3">주변 지역 {{ categoryLabel }}</h3>
     <ul class="flex flex-wrap gap-2">
       <li v-for="d in districts" :key="d.slug">
-        <NuxtLink
-          :to="`/${citySlug}/${d.slug}/${category}`"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-sm text-slate-700 hover:border-primary/40 hover:text-primary transition-colors"
-        >
+        <UiChip :to="`/${citySlug}/${d.slug}/${category}`">
           <span class="font-medium">{{ d.district }}</span>
-          <span class="text-xs text-slate-500">{{ d.count.toLocaleString() }}곳</span>
-        </NuxtLink>
+          <span class="text-xs text-muted tabular-nums">{{ d.count.toLocaleString() }}곳</span>
+        </UiChip>
       </li>
     </ul>
   </nav>
 </template>
 
 <script setup lang="ts">
+import UiChip from '~/components/common/UiChip.vue'
+
 interface District {
   slug: string
   district: string

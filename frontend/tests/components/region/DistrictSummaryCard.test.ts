@@ -87,4 +87,16 @@ describe('DistrictSummaryCard', () => {
     })
     expect(wrapper.text()).toContain('업데이트')
   })
+
+  it('상자 없이 h3 + 키-값 행(총 시설·상위 동), 요약 줄 아님', () => {
+    const wrapper = mount(DistrictSummaryCard, {
+      props: { summary: baseSummary, districtName: '강남구', categoryLabel: '공공화장실' },
+    })
+    expect(wrapper.get('h3').text()).toContain('요약')
+    expect(wrapper.find('.summary-row').exists()).toBe(false)
+    const dts = wrapper.findAll('dl dt').map((d) => d.text())
+    expect(dts[0]).toBe('총 시설')
+    expect(dts.length).toBe(1 + baseSummary.highlights.length)
+    expect(wrapper.html()).not.toMatch(/shadow-|rounded-xl|slate-/)
+  })
 })
