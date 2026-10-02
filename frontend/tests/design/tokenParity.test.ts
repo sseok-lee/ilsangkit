@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 import config from '~/tailwind.config.js'
 
-const css = readFileSync(join(process.cwd(), 'assets/css/main.css'), 'utf8')
+const here = dirname(fileURLToPath(import.meta.url))
+
+const css = readFileSync(resolve(here, '../../', 'assets/css/main.css'), 'utf8')
 
 function cssVar(name: string): string {
   const m = css.match(new RegExp(`--${name}:\\s*([^;]+);`))

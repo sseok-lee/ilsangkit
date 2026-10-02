@@ -31,3 +31,17 @@ describe('SummaryRow', () => {
     expect(mount(SummaryRow, { props: { items: many } }).attributes('style')).toContain('--summary-cols: 4')
   })
 })
+
+describe('SummaryRow — tone', () => {
+  it.each(['brand', 'success', 'danger', 'delta-up', 'delta-down'] as const)('tone=%s 이면 값에 summary-row__value--%s 클래스', (tone) => {
+    const w = mount(SummaryRow, { props: { items: [{ label: 'a', value: 1, tone }] } })
+    expect(w.get('dd').classes()).toContain(`summary-row__value--${tone}`)
+  })
+
+  it('tone 이 없으면 톤 클래스가 없다', () => {
+    const w = mount(SummaryRow, { props: { items } })
+    for (const dd of w.findAll('dd')) {
+      expect(dd.classes().filter((c) => c.startsWith('summary-row__value--'))).toEqual([])
+    }
+  })
+})

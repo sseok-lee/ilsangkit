@@ -29,3 +29,11 @@ describe('UiChip', () => {
     expect(w.get('button').classes()).toContain('ui-chip--selected')
   })
 })
+
+describe('UiChip — 링크 모드 click', () => {
+  it('링크 칩도 click 을 내보낸다', async () => {
+    const w = mount(UiChip, { props: { to: '/hospital?city=seoul' }, slots: { default: '서울' } })
+    await w.get('a').trigger('click')
+    expect(w.emitted('click')).toHaveLength(1)
+  })
+})

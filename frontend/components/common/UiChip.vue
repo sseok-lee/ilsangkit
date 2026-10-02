@@ -4,6 +4,7 @@
     :to="to"
     :class="classes"
     :aria-current="selected ? 'page' : undefined"
+    @click="emit('click', $event)"
   ><slot /></NuxtLink>
   <button
     v-else

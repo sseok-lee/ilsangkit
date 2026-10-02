@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SegmentedControl from '~/components/common/SegmentedControl.vue'
 
@@ -56,5 +56,24 @@ describe('SegmentedControl — 링크 모드', () => {
     expect(links[0].attributes('aria-current')).toBeUndefined()
     expect(links[1].attributes('aria-current')).toBe('page')
     expect(links[1].classes()).toContain('ui-segmented__item--selected')
+  })
+})
+
+describe('SegmentedControl — fill', () => {
+  it('fill 이면 ui-segmented--fill 클래스(라디오·링크 모드 모두), 기본은 없다', () => {
+    const base = { items: radioItems, ariaLabel: 'x' }
+    expect(mount(SegmentedControl, { props: base }).get('.ui-segmented').classes()).not.toContain('ui-segmented--fill')
+    expect(mount(SegmentedControl, { props: { ...base, fill: true } }).get('.ui-segmented').classes()).toContain('ui-segmented--fill')
+    const linkItems = radioItems.map((i) => ({ ...i, to: `/${i.value}` }))
+    const link = mount(SegmentedControl, { props: { items: linkItems, ariaLabel: 'x', fill: true } })
+    expect(link.get('.ui-segmented').classes()).toContain('ui-segmented--fill')
+  })
+
+  it.runIf(import.meta.dev)('to 가 일부만 있으면 dev 경고 후 라디오 모드', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const w = mount(SegmentedControl, { props: { items: [{ ...radioItems[0], to: '/a' }, radioItems[1]], ariaLabel: 'x' } })
+    expect(w.find('[role="radiogroup"]').exists()).toBe(true)
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
   })
 })

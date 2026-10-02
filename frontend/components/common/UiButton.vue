@@ -30,5 +30,12 @@ const props = withDefaults(defineProps<{
   disabled: false,
 })
 
-const classes = computed(() => ['ui-btn', `ui-btn--${props.variant}`])
+// 클래스 이름을 조립하면 Tailwind 가 리터럴을 못 찾아 규칙을 퍼지한다 — 반드시 리터럴 맵.
+const VARIANT_CLASS = {
+  primary: 'ui-btn--primary',
+  secondary: 'ui-btn--secondary',
+  link: 'ui-btn--link',
+} as const
+
+const classes = computed(() => ['ui-btn', VARIANT_CLASS[props.variant]])
 </script>
