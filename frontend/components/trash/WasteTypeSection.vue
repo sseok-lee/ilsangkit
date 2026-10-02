@@ -7,7 +7,7 @@
       >
         <span aria-hidden="true" class="material-symbols-outlined text-[20px]" :class="iconTextClass">{{ icon }}</span>
       </div>
-      <h3 class="font-bold text-ink">{{ title }}</h3>
+      <h4 class="font-bold text-ink">{{ title }}</h4>
     </div>
     <div class="text-sm text-muted space-y-3">
       <div v-if="info.dayOfWeek" class="flex items-start gap-2">

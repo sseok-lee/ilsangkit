@@ -238,7 +238,6 @@
                   <button
                     class="w-full h-11 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
                     :aria-expanded="showNavDropdown"
-                    aria-haspopup="true"
                     @click="showNavDropdown = !showNavDropdown"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">directions</span>

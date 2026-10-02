@@ -12,27 +12,25 @@
     </div>
 
     <SectionBlock variant="flat" heading="적용 대상" :subtext="areaSubtext">
-      <div>
-        <dl class="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt class="font-semibold text-muted">지역</dt>
-            <dd class="mt-1 font-bold text-ink">{{ detail.area.city }} {{ detail.area.district }} {{ detail.area.name }}</dd>
-          </div>
-          <div>
-            <dt class="font-semibold text-muted">확인 일정</dt>
-            <dd class="mt-1 text-ink">{{ detail.area.scheduleCount.toLocaleString('ko-KR') }}건</dd>
-          </div>
-          <div v-if="detail.area.conditionalCount > 0">
-            <dt class="font-semibold text-muted">조건별 일정</dt>
-            <dd class="mt-1 text-ink">{{ detail.area.conditionalCount.toLocaleString('ko-KR') }}건</dd>
-          </div>
-          <div v-if="detail.contentUpdatedAt || detail.area.dataDate">
-            <dt class="font-semibold text-muted">자료 기준일</dt>
-            <dd class="mt-1 text-ink">{{ formattedDate }}</dd>
-          </div>
-        </dl>
-        <p v-if="detail.area.summary" class="mt-3 break-words text-sm leading-6 text-muted">{{ detail.area.summary }}</p>
-      </div>
+      <dl class="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="font-semibold text-muted">지역</dt>
+          <dd class="mt-1 font-bold text-ink">{{ detail.area.city }} {{ detail.area.district }} {{ detail.area.name }}</dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-muted">확인 일정</dt>
+          <dd class="mt-1 text-ink">{{ detail.area.scheduleCount.toLocaleString('ko-KR') }}건</dd>
+        </div>
+        <div v-if="detail.area.conditionalCount > 0">
+          <dt class="font-semibold text-muted">조건별 일정</dt>
+          <dd class="mt-1 text-ink">{{ detail.area.conditionalCount.toLocaleString('ko-KR') }}건</dd>
+        </div>
+        <div v-if="detail.contentUpdatedAt || detail.area.dataDate">
+          <dt class="font-semibold text-muted">자료 기준일</dt>
+          <dd class="mt-1 text-ink">{{ formattedDate }}</dd>
+        </div>
+      </dl>
+      <p v-if="detail.area.summary" class="mt-3 break-words text-sm leading-6 text-muted">{{ detail.area.summary }}</p>
     </SectionBlock>
 
     <SectionBlock
