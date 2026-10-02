@@ -1,36 +1,35 @@
 <template>
-  <div class="bg-background-light min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead eyebrow="부동산 실거래가" :title="heroTitle" :description="heroDescription">
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
-      <PageHero
-        class="exploration-page-hero"
-        :title="heroTitle"
-        :description="heroDescription"
-      />
-
-      <SectionBlock heading="거래 유형과 지역" :subtext="`${cityName} 구/군을 선택하면 지역별 거래를 확인할 수 있습니다.`">
+      <SectionBlock variant="flat" heading="거래 유형과 지역" :subtext="`${cityName} 구/군을 선택하면 지역별 거래를 확인할 수 있습니다.`">
         <ExplorationFilters
           :type="realEstateTypeParam"
           :city="cityName"
         />
-        <div class="mt-4 pt-4 border-t border-line flex justify-end">
-          <NuxtLink :to="mapHref" class="map-link">{{ mapLinkLabel }}</NuxtLink>
+        <div class="mt-5 pt-5 border-t border-line flex justify-end">
+          <UiButton variant="link" :to="mapHref">{{ mapLinkLabel }}</UiButton>
         </div>
       </SectionBlock>
 
       <AdBanner />
 
-      <SectionBlock :subtext="`${cityName} 내 구/군을 선택하면 단지 목록을 확인할 수 있습니다.`">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">{{ cityName }} 구/군 목록</h2>
-        </template>
+      <SectionBlock
+        variant="flat"
+        :heading="`${cityName} 구/군 목록`"
+        :subtext="`${cityName} 내 구/군을 선택하면 단지 목록을 확인할 수 있습니다.`"
+      >
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink
             v-for="district in districts"
             :key="district.name"
             :to="district.url"
-            class="flex items-center justify-center p-4 rounded-xl border border-slate-200 bg-white font-bold text-slate-900 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 text-center text-sm"
+            class="flex items-center justify-center min-h-[56px] px-4 py-3 rounded-[10px] border border-line bg-white text-[15px] font-semibold text-ink text-center hover:border-primary transition-colors"
           >
             {{ district.name }}
           </NuxtLink>
@@ -39,22 +38,23 @@
 
       <SectionBlock
         v-if="cityListFailed"
+        variant="flat"
         heading="주요 건물"
       >
         <div class="rounded-lg bg-red-50 px-5 py-8 text-center">
           <p class="font-semibold text-red-700">주요 건물을 불러오지 못했습니다</p>
           <p class="mt-1 text-sm text-red-600">잠시 후 다시 시도해 주세요.</p>
-          <button class="retry-button" type="button" @click="refreshTopComplexes()">다시 시도</button>
+          <UiButton variant="primary" class="mt-4" @click="refreshTopComplexes()">다시 시도</UiButton>
         </div>
       </SectionBlock>
 
       <SectionBlock
         v-else-if="topComplexes.length > 0"
-        class="exploration-list-section"
+        variant="flat"
         heading="주요 건물"
         :subtext="`${cityName} ${typeLabel} 서버 정렬 기준 최대 6곳`"
       >
-        <div class="building-list">
+        <div class="border-t border-line">
           <ExplorationBuildingRow
             v-for="building in topComplexes"
             :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
@@ -65,13 +65,13 @@
         </div>
       </SectionBlock>
 
-      <SectionBlock v-else heading="주요 건물">
-        <p class="rounded-lg bg-background-light px-5 py-8 text-center text-sm text-muted">
+      <SectionBlock v-else variant="flat" heading="주요 건물">
+        <p class="rounded-[10px] bg-background-light px-5 py-8 text-center text-sm text-muted">
           이 지역에는 공개된 주요 건물이 없습니다.
         </p>
       </SectionBlock>
 
-      <DataSourceSection domain="real-estate" />
+      <DataSourceSection domain="real-estate" compact variant="flat" />
     </div>
   </div>
 </template>
@@ -90,7 +90,8 @@ import { suppressAds } from '~/composables/useAdsPolicy'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { explorationListHref, explorationMapHref } from '~/utils/explorationNavigation'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
@@ -210,56 +211,3 @@ setItemListSchema(
   districts.value.map((d) => ({ name: d.name, url: d.url })),
 )
 </script>
-
-<style scoped>
-.exploration-page-hero,
-.exploration-list-section {
-  border-radius: 0;
-  border-right: 0;
-  border-left: 0;
-  box-shadow: none;
-}
-
-.exploration-page-hero :deep(h1) {
-  font-size: 27px;
-}
-
-@media (min-width: 768px) {
-  .exploration-page-hero :deep(h1) {
-    font-size: 36px;
-  }
-}
-
-.map-link,
-.retry-button {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.map-link {
-  color: #2450dc;
-  text-decoration: none;
-}
-
-.retry-button {
-  margin-top: 1rem;
-  border-radius: 0.5rem;
-  background: #2450dc;
-  padding: 0.5rem 1rem;
-  color: #fff;
-}
-
-.map-link:focus-visible,
-.retry-button:focus-visible {
-  outline: 2px solid #2450dc;
-  outline-offset: 2px;
-}
-
-.building-list {
-  border-top: 1px solid #e6e9f0;
-}
-</style>
