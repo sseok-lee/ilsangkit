@@ -17,10 +17,7 @@
   <!-- flat — 평면 섹션(variant="flat"), full 분기만 해당 -->
   <section v-else-if="source && variant === 'flat'" class="section-flat">
     <div class="flex items-center justify-between mb-4 md:mb-[22px]">
-      <h2 class="ui-h2 text-strong flex items-center gap-2">
-        <span class="material-symbols-outlined text-muted text-[20px]">description</span>
-        데이터 출처
-      </h2>
+      <h2 class="ui-h2 text-strong">데이터 출처</h2>
     </div>
     <div class="flex flex-col gap-3">
       <div v-if="lastSyncDate" class="flex items-center justify-between">

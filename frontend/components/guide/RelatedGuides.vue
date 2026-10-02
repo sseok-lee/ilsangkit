@@ -1,10 +1,7 @@
 <template>
   <section v-if="guides.length > 0 && variant === 'flat'" class="section-flat">
     <div class="flex items-center justify-between mb-4 md:mb-[22px]">
-      <h2 class="ui-h2 text-strong flex items-center gap-2">
-        <span class="material-symbols-outlined text-primary text-[20px]">menu_book</span>
-        관련 가이드
-      </h2>
+      <h2 class="ui-h2 text-strong">관련 가이드</h2>
       <NuxtLink
         to="/guide"
         class="text-sm text-primary font-medium hover:underline flex items-center gap-1"

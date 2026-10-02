@@ -92,7 +92,7 @@ describe('RelatedGuides — variant', () => {
     const section = wrapper.get('section')
     expect(section.classes()).toContain('section-flat')
     expect(section.get('h2').classes()).toContain('ui-h2')
-    expect(section.get('h2').text()).toContain('관련 가이드')
+    expect(section.get('h2').text()).toBe('관련 가이드')
     expect(section.html()).not.toMatch(/shadow-|slate-|gray-/)
     expect(section.text()).toContain('가이드 A')
   })

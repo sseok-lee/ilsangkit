@@ -119,7 +119,7 @@ describe('DataSourceSection — variant', () => {
     const w = mountSection({ domain: 'facility', category: 'hospital', variant: 'flat', lastSyncDate: '2026-05-28' })
     expect(w.get('section').classes()).toContain('section-flat')
     expect(w.get('h2').classes()).toContain('ui-h2')
-    expect(w.get('h2').text()).toContain('데이터 출처')
+    expect(w.get('h2').text()).toBe('데이터 출처')
     expect(w.html()).not.toMatch(/shadow-|slate-|gray-/)
     expect(w.text()).toContain('2026-05-28')
   })
