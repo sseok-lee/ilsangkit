@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense } from 'vue'
 import AboutPage from '~/pages/about.vue'
-import StaticPageHeader from '~/components/common/StaticPageHeader.vue'
 
 vi.mock('~/composables/useFacilityMeta', () => ({
   useFacilityMeta: () => ({ setMeta: vi.fn(), setHomeMeta: vi.fn() }),
@@ -18,7 +17,7 @@ async function mountSuspended(component: any) {
         return h(Suspense, null, { default: () => h(component) })
       },
     }),
-    { global: { components: { StaticPageHeader }, stubs: { NuxtLink: { template: '<a><slot /></a>' } } } },
+    { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } },
   )
   await flushPromises()
   return wrapper
@@ -31,7 +30,7 @@ const FACILITY_LABELS = [
 ]
 
 describe('About Page', () => {
-  it('renders the page title via StaticPageHeader', async () => {
+  it('renders the page title via PageHead', async () => {
     const wrapper = await mountSuspended(AboutPage)
     expect(wrapper.find('h1').text()).toContain('일상킷 소개')
   })

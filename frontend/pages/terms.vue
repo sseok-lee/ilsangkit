@@ -1,11 +1,14 @@
 <template>
-  <div class="bg-white text-strong">
-  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
-    <StaticPageHeader
-      title="이용약관"
-      lead="일상킷 서비스 이용 조건과 절차를 규정합니다."
-      updated-at="2026.06.01"
-    />
+  <div class="bg-white text-ink">
+  <div class="help-page page-container pb-12">
+    <PageHead title="이용약관" description="일상킷 서비스 이용 조건과 절차를 규정합니다.">
+      <p class="mt-3">
+        <span class="inline-flex items-center gap-1.5 rounded-md bg-background-light px-2.5 py-1 text-xs font-medium text-muted">
+          <span class="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">calendar_month</span>
+          마지막 업데이트 2026.06.01
+        </span>
+      </p>
+    </PageHead>
 
     <LegalDocumentNav current="terms" />
     <div class="grid min-w-0 gap-8 md:grid-cols-[220px_minmax(0,1fr)] md:gap-12">
@@ -23,7 +26,7 @@
       </aside>
     <div class="min-w-0 space-y-8 text-muted text-sm leading-7 md:text-base md:leading-8">
       <section id="clause-1" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제1조 (목적)
         </h2>
         <p>
@@ -33,7 +36,7 @@
       </section>
 
       <section id="clause-2" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제2조 (서비스의 내용)
         </h2>
         <p>서비스는 다음과 같은 정보를 제공합니다.</p>
@@ -68,7 +71,7 @@
       </section>
 
       <section id="clause-3" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제3조 (서비스 이용)
         </h2>
         <p>
@@ -78,7 +81,7 @@
       </section>
 
       <section id="clause-4" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제4조 (지도 서비스)
         </h2>
         <p>
@@ -92,7 +95,7 @@
       </section>
 
       <section id="clause-5" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제5조 (정보의 정확성)
         </h2>
         <p>
@@ -104,7 +107,7 @@
       </section>
 
       <section id="clause-6" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제6조 (지적재산권)
         </h2>
         <p>
@@ -114,7 +117,7 @@
       </section>
 
       <section id="clause-7" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제7조 (면책 조항)
         </h2>
         <ul class="list-disc pl-5 space-y-1">
@@ -126,7 +129,7 @@
       </section>
 
       <section id="clause-8" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제8조 (이용자의 의무)
         </h2>
         <p>이용자는 다음 행위를 하여서는 안 됩니다.</p>
@@ -138,7 +141,7 @@
       </section>
 
       <section id="clause-9" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           제9조 (약관의 변경)
         </h2>
         <p>
@@ -149,18 +152,19 @@
       </section>
 
       <section id="clause-10" class="scroll-mt-28 border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           부칙
         </h2>
         <p>이 약관은 2026년 3월 14일부터 시행합니다.</p>
       </section>
     </div>
     </div>
-  </main>
+  </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import PageHead from '~/components/common/PageHead.vue'
 import LegalDocumentNav from '~/components/common/LegalDocumentNav.vue'
 const headings = ['제1조 (목적)', '제2조 (서비스의 내용)', '제3조 (서비스 이용)', '제4조 (지도 서비스)', '제5조 (정보의 정확성)', '제6조 (지적재산권)', '제7조 (면책 조항)', '제8조 (이용자의 의무)', '제9조 (약관의 변경)', '부칙']
 
@@ -183,9 +187,6 @@ setBreadcrumbSchema([
 </script>
 
 <style scoped>
-.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
-.help-page :deep(h1 + p) { margin-top: 16px; }
-.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
-.help-page :deep(table) { min-width: 540px; }
-@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
+/* 링크 포커스는 main.css 전역 a:focus-visible 이 맡는다. summary 는 전역 목록에 없어 여기서 준다. */
+.help-page summary:focus-visible { outline: 2px solid rgb(var(--brand-rgb)); outline-offset: 3px; }
 </style>
