@@ -81,3 +81,26 @@ describe('RelatedGuides', () => {
     expect(wrapper.text()).toContain('가이드 D')
   })
 })
+
+describe('RelatedGuides — variant', () => {
+  const resp = { success: true, data: { items: [item(1, 'a', '가이드 A')] } }
+
+  it('flat 은 section-flat 루트·ui-h2 제목이며 그림자·회색 클래스가 없다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const wrapper = mountWithSuspense({ category: 'hospital', variant: 'flat' })
+    await flushPromises()
+    const section = wrapper.get('section')
+    expect(section.classes()).toContain('section-flat')
+    expect(section.get('h2').classes()).toContain('ui-h2')
+    expect(section.get('h2').text()).toContain('관련 가이드')
+    expect(section.html()).not.toMatch(/shadow-|slate-|gray-/)
+    expect(section.text()).toContain('가이드 A')
+  })
+
+  it('기본(card)은 기존 그림자 카드를 유지한다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const wrapper = mountWithSuspense({ category: 'hospital' })
+    await flushPromises()
+    expect(wrapper.get('section').classes()).toContain('shadow-sm')
+  })
+})

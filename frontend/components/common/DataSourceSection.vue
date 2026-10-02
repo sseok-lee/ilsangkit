@@ -14,6 +14,43 @@
     </NuxtLink>
   </div>
 
+  <!-- flat — 평면 섹션(variant="flat"), full 분기만 해당 -->
+  <section v-else-if="source && variant === 'flat'" class="section-flat">
+    <div class="flex items-center justify-between mb-4 md:mb-[22px]">
+      <h2 class="ui-h2 text-strong flex items-center gap-2">
+        <span class="material-symbols-outlined text-muted text-[20px]">description</span>
+        데이터 출처
+      </h2>
+    </div>
+    <div class="flex flex-col gap-3">
+      <div v-if="lastSyncDate" class="flex items-center justify-between">
+        <span class="text-sm text-muted">최근 동기화</span>
+        <span class="text-sm font-medium text-ink">{{ lastSyncDate }}</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-muted">제공기관</span>
+        <span class="text-sm font-medium text-ink">{{ source.provider }}</span>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm text-muted shrink-0">데이터셋</span>
+        <a
+          :href="source.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-sm font-medium text-primary hover:underline text-right break-keep"
+        >
+          {{ source.datasetName }}
+        </a>
+      </div>
+      <div class="mt-1 flex items-start gap-1.5 text-xs text-muted">
+        <span class="material-symbols-outlined text-[14px] mt-px">info</span>
+        <span>
+          공표된 원본 데이터 기준입니다<span v-if="source.kogl"> · 공공누리 제{{ source.kogl }}유형</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
   <!-- full card — compact가 아니고 source도 null이면 의도적으로 아무것도 렌더하지 않는다 -->
   <div v-else-if="source" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
@@ -55,12 +92,15 @@ import { computed } from 'vue'
 import { resolveDataSource, type DataSourceDomain } from '~/utils/dataSource'
 import type { FacilityCategory } from '~/types/facility'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   domain: DataSourceDomain
   category?: FacilityCategory
   lastSyncDate?: string | null
   compact?: boolean
-}>()
+  variant?: 'card' | 'flat'
+}>(), {
+  variant: 'card',
+})
 
 const source = computed(() => resolveDataSource({ domain: props.domain, category: props.category }))
 </script>

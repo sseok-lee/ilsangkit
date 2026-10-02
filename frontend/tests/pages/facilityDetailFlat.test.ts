@@ -27,3 +27,12 @@ describe('시설 상세 페이지 평면형', () => {
     expect(template).toContain('<SectionBlock id="facility-location" variant="flat"')
   })
 })
+
+describe('시설 상세 하단 공유 섹션(DetailContextLinks)', () => {
+  const ctx = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../components/facility/detail/DetailContextLinks.vue'), 'utf8')
+  const ctxTemplate = ctx.slice(0, ctx.indexOf('<script'))
+  it('RelatedGuides·DataSourceSection 은 flat 변형', () => {
+    expect(ctxTemplate).toMatch(/<RelatedGuides\b[^>]*variant="flat"/)
+    expect(ctxTemplate).toMatch(/<DataSourceSection\b[^>]*variant="flat"/)
+  })
+})

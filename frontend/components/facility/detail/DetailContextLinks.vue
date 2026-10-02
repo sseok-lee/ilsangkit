@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <!-- 관련 가이드 (SSR 렌더 — 내부링크 색인 노출) -->
-    <RelatedGuides :category="category" />
+    <RelatedGuides :category="category" variant="flat" />
 
     <!-- 같은 지역 시설 -->
     <SectionBlock
@@ -86,7 +86,7 @@
     </SectionBlock>
 
     <!-- Data Info -->
-    <DataSourceSection domain="facility" :category="category" :last-sync-date="lastSyncDate" />
+    <DataSourceSection domain="facility" :category="category" :last-sync-date="lastSyncDate" variant="flat" />
   </div>
 </template>
 

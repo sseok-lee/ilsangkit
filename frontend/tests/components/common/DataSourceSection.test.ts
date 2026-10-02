@@ -113,3 +113,25 @@ describe('DataSourceSection — ⓘ 안내 문구(데이터셋 이름 미반복)
     expect(w.text()).not.toContain('테스트셋 기준 정보입니다')
   })
 })
+
+describe('DataSourceSection — variant', () => {
+  it('flat 은 section-flat 루트·ui-h2 제목이며 그림자·회색 클래스가 없다', () => {
+    const w = mountSection({ domain: 'facility', category: 'hospital', variant: 'flat', lastSyncDate: '2026-05-28' })
+    expect(w.get('section').classes()).toContain('section-flat')
+    expect(w.get('h2').classes()).toContain('ui-h2')
+    expect(w.get('h2').text()).toContain('데이터 출처')
+    expect(w.html()).not.toMatch(/shadow-|slate-|gray-/)
+    expect(w.text()).toContain('2026-05-28')
+  })
+
+  it('기본(card)은 기존 그림자 카드를 유지한다', () => {
+    const w = mountSection({ domain: 'facility', category: 'hospital' })
+    expect(w.get('div').classes()).toContain('shadow-sm')
+    expect(w.find('section').exists()).toBe(false)
+  })
+
+  it('compact+flat 이면 compact 그대로', () => {
+    const w = mountSection({ domain: 'facility', compact: true, variant: 'flat' })
+    expect(w.get('div').classes()).toContain('shadow-sm')
+  })
+})

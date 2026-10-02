@@ -39,3 +39,10 @@ describe('시설 목록 페이지 평면형', () => {
     expect((template.match(/<AdBanner\b/g) ?? []).length).toBe(2)
   })
 })
+
+describe('시설 목록 페이지 하단 공유 섹션', () => {
+  it('RelatedGuides·DataSourceSection 은 flat 변형', () => {
+    expect(template).toMatch(/<RelatedGuides\b[^>]*variant="flat"/)
+    expect(template).toMatch(/<DataSourceSection\b[^>]*variant="flat"/)
+  })
+})
