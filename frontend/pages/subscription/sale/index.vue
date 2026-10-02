@@ -1,16 +1,16 @@
 <template>
   <div class="bg-white">
-    <div class="mx-auto max-w-6xl px-4 pb-5 pt-8 md:flex md:items-end md:justify-between md:gap-8 md:px-6 md:pb-7 md:pt-10">
+    <div class="page-container pb-5 pt-8 md:flex md:items-end md:justify-between md:gap-8 md:pb-7 md:pt-10">
       <div>
-        <h1 class="text-[27px] md:text-[36px] leading-tight font-bold text-slate-900">분양 청약 공고</h1>
-        <p class="mt-3 text-slate-600 text-sm md:text-base">아파트·오피스텔·무순위 청약의 접수기간을 비교하세요.</p>
+        <h1 class="text-[27px] md:text-[36px] leading-tight font-bold text-ink">분양 청약 공고</h1>
+        <p class="mt-3 text-muted text-sm md:text-base">아파트·오피스텔·무순위 청약의 접수기간을 비교하세요.</p>
       </div>
-      <p class="mt-3 text-left text-xs text-slate-500 md:mt-0 md:shrink-0 md:text-right md:text-sm">
-        <strong class="font-semibold text-slate-900 md:block md:text-lg">한국부동산원 청약홈</strong>
+      <p class="mt-3 text-left text-xs text-muted md:mt-0 md:shrink-0 md:text-right md:text-sm">
+        <strong class="font-semibold text-ink md:block md:text-lg">한국부동산원 청약홈</strong>
         <span class="md:block">공개 자료 기준</span>
       </p>
     </div>
-    <div class="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-6">
+    <div class="page-container py-5 md:py-6">
       <SubscriptionListView :scope="scope" />
     </div>
   </div>

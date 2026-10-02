@@ -1,15 +1,12 @@
 <template>
-  <div class="bg-white text-strong">
-  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
-    <StaticPageHeader
-      title="일상킷 소개"
-      lead="부동산 실거래가와 내 주변 생활시설을 한곳에서."
-    />
+  <div class="bg-white text-ink">
+  <div class="page-container pt-4 pb-12 md:pt-6">
+    <PageHead title="일상킷 소개" description="부동산 실거래가와 내 주변 생활시설을 한곳에서." />
 
     <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
     <div class="min-w-0 space-y-10 text-muted text-sm md:text-base leading-relaxed">
       <section class="border-b border-line pb-8">
-        <h2 class="text-[28px] font-semibold leading-snug text-strong mb-5 md:text-[36px]">
+        <h2 class="text-lg font-semibold text-strong mb-3">
           서비스 소개
         </h2>
         <p class="mb-3">
@@ -128,7 +125,7 @@
           </p>
 
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full min-w-[540px] text-sm">
               <thead>
                 <tr class="border-b border-line-2">
                   <th class="text-left py-2 pr-4 font-medium text-strong">데이터명</th>
@@ -178,7 +175,7 @@
         </ul>
       </section>
     </div>
-      <aside class="self-start rounded-lg bg-[#F7F8FA] p-6 lg:sticky lg:top-28">
+      <aside class="self-start rounded-[10px] bg-background-light p-6 lg:sticky lg:top-28">
         <h2 class="mb-4 text-base font-bold">정보 확인과 문의</h2>
         <p class="text-sm leading-7 text-muted">데이터 출처와 이용 안내를 확인하고, 잘못된 정보나 개선 의견을 알려주세요.</p>
         <nav aria-label="도움말 바로가기" class="mt-4 flex flex-col">
@@ -188,11 +185,12 @@
         </nav>
       </aside>
     </div>
-  </main>
+  </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import PageHead from '~/components/common/PageHead.vue'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 import {
@@ -225,11 +223,3 @@ setBreadcrumbSchema([
   { name: '소개', url: '/about' },
 ])
 </script>
-
-<style scoped>
-.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
-.help-page :deep(h1 + p) { margin-top: 16px; }
-.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
-.help-page :deep(table) { min-width: 540px; }
-@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
-</style>

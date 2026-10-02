@@ -120,9 +120,9 @@ test('ten editorial routes fit all four widths and preserve keyboard/contact/leg
     }
   }
   await page.goto('/faq'); await hydrated(page)
-  await page.getByRole('navigation', { name: '질문 주제' }).getByRole('button', { name: '생활시설', exact: true }).click()
+  await page.getByRole('navigation', { name: '질문 주제' }).getByRole('radio', { name: '생활시설', exact: true }).click()
   await expect(page.getByRole('heading', { name: '부동산 실거래가', exact: true })).toBeHidden()
-  await page.getByRole('button', { name: '전체', exact: true }).click()
+  await page.getByRole('radio', { name: '전체', exact: true }).click()
   await page.locator('summary').first().focus(); await page.keyboard.press('Enter')
   await expect(page.locator('details').first()).toHaveAttribute('open', '')
   await page.setViewportSize({ width: 390, height: 900 }); await page.goto('/privacy'); await hydrated(page)

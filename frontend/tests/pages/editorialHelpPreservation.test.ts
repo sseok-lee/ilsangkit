@@ -13,7 +13,7 @@ const schema = vi.hoisted(() => vi.fn())
 vi.mock('~/composables/useFacilityMeta', () => ({ useFacilityMeta: () => ({ setMeta: vi.fn() }) }))
 vi.mock('~/composables/useStructuredData', () => ({ useStructuredData: () => ({ setBreadcrumbSchema: vi.fn(), setFAQSchema: schema }) }))
 const normalize = (text: string) => text.replace(/\s+/g, '')
-const stubs = { StaticPageHeader: true, AdBanner: true }
+const stubs = { PageHead: true, AdBanner: true }
 
 describe('editorial original information preservation', () => {
   it.each([['privacy', Privacy], ['terms', Terms]] as const)('preserves %s clause text and order', (kind, component) => {

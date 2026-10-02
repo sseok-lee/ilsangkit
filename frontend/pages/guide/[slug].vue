@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white min-h-screen text-[#15213B]">
+  <div class="bg-white min-h-screen text-ink">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <div class="text-center">
@@ -9,7 +9,8 @@
     </div>
 
     <!-- Article -->
-    <article v-else-if="guide" class="content-reading mx-auto max-w-[1024px] px-5 md:px-8 pt-6 pb-14 md:pb-20">
+    <article v-else-if="guide" class="content-reading page-container pt-6 pb-14 md:pb-20">
+      <div class="max-w-[760px]">
       <!-- Breadcrumb -->
       <Breadcrumb :items="breadcrumbItems" />
 
@@ -19,13 +20,13 @@
           <span class="inline-flex mb-2 px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-black">
             {{ categoryLabel }}
           </span>
-          <h1 class="text-[28px] md:text-[36px] leading-tight font-bold text-[#15213B] mb-5">
+          <h1 class="text-[28px] md:text-[36px] leading-tight font-bold text-ink mb-5">
             {{ guide.title }}
           </h1>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
             <time :datetime="guide.publishedAt">{{ formatDate(guide.publishedAt) }}</time>
             <span v-if="guide.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]">visibility</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">visibility</span>
               {{ guide.viewCount.toLocaleString() }}
             </span>
           </div>
@@ -41,13 +42,14 @@
           />
         </div>
       </section>
+      </div>
 
-      <div class="mt-8 grid min-w-0 gap-7" :class="readingDocument.toc.length ? 'md:grid-cols-[190px_minmax(0,1fr)] md:gap-10' : ''">
+      <div class="mt-8 grid min-w-0 gap-7" :class="readingDocument.toc.length ? 'md:grid-cols-[190px_minmax(0,760px)] md:gap-10' : 'max-w-[760px]'">
         <ContentToc :items="readingDocument.toc" />
         <div class="min-w-0 space-y-7">
       <!-- "본문" SectionBlock -->
       <SectionBlock class="reading-body">
-        <p v-if="guide.summary" class="mb-7 rounded-md bg-[#F0F4FD] p-5 text-sm leading-7 text-muted">{{ guide.summary }}</p>
+        <p v-if="guide.summary" class="mb-7 rounded-md bg-primary-50 p-5 text-sm leading-7 text-muted">{{ guide.summary }}</p>
         <div
           class="
             prose prose-slate max-w-none
@@ -87,7 +89,7 @@
           <span
             v-for="keyword in keywordList"
             :key="keyword"
-            class="px-3 py-1 bg-slate-100 text-muted text-xs rounded-full"
+            class="px-3 py-1 bg-background-light text-muted text-xs rounded-full"
           >
             #{{ keyword }}
           </span>
@@ -135,9 +137,9 @@
       <div>
         <NuxtLink
           to="/guide"
-          class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 text-ink rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+          class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-line transition-colors"
         >
-          <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
           목록으로 돌아가기
         </NuxtLink>
       </div>
@@ -146,7 +148,7 @@
     </article>
 
     <!-- fail-open: 일시 장애(503)면 guide 가 null 이다. 빈 본문 대신 재시도 안내를 그린다. -->
-    <div v-else class="max-w-3xl mx-auto px-4 md:px-6 py-20 text-center">
+    <div v-else class="page-container py-20 text-center">
       <p class="text-muted font-medium">가이드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
       <NuxtLink to="/guide" class="mt-4 inline-block text-primary hover:text-primary/80 font-medium text-sm">
         가이드 목록으로
@@ -344,7 +346,7 @@ if (guide.value) {
 
 <style scoped>
 .reading-body { border: 0; border-radius: 0; box-shadow: none; padding: 0; }
-.content-reading :deep(.prose) { color: #15213b; overflow-wrap: anywhere; }
+.content-reading :deep(.prose) { color: rgb(var(--ink-rgb)); overflow-wrap: anywhere; }
 .content-reading :deep(.prose h2), .content-reading :deep(.prose h3) { scroll-margin-top: 100px; }
 .content-reading :deep(.prose h2) { font-size: 22px; border: 0; margin-top: 32px; }
 .content-reading :deep(.prose p) { line-height: 1.9; }

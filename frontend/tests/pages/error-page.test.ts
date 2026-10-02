@@ -43,7 +43,7 @@ describe('error.vue — 410 Gone (폐원 어린이집 실측 케이스)', () => 
     const cta = render(gone).findAll('a').find((a) => a.attributes('href') === '/childcare')
     expect(cta).toBeDefined()
     expect(cta!.text()).toContain('어린이집 전체 보기')
-    expect(cta!.classes().join(' ')).toContain('bg-primary')
+    expect(cta!.classes().join(' ')).toContain('ui-btn--primary')
   })
 
   it('탈출구(재검색 폼 + 바로가기)를 노출한다 — 기존엔 404 전용이라 410 에선 사라졌다', () => {
@@ -57,6 +57,15 @@ describe('error.vue — 410 Gone (폐원 어린이집 실측 케이스)', () => 
     await w.find('input[type="search"]').setValue('미소')
     await w.find('form').trigger('submit')
     expect(clearError).toHaveBeenCalledWith({ redirect: `/childcare?keyword=${encodeURIComponent('미소')}` })
+  })
+
+  it('흰색 평면형: 회색 바탕·그림자·원시 회색이 없고 바로가기는 테두리 카드다', () => {
+    const w = render(gone)
+    const html = w.html()
+    expect(html).not.toMatch(/bg-background-light min-h-screen|shadow-(?:sm|md|lg)|slate-\d/)
+    const card = w.findAll('a').find((a) => a.attributes('href') === '/hospital')!
+    expect(card.classes()).toEqual(expect.arrayContaining(['border', 'border-line', 'rounded-[10px]', 'hover:border-primary']))
+    expect(w.findAll('h1')).toHaveLength(1)
   })
 
   it('검색 placeholder 가 카테고리 스코프를 따른다', () => {
@@ -82,7 +91,7 @@ describe('error.vue — 404 기존 동작 회귀', () => {
   it('카테고리 CTA 없이 홈이 primary 다', () => {
     const w = render(notFound)
     const home = w.findAll('a').find((a) => a.attributes('href') === '/')
-    expect(home!.classes().join(' ')).toContain('bg-primary')
+    expect(home!.classes().join(' ')).toContain('ui-btn--primary')
   })
 
   it('시설 컨텍스트가 없으면 재검색은 부동산(/search)으로 간다', async () => {
