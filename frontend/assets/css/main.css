@@ -303,6 +303,10 @@
     .summary-row__value { font-size: 1.3125rem; }
   }
 
+  /* SectionBlock variant="flat"(§3.1) — 박스 없이 위아래 여백 + 아래 구분선 */
+  .section-flat { padding: 26px 0; border-bottom: 1px solid rgb(var(--border-rgb)); }
+  @media (min-width: 768px) { .section-flat { padding: 32px 0; } }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
