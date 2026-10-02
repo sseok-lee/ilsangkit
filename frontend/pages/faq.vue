@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white text-ink min-h-screen">
-    <div class="faq-page page-container pb-12">
+    <div class="faq-page page-container pt-4 pb-12 md:pt-6">
       <div class="max-w-[760px]">
       <PageHead
         title="자주 묻는 질문"

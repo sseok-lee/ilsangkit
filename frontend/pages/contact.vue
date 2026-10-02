@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white text-ink">
-  <div class="help-page page-container pb-12">
+  <div class="help-page page-container pt-4 pb-12 md:pt-6">
     <PageHead title="문의하기" description="문의·데이터 오류 신고·제휴 제안을 받습니다." />
 
     <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">

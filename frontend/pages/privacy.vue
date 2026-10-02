@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white text-ink">
-  <div class="help-page page-container pb-12">
+  <div class="help-page page-container pt-4 pb-12 md:pt-6">
     <PageHead title="개인정보처리방침" description="일상킷이 개인정보를 어떻게 처리하는지 안내합니다.">
       <p class="mt-3">
         <span class="inline-flex items-center gap-1.5 rounded-md bg-background-light px-2.5 py-1 text-xs font-medium text-muted">

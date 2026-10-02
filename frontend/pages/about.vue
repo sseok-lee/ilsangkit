@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white text-ink">
-  <div class="help-page page-container pb-12">
+  <div class="help-page page-container pt-4 pb-12 md:pt-6">
     <PageHead title="일상킷 소개" description="부동산 실거래가와 내 주변 생활시설을 한곳에서." />
 
     <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
