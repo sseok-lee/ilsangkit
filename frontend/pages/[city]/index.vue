@@ -81,7 +81,7 @@
       </div>
 
       <!-- 에러 -->
-      <div v-else class="rounded-xl bg-red-50 border border-red-200 p-8 text-center">
+      <div v-else class="mt-6 rounded-xl bg-red-50 border border-red-200 p-8 text-center">
         <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
           <span class="material-symbols-outlined text-[28px] text-red-400" aria-hidden="true">error_outline</span>
         </div>
