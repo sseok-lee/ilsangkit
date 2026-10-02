@@ -117,7 +117,7 @@ beforeEach(() => {
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />' },
+  PageHead: { template: '<div data-stub="hero" />' },
   SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
   AdBanner: { template: '<div />' },
   DataSourceSection: { template: '<div />' },

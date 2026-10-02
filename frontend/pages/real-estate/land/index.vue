@@ -1,32 +1,27 @@
 <template>
-  <div class="property-redesign bg-white">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <PageHero
-        class="property-hero"
-        eyebrow="부동산"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead eyebrow="부동산"
         :title="LAND_META.label + ' 실거래가'"
         :description="LAND_META.description"
       />
 
-      <SectionBlock class="property-section" subtext="조회할 지역을 선택하세요.">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">시·도별 토지 실거래가</h2>
-        </template>
-        <form class="property-search" @submit.prevent="regionSearch = regionDraft.trim()">
+      <SectionBlock variant="flat" heading="시·도별 토지 실거래가" subtext="조회할 지역을 선택하세요.">
+        <form class="mb-6 flex gap-2 rounded-lg bg-background-light p-3.5 md:p-5" @submit.prevent="regionSearch = regionDraft.trim()">
           <label class="sr-only" for="land-region-search">지역명 검색</label>
-          <input id="land-region-search" v-model="regionDraft" placeholder="지역명 검색" maxlength="100">
-          <button type="submit">검색</button>
+          <input id="land-region-search" v-model="regionDraft" class="min-w-0 flex-1 min-h-[44px] rounded-md border border-line bg-white px-3 text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="지역명 검색" maxlength="100">
+          <UiButton variant="primary" type="submit">검색</UiButton>
         </form>
-        <div v-if="regionCandidates.length > 0" class="property-region-list">
+        <div v-if="regionCandidates.length > 0" class="row-list">
           <HardLink
             v-for="city in regionCandidates"
             :key="city.slug"
             :to="`/real-estate/land/${city.slug}`"
-            class="property-region-link"
+            class="row-list__link"
           >
-            <span class="text-display-3 text-slate-800">{{ city.city }}</span>
-            <span class="text-caption text-slate-500">거래 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
-            <span class="text-caption text-slate-500">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
+            <span class="text-display-3 text-ink">{{ city.city }}</span>
+            <span class="text-caption text-muted">거래 동 {{ city.indexableDongCount.toLocaleString('ko-KR') }}개</span>
+            <span class="text-caption text-muted">거래 {{ city.totalTransactions.toLocaleString('ko-KR') }}건</span>
           </HardLink>
         </div>
         <div v-else-if="hubError" role="alert" class="py-8 text-sm text-muted">지역 정보를 불러오지 못했습니다. <button class="min-h-11 underline" @click="refresh()">다시 시도</button></div>
@@ -36,21 +31,18 @@
       <!-- Ad: 시·도 카드 그리드 후 -->
       <AdBanner />
 
-      <SectionBlock class="property-section">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">자주 묻는 질문</h2>
-        </template>
+      <SectionBlock variant="flat" heading="자주 묻는 질문">
         <div class="space-y-3">
           <details
             v-for="(faq, index) in LAND_FAQ"
             :key="index"
-            class="rounded-xl bg-white border border-slate-200 overflow-hidden"
+            class="rounded-[10px] bg-white border border-line overflow-hidden"
           >
-            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-slate-800 font-medium text-sm hover:bg-slate-50 transition-colors list-none">
+            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-ink font-medium text-sm hover:bg-background-light transition-colors list-none">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-slate-500 text-lg flex-shrink-0 ml-3">expand_more</span>
+              <span class="material-symbols-outlined text-muted text-lg flex-shrink-0 ml-3">expand_more</span>
             </summary>
-            <div class="px-5 pb-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-3">
+            <div class="px-5 pb-4 text-muted text-sm leading-relaxed border-t border-line pt-3">
               {{ faq.a }}
             </div>
           </details>
@@ -59,7 +51,7 @@
 
 
       <section>
-        <DataSourceSection domain="real-estate" />
+        <DataSourceSection variant="flat" domain="real-estate" />
       </section>
     </div>
   </div>
@@ -74,8 +66,9 @@ import { useLand } from '~/composables/useLand'
 import { LAND_META, LAND_FAQ, buildLandRegionTitle } from '~/utils/landMeta'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import HardLink from '~/components/common/HardLink.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import UiButton from '~/components/common/UiButton.vue'
 
 const { data: hub, error: hubError, refresh } = await useAsyncData(
   'land-hub',
@@ -113,4 +106,3 @@ const regionSearch = ref('')
 const regionCandidates = computed(() => (hub.value?.cities ?? []).filter(row => row.city.includes(regionSearch.value)))
 </script>
 
-<style src="~/assets/css/remaining-property.css"></style>

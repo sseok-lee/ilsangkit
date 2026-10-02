@@ -1,45 +1,42 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
-        eyebrow="토지 실거래가"
-        :title="`${cityName} 토지 실거래가`"
-        :description="`${cityName} 구·군별 토지 매매 실거래가를 확인하세요. 국토교통부 공식 데이터 기반.`"
-      />
-
-      <nav aria-label="상위 지역" class="property-actions"><HardLink to="/real-estate/land">시·도 다시 선택</HardLink></nav>
-      <LandRegionNavigation :city-slug="citySlug">
-      <SectionBlock class="property-section" :subtext="`${cityName} 내 구·군을 선택하면 동별 토지 거래 내역을 확인할 수 있습니다.`">
-        <template #heading>
-          <h2 class="text-display-3 text-slate-900">{{ cityName }} 구·군 목록</h2>
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead eyebrow="토지 실거래가" :title="`${cityName} 토지 실거래가`"
+        :description="`${cityName} 구·군별 토지 매매 실거래가를 확인하세요. 국토교통부 공식 데이터 기반.`">
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
         </template>
+        <template #actions>
+          <nav aria-label="상위 지역"><HardLink to="/real-estate/land" class="ui-btn ui-btn--secondary">시·도 다시 선택</HardLink></nav>
+        </template>
+      </PageHead>
 
-        <form class="property-search" @submit.prevent="regionSearch = regionDraft.trim()">
+      <LandRegionNavigation :city-slug="citySlug">
+      <SectionBlock variant="flat" :heading="`${cityName} 구·군 목록`" :subtext="`${cityName} 내 구·군을 선택하면 동별 토지 거래 내역을 확인할 수 있습니다.`">
+
+        <form class="mb-6 flex gap-2 rounded-lg bg-background-light p-3.5 md:p-5" @submit.prevent="regionSearch = regionDraft.trim()">
           <label class="sr-only" for="land-region-search">지역명 검색</label>
-          <input id="land-region-search" v-model="regionDraft" placeholder="지역명 검색" maxlength="100">
-          <button type="submit">검색</button>
+          <input id="land-region-search" v-model="regionDraft" class="min-w-0 flex-1 min-h-[44px] rounded-md border border-line bg-white px-3 text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="지역명 검색" maxlength="100">
+          <UiButton variant="primary" type="submit">검색</UiButton>
         </form>
-        <div v-if="regionCandidates.length > 0" class="property-region-list">
+        <div v-if="regionCandidates.length > 0" class="row-list">
           <HardLink
             v-for="card in regionCandidates"
             :key="card.district"
             :to="`/real-estate/land/${citySlug}/${card.districtSlug}`"
-            class="property-region-link"
+            class="row-list__link"
           >
-            <span class="text-display-3 text-slate-800">{{ card.district }}</span>
-            <span class="text-caption text-slate-500">동 {{ card.dongCount }}개</span>
-            <span class="text-caption text-slate-500">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
+            <span class="text-display-3 text-ink">{{ card.district }}</span>
+            <span class="text-caption text-muted">동 {{ card.dongCount }}개</span>
+            <span class="text-caption text-muted">거래 {{ card.totalTransactions.toLocaleString('ko-KR') }}건</span>
           </HardLink>
         </div>
 
         <div v-else-if="regionsError" role="alert" class="py-8 text-sm text-muted">지역 정보를 불러오지 못했습니다. <button class="min-h-11 underline" @click="refresh()">다시 시도</button></div>
         <p v-else-if="regionSearch" class="py-8 text-sm text-muted">검색한 지역이 없습니다.</p>
-        <div v-else class="rounded-xl bg-slate-50 p-12 text-center">
-          <p class="text-slate-700 font-semibold">아직 토지 거래 데이터가 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1">{{ cityName }} 지역의 토지 거래 데이터가 준비 중입니다.</p>
+        <div v-else class="rounded-[10px] bg-background-light p-12 text-center">
+          <p class="text-ink font-semibold">아직 토지 거래 데이터가 없습니다</p>
+          <p class="text-muted text-sm mt-1">{{ cityName }} 지역의 토지 거래 데이터가 준비 중입니다.</p>
         </div>
       </SectionBlock>
       </LandRegionNavigation>
@@ -47,7 +44,7 @@
       <AdBanner />
 
 
-      <DataSourceSection domain="real-estate" />
+      <DataSourceSection variant="flat" domain="real-estate" />
     </div>
   </div>
 </template>
@@ -67,8 +64,9 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import type { LandRegionSummary } from '~/types/land'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import HardLink from '~/components/common/HardLink.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 
 const route = useRoute()
@@ -205,4 +203,3 @@ const regionSearch = ref('')
 const regionCandidates = computed(() => (districtCards.value).filter(row => row.district.includes(regionSearch.value)))
 </script>
 
-<style src="~/assets/css/remaining-property.css"></style>
