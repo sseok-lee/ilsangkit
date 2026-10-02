@@ -26,6 +26,8 @@ export const FILES = [
   'components/region/RegionRealEstatePrices.vue',
   'components/region/RegionRealEstateCta.vue',
   'components/city/RecentGuides.vue',
+  'components/region/RegionFacilityCategoryGrid.vue',
+  'pages/[city]/[district]/index.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/
