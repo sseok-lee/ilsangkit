@@ -112,8 +112,9 @@
                   :eyebrow="categoryMeta.label"
                   :title="displayName"
                   :description="facilityIntro || undefined"
-                />
-                <SummaryRow v-if="desktopSummaryItems.length" :items="desktopSummaryItems" />
+                >
+                  <SummaryRow v-if="desktopSummaryItems.length" class="mt-4" :items="desktopSummaryItems" />
+                </PageHead>
               </div>
 
 
