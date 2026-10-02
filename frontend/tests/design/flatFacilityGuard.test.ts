@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
 export const FILES = [
+  'pages/facilities.vue',
   'components/facility/detail/DetailBasicInfo.vue',
   'components/facility/detail/DetailFacilityStatus.vue',
   'components/facility/detail/DetailContextLinks.vue',
