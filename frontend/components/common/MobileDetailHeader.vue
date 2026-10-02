@@ -13,20 +13,20 @@
     </div>
     <SummaryRow v-if="summaryItems.length" class="mt-4" :items="summaryItems" />
     <div class="mt-4 flex gap-2">
-      <UiButton v-if="phone" variant="secondary" :href="`tel:${phone}`" data-test="call-pill" class="flex-1">
+      <UiButton v-if="phone" variant="secondary" :href="`tel:${phone}`" data-test="call-pill" class="flex-1 min-w-0 px-2">
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">call</span>전화
       </UiButton>
-      <UiButton v-if="copyable" variant="secondary" data-test="copy-pill" class="flex-1" @click="$emit('copy')">
+      <UiButton v-if="copyable" variant="secondary" data-test="copy-pill" class="flex-1 min-w-0 px-2" @click="$emit('copy')">
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">content_copy</span>복사
       </UiButton>
-      <UiButton variant="secondary" data-test="share-pill" class="flex-1" :aria-label="shareLabel" @click="$emit('share')">
+      <UiButton variant="secondary" data-test="share-pill" class="flex-1 min-w-0 px-2" :aria-label="shareLabel" @click="$emit('share')">
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">share</span>공유
       </UiButton>
-      <div v-if="!hideDirections" class="relative flex-[1.4]">
+      <div v-if="!hideDirections" class="relative flex-[1.4] min-w-0">
         <UiButton
           variant="primary"
           data-test="directions-pill"
-          class="w-full"
+          class="w-full px-3"
           :aria-expanded="showNav"
           aria-haspopup="menu"
           @click="showNav = !showNav"

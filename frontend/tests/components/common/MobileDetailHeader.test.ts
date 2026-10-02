@@ -144,4 +144,12 @@ describe('MobileDetailHeader variant="flat"', () => {
     await w.get('[data-test="directions-kakao"]').trigger('click')
     expect(w.emitted('directions')).toEqual([['kakao']])
   })
+
+  it('동작 버튼은 min-w-0 으로 줄어든다', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    for (const t of ['call-pill', 'copy-pill', 'share-pill']) {
+      expect(w.get(`[data-test="${t}"]`).classes()).toContain('min-w-0')
+    }
+    expect(w.get('[data-test="directions-pill"]').element.parentElement!.classList.contains('min-w-0')).toBe(true)
+  })
 })
