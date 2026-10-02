@@ -6,9 +6,7 @@
         <template #breadcrumb>
           <Breadcrumb :items="breadcrumbItems" class="mb-4" />
         </template>
-        <template #actions>
-          <nav aria-label="상위 지역"><HardLink :to="`/real-estate/land/${citySlug}`" class="ui-btn ui-btn--secondary">구·군 다시 선택</HardLink></nav>
-        </template>
+        <nav aria-label="상위 지역" class="mt-4"><HardLink :to="`/real-estate/land/${citySlug}`" class="ui-btn ui-btn--secondary">구·군 다시 선택</HardLink></nav>
       </PageHead>
 
       <LandRegionNavigation :city-slug="citySlug" :district-slug="districtSlug">
@@ -217,4 +215,3 @@ const regionDraft = ref('')
 const regionSearch = ref('')
 const regionCandidates = computed(() => (sortedDongs.value).filter(row => row.dongName.includes(regionSearch.value)))
 </script>
-

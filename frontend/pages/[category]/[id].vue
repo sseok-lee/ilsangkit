@@ -547,7 +547,7 @@ const desktopHeroStats = computed(() => {
   return [...commonItems, ...categoryItems]
 })
 
-// 데스크톱 요약 줄(스펙 §3.5) — 모바일 헤더와 같은 매핑(text-primary → brand), 값·순서는 PageHead stats 와 동일
+// 데스크톱 요약 줄(스펙 §3.5) — 모바일 헤더와 같은 매핑(text-primary → brand), 값·순서는 desktopHeroStats 와 동일
 const desktopSummaryItems = computed<SummaryItem[]>(() =>
   desktopHeroStats.value.map((s: { label: string; value: string; color?: string }) => ({
     label: s.label,

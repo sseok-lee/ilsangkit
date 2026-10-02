@@ -40,7 +40,7 @@
           >
             <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-ink font-medium text-sm hover:bg-background-light transition-colors list-none">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-muted text-lg flex-shrink-0 ml-3">expand_more</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-muted text-lg flex-shrink-0 ml-3">expand_more</span>
             </summary>
             <div class="px-5 pb-4 text-muted text-sm leading-relaxed border-t border-line pt-3">
               {{ faq.a }}
@@ -105,4 +105,3 @@ const regionDraft = ref('')
 const regionSearch = ref('')
 const regionCandidates = computed(() => (hub.value?.cities ?? []).filter(row => row.city.includes(regionSearch.value)))
 </script>
-

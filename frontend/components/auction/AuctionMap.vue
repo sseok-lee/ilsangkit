@@ -45,9 +45,9 @@ function openNavigation(url: string) {
             class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
             @click="showNavDropdown = !showNavDropdown"
           >
-            <span class="material-symbols-outlined text-[18px]">directions</span>
+            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">directions</span>
             길찾기
-            <span class="material-symbols-outlined text-[14px]">expand_more</span>
+            <span aria-hidden="true" class="material-symbols-outlined text-[14px]">expand_more</span>
           </button>
           <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line overflow-hidden z-20">
             <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
@@ -64,12 +64,12 @@ function openNavigation(url: string) {
 
     <!-- 지도 + 로드뷰 반반(데스크톱), 모바일 세로 적층. 공매는 모바일 지도 히어로가 없으므로 지도에 hidden md:block 미적용 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
+      <div class="rounded-[10px] border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
         <ClientOnly>
           <FacilityMap :center="{ lat, lng }" :facilities="[marker]" :level="3" />
         </ClientOnly>
       </div>
-      <div class="roadview-wrapper rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
+      <div class="roadview-wrapper rounded-[10px] border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
         <FacilityRoadview :lat="lat" :lng="lng" />
       </div>
     </div>

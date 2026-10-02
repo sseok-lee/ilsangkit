@@ -78,7 +78,7 @@
               class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-line transition-colors"
               @click="resetFilters"
             >
-              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[16px]">refresh</span>
               필터 초기화
             </button>
             <NuxtLink

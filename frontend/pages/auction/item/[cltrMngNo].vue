@@ -293,7 +293,7 @@ if (item.value) {
           >
             <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
             <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
           </details>
