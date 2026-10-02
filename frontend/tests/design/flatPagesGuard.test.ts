@@ -22,6 +22,9 @@ export const FILES = [
   'components/facility/FacilityBrowseRow.vue',
   'pages/[category]/index.vue',
   'pages/[category]/[id].vue',
+  'components/region/RegionRealEstatePrices.vue',
+  'components/region/RegionRealEstateCta.vue',
+  'components/city/RecentGuides.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/

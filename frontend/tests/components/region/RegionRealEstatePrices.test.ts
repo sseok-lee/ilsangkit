@@ -67,3 +67,13 @@ describe('RegionRealEstatePrices — SourceStamp 각주', () => {
     expect(w.text()).toContain('전체 기간 누적')
   })
 })
+
+describe('RegionRealEstatePrices — 평면 디자인', () => {
+  it('평면 섹션 + 10px 테두리 카드, 그림자·떠오름 없음', () => {
+    const w = mount(RegionRealEstatePrices, { props: { cards: sampleCards }, global: globalConfig })
+    expect(w.get('section#real-estate').classes()).toContain('section-flat')
+    const card = w.findAll('a')[0]
+    expect(card.classes()).toEqual(expect.arrayContaining(['rounded-[10px]', 'border-line', 'hover:border-primary']))
+    expect(w.html()).not.toMatch(/shadow-|-translate-y|rounded-2xl|slate-/)
+  })
+})
