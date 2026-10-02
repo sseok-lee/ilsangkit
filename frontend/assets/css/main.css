@@ -307,6 +307,22 @@
   .section-flat { padding: 26px 0; border-bottom: 1px solid rgb(var(--border-rgb)); }
   @media (min-width: 768px) { .section-flat { padding: 32px 0; } }
 
+  /* 버튼 3종(§3.6). 최소 높이 44px 터치 영역. 그림자·scale 없음 */
+  .ui-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; border-radius: 8px; border: 1px solid transparent;
+    font-size: 15px; font-weight: 600; line-height: 1.2; white-space: nowrap;
+    transition: color .15s, background-color .15s, border-color .15s;
+  }
+  .ui-btn:focus-visible { outline: 3px solid rgb(var(--brand-rgb)); outline-offset: 3px; }
+  .ui-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .ui-btn--primary { padding: 10px 20px; background: rgb(var(--brand-rgb)); color: #fff; }
+  .ui-btn--primary:hover:not(:disabled) { background: rgb(var(--brand-strong-rgb)); }
+  .ui-btn--secondary { padding: 10px 18px; background: #fff; color: rgb(var(--ink-rgb)); border-color: rgb(var(--border-rgb)); }
+  .ui-btn--secondary:hover:not(:disabled) { border-color: rgb(var(--brand-rgb)); color: rgb(var(--brand-rgb)); }
+  .ui-btn--link { padding: 0 2px; background: transparent; color: rgb(var(--brand-rgb)); font-size: 14px; }
+  .ui-btn--link:hover { text-decoration: underline; }
+
   /* Button Components — active:scale로 누름 피드백 표준 */
   .btn-primary {
     @apply px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors active:scale-[0.98];
