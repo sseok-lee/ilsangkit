@@ -95,7 +95,7 @@ async function mountSuspended(component: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<section><component :is="titleTag || \'h1\'"><slot name="title" />{{ title }}</component></section>', props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'] },
+          PageHead: { template: '<section><component :is="titleTag || \'h1\'"><slot name="title" />{{ title }}</component></section>', props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'] },
           AuctionStatusBadge: { template: '<span data-stub="status-badge" />' },
           AuctionMap: { template: '<section data-stub="auction-map" />' },
           NearbyFacilities: { template: '<div data-stub="nearby-facilities" />' },

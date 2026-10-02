@@ -37,7 +37,7 @@ function openNavigation(url: string) {
 </script>
 
 <template>
-  <SectionBlock data-testid="auction-map" heading="위치와 로드뷰" subtext="지도와 로드뷰로 주변을 바로 확인할 수 있습니다.">
+  <SectionBlock variant="flat" data-testid="auction-map" heading="위치와 로드뷰" subtext="지도와 로드뷰로 주변을 바로 확인할 수 있습니다.">
     <template #right>
       <div class="hidden md:flex items-center gap-1">
         <div class="relative">
@@ -49,12 +49,12 @@ function openNavigation(url: string) {
             길찾기
             <span class="material-symbols-outlined text-[14px]">expand_more</span>
           </button>
-          <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+          <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line overflow-hidden z-20">
+            <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
               <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
             </button>
-            <div class="h-px bg-slate-100"></div>
-            <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+            <div class="h-px bg-line"></div>
+            <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
               <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
             </button>
           </div>
@@ -73,7 +73,7 @@ function openNavigation(url: string) {
         <FacilityRoadview :lat="lat" :lng="lng" />
       </div>
     </div>
-    <p v-if="address" class="mt-2 text-caption text-slate-500">{{ address }}</p>
+    <p v-if="address" class="mt-2 text-caption text-muted">{{ address }}</p>
   </SectionBlock>
 </template>
 
