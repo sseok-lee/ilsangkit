@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// PR2(시설 목록·상세) 평면형 대상 — 원시 회색·hex·그림자·:deep 금지(스펙 2026-10-02 §8-4).
+// 흰색 평면형 대상(PR2 시설·PR3 지역 허브) — 원시 회색·hex·그림자·:deep 금지(스펙 2026-10-02 §8-4).
 // 떠 있는 층의 shadow-card-2 만 허용(§7.3). 의미 색(emerald·teal 등)은 대상 아님.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -28,7 +28,7 @@ const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill
 const HEX_CLASS = /-\[#[0-9a-fA-F]{3,8}\]/
 const SHADOW = /\bshadow-(?:subtle|sm|md|lg|xl|2xl)\b|\bshadow-card(?!-2)\b/
 
-describe('PR2 평면형 가드', () => {
+describe('평면형 페이지 가드', () => {
   it.each(FILES)('%s', (file) => {
     const src = readFileSync(resolve(root, file), 'utf8')
     expect(src.match(RAW_GRAY)?.[0] ?? null).toBeNull()

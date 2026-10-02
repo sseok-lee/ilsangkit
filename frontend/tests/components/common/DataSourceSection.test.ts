@@ -130,8 +130,17 @@ describe('DataSourceSection — variant', () => {
     expect(w.find('section').exists()).toBe(false)
   })
 
-  it('compact+flat 이면 compact 그대로', () => {
+  it('compact + flat 은 출처 한 줄(.source-line)로 렌더하고 상자·그림자가 없다', () => {
     const w = mountSection({ domain: 'facility', compact: true, variant: 'flat' })
-    expect(w.get('div').classes()).toContain('shadow-sm')
+    const p = w.get('p.source-line')
+    expect(p.text()).toContain('데이터 출처')
+    expect(p.text()).toContain('공공데이터포털 (행정안전부·보건복지부 등)')
+    expect(p.find('a').attributes('href')).toBe('/about')
+    expect(w.html()).not.toMatch(/shadow-|rounded-xl|slate-|gray-/)
+  })
+
+  it('compact 기본(card)은 기존 상자 그대로', () => {
+    const w = mountSection({ domain: 'facility', compact: true })
+    expect(w.get('div').classes()).toEqual(expect.arrayContaining(['shadow-sm', 'border-slate-200']))
   })
 })

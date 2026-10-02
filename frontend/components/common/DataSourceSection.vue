@@ -1,7 +1,16 @@
 <template>
+  <!-- compact + flat — 시안 .source-line: 상자 없는 출처 한 줄 -->
+  <p
+    v-if="compact && variant === 'flat'"
+    class="source-line flex flex-wrap items-center gap-2.5 py-[22px] text-sm text-muted"
+  >
+    <span><b class="font-semibold text-ink">데이터 출처</b> 공공데이터포털 (행정안전부·보건복지부 등)</span>
+    <NuxtLink to="/about" class="text-primary hover:underline font-medium">자세히 보기</NuxtLink>
+  </p>
+
   <!-- compact: 다중 카테고리 허브용 generic 안내 — domain/category와 무관하게 동일 문구 렌더 -->
   <div
-    v-if="compact"
+    v-else-if="compact"
     class="bg-white rounded-xl shadow-sm border border-slate-200 px-[18px] py-3.5 flex items-center gap-2.5 text-sm text-slate-500"
   >
     <span class="material-symbols-outlined text-slate-500 text-[18px] shrink-0">description</span>
