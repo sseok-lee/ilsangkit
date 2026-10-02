@@ -127,7 +127,8 @@ async function mountSuspended(component: any, options?: any) {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
           PageHero: { props: ['stats'], template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>' },
-          SectionBlock: { template: '<section><slot /><slot name="heading" /></section>' },
+          PageHead: { props: ['title'], template: '<header><h1>{{ title }}</h1><slot name="breadcrumb" /><slot /></header>' },
+          SectionBlock: { props: ['heading', 'subtext', 'variant'], template: '<section><h2 v-if="heading">{{ heading }}</h2><p v-if="subtext" data-stub="subtext">{{ subtext }}</p><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
           ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
@@ -192,30 +193,34 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
     expect(text).not.toMatch(/특별시|특별자치시|광역시|특별자치도/)
   })
 
-  it('heroStats에 "이 지역"·"전국 등록" 셀이 존재해야 한다 (둘 다 카운트>0, PR⑧ S4)', async () => {
-    mockGetComplexList.mockResolvedValue({ items: [], total: 42, page: 1, totalPages: 1 })
+  it('이 지역 개수는 목록 제목 옆 "N곳", 전국 등록은 목록 부제에 SSR 텍스트로 남는다', async () => {
+    mockGetComplexList.mockResolvedValue({
+      items: [{ buildingName: '래미안테스트', bjdCode: '11680', dongName: '대치동', jibun: '1', transactionCount: 5 }],
+      total: 42, page: 1, totalPages: 1,
+    })
     mockNationalTotal.value = 98765
     mockAsyncDataOnceWithFetcher()
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
     const wrapper = await mountSuspended(m.default)
-    const region = wrapper.find('[data-label="이 지역"]')
-    const national = wrapper.find('[data-label="전국 등록"]')
-    expect(region.exists()).toBe(true)
-    expect(region.text()).toBe('42곳')
-    expect(national.exists()).toBe(true)
-    expect(national.text()).toBe('98,765곳')
+    expect(wrapper.get('[data-testid="list-count"]').text()).toBe('42곳')
+    const subtexts = wrapper.findAll('[data-stub="subtext"]').map((p) => p.text())
+    expect(subtexts).toContain('서버 집계 기준 · 전국 등록 98,765곳')
+    expect(wrapper.findAll('h1')).toHaveLength(1)
   })
 
-  it('전국 등록 fail-open: 전국 카운트 null이면 셀 부재만, 밴드는 그대로 렌더되고 noindex 는 영향받지 않는다 (PR⑧ S4)', async () => {
-    mockGetComplexList.mockResolvedValue({ items: [], total: 42, page: 1, totalPages: 1 })
+  it('전국 등록 fail-open: 전국 카운트 null이면 부제만 줄고, 목록은 그대로 렌더되며 noindex 는 영향받지 않는다 (PR⑧ S4)', async () => {
+    mockGetComplexList.mockResolvedValue({
+      items: [{ buildingName: '래미안테스트', bjdCode: '11680', dongName: '대치동', jibun: '1', transactionCount: 5 }],
+      total: 42, page: 1, totalPages: 1,
+    })
     mockNationalTotal.value = null
     mockAsyncDataOnceWithFetcher()
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
     const wrapper = await mountSuspended(m.default)
-    // 셀 부재만 — 밴드(이 지역/데이터 출처)는 그대로 렌더
-    expect(wrapper.find('[data-label="전국 등록"]').exists()).toBe(false)
-    expect(wrapper.find('[data-label="이 지역"]').exists()).toBe(true)
-    expect(wrapper.find('[data-label="데이터 출처"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="list-count"]').text()).toBe('42곳')
+    const subtexts = wrapper.findAll('[data-stub="subtext"]').map((p) => p.text())
+    expect(subtexts).toContain('서버 집계 기준')
+    expect(subtexts.some((t) => t.includes('전국 등록'))).toBe(false)
     // noindex 무영향: 지역 데이터가 있고(confirmedEmpty=false) fetch 도 실패하지 않았으므로
     // useHead(robots noindex meta) 호출은 절대 없어야 한다 — 전국 카운트 실패가 이
     // 경로에 전혀 연결되어 있지 않음을 검증(canonical 등 다른 useHead 호출은 무관하므로
@@ -225,5 +230,18 @@ describe('real-estate/[realEstateType]/[city]/[district]/index.vue — district 
       Array.isArray((arg as any)?.meta) && (arg as any).meta.some((m: any) => m.name === 'robots'),
     )
     expect(robotsCalls).toHaveLength(0)
+  })
+
+  it('생활 인프라 링크는 UiChip 링크이고 지역 허브 경로를 유지한다', async () => {
+    mockGetComplexList.mockResolvedValue({
+      items: [{ buildingName: '래미안테스트', bjdCode: '11680', dongName: '대치동', jibun: '1', transactionCount: 5 }],
+      total: 42, page: 1, totalPages: 1,
+    })
+    mockAsyncDataOnceWithFetcher()
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const chips = wrapper.findAll('a.ui-chip')
+    expect(chips.length).toBeGreaterThan(0)
+    expect(chips.every((a) => /^\/seoul\/gangnam\/[a-z-]+$/.test(a.attributes('href') ?? ''))).toBe(true)
   })
 })
