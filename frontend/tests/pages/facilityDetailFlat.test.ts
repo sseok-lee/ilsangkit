@@ -23,6 +23,7 @@ describe('시설 상세 페이지 평면형', () => {
   it('모바일 헤더·주변 시설·위치 섹션은 flat', () => {
     expect(template).toMatch(/<MobileDetailHeader[\s\S]*?variant="flat"/)
     expect(template).toMatch(/<DetailNearby[\s\S]*?section-variant="flat"/)
+    expect(template).toMatch(/<BlogReviewSection[\s\S]*?variant="flat"/)
     expect(template).toContain('<SectionBlock id="facility-location" variant="flat"')
   })
 })

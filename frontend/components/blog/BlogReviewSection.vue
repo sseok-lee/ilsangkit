@@ -2,14 +2,15 @@
   <section
     ref="rootEl"
     data-testid="blog-section"
-    :class="['min-h-[1px]', hasResults || loading ? 'mt-8' : '']"
+    :class="['min-h-[1px]', (hasResults || loading) && variant !== 'flat' ? 'mt-8' : '']"
   >
     <SectionBlock
       v-if="hasResults || loading"
       heading="관련 블로그"
+      :variant="variant"
     >
       <div v-if="loading" class="flex flex-col gap-3">
-        <div v-for="i in 5" :key="i" class="h-24 rounded-xl bg-slate-100 animate-pulse" />
+        <div v-for="i in 5" :key="i" class="h-24 rounded-xl animate-pulse" :class="variant === 'flat' ? 'bg-line' : 'bg-slate-100'" />
       </div>
 
       <div v-else class="flex flex-col gap-3">
@@ -30,7 +31,10 @@ import { useBlogReviews, type BlogReviewKind } from '~/composables/useBlogReview
 import BlogReviewCard from './BlogReviewCard.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-const props = defineProps<{ kind: BlogReviewKind; primaryKey: string; secondaryKey: string }>()
+const props = withDefaults(
+  defineProps<{ kind: BlogReviewKind; primaryKey: string; secondaryKey: string; variant?: 'card' | 'flat' }>(),
+  { variant: 'card' },
+)
 
 const { posts, loading, fetchPosts } = useBlogReviews()
 const rootEl = ref<HTMLElement | null>(null)

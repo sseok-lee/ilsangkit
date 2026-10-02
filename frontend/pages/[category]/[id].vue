@@ -207,6 +207,7 @@
               <BlogReviewSection
                 v-if="facility"
                 kind="facility"
+                variant="flat"
                 :primary-key="facility.category"
                 :secondary-key="facility.id"
               />
