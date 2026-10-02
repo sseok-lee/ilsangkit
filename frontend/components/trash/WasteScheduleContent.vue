@@ -1,42 +1,36 @@
 <template>
-  <article class="rounded-lg border border-[#E6E9F0] bg-white p-4">
-    <header class="border-b border-[#E6E9F0] pb-3">
+  <article class="rounded-[10px] border border-line bg-white p-4">
+    <header class="border-b border-line pb-3">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0">
-          <p class="text-sm font-semibold text-[#2450DC]">{{ scopeText }}</p>
-          <h3 class="mt-1 text-lg font-bold leading-7 text-[#15213B]">
+          <p class="text-sm font-semibold text-primary">{{ scopeText }}</p>
+          <h3 class="mt-1 text-lg font-bold leading-7 text-ink">
             {{ targetText }}
           </h3>
-          <p class="mt-1 break-words text-sm leading-6 text-[#56627A]">
+          <p class="mt-1 break-words text-sm leading-6 text-muted">
             {{ conditionText || '해당 동 전체에 적용되는 배출 안내입니다.' }}
           </p>
         </div>
-        <a
-          :href="sourceHref"
-          class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-lg border border-[#E6E9F0] bg-white px-3 text-sm font-semibold text-[#2450DC] hover:bg-[#F7F8FA]"
-          @click="openSource"
-        >
-          원문 보기
-        </a>
+        <UiButton variant="secondary" :href="sourceHref" class="shrink-0" @click="openSource">원문 보기</UiButton>
       </div>
     </header>
 
     <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
       <div v-if="schedule.emissionPlace" class="min-w-0">
-        <dt class="font-semibold text-[#56627A]">배출 장소</dt>
-        <dd class="mt-1 break-words text-[#15213B]">{{ schedule.emissionPlace }}</dd>
+        <dt class="font-semibold text-muted">배출 장소</dt>
+        <dd class="mt-1 break-words text-ink">{{ schedule.emissionPlace }}</dd>
       </div>
       <div v-if="details?.emissionPlaceType" class="min-w-0">
-        <dt class="font-semibold text-[#56627A]">수거 방식</dt>
-        <dd class="mt-1 break-words text-[#15213B]">{{ details.emissionPlaceType }}</dd>
+        <dt class="font-semibold text-muted">수거 방식</dt>
+        <dd class="mt-1 break-words text-ink">{{ details.emissionPlaceType }}</dd>
       </div>
       <div v-if="details?.managementZone" class="min-w-0">
-        <dt class="font-semibold text-[#56627A]">관리구역</dt>
-        <dd class="mt-1 break-words text-[#15213B]">{{ details.managementZone }}</dd>
+        <dt class="font-semibold text-muted">관리구역</dt>
+        <dd class="mt-1 break-words text-ink">{{ details.managementZone }}</dd>
       </div>
       <div v-if="details?.uncollectedDay" class="min-w-0">
-        <dt class="font-semibold text-[#56627A]">미수거일</dt>
-        <dd class="mt-1 break-words text-[#15213B]">{{ details.uncollectedDay }}</dd>
+        <dt class="font-semibold text-muted">미수거일</dt>
+        <dd class="mt-1 break-words text-ink">{{ details.uncollectedDay }}</dd>
       </div>
     </dl>
 
@@ -62,46 +56,46 @@
         title="재활용"
         :info="details.recyclable"
       />
-      <section v-if="details?.bulkWaste" class="rounded-lg border border-line bg-white p-4 shadow-none">
+      <section v-if="details?.bulkWaste" class="rounded-[10px] border border-line bg-white p-4">
         <div class="mb-3 flex items-center gap-3">
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
-            <span class="material-symbols-outlined text-[20px] text-purple-600">weekend</span>
+            <span class="material-symbols-outlined text-[20px] text-purple-600" aria-hidden="true">weekend</span>
           </div>
-          <h4 class="font-bold text-slate-900">대형폐기물</h4>
+          <h4 class="font-bold text-ink">대형폐기물</h4>
         </div>
-        <div class="space-y-2 text-sm leading-6 text-slate-600">
-          <p v-if="bulkTime"><span class="font-semibold text-slate-700">배출 시간:</span> {{ bulkTime }}</p>
-          <p v-if="details.bulkWaste.method" class="break-words"><span class="font-semibold text-slate-700">배출 방법:</span> {{ details.bulkWaste.method }}</p>
-          <p v-if="details.bulkWaste.place" class="break-words"><span class="font-semibold text-slate-700">배출 장소:</span> {{ details.bulkWaste.place }}</p>
+        <div class="space-y-2 text-sm leading-6 text-muted">
+          <p v-if="bulkTime"><span class="font-semibold text-ink">배출 시간:</span> {{ bulkTime }}</p>
+          <p v-if="details.bulkWaste.method" class="break-words"><span class="font-semibold text-ink">배출 방법:</span> {{ details.bulkWaste.method }}</p>
+          <p v-if="details.bulkWaste.place" class="break-words"><span class="font-semibold text-ink">배출 장소:</span> {{ details.bulkWaste.place }}</p>
         </div>
       </section>
     </div>
 
-    <footer class="mt-4 rounded-lg bg-[#F7F8FA] p-3">
+    <footer class="mt-4 rounded-[10px] bg-background-light p-3">
       <dl class="grid gap-2 text-sm sm:grid-cols-2">
         <div v-if="details?.manageDepartment" class="min-w-0">
-          <dt class="font-semibold text-[#56627A]">관리부서</dt>
-          <dd class="mt-1 break-words text-[#15213B]">{{ details.manageDepartment }}</dd>
+          <dt class="font-semibold text-muted">관리부서</dt>
+          <dd class="mt-1 break-words text-ink">{{ details.manageDepartment }}</dd>
         </div>
         <div v-if="details?.managePhone" class="min-w-0">
-          <dt class="font-semibold text-[#56627A]">전화</dt>
+          <dt class="font-semibold text-muted">전화</dt>
           <dd class="mt-1">
-            <a :href="`tel:${details.managePhone}`" class="break-all font-semibold text-[#2450DC] hover:underline">
+            <a :href="`tel:${details.managePhone}`" class="break-all font-semibold text-primary hover:underline">
               {{ details.managePhone }}
             </a>
           </dd>
         </div>
         <div v-if="schedule.sourceUrl" class="min-w-0">
-          <dt class="font-semibold text-[#56627A]">출처</dt>
+          <dt class="font-semibold text-muted">출처</dt>
           <dd class="mt-1">
-            <a :href="schedule.sourceUrl" rel="noopener noreferrer" class="break-all font-semibold text-[#2450DC] hover:underline">
+            <a :href="schedule.sourceUrl" rel="noopener noreferrer" class="break-all font-semibold text-primary hover:underline">
               {{ schedule.sourceUrl }}
             </a>
           </dd>
         </div>
         <div v-if="details?.dataCreatedDate || details?.lastModified" class="min-w-0">
-          <dt class="font-semibold text-[#56627A]">자료 기준일</dt>
-          <dd class="mt-1 break-words text-[#15213B]">{{ details.dataCreatedDate || details.lastModified }}</dd>
+          <dt class="font-semibold text-muted">자료 기준일</dt>
+          <dd class="mt-1 break-words text-ink">{{ details.dataCreatedDate || details.lastModified }}</dd>
         </div>
       </dl>
     </footer>
@@ -112,6 +106,7 @@
 import { computed } from 'vue'
 import type { CoverageScope } from '~/types/wasteArea'
 import type { WasteScheduleDetail } from '~/composables/useWasteSchedule'
+import UiButton from '~/components/common/UiButton.vue'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
 import { formatTimeRange } from '~/utils/wasteSchedule'
 import { buildTrashSourceHref, storeTrashReturnStateForTarget, trashReturnStateFromRoute } from '~/utils/trashReturnContext'

@@ -81,7 +81,7 @@ async function mountPage(capturedErrors: unknown[] = []) {
     global: {
       stubs: {
         Breadcrumb: { template: '<nav />' },
-        PageHero: { props: ['title', 'description'], template: '<header><h1>{{ title }}</h1><p>{{ description }}</p></header>' },
+        PageHead: { props: ['title', 'description'], template: '<header><h1>{{ title }}</h1><p>{{ description }}</p><slot name="breadcrumb" /><slot /></header>' },
         SectionBlock: { props: ['heading', 'subtext'], template: '<section><h2>{{ heading }}</h2><slot /></section>' },
         DataSourceSection: { template: '<div />' },
         ClientOnly: { template: '<slot />' },
@@ -157,5 +157,13 @@ describe('/trash/areas/:areaId', () => {
     errors.length = 0
     await mountPage(errors)
     expect(errors[0]).toMatchObject({ statusCode: 503 })
+  })
+
+  it('흰색 평면형: 정렬 컨테이너·평면 섹션이고 hex 클래스가 없다', async () => {
+    fetchMock.mockResolvedValue({ success: true, data: detail })
+    const wrapper = await mountPage()
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+    expect(wrapper.html()).not.toMatch(/-\[#[0-9a-fA-F]{3,8}\]|max-w-\[1120px\]/)
+    expect(wrapper.find('main').exists()).toBe(false)
   })
 })

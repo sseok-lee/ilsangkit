@@ -64,7 +64,7 @@ function mountList(props: Partial<InstanceType<typeof WasteAreaList>['$props']> 
     },
     global: {
       stubs: {
-        SectionBlock: { template: '<section><slot name="right" /><slot /></section>' },
+        SectionBlock: { props: ['heading', 'subtext', 'variant'], template: '<section :data-variant="variant"><slot name="right" /><slot /></section>' },
         EmptyState: { props: ['title', 'description'], template: '<div class="empty">{{ title }} {{ description }}<slot /></div>' },
         Pagination: { props: ['hrefFor'], template: '<nav><a :href="hrefFor(2)">2</a></nav>' },
       },
@@ -115,5 +115,20 @@ describe('WasteAreaList', () => {
     await wrapper.get('form').trigger('submit')
 
     expect(wrapper.emitted('search')?.[0]).toEqual([{ city: '서울특별시', district: '강남구', keyword: '삼성' }])
+  })
+
+  it('평면 섹션이고 개수는 제목 옆 글자다', () => {
+    const wrapper = mountList()
+    expect(wrapper.find('[data-variant="flat"], .section-flat').exists()).toBe(true)
+    const count = wrapper.get('[data-testid="list-count"]')
+    expect(count.text()).toMatch(/^[\d,]+지역$/)
+    expect(wrapper.html()).not.toMatch(/rounded-full bg-primary\/10/)
+  })
+
+  it('검색은 주 버튼(submit)이다', () => {
+    const wrapper = mountList()
+    const submit = wrapper.get('button[type="submit"]')
+    expect(submit.classes()).toContain('ui-btn--primary')
+    expect(submit.text()).toBe('검색')
   })
 })

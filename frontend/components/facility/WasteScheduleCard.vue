@@ -2,29 +2,29 @@
   <a
     :href="sourceHref"
     :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세 정보 보기`"
-    class="group w-full bg-white rounded-xl p-4 text-left shadow-subtle hover:shadow-lg transition-all duration-300 border cursor-pointer border-transparent hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    class="group w-full bg-white rounded-[10px] p-4 text-left border border-line hover:border-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     @click="openSource"
   >
     <div class="flex items-start gap-4">
       <!-- Icon -->
-      <div class="shrink-0 w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+      <div class="shrink-0 w-12 h-12 rounded-full bg-background-light flex items-center justify-center">
         <CategoryIcon category-id="trash" size="md" />
       </div>
 
       <!-- Details -->
       <div class="flex-1 min-w-0 pt-0.5">
         <!-- City badge -->
-        <p v-if="region.city" class="text-slate-500 text-[11px] font-medium tracking-wide truncate">
+        <p v-if="region.city" class="text-muted text-[11px] font-medium tracking-wide truncate">
           {{ shortCity }}{{ region.district ? ` · ${region.district}` : '' }}
         </p>
 
         <!-- Title -->
-        <h3 class="text-slate-900 text-base font-bold truncate">
+        <h3 class="text-ink text-base font-bold truncate">
           {{ region.targetRegion?.replaceAll('+', ', ') }}
         </h3>
 
         <!-- Subtitle: emission place + type + management zone -->
-        <p v-if="subtitle" class="text-slate-500 text-xs font-normal mt-1 truncate">
+        <p v-if="subtitle" class="text-muted text-xs font-normal mt-1 truncate">
           {{ subtitle }}
         </p>
 
@@ -37,9 +37,9 @@
             >
               {{ row.type }}
             </span>
-            <span v-if="row.days" class="text-slate-700 text-xs font-medium">{{ row.days }}</span>
-            <span v-if="row.time" class="text-slate-500 text-xs">{{ row.time }}</span>
-            <span v-if="row.method" class="basis-full text-slate-500 text-xs line-clamp-2">{{ row.method }}</span>
+            <span v-if="row.days" class="text-ink text-xs font-medium">{{ row.days }}</span>
+            <span v-if="row.time" class="text-muted text-xs">{{ row.time }}</span>
+            <span v-if="row.method" class="basis-full text-muted text-xs line-clamp-2">{{ row.method }}</span>
           </li>
         </ul>
 
@@ -48,11 +48,11 @@
             v-if="region.uncollectedDay"
             class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"
           >
-            <span class="material-symbols-outlined text-[14px]">warning</span>
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">warning</span>
             미수거
           </span>
           <!-- 원본 자료 기준일. DB 동기화 시각(syncedAt)과 다르므로 라벨로 구분한다. -->
-          <span v-if="region.dataCreatedDate" class="text-slate-400 text-[11px]">
+          <span v-if="region.dataCreatedDate" class="text-faint text-[11px]">
             자료 기준일 {{ region.dataCreatedDate }}
           </span>
         </div>
