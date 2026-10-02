@@ -1,5 +1,49 @@
 <template>
-  <div class="rounded-2xl bg-white border border-slate-200 p-5">
+  <section v-if="variant === 'flat'" class="section-flat">
+    <button
+      type="button"
+      data-test="dept-toggle"
+      class="flex w-full items-center gap-2 min-h-[44px] text-left"
+      :aria-expanded="expanded"
+      @click="expanded = !expanded"
+    >
+      <h2 class="ui-h2 text-strong">진료 과목</h2>
+      <span v-if="selected.length > 0" class="text-sm font-semibold text-primary">{{ selected.length }}개 선택</span>
+      <span class="ml-auto material-symbols-outlined text-muted text-[22px]" aria-hidden="true">
+        {{ expanded ? 'expand_less' : 'expand_more' }}
+      </span>
+    </button>
+
+    <div v-if="expanded" class="mt-4">
+      <div v-if="pending" class="flex flex-wrap gap-2">
+        <div v-for="i in 12" :key="i" class="h-11 w-24 rounded-[7px] bg-background-light animate-pulse"></div>
+      </div>
+      <div v-else class="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto pr-1">
+        <UiChip
+          v-for="dept in items"
+          :key="dept.name"
+          :selected="selected.includes(dept.name)"
+          @click="toggle(dept.name)"
+        >
+          {{ dept.name }}
+          <span class="text-[12px] font-medium text-muted tabular-nums">({{ dept.count.toLocaleString('ko-KR') }})</span>
+        </UiChip>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <UiButton variant="secondary" data-test="dept-reset" :disabled="selected.length === 0" @click="reset">초기화</UiButton>
+        <UiButton variant="primary" data-test="dept-apply" class="flex-1" :disabled="!isDirty" @click="applyAndCollapse">적용</UiButton>
+      </div>
+    </div>
+
+    <div v-else-if="selected.length > 0" class="mt-3 flex flex-wrap gap-1.5">
+      <span
+        v-for="name in selected"
+        :key="name"
+        class="inline-flex items-center px-2.5 py-1 rounded-[7px] text-[12px] font-semibold bg-primary-50 text-primary border border-brand-line"
+      >{{ name }}</span>
+    </div>
+  </section>
+  <div v-else class="rounded-2xl bg-white border border-slate-200 p-5">
     <button
       type="button"
       class="flex items-center gap-2 w-full"
@@ -74,12 +118,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import UiButton from '~/components/common/UiButton.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import { useHospitalDepartments } from '~/composables/useHospitalDepartments'
 
 interface Props {
   modelValue: string[]
+  variant?: 'card' | 'flat'
 }
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { variant: 'card' })
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string[]): void
   (e: 'apply', value: string[]): void
