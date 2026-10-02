@@ -26,7 +26,7 @@
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
             <time :datetime="displayPublishedAt">{{ formatDate(displayPublishedAt) }}</time>
             <span v-if="article.viewCount >= VIEW_COUNT_DISPLAY_MIN" class="flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]">visibility</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">visibility</span>
               {{ article.viewCount.toLocaleString() }}
             </span>
           </div>
@@ -137,7 +137,7 @@
           to="/article"
           class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-line transition-colors"
         >
-          <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
           목록으로 돌아가기
         </NuxtLink>
       </div>

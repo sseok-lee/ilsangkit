@@ -8,7 +8,7 @@
       />
 
       <nav aria-label="질문 주제" class="mt-6 mb-6">
-        <SegmentedControl v-model="activeTab" :items="tabItems" aria-label="질문 주제 선택" />
+        <SegmentedControl :model-value="activeTab" :items="tabItems" aria-label="질문 주제 선택" @update:model-value="(v) => (activeTab = v as TabKey)" />
       </nav>
       <AdBanner class="my-3" />
 
@@ -86,7 +86,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 const tabs = [{ key: 'all', label: '전체' }, { key: 'real-estate', label: '부동산' }, { key: 'facility', label: '생활시설' }] as const
-const activeTab = ref<typeof tabs[number]['key']>('all')
+type TabKey = typeof tabs[number]['key']
+const activeTab = ref<TabKey>('all')
 const tabItems = tabs.map((tab) => ({ value: tab.key, label: tab.label }))
 import PageHead from '~/components/common/PageHead.vue'
 import SegmentedControl from '~/components/common/SegmentedControl.vue'
