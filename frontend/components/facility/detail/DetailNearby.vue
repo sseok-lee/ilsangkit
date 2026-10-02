@@ -9,7 +9,7 @@
     >
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <template v-if="nearbyLoading">
-          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
+          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-background-light h-[72px]"></div>
         </template>
         <template v-else>
           <FacilityCard
@@ -26,7 +26,7 @@
     <template v-if="crossLoading">
       <SectionBlock :variant="sectionVariant">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-gray-100 h-[72px]"></div>
+          <div v-for="i in 2" :key="i" class="animate-pulse rounded-xl bg-background-light h-[72px]"></div>
         </div>
       </SectionBlock>
     </template>

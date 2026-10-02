@@ -6,11 +6,11 @@
         class="bg-white rounded-lg border border-line text-left"
         :class="variant === 'prominent' ? 'p-3' : 'py-2.5 px-3 flex flex-col justify-center'"
       >
-        <p class="text-xs text-gray-500" :class="variant === 'prominent' ? 'mb-1' : ''">{{ item.label }}</p>
-        <p v-if="hasValue(item.value)" class="font-bold text-slate-900 tabular-nums" :class="variant === 'prominent' ? 'text-lg' : 'text-sm'">
-          {{ item.value }}<span v-if="item.unit" class="text-xs font-normal text-gray-600">{{ item.unit }}</span>
+        <p class="text-xs text-muted" :class="variant === 'prominent' ? 'mb-1' : ''">{{ item.label }}</p>
+        <p v-if="hasValue(item.value)" class="font-bold text-ink tabular-nums" :class="variant === 'prominent' ? 'text-lg' : 'text-sm'">
+          {{ item.value }}<span v-if="item.unit" class="text-xs font-normal text-muted">{{ item.unit }}</span>
         </p>
-        <p v-else class="text-sm text-slate-500">{{ EMPTY_FIELD_TEXT }}</p>
+        <p v-else class="text-sm text-muted">{{ EMPTY_FIELD_TEXT }}</p>
       </div>
     </template>
   </div>
