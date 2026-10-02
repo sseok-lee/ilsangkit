@@ -1,18 +1,18 @@
 <template>
   <section v-if="variant === 'flat'" class="section-flat">
-    <button
-      type="button"
-      data-test="dept-toggle"
-      class="flex w-full items-center gap-2 min-h-[44px] text-left"
-      :aria-expanded="expanded"
-      @click="expanded = !expanded"
-    >
-      <h2 class="ui-h2 text-strong">진료 과목</h2>
-      <span v-if="selected.length > 0" class="text-sm font-semibold text-primary">{{ selected.length }}개 선택</span>
-      <span class="ml-auto material-symbols-outlined text-muted text-[22px]" aria-hidden="true">
-        {{ expanded ? 'expand_less' : 'expand_more' }}
-      </span>
-    </button>
+    <h2 class="ui-h2 text-strong">
+      <button
+        type="button"
+        data-test="dept-toggle"
+        class="flex w-full items-center gap-2 min-h-[44px] text-left"
+        :aria-expanded="expanded"
+        @click="expanded = !expanded"
+      >
+        <span>진료 과목</span>
+        <span v-if="selected.length > 0" class="text-sm font-semibold text-primary">{{ selected.length }}개 선택</span>
+        <span class="ml-auto material-symbols-outlined text-muted text-[22px]" aria-hidden="true">{{ expanded ? 'expand_less' : 'expand_more' }}</span>
+      </button>
+    </h2>
 
     <div v-if="expanded" class="mt-4">
       <div v-if="pending" class="flex flex-wrap gap-2">

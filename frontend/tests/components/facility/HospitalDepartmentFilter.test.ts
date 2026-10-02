@@ -15,6 +15,8 @@ describe('HospitalDepartmentFilter variant="flat"', () => {
     const w = mount(HospitalDepartmentFilter, { props: { modelValue: ['내과'], variant: 'flat' } })
     expect(w.get('section').classes()).toContain('section-flat')
     expect(w.get('h2').classes()).toContain('ui-h2')
+    expect(w.get('h2').find('[data-test="dept-toggle"]').exists()).toBe(true)
+    expect(w.get('[data-test="dept-toggle"]').find('h2').exists()).toBe(false)
     await w.get('[data-test="dept-toggle"]').trigger('click')
     const chips = w.findAll('button.ui-chip')
     expect(chips.length).toBe(2)
