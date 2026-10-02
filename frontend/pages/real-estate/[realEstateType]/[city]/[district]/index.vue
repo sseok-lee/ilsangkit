@@ -1,25 +1,20 @@
 <template>
-  <div class="bg-background-light min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" />
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead eyebrow="부동산 실거래가" :title="heroTitle" :description="heroDescription">
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
-      <!-- Hero -->
-      <PageHero
-        class="exploration-page-hero"
-        :title="heroTitle"
-        :description="heroDescription"
-        :stats="heroStats"
-      />
-
-      <SectionBlock heading="거래 유형과 지역" subtext="건물·거래 유형과 지역을 바꾸면 첫 페이지부터 표시됩니다.">
+      <SectionBlock variant="flat" heading="거래 유형과 지역" subtext="건물·거래 유형과 지역을 바꾸면 첫 페이지부터 표시됩니다.">
         <ExplorationFilters
           :type="realEstateType"
           :city="cityName"
           :district="districtName"
         />
-        <div class="mt-4 pt-4 border-t border-line flex justify-end">
-          <NuxtLink :to="mapHref" class="map-link">{{ mapLinkLabel }}</NuxtLink>
+        <div class="mt-5 pt-5 border-t border-line flex justify-end">
+          <UiButton variant="link" :to="mapHref">{{ mapLinkLabel }}</UiButton>
         </div>
       </SectionBlock>
 
@@ -28,37 +23,40 @@
 
       <!-- 결과 -->
       <template v-if="pending">
-        <SectionBlock heading="건물 목록" :subtext="UI_MESSAGES.loading">
+        <SectionBlock variant="flat" heading="건물 목록" :subtext="UI_MESSAGES.loading">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-              <div class="h-4 bg-slate-200 rounded w-2/3 mb-2"></div>
-              <div class="h-3 bg-slate-100 rounded w-full"></div>
+              <div class="h-4 bg-track rounded w-2/3 mb-2"></div>
+              <div class="h-3 bg-background-light rounded w-full"></div>
             </div>
           </div>
         </SectionBlock>
       </template>
 
       <template v-else-if="fetchFailed">
-        <SectionBlock heading="건물 목록">
+        <SectionBlock variant="flat" heading="건물 목록">
           <div class="rounded-lg bg-red-50 px-5 py-8 text-center">
             <p class="font-semibold text-red-700">건물 목록을 불러오지 못했습니다</p>
             <p class="mt-1 text-sm text-red-600">잠시 후 다시 시도해 주세요.</p>
-            <button class="retry-button" type="button" @click="retryLoad">다시 시도</button>
+            <UiButton variant="primary" class="mt-4" @click="retryLoad">다시 시도</UiButton>
           </div>
         </SectionBlock>
       </template>
 
       <template v-else-if="renderableComplexes.length > 0">
-        <p v-if="districtSummaryText" class="rounded-xl bg-white border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed">
+        <p v-if="districtSummaryText" class="mt-6 rounded-[10px] bg-background-light px-5 py-[18px] text-sm text-muted leading-relaxed">
           {{ districtSummaryText }}
         </p>
 
         <SectionBlock
-          class="exploration-list-section"
+          variant="flat"
           :heading="`${districtName} ${typeLabel} 단지 목록`"
-          :subtext="`서버 집계 기준 총 ${totalComplexes.toLocaleString()}곳`"
+          :subtext="listSubtext"
         >
-          <div class="building-list">
+          <template #right>
+            <span data-testid="list-count" class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ totalComplexes.toLocaleString('ko-KR') }}</strong>곳</span>
+          </template>
+          <div class="border-t border-line">
             <ExplorationBuildingRow
               v-for="building in renderableComplexes"
               :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
@@ -80,39 +78,32 @@
       </template>
 
       <template v-else>
-        <SectionBlock heading="건물 목록">
+        <SectionBlock variant="flat" heading="건물 목록">
           <EmptyState
             icon="apartment"
             title="이 지역에는 아직 공개 가능한 단지가 없습니다"
             description="국토교통부 실거래 신고가 누적되면 순차적으로 노출됩니다."
           >
             <div class="flex items-center justify-center gap-2">
-              <NuxtLink to="/real-estate" class="btn-primary inline-flex items-center gap-1.5 text-sm min-h-[44px]">
-                전국 부동산 허브로
-              </NuxtLink>
-              <NuxtLink :to="`/${citySlug}/${districtSlug}`" class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200">
-                지역 허브로
-              </NuxtLink>
+              <UiButton variant="primary" to="/real-estate">전국 부동산 허브로</UiButton>
+              <UiButton variant="secondary" :to="`/${citySlug}/${districtSlug}`">지역 허브로</UiButton>
             </div>
           </EmptyState>
         </SectionBlock>
       </template>
 
       <!-- 지역 내 다른 카테고리 (교차 링크) -->
-      <SectionBlock heading="이 지역의 생활 인프라">
+      <SectionBlock variant="flat" heading="이 지역의 생활 인프라">
         <div class="flex flex-wrap gap-2">
-          <NuxtLink
+          <UiChip
             v-for="cat in crossCategoryLinks"
             :key="cat.slug"
             :to="`/${citySlug}/${districtSlug}/${cat.slug}`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 transition-colors"
-          >
-            {{ cat.label }}
-          </NuxtLink>
+          >{{ cat.label }}</UiChip>
         </div>
       </SectionBlock>
 
-      <DataSourceSection domain="real-estate" />
+      <DataSourceSection domain="real-estate" variant="flat" />
     </div>
   </div>
 </template>
@@ -146,7 +137,9 @@ import { suppressAds } from '~/composables/useAdsPolicy'
 import { useRegions } from '~/composables/useRegions'
 import { explorationMapHref } from '~/utils/explorationNavigation'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
@@ -319,13 +312,12 @@ watch(
 // fail-open 컴포저블: 실패 시 total=null → 셀 부재만, shouldNoindexSsr(아래)에는 절대 연결하지 않는다.
 const { total: nationalComplexes } = useNationalComplexCount(realEstateType)
 
-const heroStats = computed(() => {
-  const items = [] as { label: string; value: string }[]
-  if (totalComplexes.value > 0) items.push({ label: '이 지역', value: `${totalComplexes.value.toLocaleString()}곳` })
+// 목록 부제 — 전국 등록 수는 SSR 텍스트로 유지한다(fail-open: null 이면 생략).
+const listSubtext = computed(() => {
   const nat = nationalComplexes.value
-  if (typeof nat === 'number' && nat > 0) items.push({ label: '전국 등록', value: `${nat.toLocaleString('ko-KR')}곳` })
-  items.push({ label: '데이터 출처', value: '국토교통부' })
-  return items
+  return typeof nat === 'number' && nat > 0
+    ? `서버 집계 기준 · 전국 등록 ${nat.toLocaleString('ko-KR')}곳`
+    : '서버 집계 기준'
 })
 
 const districtSummaryText = computed(() => {
@@ -461,56 +453,3 @@ watch(
   { immediate: true },
 )
 </script>
-
-<style scoped>
-.exploration-page-hero,
-.exploration-list-section {
-  border-radius: 0;
-  border-right: 0;
-  border-left: 0;
-  box-shadow: none;
-}
-
-.exploration-page-hero :deep(h1) {
-  font-size: 27px;
-}
-
-@media (min-width: 768px) {
-  .exploration-page-hero :deep(h1) {
-    font-size: 36px;
-  }
-}
-
-.map-link,
-.retry-button {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.map-link {
-  color: #2450dc;
-  text-decoration: none;
-}
-
-.retry-button {
-  margin-top: 1rem;
-  border-radius: 0.5rem;
-  background: #2450dc;
-  padding: 0.5rem 1rem;
-  color: #fff;
-}
-
-.map-link:focus-visible,
-.retry-button:focus-visible {
-  outline: 2px solid #2450dc;
-  outline-offset: 2px;
-}
-
-.building-list {
-  border-top: 1px solid #e6e9f0;
-}
-</style>

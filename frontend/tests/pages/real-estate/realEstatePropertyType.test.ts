@@ -132,6 +132,8 @@ async function mountSuspended(component: any, options?: any) {
           Pagination: { template: '<div />' },
           DataSourceSection: { template: '<div />' },
           ExplorationFilters: { template: '<div data-stub="filters" />' },
+          ExplorationBuildingRow: { template: '<div data-stub="building-row" />' },
+          PageHead: { props: ['title'], template: '<header><h1>{{ title }}</h1><slot name="breadcrumb" /><slot /></header>' },
         },
         ...options?.global,
       },
@@ -174,19 +176,27 @@ describe('real-estate/[realEstateType]/index.vue — property type list page', (
     expect(cityHubLinks.length).toBe(SIDO_CHIPS.length)
   })
 
-  it('heroStats에 "전국 등록" 셀이 존재해야 한다 (totalComplexes>0, PR⑧ S3)', async () => {
+  it('전국 건물 수를 목록 제목 옆 글자 "N곳"으로 렌더한다 (히어로 셀 대체, D6)', async () => {
     mockGetComplexList.mockResolvedValueOnce({
-      items: [],
+      items: [{ buildingName: '래미안테스트', bjdCode: '11680', dongName: '대치동', jibun: '1' }],
       total: 123456,
       page: 1,
-      totalPages: 0,
+      totalPages: 1,
     })
     mockAsyncDataOnceWithFetcher()
     const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
     const wrapper = await mountSuspended(m.default)
-    const cell = wrapper.find('[data-label="전국 등록"]')
-    expect(cell.exists()).toBe(true)
-    expect(cell.text()).toBe('123,456곳')
+    const count = wrapper.get('[data-testid="list-count"]')
+    expect(count.text()).toBe('123,456곳')
+    expect(count.get('strong').text()).toBe('123,456')
+    expect(wrapper.find('[data-label="전국 등록"]').exists()).toBe(false)
+  })
+
+  it('h1 은 PageHead 하나뿐이다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+    expect(wrapper.find('[data-stub="hero"]').exists()).toBe(false)
   })
 
 })

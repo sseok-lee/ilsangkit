@@ -107,9 +107,9 @@ const linkUrl = computed(() => {
   gap: 1.5rem;
   align-items: center;
   padding: 1.5rem 1.25rem;
-  border-bottom: 1px solid #e6e9f0;
-  background: #fff;
-  color: #15213b;
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  background: rgb(var(--surface-rgb));
+  color: rgb(var(--ink-rgb));
   text-decoration: none;
   min-width: 0;
 }
@@ -121,7 +121,7 @@ const linkUrl = computed(() => {
 
 .building-cell h3 {
   margin: 0;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.35;
@@ -130,7 +130,7 @@ const linkUrl = computed(() => {
 
 .building-cell p {
   margin: 0.375rem 0 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 0.8125rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -143,7 +143,7 @@ const linkUrl = computed(() => {
 
 .row-empty {
   margin: 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 0.875rem;
 }
 

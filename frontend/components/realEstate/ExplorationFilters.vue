@@ -1,39 +1,16 @@
 <template>
-  <div class="exploration-filters">
-    <fieldset>
-      <legend>건물 유형</legend>
-      <div class="filter-links" aria-label="건물 유형">
-        <NuxtLink
-          v-for="option in propertyOptions"
-          :key="option.value"
-          :to="typeHref(option.value, transactionMode)"
-          class="filter-link"
-          :class="{ active: option.value === propertyType }"
-          :aria-current="option.value === propertyType ? 'page' : undefined"
-        >
-          {{ option.label }}
-        </NuxtLink>
-      </div>
+  <div class="exploration-filters grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-[auto_auto_minmax(18rem,1fr)] lg:items-end">
+    <fieldset class="min-w-0">
+      <legend class="mb-2 text-[13px] font-semibold text-muted">건물 유형</legend>
+      <SegmentedControl :items="propertyItems" :model-value="propertyType" aria-label="건물 유형" fill />
     </fieldset>
-
-    <fieldset>
-      <legend>거래 유형</legend>
-      <div class="filter-links" aria-label="거래 유형">
-        <NuxtLink
-          v-for="option in transactionOptions"
-          :key="option.value"
-          :to="typeHref(propertyType, option.value)"
-          class="filter-link"
-          :class="{ active: option.value === transactionMode }"
-          :aria-current="option.value === transactionMode ? 'page' : undefined"
-        >
-          {{ option.label }}
-        </NuxtLink>
-      </div>
+    <fieldset class="min-w-0">
+      <legend class="mb-2 text-[13px] font-semibold text-muted">거래 유형</legend>
+      <SegmentedControl :items="transactionItems" :model-value="transactionMode" aria-label="거래 유형" fill />
     </fieldset>
-
-    <div class="region-filter">
+    <div class="min-w-0 sm:col-span-2 lg:col-span-1">
       <RegionCascadingDropdown
+        variant="flat"
         :city="city ?? ''"
         :district="district ?? ''"
         @update:city="changeCity"
@@ -46,6 +23,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
+import SegmentedControl from '~/components/common/SegmentedControl.vue'
 import { explorationListHref } from '~/utils/explorationNavigation'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
@@ -81,6 +59,18 @@ function typeHref(property: PropertyType, mode: TransactionMode): string {
   return explorationListHref(`${property}-${mode}` as RealEstateUrlType, selectedRegion())
 }
 
+const propertyItems = computed(() => propertyOptions.map((option) => ({
+  value: option.value,
+  label: option.label,
+  to: typeHref(option.value, transactionMode.value),
+})))
+
+const transactionItems = computed(() => transactionOptions.map((option) => ({
+  value: option.value,
+  label: option.label,
+  to: typeHref(propertyType.value, option.value),
+})))
+
 async function changeCity(city: string): Promise<void> {
   await navigateTo(explorationListHref(props.type, city ? { city } : null))
 }
@@ -94,91 +84,3 @@ async function changeDistrict(district: string): Promise<void> {
 }
 </script>
 
-<style scoped>
-.exploration-filters {
-  display: grid;
-  grid-template-columns: auto auto minmax(18rem, 1fr);
-  gap: 1.25rem;
-  align-items: end;
-}
-
-fieldset {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-legend {
-  margin-bottom: 0.5rem;
-  color: #56627a;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.filter-links {
-  display: flex;
-  min-height: 44px;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 0.625rem;
-  background: #f7f8fa;
-}
-
-.filter-link {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
-  color: #56627a;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.filter-link.active {
-  background: #15213b;
-  color: #fff;
-}
-
-.filter-link:focus-visible {
-  outline: 2px solid #2450dc;
-  outline-offset: 2px;
-}
-
-.region-filter {
-  min-width: 0;
-}
-
-@media (max-width: 900px) {
-  .exploration-filters {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .region-filter {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 520px) {
-  .exploration-filters {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
-  }
-
-  .region-filter {
-    grid-column: auto;
-  }
-
-  .filter-links {
-    width: 100%;
-  }
-
-  .filter-link {
-    flex: 1 1 0;
-    padding-inline: 0.5rem;
-  }
-}
-</style>

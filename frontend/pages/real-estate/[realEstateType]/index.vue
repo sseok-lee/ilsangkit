@@ -1,130 +1,129 @@
 <template>
-  <div class="bg-background-light min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
+        eyebrow="부동산 실거래가"
+        :title="`전국 ${propertyMeta?.label ?? ''} ${tabLabel} 실거래가`"
+        :description="propertyDescription"
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
-    <!-- Hero -->
-    <PageHero
-      class="exploration-page-hero"
-      :title="`전국 ${propertyMeta?.label ?? ''} ${tabLabel} 실거래가`"
-      :description="propertyDescription"
-      :stats="heroStats"
-    />
+      <!-- 거래 유형과 지역 -->
+      <SectionBlock
+        variant="flat"
+        heading="거래 유형과 지역"
+        subtext="매매/전월세 탭을 고르고 시/도를 선택해 지역별 실거래가를 확인하세요."
+      >
+        <ExplorationFilters :type="apiSlug" />
+        <div class="mt-5 pt-5 border-t border-line flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <RegionChips variant="flat" :href-for="(slug) => `/real-estate/${apiSlug}/${slug}`" />
+          <UiButton variant="link" :to="mapHref">전국 지도에서 보기</UiButton>
+        </div>
+      </SectionBlock>
 
-    <!-- 거래 유형과 지역 -->
-    <SectionBlock heading="거래 유형과 지역" subtext="매매/전월세 탭을 고르고 시/도를 선택해 지역별 실거래가를 확인하세요.">
-      <ExplorationFilters :type="apiSlug" />
-      <div class="mt-4 pt-4 border-t border-line flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <RegionChips :href-for="(slug) => `/real-estate/${apiSlug}/${slug}`" />
-        <NuxtLink :to="mapHref" class="map-link">전국 지도에서 보기</NuxtLink>
-      </div>
-    </SectionBlock>
+      <!-- Ad: 거래유형·지역 필터 직후 -->
+      <AdBanner />
 
-    <!-- Ad: 거래유형·지역 필터 직후 -->
-    <AdBanner />
-
-    <!-- 결과 -->
-    <template v-if="pending">
-      <SectionBlock heading="건물 목록" subtext="지역 선택 후 결과가 표시됩니다.">
-        <div class="space-y-px bg-line overflow-hidden">
-          <div v-for="i in 6" :key="i" class="bg-white rounded-xl p-4 border border-line animate-pulse">
-            <div class="flex gap-3">
-              <div class="shrink-0 w-10 h-10 rounded-lg bg-slate-200"></div>
-              <div class="flex-1 space-y-2">
-                <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-                <div class="h-3 bg-slate-100 rounded w-full"></div>
-                <div class="flex items-center justify-between mt-1">
-                  <div class="h-5 bg-slate-200 rounded w-24"></div>
-                  <div class="h-5 bg-slate-100 rounded-md w-12"></div>
+      <!-- 결과 -->
+      <template v-if="pending">
+        <SectionBlock variant="flat" heading="건물 목록" subtext="지역 선택 후 결과가 표시됩니다.">
+          <div class="border-t border-line">
+            <div v-for="i in 6" :key="i" class="bg-white p-4 border-b border-line animate-pulse">
+              <div class="flex gap-3">
+                <div class="shrink-0 w-10 h-10 rounded-lg bg-track"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="h-4 bg-track rounded w-2/3"></div>
+                  <div class="h-3 bg-background-light rounded w-full"></div>
+                  <div class="flex items-center justify-between mt-1">
+                    <div class="h-5 bg-track rounded w-24"></div>
+                    <div class="h-5 bg-background-light rounded-md w-12"></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </SectionBlock>
-    </template>
+        </SectionBlock>
+      </template>
 
-    <template v-else-if="error">
-      <SectionBlock heading="건물 목록">
-        <div class="rounded-xl bg-red-50 p-8 text-center">
-          <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-            <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+      <template v-else-if="error">
+        <SectionBlock variant="flat" heading="건물 목록">
+          <div class="rounded-xl bg-red-50 p-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[28px] text-red-400" aria-hidden="true">error_outline</span>
+            </div>
+            <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
+            <p class="text-red-500 text-sm mt-1">잠시 후 다시 시도해주세요</p>
+            <button
+              class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+              @click="retryLoad"
+            >
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
+              다시 시도
+            </button>
           </div>
-          <p class="text-red-700 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
-          <p class="text-red-500 text-sm mt-1">잠시 후 다시 시도해주세요</p>
-          <button
-            class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-            @click="retryLoad"
-          >
-            <span class="material-symbols-outlined text-[16px]">refresh</span>
-            다시 시도
-          </button>
-        </div>
-      </SectionBlock>
-    </template>
+        </SectionBlock>
+      </template>
 
-    <template v-else-if="renderableComplexes.length > 0">
-      <SectionBlock class="exploration-list-section" heading="건물 목록" subtext="서버 집계 기준 최근 거래가 있는 건물부터 확인하세요.">
-        <template #right>
-          <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-            {{ totalComplexes.toLocaleString() }}건
-          </span>
-        </template>
-        <div class="building-list">
-          <ExplorationBuildingRow
-            v-for="building in renderableComplexes"
-            :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
-            :building="building"
-            :real-estate-type="apiSlug"
-            :mode="currentTab"
+      <template v-else-if="renderableComplexes.length > 0">
+        <SectionBlock variant="flat" heading="건물 목록" subtext="서버 집계 기준 최근 거래가 있는 건물부터 확인하세요.">
+          <template #right>
+            <span data-testid="list-count" class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ totalComplexes.toLocaleString('ko-KR') }}</strong>곳</span>
+          </template>
+          <div class="border-t border-line">
+            <ExplorationBuildingRow
+              v-for="building in renderableComplexes"
+              :key="building.buildingKey ?? `${building.buildingName}:${building.bjdCode}:${building.dongName}:${building.jibun ?? ''}`"
+              :building="building"
+              :real-estate-type="apiSlug"
+              :mode="currentTab"
+            />
+          </div>
+          <!-- Ad: 건물 목록 이후 -->
+          <AdBanner class="mt-4" />
+          <!-- 페이지네이션 -->
+          <Pagination
+            :current-page="currentPage"
+            :total-pages="totalPages"
+            :href-for="pageHref"
+            @page-change="goToPage"
           />
-        </div>
-        <!-- Ad: 건물 목록 이후 -->
-        <AdBanner class="mt-4" />
-        <!-- 페이지네이션 -->
-        <Pagination
-          :current-page="currentPage"
-          :total-pages="totalPages"
-          :href-for="pageHref"
-          @page-change="goToPage"
-        />
-      </SectionBlock>
-    </template>
+        </SectionBlock>
+      </template>
 
-    <template v-else>
-      <SectionBlock heading="건물 목록">
-        <div class="rounded-xl bg-background-light p-12 text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-card">
-            <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
+      <template v-else>
+        <SectionBlock variant="flat" heading="건물 목록">
+          <div class="rounded-[10px] bg-background-light p-12 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white border border-line flex items-center justify-center">
+              <img :src="`/icons/category/${propertyMeta?.iconImg || 'apt'}.webp?v2`" :alt="propertyMeta?.label || '부동산'" class="w-10 h-10" width="40" height="40" />
+            </div>
+            <p class="text-ink font-semibold text-lg">공개된 건물이 없습니다</p>
+            <p class="text-muted text-sm mt-1">다른 건물 유형이나 거래 유형을 선택해 보세요</p>
           </div>
-          <p class="text-slate-700 font-semibold text-lg">공개된 건물이 없습니다</p>
-          <p class="text-slate-500 text-sm mt-1">다른 건물 유형이나 거래 유형을 선택해 보세요</p>
+        </SectionBlock>
+      </template>
+
+      <!-- FAQ -->
+      <SectionBlock v-if="faqs.length > 0" variant="flat" heading="자주 묻는 질문">
+        <div class="space-y-1">
+          <details
+            v-for="(faq, i) in faqs"
+            :key="i"
+            class="group border-b border-line last:border-b-0"
+          >
+            <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
+              {{ faq.q }}
+              <span class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform" aria-hidden="true">expand_more</span>
+            </summary>
+            <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
+          </details>
         </div>
       </SectionBlock>
-    </template>
 
-    <!-- FAQ -->
-    <SectionBlock v-if="faqs.length > 0" heading="자주 묻는 질문">
-      <div class="space-y-1">
-        <details
-          v-for="(faq, i) in faqs"
-          :key="i"
-          class="group border-b border-line last:border-b-0"
-        >
-          <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
-            {{ faq.q }}
-            <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
-          </summary>
-          <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
-        </details>
-      </div>
-    </SectionBlock>
-
-    <!-- 데이터 출처 -->
-    <section>
-      <DataSourceSection domain="real-estate" />
-    </section>
+      <!-- 데이터 출처 -->
+      <DataSourceSection domain="real-estate" variant="flat" />
     </div>
   </div>
 </template>
@@ -152,7 +151,8 @@ import { explorationMapHref } from '~/utils/explorationNavigation'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionChips from '~/components/common/RegionChips.vue'
 import ExplorationFilters from '~/components/realEstate/ExplorationFilters.vue'
@@ -406,59 +406,10 @@ watch(
   { immediate: true },
 )
 
-// Breadcrumb + hero stats
+// Breadcrumb
 const breadcrumbItems = computed(() => [
   { label: '홈', href: '/', current: false },
   { label: '부동산 실거래가', href: '/real-estate', current: false },
   { label: propertyMeta.value?.label ?? realEstateTypeParam.value, href: `/real-estate/${realEstateTypeParam.value}`, current: true },
 ])
-
-const heroStats = computed(() => {
-  const stats: { label: string; value: string }[] = []
-  if (totalComplexes.value > 0) {
-    stats.push({ label: '전국 등록', value: `${totalComplexes.value.toLocaleString('ko-KR')}곳` })
-  }
-  stats.push({ label: '보기 방식', value: '매매 / 전월세' })
-  return stats
-})
 </script>
-
-<style scoped>
-.exploration-page-hero,
-.exploration-list-section {
-  border-radius: 0;
-  border-right: 0;
-  border-left: 0;
-  box-shadow: none;
-}
-
-.exploration-page-hero :deep(h1) {
-  font-size: 27px;
-}
-
-@media (min-width: 768px) {
-  .exploration-page-hero :deep(h1) {
-    font-size: 36px;
-  }
-}
-
-.map-link {
-  display: inline-flex;
-  min-height: 44px;
-  flex: 0 0 auto;
-  align-items: center;
-  color: #2450dc;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.map-link:focus-visible {
-  outline: 2px solid #2450dc;
-  outline-offset: 2px;
-}
-
-.building-list {
-  border-top: 1px solid #e6e9f0;
-}
-</style>

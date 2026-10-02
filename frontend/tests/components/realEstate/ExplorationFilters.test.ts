@@ -8,10 +8,10 @@ const navigateToMock = vi.fn().mockResolvedValue(undefined)
 
 const RegionDropdownStub = defineComponent({
   name: 'RegionCascadingDropdown',
-  props: ['city', 'district'],
+  props: ['city', 'district', 'variant'],
   emits: ['update:city', 'update:district'],
   template: `
-    <div data-testid="region-dropdown" :data-city="city" :data-district="district">
+    <div data-testid="region-dropdown" :data-city="city" :data-district="district" :data-variant="variant">
       <button data-testid="choose-busan" @click="$emit('update:city', '부산')">부산</button>
       <button data-testid="choose-seocho" @click="$emit('update:district', '서초구')">서초구</button>
       <button data-testid="choose-national" @click="$emit('update:city', '')">전국</button>
@@ -76,5 +76,26 @@ describe('ExplorationFilters', () => {
     await wrapper.get('[data-testid="choose-national"]').trigger('click')
 
     expect(navigateToMock).toHaveBeenCalledWith('/real-estate/apt-rent')
+  })
+
+  it('건물·거래 유형을 링크 모드 세그먼트 2개로 렌더하고 현재 값을 aria-current 로 표시한다', () => {
+    const wrapper = mountIt()
+    const groups = wrapper.findAll('.ui-segmented[role="group"]')
+    expect(groups.map((g) => g.attributes('aria-label'))).toEqual(['건물 유형', '거래 유형'])
+
+    const current = wrapper.findAll('a[aria-current="page"]')
+    expect(current.map((a) => a.text())).toEqual(['아파트', '전월세'])
+    expect(current.every((a) => a.classes().includes('ui-segmented__item--selected'))).toBe(true)
+    expect(wrapper.find('.filter-link').exists()).toBe(false)
+  })
+
+  it('fieldset/legend 접근성 그룹을 유지한다', () => {
+    const wrapper = mountIt()
+    expect(wrapper.findAll('fieldset legend').map((l) => l.text())).toEqual(['건물 유형', '거래 유형'])
+  })
+
+  it('지역 선택은 평면형 변형을 쓴다', () => {
+    const wrapper = mountIt()
+    expect(wrapper.get('[data-testid="region-dropdown"]').attributes('data-variant')).toBe('flat')
   })
 })
