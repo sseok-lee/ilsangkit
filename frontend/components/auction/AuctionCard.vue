@@ -34,7 +34,7 @@ const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item
       <p class="mt-2 text-xs text-muted">{{ item.bidCloseDtm ? `${formatAuctionDateTime(item.bidCloseDtm)} 마감` : '일정 미제공' }}</p>
     </div>
   </HardLink>
-  <HardLink v-else :to="to" class="block bg-white rounded-xl border border-line p-4 shadow-card hover:border-primary/30 transition-[box-shadow,border-color]">
+  <HardLink v-else :to="to" class="block bg-white rounded-[10px] border border-line p-4 hover:border-primary transition-colors">
     <div class="flex items-center gap-2 mb-2">
       <AuctionStatusBadge :status="item.status" />
       <span v-if="item.propertyType" class="text-caption text-muted">{{ item.propertyType }}</span>
@@ -57,8 +57,8 @@ const discount = computed(() => formatDiscount(props.item.apslAssAmt, props.item
 </template>
 
 <style scoped>
-.auction-property-row { display:flex; flex-wrap:wrap; gap:20px; padding:22px 4px; border-bottom:1px solid #e6e9f0; background:white; }
-.auction-property-row:hover { background:#f7f8fa; }
-.auction-property-row:focus-visible { outline:2px solid #2450dc; outline-offset:3px; }
+.auction-property-row { display:flex; flex-wrap:wrap; gap:20px; padding:22px 4px; border-bottom:1px solid rgb(var(--border-rgb)); background:white; }
+.auction-property-row:hover { background:rgb(var(--paper-rgb)); }
+.auction-property-row:focus-visible { outline:2px solid rgb(var(--brand-rgb)); outline-offset:3px; }
 @media(max-width:767px) { .auction-property-row { flex-direction:column; gap:12px; } }
 </style>

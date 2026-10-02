@@ -1,37 +1,38 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="공매"
         :title="`${districtName} 공매 물건·낙찰가율`"
         :description="`${cityName} ${districtName} 부동산 공매 물건과 용도별 낙찰가율 통계를 확인하세요.`"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- fail-open: 일시 장애(503)면 집계가 비어 보인다. 빈 화면 대신 이유를 밝힌다. -->
-      <p v-if="regionFetchFailed" class="py-6 text-center text-sm text-slate-600">
+      <p v-if="regionFetchFailed" class="py-6 text-center text-sm text-muted">
         공매 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
       </p>
 
       <!-- 용도별 집계 카드 -->
-      <SectionBlock class="property-section" v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
+      <SectionBlock variant="flat" v-if="usageGroups.length > 0" heading="용도별 현황" subtext="용도별 낙찰가율과 물건 현황입니다.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <div
             v-for="g in usageGroups"
             :key="g.usageGroup"
-            class="property-stat"
+            class="rounded-lg bg-background-light p-5 min-w-0"
           >
-            <p class="text-caption text-slate-500 mb-1">{{ USAGE_GROUP_LABEL[g.usageGroup] }}</p>
-            <p class="text-sm font-bold text-slate-900">{{ formatBidRate(g.avgBidRate) }}</p>
-            <p class="text-caption text-slate-500 mt-1">진행 {{ g.activeCount }}건 · 낙찰 {{ g.soldCount }}건</p>
+            <p class="text-caption text-muted mb-1">{{ USAGE_GROUP_LABEL[g.usageGroup] }}</p>
+            <p class="text-sm font-bold text-ink">{{ formatBidRate(g.avgBidRate) }}</p>
+            <p class="text-caption text-muted mt-1">진행 {{ g.activeCount }}건 · 낙찰 {{ g.soldCount }}건</p>
           </div>
         </div>
       </SectionBlock>
 
       <!-- 진행중 물건 -->
-      <SectionBlock class="property-section" v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
+      <SectionBlock variant="flat" v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
         <div class="flex flex-col">
           <AuctionCard variant="row" v-for="item in activeItems" :key="item.cltrMngNo" :item="item" />
         </div>
@@ -41,7 +42,7 @@
       </SectionBlock>
 
       <!-- 최근 낙찰 물건 -->
-      <SectionBlock class="property-section" v-if="recentSold.length > 0" heading="최근 낙찰" subtext="최근 낙찰된 공매 물건입니다.">
+      <SectionBlock variant="flat" v-if="recentSold.length > 0" heading="최근 낙찰" subtext="최근 낙찰된 공매 물건입니다.">
         <div class="flex flex-col">
           <AuctionCard variant="row" v-for="item in recentSold" :key="item.cltrMngNo" :item="item" />
         </div>
@@ -50,24 +51,24 @@
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock class="property-section" heading="자주 묻는 질문">
+      <SectionBlock variant="flat" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details
             v-for="faq in AUCTION_FAQ"
             :key="faq.q"
             class="group border-b border-line last:border-b-0"
           >
-            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+            <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+              <span class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
-            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+            <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
           </details>
         </div>
       </SectionBlock>
 
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>
 </template>
@@ -83,7 +84,7 @@ import { computeAuctionRegionHead } from '~/utils/auctionHead'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -179,5 +180,3 @@ setBreadcrumbSchema([
   { name: districtName, url: `/auction/${citySlug}/${districtSlug}` },
 ])
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

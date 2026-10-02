@@ -1,30 +1,31 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="공매"
         :title="`${cityName} 공매 물건`"
         :description="`${cityName} 구·군별 부동산 공매 물건과 낙찰가율 통계를 확인하세요.`"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <SectionBlock
-        class="property-section"
+        variant="flat"
         :heading="`${cityName} 구·군 목록`"
         :subtext="`${cityName} 내 구·군을 선택하면 공매 물건과 낙찰가율 통계를 확인할 수 있습니다.`"
       >
-        <div v-if="districtCards.length > 0" class="property-region-list">
+        <div v-if="districtCards.length > 0" class="row-list">
           <NuxtLink
             v-for="card in districtCards"
             :key="card.district"
             :to="`/auction/${citySlug}/${card.districtSlug}`"
-            class="property-region-link"
+            class="row-list__link"
           >
-            <span class="text-display-3 text-slate-800">{{ card.district }}</span>
-            <span class="text-caption text-slate-500">진행 {{ card.activeCount }}건</span>
-            <span class="text-caption text-slate-500">낙찰 {{ card.soldCount }}건</span>
+            <span class="text-display-3 text-ink">{{ card.district }}</span>
+            <span class="text-caption text-muted">진행 {{ card.activeCount }}건</span>
+            <span class="text-caption text-muted">낙찰 {{ card.soldCount }}건</span>
           </NuxtLink>
         </div>
 
@@ -43,7 +44,7 @@
       <AdBanner />
 
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>
 </template>
@@ -57,7 +58,7 @@ import { computeAuctionCityHead } from '~/utils/auctionHead'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
@@ -130,5 +131,3 @@ const selfUrl = `${SITE_URL}/auction/${citySlug}`
 
 useHead(() => computeAuctionCityHead({ city: cityName, anyIndexable: anyIndexable.value }, selfUrl))
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

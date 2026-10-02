@@ -1,60 +1,63 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="공매"
         title="부동산 공매 물건 검색"
         :description="AUCTION_META.description"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- 요약 통계 -->
-      <div v-if="hub" class="grid grid-cols-3 gap-3">
-        <div class="property-stat text-center">
-          <p class="text-caption text-slate-500 mb-1">진행중 물건</p>
-          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.totalActive.toLocaleString('ko-KR') }}</p>
+      <div v-if="hub" class="mt-6 grid grid-cols-3 gap-3">
+        <div class="rounded-lg bg-background-light p-5 min-w-0 text-center">
+          <p class="text-caption text-muted mb-1">진행중 물건</p>
+          <p class="text-xl md:text-3xl font-bold text-ink">{{ hub.totalActive.toLocaleString('ko-KR') }}</p>
         </div>
-        <div class="property-stat text-center">
-          <p class="text-caption text-slate-500 mb-1">누적 낙찰</p>
-          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.totalSold.toLocaleString('ko-KR') }}</p>
+        <div class="rounded-lg bg-background-light p-5 min-w-0 text-center">
+          <p class="text-caption text-muted mb-1">누적 낙찰</p>
+          <p class="text-xl md:text-3xl font-bold text-ink">{{ hub.totalSold.toLocaleString('ko-KR') }}</p>
         </div>
-        <div class="property-stat text-center">
-          <p class="text-caption text-slate-500 mb-1">집계 지역</p>
-          <p class="text-xl md:text-3xl font-bold text-slate-900">{{ hub.regionCount.toLocaleString('ko-KR') }}</p>
+        <div class="rounded-lg bg-background-light p-5 min-w-0 text-center">
+          <p class="text-caption text-muted mb-1">집계 지역</p>
+          <p class="text-xl md:text-3xl font-bold text-ink">{{ hub.regionCount.toLocaleString('ko-KR') }}</p>
         </div>
       </div>
 
       <!-- 용도별 진입 카드 -->
-      <SectionBlock class="property-section" heading="용도별 공매 물건" subtext="용도별로 공매 물건을 조회하세요.">
+      <SectionBlock variant="flat" heading="용도별 공매 물건" subtext="용도별로 공매 물건을 조회하세요.">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <NuxtLink
             v-for="usage in usageCards"
             :key="usage.key"
             :to="`/auction/list?usage=${usage.key}`"
-            class="property-stat flex min-h-11 flex-col gap-1 hover:text-primary"
+            class="flex min-h-11 min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-white p-5 hover:border-primary hover:text-primary transition-colors"
           >
-            <span class="text-display-3 text-slate-800">{{ usage.label }}</span>
-            <span class="text-caption text-slate-500">공매 물건 조회 →</span>
+            <span class="text-display-3 text-ink">{{ usage.label }}</span>
+            <span class="text-caption text-muted">공매 물건 조회 →</span>
           </NuxtLink>
           <NuxtLink
             to="/auction/list"
-            class="property-stat flex min-h-11 flex-col gap-1 hover:text-primary"
+            class="flex min-h-11 min-w-0 flex-col gap-1 rounded-[10px] border border-line bg-white p-5 hover:border-primary hover:text-primary transition-colors"
           >
-            <span class="text-display-3 text-slate-800">전체</span>
-            <span class="text-caption text-slate-500">모든 용도 보기 →</span>
+            <span class="text-display-3 text-ink">전체</span>
+            <span class="text-caption text-muted">모든 용도 보기 →</span>
           </NuxtLink>
         </div>
       </SectionBlock>
 
-      <SectionBlock class="property-section" heading="지역별 공매" subtext="시·도와 구·군을 선택해 지역의 공매 물건을 확인하세요.">
-        <nav class="property-actions" aria-label="공매 지역 선택"><NuxtLink v-for="region in regionCities" :key="region.slug" :to="`/auction/${region.slug}`">{{ region.city }}</NuxtLink></nav>
+      <SectionBlock variant="flat" heading="지역별 공매" subtext="시·도와 구·군을 선택해 지역의 공매 물건을 확인하세요.">
+        <nav class="flex flex-wrap gap-2" aria-label="공매 지역 선택">
+          <UiChip v-for="region in regionCities" :key="region.slug" :to="`/auction/${region.slug}`">{{ region.city }}</UiChip>
+        </nav>
         <p v-if="regionsError" role="alert" class="text-sm text-muted">지역 정보를 불러오지 못했습니다.</p>
       </SectionBlock>
 
       <!-- 부가④ 마감임박 물건 -->
-      <SectionBlock class="property-section" v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
+      <SectionBlock variant="flat" v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
         <div class="flex flex-col">
           <AuctionCard variant="row" v-for="item in deadline.items" :key="item.cltrMngNo" :item="item" />
         </div>
@@ -64,37 +67,35 @@
       </SectionBlock>
 
       <!-- 랭킹 진입 -->
-      <div class="bg-white rounded-xl border border-line p-4 shadow-card flex items-center justify-between">
+      <div class="bg-white rounded-[10px] border border-line p-4 flex items-center justify-between gap-4 mt-6">
         <div>
-          <p class="text-sm font-semibold text-slate-900">낙찰가율 랭킹</p>
-          <p class="text-caption text-slate-500 mt-0.5">지역별·용도별 낙찰가율 통계를 확인하세요</p>
+          <p class="text-sm font-semibold text-ink">낙찰가율 랭킹</p>
+          <p class="text-caption text-muted mt-0.5">지역별·용도별 낙찰가율 통계를 확인하세요</p>
         </div>
-        <NuxtLink to="/auction/ranking" class="min-h-11 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors">
-          랭킹 보기
-        </NuxtLink>
+        <UiButton variant="primary" to="/auction/ranking">랭킹 보기</UiButton>
       </div>
 
       <AdBanner />
 
       <!-- FAQ -->
-      <SectionBlock class="property-section" heading="자주 묻는 질문">
+      <SectionBlock variant="flat" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details
             v-for="(faq, index) in AUCTION_FAQ"
             :key="index"
             class="group border-b border-line last:border-b-0"
           >
-            <summary class="cursor-pointer py-3 text-base font-medium text-slate-800 flex items-center justify-between hover:text-primary">
+            <summary class="cursor-pointer py-3 text-base font-medium text-ink flex items-center justify-between hover:text-primary">
               {{ faq.q }}
-              <span class="material-symbols-outlined text-[18px] text-slate-500 group-open:rotate-180 transition-transform">expand_more</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted group-open:rotate-180 transition-transform">expand_more</span>
             </summary>
-            <p class="pb-3 text-sm text-slate-600 leading-relaxed">{{ faq.a }}</p>
+            <p class="pb-3 text-sm text-muted leading-relaxed">{{ faq.a }}</p>
           </details>
         </div>
       </SectionBlock>
 
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>
 </template>
@@ -109,7 +110,9 @@ import { USAGE_GROUP_LABEL } from '~/types/auction'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -173,5 +176,3 @@ useHead({
   link: [{ rel: 'canonical', href: `${SITE_URL}/auction` }],
 })
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

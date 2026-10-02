@@ -86,7 +86,7 @@ const rankingRow = {
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />' },
+  PageHead: { template: '<div data-stub="hero" />' },
   SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
   AuctionRankingTable: { template: '<table data-stub="ranking-table" />', props: ['rows'] },
   EmptyState: { template: '<div data-stub="empty"><slot /></div>', props: ['icon', 'title', 'description'] },
