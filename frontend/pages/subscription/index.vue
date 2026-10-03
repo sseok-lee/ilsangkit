@@ -1,6 +1,6 @@
 <template>
   <div class="subscription-hub bg-white text-ink" :aria-busy="pending ? 'true' : 'false'">
-    <div class="hub-shell page-container pt-3 md:pt-5 pb-14">
+    <div class="page-container pt-3 md:pt-5 pb-14">
       <PageHead
         eyebrow="청약"
         title="청약·임대, 신청할 공고부터."

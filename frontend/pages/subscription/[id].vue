@@ -55,6 +55,7 @@
           :title="subscription.houseName"
           :description="subscription.supplyLocation || subscription.regionName"
         >
+          <template #title><span class="break-keep [overflow-wrap:anywhere]">{{ subscription.houseName }}</span></template>
           <div class="mt-4">
             <UiButton variant="secondary" aria-label="공유하기" @click="handleShare">
               <span class="material-symbols-outlined text-[18px]" aria-hidden="true">share</span>
@@ -333,8 +334,8 @@
         </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-8 md:order-8">
-          <span class="material-symbols-outlined text-[32px] text-faint mb-2">location_off</span>
+        <div v-if="!hasCoords" class="mt-6 rounded-[10px] border border-line bg-background-light p-6 text-center order-8 md:order-8">
+          <span class="material-symbols-outlined text-[32px] text-faint mb-2" aria-hidden="true">location_off</span>
           <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
@@ -428,7 +429,7 @@
         </SectionBlock>
 
         <!-- 외부 링크 버튼 -->
-        <div class="flex flex-col md:flex-row gap-4 order-9 md:order-9">
+        <div class="mt-6 flex flex-col md:flex-row gap-4 order-9 md:order-9">
           <UiButton
             v-if="subscription.homepage"
             variant="primary"

@@ -349,13 +349,19 @@ async function handleLoadMore(): Promise<void> {
   margin-bottom: 18px;
   border-bottom: 1px solid rgb(var(--border-rgb));
   padding-bottom: 17px;
-  /* 세그먼트는 한 줄이라 좁은 화면에서 넘치면 이 안에서 가로 스크롤 */
+  /* 세그먼트는 한 줄이라 좁은 화면에서 넘치면 이 안에서 가로 스크롤.
+     스크롤 영역은 바깥으로 그린 포커스 링(3px)을 자르므로 3px 여유를 두고 음수 margin 으로 정렬선을 맞춘다. */
   overflow-x: auto;
+  padding-top: 3px;
+  padding-inline: 3px;
+  margin-inline: -3px;
 }
 
 .status-tabs {
   margin-bottom: 18px;
   overflow-x: auto;
+  padding: 3px;
+  margin-inline: -3px;
 }
 
 .filter-controls {
