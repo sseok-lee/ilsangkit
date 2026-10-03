@@ -43,7 +43,7 @@ const links = computed(() => baseLinks.map((link) => {
 .subscription-nav {
   display: flex;
   gap: 30px;
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
   margin-bottom: 30px;
 }
 
@@ -52,14 +52,14 @@ const links = computed(() => baseLinks.map((link) => {
   padding: 12px 2px 14px;
   margin-bottom: -1px;
   border-bottom: 3px solid transparent;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 17px;
   font-weight: 650;
 }
 
 .subscription-nav__link--active {
-  border-color: #2450dc;
-  color: #2450dc;
+  border-color: rgb(var(--brand-rgb));
+  color: rgb(var(--brand-rgb));
 }
 
 @media (max-width: 700px) {

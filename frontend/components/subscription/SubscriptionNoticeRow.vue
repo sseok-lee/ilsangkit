@@ -1,5 +1,5 @@
 <template>
-  <article class="notice-row">
+  <article class="notice-row" :class="{ 'notice-row--panel': layout === 'panel' }">
     <div class="notice-main">
       <NuxtLink
         :to="`/subscription/${item.id}`"
@@ -40,8 +40,10 @@ const props = withDefaults(defineProps<{
   selectedCity?: string
   selectedDistrict?: string
   showCategory?: boolean
+  layout?: 'list' | 'panel'
 }>(), {
   showCategory: false,
+  layout: 'list',
 })
 
 const emit = defineEmits<{
@@ -52,7 +54,7 @@ const badge = computed(() => subscriptionTypeBadge(props.item.sourceType, props.
 const categoryLabel = computed(() => badge.value.kind === 'rent' ? '임대' : '분양')
 const categoryBadgeClass = computed(() =>
   badge.value.kind === 'rent'
-    ? 'bg-slate-900 text-white'
+    ? 'bg-ink text-white'
     : 'bg-primary-50 text-primary'
 )
 
@@ -150,11 +152,11 @@ const deadlineLabel = computed(() => {
   gap: 24px;
   align-items: center;
   padding: 22px 18px;
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
 }
 
 .notice-row:hover {
-  background: #fbfcff;
+  background: rgb(var(--surface-2-rgb));
 }
 
 .notice-main {
@@ -163,7 +165,7 @@ const deadlineLabel = computed(() => {
 
 .notice-name {
   display: block;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 16px;
   font-weight: 600;
   line-height: 1.6;
@@ -177,12 +179,12 @@ const deadlineLabel = computed(() => {
 }
 
 .notice-name:focus-visible::after {
-  outline: 2px solid #2450dc;
+  outline: 2px solid rgb(var(--brand-rgb));
   outline-offset: -2px;
 }
 
 .notice-row:hover .notice-name {
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
 }
 
 .tagline {
@@ -191,7 +193,7 @@ const deadlineLabel = computed(() => {
   gap: 8px;
   align-items: center;
   margin-top: 8px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 12px;
 }
 
@@ -213,23 +215,23 @@ const deadlineLabel = computed(() => {
 }
 
 .status.upcoming {
-  background: #edf2ff;
-  color: #2450dc;
+  background: rgb(var(--brand-tint-rgb));
+  color: rgb(var(--brand-rgb));
 }
 
 .status.closed,
 .status.unknown {
-  background: #f0f2f6;
-  color: #56627a;
+  background: rgb(var(--track-rgb));
+  color: rgb(var(--muted-rgb));
 }
 
 .region {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
 }
 
 .supply {
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 15px;
   font-variant-numeric: tabular-nums;
   font-weight: 550;
@@ -239,13 +241,13 @@ const deadlineLabel = computed(() => {
 
 .supply small {
   display: block;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 11px;
   font-weight: 400;
 }
 
 .period {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -253,7 +255,7 @@ const deadlineLabel = computed(() => {
 
 .period strong {
   display: block;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-weight: 500;
 }
 
@@ -279,7 +281,7 @@ const deadlineLabel = computed(() => {
   }
 
   .notice-row:first-child {
-    border-top: 1px solid #e6e9f0;
+    border-top: 1px solid rgb(var(--border-rgb));
   }
 
   .notice-main {
@@ -311,13 +313,46 @@ const deadlineLabel = computed(() => {
   }
 
   .period strong {
-    color: #56627a;
+    color: rgb(var(--muted-rgb));
     font-size: 12px;
   }
 
   .deadline {
     margin: 0;
     white-space: nowrap;
+  }
+}
+
+@media (min-width: 769px) {
+  .notice-row--panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 14px;
+    padding: 20px 0;
+  }
+
+  .notice-row--panel .notice-main {
+    grid-column: 1 / -1;
+  }
+
+  .notice-row--panel .notice-name {
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  .notice-row--panel .region {
+    font-size: 13px;
+  }
+
+  .notice-row--panel .supply {
+    font-size: 13px;
+  }
+
+  .notice-row--panel .period {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
   }
 }
 </style>

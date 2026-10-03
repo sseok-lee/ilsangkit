@@ -9,9 +9,7 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `SubscriptionCard.vue` | 청약 단위 카드 |
 | `SubscriptionListView.vue` | 청약 목록 뷰 (필터/정렬) |
-| `SpecialSupplyCard.vue` | 특별공급 전용 카드 |
 | `HomeSubscriptionSection.vue` | 홈 페이지 청약 섹션 |
 | `TimelineItem.vue` | 청약 일정 타임라인 항목 |
 | `RentalPriceStatsBox.vue` | 전월세 임대료 통계 박스 |

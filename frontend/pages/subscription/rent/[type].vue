@@ -1,14 +1,14 @@
 <template>
   <div class="bg-white">
-    <div class="page-container pb-5 pt-8 md:flex md:items-end md:justify-between md:gap-8 md:pb-7 md:pt-10">
-      <div>
-        <h1 class="text-[27px] md:text-[36px] leading-tight font-bold text-ink">{{ typeMeta.label }}</h1>
-        <p class="mt-3 text-muted text-sm md:text-base">{{ typeMeta.description }}</p>
-      </div>
-      <p class="mt-3 text-left text-xs text-muted md:mt-0 md:shrink-0 md:text-right md:text-sm">
-        <strong class="font-semibold text-ink md:block md:text-lg">청약홈 · 마이홈 · LH</strong>
-        <span class="md:block">공개 자료 기준</span>
-      </p>
+    <div class="page-container pt-3 md:pt-5">
+      <PageHead :title="typeMeta.label" :description="typeMeta.description">
+        <template #actions>
+          <p class="text-right text-xs text-muted md:text-sm">
+            <strong class="block font-semibold text-ink md:text-lg">청약홈 · 마이홈 · LH</strong>
+            <span class="block">공개 자료 기준</span>
+          </p>
+        </template>
+      </PageHead>
     </div>
     <div class="page-container py-5 md:py-6">
       <SubscriptionListView
@@ -21,6 +21,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import PageHead from '~/components/common/PageHead.vue'
 import { SITE_URL } from '~/utils/seoConstants'
 import { RENT_TYPES } from '~/utils/subscriptionMeta'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

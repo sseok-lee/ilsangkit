@@ -17,17 +17,17 @@
           >
             <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
               <button
-                class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm"
+                class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-card-2"
                 @click="isMapExpanded = false"
               >
                 <span class="material-symbols-outlined text-ink">close</span>
               </button>
-              <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ subscription.houseName }}</span>
+              <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm truncate max-w-[60vw]">{{ subscription.houseName }}</span>
               <a
                 :href="kakaoMapUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-sm"
+                class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-card-2"
               >
                 <span class="material-symbols-outlined text-[20px]">directions</span>
               </a>
@@ -44,35 +44,25 @@
         </Transition>
       </Teleport>
 
-      <div class="max-w-[1120px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-8 md:pb-10 flex flex-col gap-3">
+      <div class="page-container pt-3 md:pt-5 pb-10 flex flex-col">
         <!-- Breadcrumb (데스크톱만 — chrome, order 미부여로 소스 최상단 유지) -->
         <Breadcrumb :items="breadcrumbItems" class="hidden md:block" />
 
         <!-- T0 헤더 (literal h1 소유) -->
-        <section class="order-1 md:order-1 py-5 md:py-10 border-b border-line">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0">
-              <span class="inline-flex items-center mb-3 rounded bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary">
-                {{ heroEyebrow }}
-              </span>
-              <h1 class="text-[27px] md:text-[36px] leading-[1.15] font-extrabold text-strong break-keep [overflow-wrap:anywhere]">
-                {{ subscription.houseName }}
-              </h1>
-              <p class="mt-3 text-sm md:text-base text-muted">
-                {{ subscription.supplyLocation || subscription.regionName }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold text-ink hover:bg-background-light"
-              aria-label="공유하기"
-              @click="handleShare"
-            >
+        <PageHead
+          class="order-1 md:order-1"
+          :eyebrow="heroEyebrow"
+          :title="subscription.houseName"
+          :description="subscription.supplyLocation || subscription.regionName"
+        >
+          <template #title><span class="break-keep [overflow-wrap:anywhere]">{{ subscription.houseName }}</span></template>
+          <div class="mt-4">
+            <UiButton variant="secondary" aria-label="공유하기" @click="handleShare">
               <span class="material-symbols-outlined text-[18px]" aria-hidden="true">share</span>
-              <span class="hidden sm:inline">공유</span>
-            </button>
+              공유
+            </UiButton>
           </div>
-          <dl v-if="heroStats.length" class="mt-6 grid grid-cols-1 border-y border-line md:grid-cols-2">
+          <dl v-if="heroStats.length" class="mt-6 grid grid-cols-1 border-t border-line md:grid-cols-2">
             <div
               v-for="stat in heroStats"
               :key="stat.label"
@@ -82,25 +72,25 @@
             >
               <dt class="text-xs font-semibold text-faint">{{ stat.label }}</dt>
               <dd
-                class="mt-2 font-extrabold text-strong font-display tabular-nums break-keep"
+                class="mt-2 font-extrabold text-strong tabular-nums break-keep"
                 :class="stat.prominent ? 'text-[36px] leading-tight whitespace-normal [overflow-wrap:anywhere]' : 'text-xl md:text-2xl'"
               >
                 {{ stat.value }}
               </dd>
             </div>
           </dl>
-        </section>
+        </PageHead>
 
         <!-- 광고① : 헤더 직후 (최고 가시성) -->
         <AdBanner class="order-2 md:order-2" />
 
         <!-- T1a "청약 일정" 블록 -->
-        <SectionBlock class="order-3 md:order-3" heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
+        <SectionBlock variant="flat" class="order-3 md:order-3" heading="청약 일정" subtext="놓치면 안 되는 일정을 가장 먼저 확인하세요.">
           <SubscriptionScheduleTimeline :subscription="subscription" />
         </SectionBlock>
 
         <!-- T1b "면적별 공급정보" 블록 (일정과 인접 — 사이에 광고 없음) -->
-        <SectionBlock v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" :subtext="supplySectionSubtext">
+        <SectionBlock variant="flat" v-if="unitTypes && unitTypes.length > 0" class="order-4 md:order-4" heading="면적별 공급정보" :subtext="supplySectionSubtext">
           <div data-testid="unit-summary-list" class="md:hidden border-t border-line">
             <div v-for="unit in unitTypes" :key="`summary-${unit.id}`" class="border-b border-line bg-white py-3">
               <div class="flex items-baseline justify-between gap-3">
@@ -162,7 +152,7 @@
         <AdBanner class="order-5 md:order-5" />
 
         <!-- T3 "면적별 경쟁률" 블록 -->
-        <SectionBlock v-if="competitions.length > 0" class="order-6 md:order-6" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
+        <SectionBlock variant="flat" v-if="competitions.length > 0" class="order-6 md:order-6" heading="면적별 경쟁률" subtext="1·2순위 접수자수와 공급세대수 기준 경쟁률입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -192,7 +182,7 @@
         </SectionBlock>
 
         <!-- "당첨 가점 분석" 블록 -->
-        <SectionBlock v-if="validScores.length > 0" class="order-6 md:order-6" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
+        <SectionBlock variant="flat" v-if="validScores.length > 0" class="order-6 md:order-6" heading="당첨 가점 분석" subtext="가점제 적용 단지의 1순위 당첨 가점 · 84점 만점 기준입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -222,7 +212,7 @@
         </SectionBlock>
 
         <!-- "면적별 특별공급 내역" 블록 -->
-        <SectionBlock v-if="hasSpecialSupply" class="order-7 md:order-7" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
+        <SectionBlock variant="flat" v-if="hasSpecialSupply" class="order-7 md:order-7" heading="면적별 특별공급 내역" subtext="특별공급 대상별 세대수를 한눈에 확인합니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -255,7 +245,7 @@
         </SectionBlock>
 
         <!-- "특별공급 신청현황" 블록 -->
-        <SectionBlock v-if="specialStatuses.length > 0" class="order-7 md:order-7" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
+        <SectionBlock variant="flat" v-if="specialStatuses.length > 0" class="order-7 md:order-7" heading="특별공급 신청현황" subtext="특별공급 대상별 접수자수 대비 공급세대수입니다.">
           <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap">
               <thead>
@@ -280,7 +270,7 @@
         <RentalPriceStatsBox v-if="showRentalPriceStats" class="order-7 md:order-7" :subscription-id="subscription.id" :region-name="subscription.regionName" />
 
         <!-- "위치와 로드뷰" 데스크톱 -->
-        <SectionBlock v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-8 md:order-8">
+        <SectionBlock variant="flat" v-if="hasCoords" heading="위치와 로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="hidden md:block order-8 md:order-8">
           <template #right>
             <div class="relative">
               <button
@@ -291,12 +281,12 @@
                 길찾기
                 <span class="material-symbols-outlined text-[14px]">expand_more</span>
               </button>
-              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-line-2 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line-2 overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
                   <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                 </button>
                 <div class="h-px bg-line"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
                   <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                 </button>
               </div>
@@ -319,7 +309,7 @@
         </SectionBlock>
 
         <!-- 위치·로드뷰 (모바일) -->
-        <SectionBlock v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-8 md:order-8">
+        <SectionBlock variant="flat" v-if="hasCoords" heading="위치·로드뷰" subtext="지도와 로드뷰로 공급지의 위치를 확인합니다." class="md:hidden order-8 md:order-8">
           <!-- 모바일 전용 라이브 지도 (데스크톱은 위 사이드 섹션 사용) -->
           <div class="relative h-[220px] w-full rounded-xl overflow-hidden border border-line mb-3">
             <ClientOnly>
@@ -331,7 +321,7 @@
               />
             </ClientOnly>
             <button
-              class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+              class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
               @click="isMapExpanded = true"
             >
               <span class="material-symbols-outlined text-[16px]">open_in_full</span>
@@ -344,13 +334,14 @@
         </SectionBlock>
 
         <!-- 좌표 없음 fallback -->
-        <div v-if="!hasCoords" class="rounded-xl border border-line bg-background-light p-6 text-center order-8 md:order-8">
-          <span class="material-symbols-outlined text-[32px] text-faint mb-2">location_off</span>
+        <div v-if="!hasCoords" class="mt-6 rounded-[10px] border border-line bg-background-light p-6 text-center order-8 md:order-8">
+          <span class="material-symbols-outlined text-[32px] text-faint mb-2" aria-hidden="true">location_off</span>
           <p class="text-sm text-muted">위치 정보가 제공되지 않아 지도를 표시할 수 없습니다.</p>
         </div>
 
 
         <SectionBlock
+          variant="flat"
           v-if="subscription.publicRental"
           class="order-8 md:order-8"
           heading="공공임대 공급정보"
@@ -400,7 +391,7 @@
         </SectionBlock>
 
         <!-- "기본정보" 블록 -->
-        <SectionBlock class="order-9 md:order-9" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
+        <SectionBlock variant="flat" class="order-9 md:order-9" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <div class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">주택유형</span>
@@ -438,27 +429,29 @@
         </SectionBlock>
 
         <!-- 외부 링크 버튼 -->
-        <div class="flex flex-col md:flex-row gap-4 order-9 md:order-9">
-          <a
+        <div class="mt-6 flex flex-col md:flex-row gap-4 order-9 md:order-9">
+          <UiButton
             v-if="subscription.homepage"
+            variant="primary"
             :href="subscription.homepage"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+            class="flex-1 w-full justify-center"
           >
-            <span class="material-symbols-outlined text-[20px]">explore</span>
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">explore</span>
             공식 홈페이지
-          </a>
-          <a
+          </UiButton>
+          <UiButton
             v-if="subscription.pblancUrl"
+            variant="secondary"
             :href="subscription.pblancUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-line-2 text-ink font-medium rounded-xl hover:bg-background-light transition-colors shadow-sm"
+            class="flex-1 w-full justify-center"
           >
-            <span class="material-symbols-outlined text-[20px]">description</span>
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">description</span>
             원문 확인
-          </a>
+          </UiButton>
         </div>
 
         <!-- Ad③: 기본정보 이후 · 관련 가이드 앞 (항상 존재하는 블록 사이로 이동 — 결과 미발표 청약에서 경쟁률·가점 섹션이 비어 광고②와 연속 노출되던 문제 방지) -->
@@ -472,7 +465,7 @@
 
         <!-- 데이터 정보 (멀티루트 → wrapper에 order) -->
         <div class="order-12 md:order-12">
-          <DataSourceSection domain="subscription" :last-sync-date="subscription?.updatedAt ? formatDotDate(subscription.updatedAt) : null" />
+          <DataSourceSection variant="flat" domain="subscription" :last-sync-date="subscription?.updatedAt ? formatDotDate(subscription.updatedAt) : null" />
         </div>
       </div>
     </template>
@@ -512,6 +505,8 @@ import SubscriptionScheduleTimeline from '~/components/subscription/Subscription
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
@@ -1013,23 +1008,6 @@ setMeta({
 </script>
 
 <style scoped>
-.subscription-detail-page :deep(.shadow-card) {
-  box-shadow: none;
-}
-
-.subscription-detail-page :deep(section.bg-white.border.rounded-xl) {
-  border-width: 0;
-  border-radius: 0;
-  padding-left: 0;
-  padding-right: 0;
-  box-shadow: none;
-}
-
-.subscription-detail-page :deep(section.bg-white.border.rounded-xl + section.bg-white.border.rounded-xl) {
-  border-top: 1px solid rgb(var(--color-line, 226 232 240));
-  padding-top: 20px;
-}
-
 .roadview-wrapper :deep(> div) {
   height: 100% !important;
 }

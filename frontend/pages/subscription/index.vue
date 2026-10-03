@@ -1,14 +1,11 @@
 <template>
-  <main class="subscription-hub" :aria-busy="pending ? 'true' : 'false'">
-    <div class="hub-shell">
-      <section class="hub-hero">
-        <p class="hero-kicker">청약</p>
-        <h1>청약·임대, 신청할 공고부터.</h1>
-        <p class="hero-description">
-          한국부동산원 청약홈, 마이홈·LH, 민간 분양사가 제공하는 청약·임대 공고를
-          분양과 임대로 나눠 접수 상태와 공급 규모 중심으로 확인하세요.
-        </p>
-      </section>
+  <div class="subscription-hub bg-white text-ink" :aria-busy="pending ? 'true' : 'false'">
+    <div class="page-container pt-3 md:pt-5 pb-14">
+      <PageHead
+        eyebrow="청약"
+        title="청약·임대, 신청할 공고부터."
+        description="한국부동산원 청약홈, 마이홈·LH, 민간 분양사가 제공하는 청약·임대 공고를 분양과 임대로 나눠 접수 상태와 공급 규모 중심으로 확인하세요."
+      />
 
       <SubscriptionNav />
 
@@ -59,6 +56,7 @@
                 v-for="item in panel.data.items"
                 :key="item.id"
                 :item="item"
+                layout="panel"
               />
             </div>
           </article>
@@ -159,19 +157,20 @@
             <p>분양·민영주택 청약 정보는 한국부동산원 청약Home(applyhome.co.kr) 공개 API 기준입니다.</p>
           </div>
         </div>
-        <DataSourceSection domain="subscription" />
+        <DataSourceSection variant="flat" domain="subscription" />
         <p class="source-copy">
           공공임대(마이홈·LH) 공고는 각 공급기관 원문을 기준으로 합니다.
           실제 신청 전 반드시 청약Home·마이홈·LH 또는 해당 공급기관의 최신 공고를 확인하세요.
         </p>
       </section>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import { useAnalytics } from '~/composables/useAnalytics'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
@@ -239,42 +238,8 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 <style scoped>
 .subscription-hub {
   min-height: 100vh;
-  background: #fff;
-  color: #15213b;
-}
-
-.hub-shell {
-  width: min(100%, 1200px);
-  margin: 0 auto;
-  padding: 30px 24px 56px;
-}
-
-.hub-hero {
-  padding: 20px 0 6px;
-}
-
-.hero-kicker {
-  margin: 0 0 8px;
-  color: #2450dc;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.hub-hero h1 {
-  margin: 0;
-  color: #15213b;
-  font-size: 36px;
-  font-weight: 760;
-  letter-spacing: 0;
-  line-height: 1.28;
-}
-
-.hero-description {
-  max-width: 760px;
-  margin: 14px 0 0;
-  color: #56627a;
-  font-size: 16px;
-  line-height: 1.7;
+  background: rgb(var(--surface-rgb));
+  color: rgb(var(--ink-rgb));
 }
 
 .section-heading {
@@ -287,7 +252,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 
 .section-heading h2 {
   margin: 0;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 22px;
   font-weight: 730;
   letter-spacing: 0;
@@ -295,7 +260,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 
 .section-heading p {
   margin: 6px 0 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
   line-height: 1.55;
 }
@@ -335,12 +300,12 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
   justify-content: space-between;
   gap: 14px;
   padding: 20px 18px 16px;
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
 }
 
 .panel-header h3 {
   margin: 0;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 19px;
   font-weight: 730;
   letter-spacing: 0;
@@ -348,7 +313,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 
 .panel-header p {
   margin: 6px 0 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   line-height: 1.45;
 }
@@ -361,7 +326,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
   min-height: 44px;
   border: 0;
   background: transparent;
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
   cursor: pointer;
   font: inherit;
   font-size: 14px;
@@ -385,13 +350,13 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 }
 
 .panel-total strong {
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
   font-size: 20px;
   font-weight: 760;
 }
 
 .panel-total span {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
 }
 
@@ -400,7 +365,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 }
 
 .notice-list {
-  background: #fff;
+  background: rgb(var(--surface-rgb));
 }
 
 .state-box {
@@ -410,7 +375,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 
 .state-box p {
   margin: 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
   line-height: 1.6;
 }
@@ -451,7 +416,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
-  border-top: 1px solid #e6e9f0;
+  border-top: 1px solid rgb(var(--border-rgb));
 }
 
 .guide-link {
@@ -461,13 +426,13 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
   justify-content: center;
   gap: 7px;
   padding: 16px 0;
-  border-bottom: 1px solid #e6e9f0;
-  color: #15213b;
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  color: rgb(var(--ink-rgb));
   text-decoration: none;
 }
 
 .guide-link:hover {
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
 }
 
 .guide-link strong {
@@ -475,23 +440,23 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 }
 
 .guide-link span {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   line-height: 1.5;
 }
 
 .faq-list {
-  border-top: 1px solid #e6e9f0;
+  border-top: 1px solid rgb(var(--border-rgb));
 }
 
 .faq-list details {
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
 }
 
 .faq-list summary {
   min-height: 44px;
   padding: 14px 0;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   cursor: pointer;
   font-size: 15px;
   font-weight: 650;
@@ -500,14 +465,14 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 .faq-list p {
   margin: 0;
   padding: 0 0 16px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
   line-height: 1.7;
 }
 
 .source-copy {
   margin: 14px 0 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   line-height: 1.65;
 }
@@ -535,7 +500,7 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
 
   .hub-panel + .hub-panel {
     padding-left: 32px;
-    border-left: 1px solid #e6e9f0;
+    border-left: 1px solid rgb(var(--border-rgb));
   }
 
   .panel-header {
@@ -552,52 +517,9 @@ onMounted(() => trackSubscriptionListView({ listType: 'hub' }))
   .notice-list {
     background: transparent;
   }
-
-  .hub-panel :deep(.notice-row) {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px 14px;
-    padding: 20px 0;
-  }
-
-  .hub-panel :deep(.notice-main) {
-    grid-column: 1 / -1;
-  }
-
-  .hub-panel :deep(.notice-name) {
-    font-size: 17px;
-    line-height: 1.55;
-  }
-
-  .hub-panel :deep(.region) {
-    font-size: 13px;
-  }
-
-  .hub-panel :deep(.supply) {
-    font-size: 13px;
-  }
-
-  .hub-panel :deep(.period) {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    text-align: left;
-  }
 }
 
 @media (max-width: 768px) {
-  .hub-shell {
-    padding: 24px 16px 44px;
-  }
-
-  .hub-hero h1 {
-    font-size: 27px;
-  }
-
-  .hero-description {
-    font-size: 15px;
-  }
-
   .section-heading {
     display: block;
   }
