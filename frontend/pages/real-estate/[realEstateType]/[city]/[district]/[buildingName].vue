@@ -4,7 +4,7 @@
     <div v-if="ssrLoading" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
+        <p class="text-muted">{{ UI_MESSAGES.loading }}</p>
       </div>
     </div>
 
@@ -45,55 +45,29 @@
       </Transition>
     </Teleport>
 
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-4 md:pt-5 pb-20 md:pb-14 flex flex-col gap-0">
+    <div class="page-container pt-3 md:pt-5 pb-20 md:pb-14 flex flex-col">
       <div class="order-1 min-w-0 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
         <Breadcrumb :items="breadcrumbItems" />
       </div>
 
-      <section class="estate-detail-head order-2" aria-labelledby="estate-detail-title">
-        <div class="estate-heading-line">
-          <div class="min-w-0">
-            <p class="estate-eyebrow">{{ getDetailEyebrow(propertyMeta?.label ?? '', currentTab) }}</p>
-            <h1 id="estate-detail-title" class="estate-title">{{ buildingName }}</h1>
-            <div v-if="hasReportedAddressAmbiguity" class="estate-address">
-              <a href="#reported-addresses" class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100">
-                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">info</span>
-                주소 후보 {{ reportedAddressCount }}건 · 위치 섹션에서 확인
-              </a>
-            </div>
-            <p v-else class="estate-address">
-              <AddressLine :address="fullAddress" />
-            </p>
-          </div>
-          <button
-            class="estate-share-button"
-            aria-label="이 건물 공유하기"
-            @click="handleShare"
-          >
-            <span class="material-symbols-outlined text-[18px]">share</span>
-            <span class="share-label">공유</span>
-          </button>
+      <PageHead class="order-2" :title="buildingName">
+        <template #actions>
+          <UiButton variant="secondary" aria-label="이 건물 공유하기" @click="handleShare">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">share</span>
+            <span>공유</span>
+          </UiButton>
+        </template>
+        <div v-if="hasReportedAddressAmbiguity" class="mt-3 text-[13px] md:text-sm text-faint">
+          <a href="#reported-addresses" class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100">
+            <span class="material-symbols-outlined text-[15px]" aria-hidden="true">info</span>
+            주소 후보 {{ reportedAddressCount }}건 · 위치 섹션에서 확인
+          </a>
         </div>
+        <p v-else class="mt-3 text-[13px] md:text-sm text-faint">
+          <AddressLine :address="fullAddress" />
+        </p>
 
-        <div class="estate-summary" aria-label="실거래 요약">
-          <div>
-            <span class="estate-summary-label">최근 매매</span>
-            <strong class="estate-summary-price tabular-nums">{{ latestSaleAmountLabel }}</strong>
-            <small>{{ latestSaleDetailLine }}</small>
-          </div>
-          <div>
-            <span class="estate-summary-label">건축연도</span>
-            <strong class="tabular-nums">{{ overviewBuildYearLabel }}</strong>
-          </div>
-          <div>
-            <span class="estate-summary-label">거래된 전용면적</span>
-            <strong class="tabular-nums">{{ overviewAreaRangeLabel }}</strong>
-          </div>
-          <div>
-            <span class="estate-summary-label">6개월 매매 · 전체 면적</span>
-            <strong class="tabular-nums">{{ overviewSaleCount6mLabel }}</strong>
-          </div>
-        </div>
+        <SummaryRow lead class="mt-[22px] md:mt-7" aria-label="실거래 요약" :items="estateSummaryItems" />
         <div v-if="overviewError" class="estate-inline-error" role="alert">
           <span>최근 매매 요약을 불러오지 못했습니다. 가격 흐름과 거래 내역은 마지막 성공 데이터를 유지합니다.</span>
           <button type="button" @click="refreshOverview">요약 다시 불러오기</button>
@@ -105,7 +79,7 @@
           <a href="#location">위치</a>
           <a href="#nearby">주변 정보</a>
         </nav>
-      </section>
+      </PageHead>
 
       <!-- Ad: Hero 직후 (fold 하단) — 모바일 실측 384px 로 폴드 안이라 규격 상한을 둔다.
            높이 미지정이면 AdSense 가 390×390(뷰포트의 46%)을 배정하고 full-bleed 로 번진다.
@@ -519,7 +493,6 @@ import { buildOgMapImageUrl } from '~/utils/ogImageUrl'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { useNearbyComplexes } from '~/composables/useNearbyComplexes'
 import { fetchNearbyForSsr } from '~/utils/realEstateNearbySsr'
-import { getDetailEyebrow } from '~/utils/realEstateDetailLabels'
 import RentRatioBar from '~/components/realEstate/RentRatioBar.vue'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { resolveLatestSaleDeal } from '~/utils/realEstateRecentDeal'
@@ -539,6 +512,9 @@ import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import SummaryRow, { type SummaryItem } from '~/components/common/SummaryRow.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
@@ -1231,6 +1207,14 @@ const overviewSaleCount6mLabel = computed(() => {
   return Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT
 })
 
+// 머리 요약 줄 — 최근 매매를 강조하고 날짜·면적·층을 보조 줄로 단다
+const estateSummaryItems = computed<SummaryItem[]>(() => [
+  { label: '최근 매매', value: latestSaleAmountLabel.value, note: latestSaleDetailLine.value },
+  { label: '건축연도', value: overviewBuildYearLabel.value },
+  { label: '거래된 전용면적', value: overviewAreaRangeLabel.value },
+  { label: '6개월 매매 · 전체 면적', value: overviewSaleCount6mLabel.value },
+])
+
 
 const rentRatioTotal = computed(
   () => (buildingInfo.value?.jeonseCount ?? 0) + (buildingInfo.value?.wolseCount ?? 0),
@@ -1818,98 +1802,6 @@ const hasNearby = computed(() =>
   --estate-paper: #f7f8fb;
 }
 
-.estate-detail-head {
-  padding: 24px 0 10px;
-}
-
-.estate-heading-line {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.estate-eyebrow {
-  display: none;
-}
-
-.estate-title {
-  color: var(--estate-ink);
-  font-size: 27px;
-  font-weight: 720;
-  letter-spacing: -0.045em;
-  line-height: 1.25;
-}
-
-.estate-address {
-  margin-top: 12px;
-  color: var(--estate-muted);
-  font-size: 13px;
-}
-
-.estate-share-button {
-  display: inline-flex;
-  min-height: 44px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 1px solid var(--estate-line);
-  border-radius: 8px;
-  background: #fff;
-  padding: 10px;
-  color: var(--estate-ink);
-  font-size: 14px;
-}
-
-.estate-summary {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 20px 16px;
-  margin: 22px 0 12px;
-  padding: 20px 0 10px;
-  border-top: 1px solid var(--estate-line);
-  align-items: start;
-}
-
-.estate-summary > div:first-child {
-  grid-column: 1 / -1;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--estate-line);
-}
-
-.estate-summary-label {
-  display: flex;
-  min-height: 36px;
-  align-items: flex-end;
-  margin-bottom: 8px;
-  color: var(--estate-muted);
-  font-size: 12px;
-}
-
-.estate-summary strong {
-  display: block;
-  color: var(--estate-ink);
-  font-size: 19px;
-  font-weight: 650;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.estate-summary .estate-summary-price {
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.estate-summary small {
-  display: block;
-  margin-top: 6px;
-  color: var(--estate-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .estate-record-note {
   margin: 8px 0 16px;
   max-width: 36ch;
@@ -2082,55 +1974,6 @@ const hasNearby = computed(() =>
 }
 
 @media (min-width: 768px) {
-  .estate-detail-head {
-    padding: 32px 0 10px;
-  }
-
-  .estate-title {
-    font-size: 36px;
-  }
-
-  .estate-address {
-    font-size: 14px;
-  }
-
-  .estate-share-button {
-    padding: 9px 13px;
-  }
-
-  .estate-summary {
-    grid-template-columns: 1.55fr 0.8fr 1fr 1fr;
-    gap: 24px;
-    margin: 28px 0 12px;
-    padding: 24px 0;
-    align-items: center;
-  }
-
-  .estate-summary > div:first-child {
-    grid-column: auto;
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .estate-summary > div + div {
-    border-left: 1px solid var(--estate-line);
-    padding-left: 26px;
-  }
-
-  .estate-summary-label {
-    display: block;
-    min-height: 0;
-    font-size: 13px;
-  }
-
-  .estate-summary strong {
-    font-size: 21px;
-  }
-
-  .estate-summary small {
-    font-size: 13px;
-  }
-
   .estate-record-note {
     margin-bottom: 24px;
     max-width: none;

@@ -421,6 +421,9 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const h1s = wrapper.findAll('h1')
     expect(h1s.length).toBe(1)
     expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
+    const summary = wrapper.get('[aria-label="실거래 요약"]')
+    expect(summary.element.tagName).toBe('DL')
+    expect(summary.classes()).toContain('summary-row--lead')
   })
 
   it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
@@ -565,6 +568,9 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(src).not.toContain('heroStats')
     expect(src).not.toContain('MobileDetailHeader')
     expect(src).not.toContain('PageHero')
+    expect(src).toContain('<PageHead')
+    expect(src).toContain('estateSummaryItems')
+    expect(src).not.toContain('estate-detail-head')
   })
 
   it('재배치·건축년도 병기 변경 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
