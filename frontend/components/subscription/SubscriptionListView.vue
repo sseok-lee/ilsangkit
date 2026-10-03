@@ -4,15 +4,7 @@
 
     <div class="filter-box" aria-label="공고 검색 필터">
       <nav class="type-tabs" aria-label="공급유형">
-        <NuxtLink
-          v-for="link in typeLinks"
-          :key="link.path"
-          :to="{ path: link.path, query: link.query }"
-          :aria-current="link.active ? 'page' : undefined"
-          class="type-tab"
-        >
-          {{ link.label }}
-        </NuxtLink>
+        <SegmentedControl :items="typeSegmentItems" :model-value="activeTypePath" aria-label="공급유형 선택" />
       </nav>
 
       <form class="filter-controls" @submit.prevent="submitKeyword">
@@ -20,6 +12,7 @@
           <RegionCascadingDropdown
             :city="filters.city"
             :district="filters.district"
+            variant="flat"
             @update:city="(city: string) => applyFilters({ city, district: '' })"
             @update:district="(district: string) => applyFilters({ district })"
           />
@@ -51,16 +44,13 @@
       </p>
     </div>
 
-    <div class="status-tabs" role="group" aria-label="접수 상태">
-      <button
-        v-for="status in statuses"
-        :key="status.value"
-        type="button"
-        :aria-pressed="filters.status === status.value"
-        @click="applyFilters({ status: status.value })"
-      >
-        {{ status.label }}
-      </button>
+    <div class="status-tabs">
+      <SegmentedControl
+        :items="statusSegmentItems"
+        :model-value="filters.status"
+        aria-label="접수 상태"
+        @update:model-value="(value) => applyFilters({ status: value as SubscriptionListFilters['status'] })"
+      />
     </div>
 
     <div v-if="showAds" class="ad-slot">
@@ -168,7 +158,7 @@
       <AdBanner />
     </div>
 
-    <DataSourceSection domain="subscription" class="source-note" />
+    <DataSourceSection domain="subscription" variant="flat" class="source-note" />
 
     <section class="faq" aria-labelledby="subscription-list-faq-title">
       <h2 id="subscription-list-faq-title">공고를 보기 전에</h2>
@@ -192,6 +182,7 @@ import { useSubscriptionList } from '~/composables/useSubscriptionList'
 import { useRegions } from '~/composables/useRegions'
 import RegionCascadingDropdown from '~/components/common/RegionCascadingDropdown.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
+import SegmentedControl from '~/components/common/SegmentedControl.vue'
 import SubscriptionNav from '~/components/subscription/SubscriptionNav.vue'
 import SubscriptionNoticeRow from '~/components/subscription/SubscriptionNoticeRow.vue'
 import { normalizeSubscriptionQuery, subscriptionScopeForPath } from '~/utils/subscriptionListQuery'
@@ -294,6 +285,13 @@ const typeLinks = computed(() => {
   ].map(link => ({ ...link, query: queryForScope(link.scope) }))
 })
 
+const typeSegmentItems = computed(() => typeLinks.value.map((link) => {
+  const qs = new URLSearchParams(link.query).toString()
+  return { value: link.path, label: link.label, to: qs ? `${link.path}?${qs}` : link.path }
+}))
+const activeTypePath = computed(() => typeLinks.value.find((link) => link.active)?.path)
+const statusSegmentItems = computed(() => statuses.value.map((status) => ({ value: status.value, label: status.label })))
+
 watch(() => filters.value.q, (value) => {
   if (import.meta.client && document.activeElement?.id === 'subscription-keyword' && draftKeyword.value !== value) {
     return
@@ -336,62 +334,25 @@ async function handleLoadMore(): Promise<void> {
 
 <style scoped>
 .subscription-list {
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
 }
 
 .filter-box {
   margin-bottom: 28px;
   border-radius: 8px;
-  background: #f7f8fa;
+  background: rgb(var(--paper-rgb));
   padding: 22px 24px;
 }
 
 
 .type-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 18px;
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
   padding-bottom: 17px;
 }
 
-.type-tab {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  border-radius: 5px;
-  color: #15213b;
-  font-size: 14px;
-  padding: 7px 12px;
-}
-
-.type-tab[aria-current='page'] {
-  background: #fff;
-  box-shadow: 0 1px 4px rgb(21 33 59 / 4%);
-  color: #2450dc;
-  font-weight: 650;
-}
-
 .status-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
   margin-bottom: 18px;
-}
-
-.status-tabs button {
-  min-height: 44px;
-  border: 1px solid #e6e9f0;
-  border-radius: 20px;
-  padding: 7px 13px;
-  font-size: 13px;
-}
-
-.status-tabs button[aria-pressed='true'] {
-  border-color: #15213b;
-  background: #15213b;
-  color: #fff;
 }
 
 .filter-controls {
@@ -403,21 +364,20 @@ async function handleLoadMore(): Promise<void> {
 
 .filter-controls label {
   display: block;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 12px;
   font-weight: 550;
 }
 
-.filter-controls :deep(select),
 .filter-controls input {
   display: block;
   width: 100%;
   min-height: 44px;
   margin-top: 6px;
-  border: 1px solid #dce1eb;
+  border: 1px solid rgb(var(--line-strong-rgb));
   border-radius: 5px;
-  background: #fff;
-  color: #15213b;
+  background: rgb(var(--surface-rgb));
+  color: rgb(var(--ink-rgb));
   font-size: 14px;
   padding: 0 12px;
 }
@@ -425,8 +385,8 @@ async function handleLoadMore(): Promise<void> {
 .search-button {
   min-height: 44px;
   border-radius: 5px;
-  background: #2450dc;
-  color: #fff;
+  background: rgb(var(--brand-rgb));
+  color: rgb(var(--surface-rgb));
   font-size: 14px;
   font-weight: 650;
   padding: 0 18px;
@@ -438,7 +398,7 @@ async function handleLoadMore(): Promise<void> {
   justify-content: center;
   min-width: 96px;
   min-height: 44px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -477,8 +437,8 @@ async function handleLoadMore(): Promise<void> {
 .sort-select {
   min-height: 44px;
   border: 0;
-  background: #fff;
-  color: #56627a;
+  background: rgb(var(--surface-rgb));
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   padding: 6px 25px 6px 8px;
 }
@@ -487,10 +447,10 @@ async function handleLoadMore(): Promise<void> {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px 80px 178px;
   gap: 24px;
-  border-top: 1px solid #e6e9f0;
-  border-bottom: 1px solid #e6e9f0;
-  background: #f7f8fa;
-  color: #56627a;
+  border-top: 1px solid rgb(var(--border-rgb));
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  background: rgb(var(--paper-rgb));
+  color: rgb(var(--muted-rgb));
   font-size: 12px;
   padding: 11px 18px;
 }
@@ -506,7 +466,7 @@ async function handleLoadMore(): Promise<void> {
   grid-template-columns: minmax(0, 1fr) 120px 80px 178px;
   gap: 24px;
   align-items: center;
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
   padding: 22px 18px;
 }
 
@@ -514,7 +474,7 @@ async function handleLoadMore(): Promise<void> {
   display: block;
   height: 14px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #eef1f6 0%, #f7f8fa 45%, #eef1f6 100%);
+  background: linear-gradient(90deg, rgb(var(--track-rgb)) 0%, rgb(var(--paper-rgb)) 45%, rgb(var(--track-rgb)) 100%);
 }
 
 .skeleton-line--title {
@@ -524,13 +484,13 @@ async function handleLoadMore(): Promise<void> {
 
 .state-box,
 .empty {
-  border-block: 1px solid #e6e9f0;
+  border-block: 1px solid rgb(var(--border-rgb));
   padding: 65px 20px;
   text-align: center;
 }
 
 .state-box {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
 }
 
 .state-box p,
@@ -544,7 +504,7 @@ async function handleLoadMore(): Promise<void> {
 .empty button,
 .more-error button {
   min-height: 44px;
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
   font-weight: 600;
 }
 
@@ -558,7 +518,7 @@ async function handleLoadMore(): Promise<void> {
 
 .empty p {
   margin: 9px 0 18px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
 }
 
@@ -567,21 +527,21 @@ async function handleLoadMore(): Promise<void> {
   gap: 10px;
   align-items: baseline;
   margin-top: 20px;
-  border-bottom: 1px solid #e6e9f0;
-  color: #56627a;
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
   padding: 15px 0;
 }
 
 .schedule-note strong {
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 13px;
   white-space: nowrap;
 }
 
 .load-status {
   min-height: 1px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 13px;
 }
 
@@ -589,9 +549,9 @@ async function handleLoadMore(): Promise<void> {
   display: block;
   min-width: 200px;
   margin: 26px auto 8px;
-  border: 1px solid #d7deea;
+  border: 1px solid rgb(var(--border-2-rgb));
   border-radius: 6px;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
   padding: 11px 24px;
 }
@@ -617,18 +577,18 @@ async function handleLoadMore(): Promise<void> {
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 36px;
   margin: 36px 0 52px;
-  border-top: 1px solid #e6e9f0;
+  border-top: 1px solid rgb(var(--border-rgb));
   padding-top: 26px;
 }
 
 .faq h2 {
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 20px;
   font-weight: 700;
 }
 
 .faq details {
-  border-bottom: 1px solid #e6e9f0;
+  border-bottom: 1px solid rgb(var(--border-rgb));
   padding: 13px 0;
 }
 
@@ -638,7 +598,7 @@ async function handleLoadMore(): Promise<void> {
 }
 
 .faq p {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 14px;
   line-height: 1.8;
   padding: 10px 0;
@@ -681,25 +641,8 @@ async function handleLoadMore(): Promise<void> {
   }
 
   .type-tabs {
-    gap: 3px;
     margin-bottom: 13px;
     padding-bottom: 12px;
-  }
-
-  .type-tab {
-    min-height: 44px;
-    font-size: 12px;
-    padding: 6px 9px;
-  }
-
-  .status-tabs {
-    gap: 5px;
-  }
-
-  .status-tabs button {
-    min-height: 44px;
-    padding: 6px 10px;
-    font-size: 12px;
   }
 
   .filter-controls {
@@ -711,12 +654,6 @@ async function handleLoadMore(): Promise<void> {
     grid-column: 1 / -1;
   }
 
-  .filter-controls :deep(.grid) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 8px;
-  }
-
-  .filter-controls :deep(select),
   .filter-controls input {
     min-height: 44px;
     padding: 0 9px;

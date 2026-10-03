@@ -126,6 +126,22 @@ describe('SubscriptionListView', () => {
     regionError.value = null
   })
 
+  it('공급유형은 링크 세그먼트, 접수 상태는 라디오 세그먼트다', async () => {
+    const wrapper = mountList({ scope: { category: 'sale' } })
+    await flushPromises()
+
+    const typeNav = wrapper.get('[aria-label="공급유형"]')
+    expect(typeNav.findAll('a').length).toBeGreaterThan(1)
+    expect(typeNav.find('a[aria-current="page"]').exists()).toBe(true)
+    const statusGroup = wrapper.get('[aria-label="접수 상태"]')
+    const radios = statusGroup.findAll('[role="radio"]')
+    expect(radios.length).toBeGreaterThan(1)
+    expect(radios.filter((r) => r.attributes('aria-checked') === 'true')).toHaveLength(1)
+
+    await radios[1].trigger('click')
+    expect(applyFilters).toHaveBeenCalledWith({ status: 'ongoing' })
+  })
+
   it('renders current input from state without querying while typing', async () => {
     const wrapper = mountList({ scope: { category: 'sale' } })
     await flushPromises()
