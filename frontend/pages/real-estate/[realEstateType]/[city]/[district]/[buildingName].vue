@@ -25,12 +25,13 @@
         >
           <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
             <button
-              class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm"
+              class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-card-2"
+              aria-label="지도 닫기"
               @click="isMapExpanded = false"
             >
-              <span class="material-symbols-outlined text-slate-700">close</span>
+              <span class="material-symbols-outlined text-ink" aria-hidden="true">close</span>
             </button>
-            <span class="text-sm font-bold text-slate-900 bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ buildingName }}</span>
+            <span class="text-sm font-bold text-ink bg-white/90 px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm truncate max-w-[60vw]">{{ buildingName }}</span>
             <div class="size-10"></div>
           </div>
           <ClientOnly>
@@ -87,7 +88,7 @@
       <AdBanner class="estate-ad-slot estate-ad-slot--first order-3 md:order-3" sizing="fixed" ad-format="rectangle" :fixed-height="280" />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
-      <SectionBlock id="location" class="estate-flat-section order-9 md:order-11" heading="위치" :subtext="locationSectionSubtext">
+      <SectionBlock variant="flat" id="location" class="order-9 md:order-11" heading="위치" :subtext="locationSectionSubtext">
         <template #right>
           <div v-if="hasMapCoords" class="hidden md:flex items-center gap-1">
             <div class="relative">
@@ -99,12 +100,12 @@
                 길찾기
                 <span class="material-symbols-outlined text-[14px]">expand_more</span>
               </button>
-              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-20">
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
+              <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line overflow-hidden z-20">
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
                   <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                 </button>
-                <div class="h-px bg-slate-100"></div>
-                <button class="w-full px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-gray-50 flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
+                <div class="h-px bg-line"></div>
+                <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(naverMapUrl)">
                   <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                 </button>
               </div>
@@ -131,7 +132,7 @@
               <li
                 v-for="item in reportedAddressItems"
                 :key="item.key"
-                class="rounded-xl border border-amber-100 bg-white px-3 py-3"
+                class="rounded-[10px] border border-amber-100 bg-white px-3 py-3"
               >
                 <AddressLine :address="item.display" />
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -140,7 +141,7 @@
                     :aria-label="`카카오맵에서 ${shortAddressLabel(item.display)} 검색`"
                     target="_blank"
                     rel="noopener"
-                    class="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-medium text-slate-800 transition-colors hover:bg-gray-50"
+                    class="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-background-light"
                   >
                     <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
                     카카오맵
@@ -150,7 +151,7 @@
                     :aria-label="`네이버맵에서 ${shortAddressLabel(item.display)} 검색`"
                     target="_blank"
                     rel="noopener"
-                    class="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-medium text-slate-800 transition-colors hover:bg-gray-50"
+                    class="inline-flex min-h-[40px] items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-background-light"
                   >
                     <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
                     네이버맵
@@ -162,30 +163,20 @@
           <template v-else>
             <AddressLine :address="fullAddress" class="justify-center" />
             <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <a
-                :href="kakaoSearchUrl"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
-              >
+              <UiButton variant="secondary" :href="kakaoSearchUrl" target="_blank" rel="noopener">
                 <img src="/images/icons/kakaomap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
                 카카오맵에서 주소 검색
-              </a>
-              <a
-                :href="naverSearchUrl"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
-              >
+              </UiButton>
+              <UiButton variant="secondary" :href="naverSearchUrl" target="_blank" rel="noopener">
                 <img src="/images/icons/navermap.svg" alt="" class="h-5 w-5 rounded" aria-hidden="true" />
                 네이버맵에서 주소 검색
-              </a>
+              </UiButton>
             </div>
           </template>
         </EmptyState>
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- 지도: 모바일에서도 노출 (짧은 높이 + 크게 보기 버튼) -->
-          <div class="relative rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
+          <div class="relative rounded-[10px] border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <ClientOnly>
               <FacilityMap
                 :center="{ lat: buildingInfo.lat, lng: buildingInfo.lng }"
@@ -194,14 +185,14 @@
               />
             </ClientOnly>
             <button
-              class="md:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-slate-700 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+              class="md:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
               @click="isMapExpanded = true"
             >
               <span class="material-symbols-outlined text-[16px]">open_in_full</span>
               지도 크게 보기
             </button>
           </div>
-          <div class="roadview-wrapper rounded-xl border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
+          <div class="roadview-wrapper rounded-[10px] border border-line overflow-hidden" :class="DETAIL_MAP_MEDIA_HEIGHT">
             <FacilityRoadview :lat="buildingInfo.lat" :lng="buildingInfo.lng" />
           </div>
         </div>
@@ -210,6 +201,7 @@
 
       <!-- "전·월세 거래 비중" 블록 (rent 전용) — 시세추이(order-4) 직후로 승격 -->
       <SectionBlock
+        variant="flat"
         v-if="currentTab === 'rent' && rentRatioTotal > 0"
         class="order-5 md:order-5"
         heading="전·월세 거래 비중"
@@ -218,13 +210,8 @@
         <RentRatioBar :jeonse-count="buildingInfo?.jeonseCount" :wolse-count="buildingInfo?.wolseCount" />
       </SectionBlock>
 
-      <section id="trend" class="estate-flat-section order-4 md:order-4" aria-labelledby="trend-title">
-        <div class="estate-section-head">
-          <div>
-            <h2 id="trend-title">가격 흐름</h2>
-            <p>거래 유형과 전용면적을 함께 확인하세요.</p>
-          </div>
-        </div>
+      <SectionBlock variant="flat" id="trend" class="order-4 md:order-4" aria-labelledby="trend-title" subtext="거래 유형과 전용면적을 함께 확인하세요.">
+        <template #heading><h2 id="trend-title" class="ui-h2 text-strong">가격 흐름</h2></template>
 
         <ExactDealFilters
           v-if="snapshot"
@@ -284,18 +271,15 @@
           :stale-days="RE_STALE_DAYS"
         />
         <p v-if="snapshot" class="estate-data-caveat">필수 신고 정보가 있는 거래 기준</p>
-      </section>
+      </SectionBlock>
 
       <!-- Ad: 시세 추이/비중 ↔ 위치 사이 (데스크톱 md:order-6, 모바일 order-5는 비중 뒤로 tie-break) -->
       <AdBanner class="estate-ad-slot order-5 md:order-6" />
 
-      <section id="transactions" class="estate-flat-section order-6 md:order-7" aria-labelledby="transactions-title">
-        <div class="estate-section-head">
-          <div>
-            <h2 id="transactions-title">거래 내역</h2>
-            <p>선택한 거래 유형·면적·기간의 내역입니다.</p>
-          </div>
-          <div class="estate-source-stack">
+      <SectionBlock variant="flat" id="transactions" class="order-6 md:order-7" aria-labelledby="transactions-title" subtext="선택한 거래 유형·면적·기간의 내역입니다.">
+        <template #heading><h2 id="transactions-title" class="ui-h2 text-strong">거래 내역</h2></template>
+        <template #right>
+          <div class="md:text-right">
             <SourceStamp
               provider="국토교통부"
               :synced-at="rawSyncDate"
@@ -305,7 +289,7 @@
             />
             <p class="estate-data-caveat">필수 신고 정보가 있는 거래 기준</p>
           </div>
-        </div>
+        </template>
         <div v-if="tableError" class="estate-inline-error mb-4" role="alert">
           <span>거래 내역 페이지를 불러오지 못했습니다. 표는 마지막 성공 데이터를 유지합니다.</span>
           <button type="button" @click="retryExactPage">거래 내역 다시 불러오기</button>
@@ -331,7 +315,7 @@
           @page-change="goToExactPage"
           class="mt-4"
         />
-      </section>
+      </SectionBlock>
 
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner class="estate-ad-slot order-7 md:order-8" />
@@ -339,11 +323,12 @@
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
       <div id="nearby" class="estate-nearby-group flex flex-col gap-0 order-12 md:order-12">
         <SectionBlock
+          variant="flat"
           v-if="nearbyByType.apt.length > 0"
           subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
         >
           <template #heading>
-            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+            <h3 class="ui-h2 text-strong flex items-center gap-2">
               <img src="/icons/category/apt.webp?v2" alt="아파트" class="w-6 h-6" width="24" height="24" />
               {{ nearbyHeading('apt') }}
             </h3>
@@ -361,11 +346,12 @@
         </SectionBlock>
 
         <SectionBlock
+          variant="flat"
           v-if="nearbyByType.offitel.length > 0"
           subtext="같은 동 내 오피스텔 단지의 실거래를 함께 확인하세요."
         >
           <template #heading>
-            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+            <h3 class="ui-h2 text-strong flex items-center gap-2">
               <img src="/icons/category/offitel.webp?v2" alt="오피스텔" class="w-6 h-6" width="24" height="24" />
               {{ nearbyHeading('offitel') }}
             </h3>
@@ -383,11 +369,12 @@
         </SectionBlock>
 
         <SectionBlock
+          variant="flat"
           v-if="nearbyByType.villa.length > 0"
           subtext="같은 동 내 빌라 단지의 실거래를 비교해 보세요."
         >
           <template #heading>
-            <h3 class="text-display-3 text-slate-900 flex items-center gap-2">
+            <h3 class="ui-h2 text-strong flex items-center gap-2">
               <img src="/icons/category/villa.webp?v2" alt="빌라" class="w-6 h-6" width="24" height="24" />
               {{ nearbyHeading('villa') }}
             </h3>
@@ -405,19 +392,19 @@
         </SectionBlock>
 
         <!-- 인근 단지 결측: 세 유형이 모두 비면 블록째 사라져 앞뒤 광고가 붙는다. -->
-        <SectionBlock v-if="!hasNearby" heading="인근 단지" subtext="반경 내 등록된 다른 단지가 없습니다.">
+        <SectionBlock variant="flat" v-if="!hasNearby" heading="인근 단지" subtext="반경 내 등록된 다른 단지가 없습니다.">
           <EmptyState
             icon="apartment"
             title="반경 내 다른 단지가 없습니다"
             :description="`${buildingName} 주변에 실거래가가 등록된 다른 단지를 찾지 못했습니다. ${districtName}의 전체 목록에서 비교해보세요.`"
           >
-            <NuxtLink
+            <UiButton
+              variant="secondary"
               :to="`/real-estate/${realEstateTypeParam}/${citySlugParam}/${districtSlugParam}`"
-              class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
             >
               <span class="material-symbols-outlined text-[18px]" aria-hidden="true">apartment</span>
               {{ districtName }} {{ propertyMeta?.label ?? '' }} 전체 보기
-            </NuxtLink>
+            </UiButton>
           </EmptyState>
         </SectionBlock>
       </div>
@@ -425,6 +412,7 @@
 
       <!-- "주변 생활시설" 블록 -->
       <SectionBlock
+        variant="flat"
         class="order-12 md:order-12"
         heading="주변 생활시설"
         :subtext="facilitySectionSubtext"
@@ -436,13 +424,13 @@
           :title="facilityEmptyTitle"
           :description="facilityEmptyDescription"
         >
-          <NuxtLink
+          <UiButton
+            variant="secondary"
             :to="`/${citySlugParam}/${districtSlugParam}`"
-            class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-gray-50"
           >
             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">location_on</span>
             {{ districtName }} 생활시설 전체 보기
-          </NuxtLink>
+          </UiButton>
         </EmptyState>
       </SectionBlock>
 
@@ -451,6 +439,7 @@
 
       <!-- 네이버 블로그 후기 -->
       <BlogReviewSection
+        variant="flat"
         v-if="buildingName"
         class="order-12 md:order-12"
         kind="real-estate"
@@ -459,13 +448,13 @@
       />
 
       <!-- 관련 가이드 -->
-      <RelatedGuides class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
+      <RelatedGuides variant="flat" class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
 
       <!-- 데이터 출처 -->
       <!-- DataSourceSection은 멀티 루트 템플릿(compact/full v-if·v-else)이라 class fall-through가 안 됨 → order를 wrapper div에 부여 -->
       <div class="order-12 md:order-12">
-        <DataSourceSection domain="real-estate" :last-sync-date="lastSyncDate" />
+        <DataSourceSection variant="flat" domain="real-estate" :last-sync-date="lastSyncDate" />
       </div>
     </div>
     </template>
@@ -1795,17 +1784,10 @@ const hasNearby = computed(() =>
 </script>
 
 <style scoped>
-.estate-detail-page {
-  --estate-ink: #101828;
-  --estate-muted: #667085;
-  --estate-line: #e5eaf2;
-  --estate-paper: #f7f8fb;
-}
-
 .estate-record-note {
   margin: 8px 0 16px;
   max-width: 36ch;
-  color: var(--estate-muted);
+  color: rgb(var(--faint-rgb));
   font-size: 12px;
   line-height: 1.7;
 }
@@ -1828,7 +1810,7 @@ const hasNearby = computed(() =>
   flex-shrink: 0;
   border: 1px solid #fdba74;
   border-radius: 8px;
-  background: #fff;
+  background: rgb(var(--surface-rgb));
   padding: 6px 10px;
   color: #9a3412;
   font-size: 12px;
@@ -1837,85 +1819,33 @@ const hasNearby = computed(() =>
 
 .estate-data-caveat {
   margin-top: 6px;
-  color: var(--estate-muted);
+  color: rgb(var(--faint-rgb));
   font-size: 12px;
   line-height: 1.6;
-}
-
-.estate-source-stack {
-  text-align: right;
 }
 
 .estate-section-nav {
   display: flex;
   gap: 22px;
   overflow-x: auto;
-  border-top: 1px solid var(--estate-line);
+  border-top: 1px solid rgb(var(--border-rgb));
   padding-top: 14px;
-  color: var(--estate-muted);
+  color: rgb(var(--faint-rgb));
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .estate-section-nav a:first-child {
-  color: var(--color-primary, #2450dc);
+  color: rgb(var(--brand-rgb));
 }
 
 .estate-ad-slot {
   margin: 18px 0;
 }
 
-.estate-flat-section,
-.estate-nearby-group :deep(section) {
-  border: 0;
-  border-bottom: 1px solid var(--estate-line);
-  border-radius: 0;
-  box-shadow: none;
-  padding: 26px 0;
-}
-
-.estate-section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.estate-section-head h2,
-.estate-flat-section :deep(h2),
-.estate-nearby-group :deep(h2),
-.estate-nearby-group :deep(header h3) {
-  color: var(--estate-ink);
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.35;
-}
-
-.estate-section-head p,
-.estate-flat-section :deep(header p),
-.estate-nearby-group :deep(header p) {
-  margin-top: 7px;
-  color: var(--estate-muted);
-  font-size: 13px;
-}
-
 .estate-exact-filters {
   margin-bottom: 22px;
-}
-
-.estate-exact-filters :deep(form) {
-  background: #fff;
-}
-
-.estate-exact-filters :deep(.grid) {
-  align-items: end;
-}
-
-.estate-exact-filters :deep(select) {
-  border-radius: 7px;
 }
 
 .estate-chart-shell {
@@ -1927,50 +1857,28 @@ const hasNearby = computed(() =>
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  border-top: 1px solid var(--estate-line);
+  border-top: 1px solid rgb(var(--border-rgb));
   padding-top: 18px;
 }
 
 .estate-chart-summary span {
-  color: var(--estate-muted);
+  color: rgb(var(--faint-rgb));
   font-size: 12px;
 }
 
 .estate-chart-summary strong {
   display: block;
   margin-top: 3px;
-  color: var(--estate-ink);
+  color: rgb(var(--ink-rgb));
   font-size: 19px;
   font-weight: 650;
 }
 
 .estate-empty {
-  background: var(--estate-paper);
+  background: rgb(var(--paper-rgb));
   padding: 30px;
   text-align: center;
-  color: var(--estate-muted);
-}
-
-.estate-detail-page :deep(.shadow-card),
-.estate-detail-page :deep(.shadow-sm),
-.estate-detail-page :deep(.shadow-md) {
-  box-shadow: none;
-}
-
-.estate-detail-page :deep(.bg-background-light) {
-  background: var(--estate-paper);
-}
-
-.estate-detail-page :deep(.rounded-xl) {
-  border-radius: 10px;
-}
-
-.estate-detail-page :deep(table) {
-  border-top: 1px solid var(--estate-line);
-}
-
-.estate-detail-page :deep(th) {
-  background: var(--estate-paper);
+  color: rgb(var(--faint-rgb));
 }
 
 @media (min-width: 768px) {
@@ -1993,29 +1901,6 @@ const hasNearby = computed(() =>
     min-height: 280px;
   }
 
-  .estate-flat-section,
-  .estate-nearby-group :deep(section) {
-    padding: 32px 0;
-  }
-
-  .estate-section-head {
-    align-items: baseline;
-    margin-bottom: 22px;
-  }
-
-  .estate-section-head h2,
-  .estate-flat-section :deep(h2),
-  .estate-nearby-group :deep(h2),
-  .estate-nearby-group :deep(header h3) {
-    font-size: 24px;
-  }
-
-  .estate-section-head p,
-  .estate-flat-section :deep(header p),
-  .estate-nearby-group :deep(header p) {
-    font-size: 14px;
-  }
-
   .estate-chart-shell {
     grid-template-columns: minmax(0, 1fr) 200px;
     gap: 36px;
@@ -2024,7 +1909,7 @@ const hasNearby = computed(() =>
   .estate-chart-summary {
     display: block;
     border-top: 0;
-    border-left: 1px solid var(--estate-line);
+    border-left: 1px solid rgb(var(--border-rgb));
     padding: 8px 0 0 26px;
   }
 
@@ -2038,13 +1923,6 @@ const hasNearby = computed(() =>
 
   .estate-chart-summary strong {
     font-size: 23px;
-  }
-
-  .estate-flat-section :deep(section.bg-white.border.border-line.rounded-xl.shadow-card),
-  .estate-nearby-group :deep(section.bg-white.border.border-line.rounded-xl.shadow-card) {
-    border-left-width: 0;
-    border-right-width: 0;
-    border-radius: 0;
   }
 }
 
