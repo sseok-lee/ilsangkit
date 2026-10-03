@@ -5,12 +5,12 @@
     aria-describedby="exact-filter-status"
     @submit.prevent
   >
-    <div class="grid gap-3 md:grid-cols-4">
+    <div class="grid items-end gap-3 md:grid-cols-4">
       <label class="grid gap-1 text-sm font-medium text-strong">
         거래 유형
         <select
           name="mode"
-          class="min-h-11 rounded-md border border-line bg-white px-3 text-sm"
+          class="min-h-11 rounded-[7px] border border-line bg-white px-3 text-sm"
           v-model="currentMode"
           @change="onModeChange"
         >
@@ -24,7 +24,7 @@
         전용면적
         <select
           name="area"
-          class="min-h-11 rounded-md border border-line bg-white px-3 text-sm"
+          class="min-h-11 rounded-[7px] border border-line bg-white px-3 text-sm"
           v-model="currentArea"
           @change="emitArea"
         >
@@ -39,7 +39,7 @@
         조회 기간
         <select
           name="months"
-          class="min-h-11 rounded-md border border-line bg-white px-3 text-sm"
+          class="min-h-11 rounded-[7px] border border-line bg-white px-3 text-sm"
           v-model="currentMonths"
           @change="emitMonths"
         >
@@ -54,7 +54,7 @@
         보증금
         <select
           name="deposit"
-          class="min-h-11 rounded-md border border-line bg-white px-3 text-sm"
+          class="min-h-11 rounded-[7px] border border-line bg-white px-3 text-sm"
           v-model="currentDeposit"
           @change="emitDeposit"
         >

@@ -1,5 +1,5 @@
 <template>
-  <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <section class="page-container py-6">
     <div class="flex items-end justify-between gap-4 mb-4">
       <div>
         <h2 class="text-display-2 text-strong flex items-center gap-2">
@@ -135,7 +135,7 @@ function statusClass(status: HomeSubscriptionItem['status']): string {
   if (status === 'ongoing') return 'bg-red-50 text-red-700'
   if (status === 'upcoming') return 'bg-blue-50 text-blue-700'
   if (status === 'unknown') return 'bg-amber-50 text-amber-700'
-  return 'bg-slate-100 text-slate-600'
+  return 'bg-background-light text-muted'
 }
 
 function supplyLabel(count: number | null): string {

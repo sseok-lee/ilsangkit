@@ -67,52 +67,17 @@
   }
 }
 
-/* ── OD 진화판 상세 페이지 반복 패턴 (Tailwind 유틸로 표현이 번거로운 것만) ──
-   --cat: 페이지 루트([id].vue)에서 카테고리 색을 주입. 미주입 시 브랜드로 폴백. */
+/* 홈 히어로(pages/index.vue) — 루트 색과 보이는 큰 제목 */
 @layer components {
   .housing-redesign {
-    color: #15213B;
-    background: #fff;
+    color: rgb(var(--ink-rgb));
+    background: rgb(var(--surface-rgb));
   }
 
   .housing-redesign .housing-title {
     font-size: 2.25rem;
     line-height: 1.2;
     overflow-wrap: anywhere;
-  }
-
-  .housing-redesign .housing-amount {
-    font-size: 2.25rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .housing-redesign .housing-section {
-    padding: 2rem 0;
-    border-bottom: 1px solid #E6E9F0;
-  }
-
-  .housing-redesign .housing-divider {
-    border-color: #E6E9F0;
-  }
-
-  .housing-redesign .housing-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .housing-redesign .housing-table th {
-    padding: 0.875rem 1rem;
-    background: #F7F8FA;
-    color: #56627A;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-
-  .housing-redesign .housing-table td {
-    padding: 1.1875rem 1rem;
-    border-bottom: 1px solid #E6E9F0;
   }
 
   @media (max-width: 767px) {
@@ -131,6 +96,8 @@
     }
   }
 
+/* ── OD 진화판 상세 페이지 반복 패턴 (Tailwind 유틸로 표현이 번거로운 것만) ──
+   --cat: 페이지 루트([id].vue)에서 카테고리 색을 주입. 미주입 시 브랜드로 폴백. */
   /* 편의시설 칩 (DetailFacilityStatus / DetailBasicInfo) */
   .od-amen {
     display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
@@ -278,6 +245,19 @@
     .summary-row__item:last-child:nth-child(odd) { grid-column: auto; }
     .summary-row__item + .summary-row__item { border-left: 1px solid rgb(var(--border-rgb)); padding-left: 24px; }
     .summary-row__value { font-size: 1.3125rem; }
+  }
+
+  /* SummaryRow lead — 첫 칸 강조(단지 상세 최근 매매). 4칸 전용 */
+  .summary-row--lead { grid-template-columns: 1.3fr 1fr; }
+  .summary-row--lead .summary-row__value { font-size: 1.1875rem; white-space: nowrap; }
+  .summary-row--lead .summary-row__item:first-child { grid-column: 1 / -1; padding-bottom: 18px; border-bottom: 1px solid rgb(var(--border-rgb)); }
+  .summary-row--lead .summary-row__item:first-child .summary-row__value { font-size: 2.25rem; font-weight: 700; line-height: 1.2; }
+  .summary-row__note { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: rgb(var(--muted-rgb)); }
+  @media (min-width: 768px) {
+    .summary-row--lead { grid-template-columns: 1.55fr 0.8fr 1fr 1fr; align-items: center; }
+    .summary-row--lead .summary-row__value { font-size: 1.3125rem; }
+    .summary-row--lead .summary-row__item:first-child { grid-column: auto; padding-bottom: 0; border-bottom: 0; }
+    .summary-row__note { font-size: 13px; }
   }
 
   /* SectionBlock variant="flat"(§3.1) — 박스 없이 위아래 여백 + 아래 구분선 */

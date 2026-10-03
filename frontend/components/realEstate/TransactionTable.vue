@@ -6,7 +6,7 @@
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
         <table class="w-full text-sm tabular-nums">
           <thead>
-            <tr class="border-b border-line">
+            <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
@@ -27,7 +27,7 @@
               class="border-b border-line"
             >
               <td v-for="col in columns" :key="col.key" class="px-4 py-3">
-                <div class="h-4 bg-slate-200 rounded animate-pulse" />
+                <div class="h-4 bg-line rounded animate-pulse" />
               </td>
             </tr>
           </tbody>
@@ -41,9 +41,9 @@
           data-testid="skeleton-card"
           class="rounded-lg border border-line p-4 space-y-3"
         >
-          <div class="h-4 w-2/3 bg-slate-200 rounded animate-pulse" />
-          <div class="h-5 w-1/2 bg-slate-200 rounded animate-pulse" />
-          <div class="h-4 w-1/3 bg-slate-200 rounded animate-pulse" />
+          <div class="h-4 w-2/3 bg-line rounded animate-pulse" />
+          <div class="h-5 w-1/2 bg-line rounded animate-pulse" />
+          <div class="h-4 w-1/3 bg-line rounded animate-pulse" />
         </div>
       </div>
     </template>
@@ -51,7 +51,7 @@
     <!-- Empty state -->
     <div
       v-else-if="transactions.length === 0"
-      class="flex items-center justify-center py-16 text-slate-500 text-sm"
+      class="flex items-center justify-center py-16 text-muted text-sm"
     >
       {{ emptyFiltered('거래 내역') }}
     </div>
@@ -84,7 +84,7 @@
                 tx.cancelDealDay ? 'opacity-50' : '',
               ]"
             >
-              <td class="px-4 py-3 whitespace-nowrap text-slate-600">
+              <td class="px-4 py-3 whitespace-nowrap text-muted">
                 <span>{{ formatDate(tx) }}</span>
                 <span
                   v-if="tx.cancelDealDay"
@@ -93,19 +93,19 @@
                   취소
                 </span>
               </td>
-              <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
+              <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-ink">
                 {{ tx.buildingName }}
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 {{ tx.floor != null ? `${tx.floor}층` : '-' }}
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 {{ formatArea(tx) }}
               </td>
               <td class="px-4 py-3 text-right font-display font-bold text-strong tabular-nums">
                 {{ formatKoreanPrice(tx.dealAmount) }}
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 {{ pricePerPyeong(tx) ?? '-' }}
               </td>
               <td class="px-4 py-3">
@@ -115,14 +115,14 @@
                     'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
                     tx.dealType === '직거래'
                       ? 'bg-amber-50 text-amber-700'
-                      : 'bg-slate-100 text-slate-600',
+                      : 'bg-background-light text-muted',
                   ]"
                 >
                   {{ tx.dealType }}
                 </span>
-                <span v-else class="text-slate-600">-</span>
+                <span v-else class="text-muted">-</span>
               </td>
-              <td class="px-4 py-3 text-slate-500 text-xs">
+              <td class="px-4 py-3 text-muted text-xs">
                 <template v-if="tx.buyerType || tx.sellerType">
                   {{ tx.buyerType || '-' }} / {{ tx.sellerType || '-' }}
                 </template>
@@ -144,7 +144,7 @@
           ]"
         >
           <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">
+            <span class="text-muted">
               {{ formatDate(tx) }}
               <span
                 v-if="tx.cancelDealDay"
@@ -153,7 +153,7 @@
                 취소
               </span>
             </span>
-            <span v-if="!hideBuilding" class="font-medium text-slate-900 truncate ml-2 max-w-[55%] text-right">
+            <span v-if="!hideBuilding" class="font-medium text-ink truncate ml-2 max-w-[55%] text-right">
               {{ tx.buildingName }}
             </span>
           </div>
@@ -167,17 +167,17 @@
                 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
                 tx.dealType === '직거래'
                   ? 'bg-amber-50 text-amber-700'
-                  : 'bg-slate-100 text-slate-600',
+                  : 'bg-background-light text-muted',
               ]"
             >
               {{ tx.dealType }}
             </span>
           </div>
-          <div class="mt-1.5 text-sm text-slate-500">
+          <div class="mt-1.5 text-sm text-muted">
             {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
             <span v-if="pricePerPyeong(tx)" class="ml-1">· 평당 {{ pricePerPyeong(tx) }}</span>
           </div>
-          <div v-if="tx.buyerType || tx.sellerType" class="mt-1 text-xs text-slate-500">
+          <div v-if="tx.buyerType || tx.sellerType" class="mt-1 text-xs text-muted">
             매수 {{ tx.buyerType || '-' }} / 매도 {{ tx.sellerType || '-' }}
           </div>
         </div>
@@ -262,16 +262,16 @@
               :key="tx.id"
               class="border-b border-line hover:bg-background-light transition-colors"
             >
-              <td class="px-4 py-3 whitespace-nowrap text-slate-600">
+              <td class="px-4 py-3 whitespace-nowrap text-muted">
                 {{ formatDate(tx) }}
               </td>
-              <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-slate-900">
+              <td v-if="!hideBuilding" class="px-4 py-3 font-medium text-ink">
                 {{ tx.buildingName }}
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 {{ tx.floor != null ? `${tx.floor}층` : '-' }}
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 {{ formatArea(tx) }}
               </td>
               <td class="px-4 py-3 text-right font-display font-bold text-strong tabular-nums">
@@ -286,7 +286,7 @@
                   {{ formatChangeRate(depositChangeRate(tx)!) }}
                 </div>
               </td>
-              <td class="px-4 py-3 text-right text-slate-600">
+              <td class="px-4 py-3 text-right text-muted">
                 <div>{{ formatMonthlyRent(tx) }}</div>
                 <div
                   v-if="monthlyRentChangeRate(tx) !== null"
@@ -322,9 +322,9 @@
                 >
                   {{ tx.contractType }}
                 </span>
-                <span v-else class="text-slate-600">-</span>
+                <span v-else class="text-muted">-</span>
               </td>
-              <td class="px-4 py-3 text-slate-600">
+              <td class="px-4 py-3 text-muted">
                 {{ tx.contractTerm || '-' }}
               </td>
             </tr>
@@ -340,8 +340,8 @@
           class="rounded-lg border bg-white p-4 border-line"
         >
           <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-500">{{ formatDate(tx) }}</span>
-            <span v-if="!hideBuilding" class="font-medium text-slate-900 truncate ml-2 max-w-[55%] text-right">
+            <span class="text-muted">{{ formatDate(tx) }}</span>
+            <span v-if="!hideBuilding" class="font-medium text-ink truncate ml-2 max-w-[55%] text-right">
               {{ tx.buildingName }}
             </span>
           </div>
@@ -380,7 +380,7 @@
               {{ tx.contractType }}
             </span>
           </div>
-          <div class="mt-1.5 text-sm text-slate-500">
+          <div class="mt-1.5 text-sm text-muted">
             <template v-if="tx.rentType !== '전세' && tx.monthlyRent">
               월세 {{ formatKoreanPrice(tx.monthlyRent) }}
               <span
@@ -396,7 +396,7 @@
             </template>
             {{ tx.floor != null ? `${tx.floor}층` : '-' }} · {{ formatArea(tx) }}
           </div>
-          <div v-if="tx.contractTerm" class="mt-1 text-xs text-slate-500">
+          <div v-if="tx.contractTerm" class="mt-1 text-xs text-muted">
             계약 {{ tx.contractTerm }}
           </div>
         </div>

@@ -1,7 +1,7 @@
 <template>
   <HardLink
     :to="linkUrl"
-    class="block bg-white rounded-xl p-4 shadow-card hover:shadow-card-2 transition-[box-shadow,border-color,transform] duration-200 ease-out border border-line hover:border-primary/30 hover:-translate-y-0.5"
+    class="block bg-white rounded-[10px] p-4 transition-colors duration-200 ease-out border border-line hover:border-primary/30"
   >
     <div class="flex items-start gap-2 mb-2">
       <h3 class="font-display text-strong text-[15px] font-extrabold tracking-tight truncate flex-1 min-w-0">{{ item.buildingName }}</h3>

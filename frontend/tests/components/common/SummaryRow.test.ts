@@ -45,3 +45,31 @@ describe('SummaryRow — tone', () => {
     }
   })
 })
+
+const leadItems = [
+  { label: '최근 매매', value: '12억 5,000만', note: '2026.09 · 84㎡ · 12층' },
+  { label: '건축연도', value: '2000년' },
+  { label: '거래된 전용면적', value: '59~114㎡' },
+  { label: '6개월 매매 · 전체 면적', value: '8건' },
+]
+
+describe('SummaryRow lead·note', () => {
+  it('기본은 lead 클래스가 없고 note 가 없으면 보조 줄도 없다', () => {
+    const w = mount(SummaryRow, { props: { items: leadItems.map(({ note, ...rest }) => rest) } })
+    expect(w.get('dl').classes()).not.toContain('summary-row--lead')
+    expect(w.find('.summary-row__note').exists()).toBe(false)
+  })
+
+  it('lead 면 루트에 summary-row--lead, note 는 값 아래 dd 로 그린다', () => {
+    const w = mount(SummaryRow, { props: { items: leadItems, lead: true }, attrs: { 'aria-label': '실거래 요약' } })
+    const dl = w.get('dl')
+    expect(dl.classes()).toContain('summary-row--lead')
+    expect(dl.attributes('aria-label')).toBe('실거래 요약')
+    const first = w.findAll('.summary-row__item')[0]
+    const dds = first.findAll('dd')
+    expect(dds).toHaveLength(2)
+    expect(dds[0].classes()).toContain('summary-row__value')
+    expect(dds[1].classes()).toContain('summary-row__note')
+    expect(dds[1].text()).toBe('2026.09 · 84㎡ · 12층')
+  })
+})
