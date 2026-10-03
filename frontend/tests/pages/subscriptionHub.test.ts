@@ -19,7 +19,7 @@ describe('subscription hub page contract', () => {
 
   it('renders the required page order with exactly one hub ad slot', () => {
     const order = [
-      'hub-hero',
+      '<PageHead',
       'SubscriptionNav',
       'ongoing-panels',
       '<AdBanner',
@@ -51,13 +51,13 @@ describe('subscription hub page contract', () => {
     expect(page).not.toContain('청약통장 없이도 신청 가능합니다')
   })
 
-  it('keeps the visual spec tokens for the hub title and controls', () => {
+  it('keeps the hub title on PageHead and colors on tokens', () => {
     expect(page).toContain('청약·임대, 신청할 공고부터.')
-    expect(page).toContain('font-size: 36px')
-    expect(page).toContain('font-size: 27px')
+    expect(page).toMatch(/<PageHead[\s\S]*eyebrow="청약"/)
     expect(page).toContain('min-height: 44px')
-    expect(page).toContain('#2450dc')
-    expect(page).toContain('#15213b')
-    expect(page).toContain('#e6e9f0')
+    expect(page).toContain('rgb(var(--brand-rgb))')
+    expect(page).toContain('rgb(var(--ink-rgb))')
+    expect(page).toContain('rgb(var(--border-rgb))')
+    expect(page).toMatch(/<SubscriptionNoticeRow[\s\S]*layout="panel"/)
   })
 })
