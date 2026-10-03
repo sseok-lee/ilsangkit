@@ -11,16 +11,16 @@
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- 지하철역 카드 -->
       <div v-if="transitStations.length > 0" class="rounded-2xl bg-white border border-line overflow-hidden">
-        <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50 bg-sky-50/60">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-line bg-sky-50/60">
           <span class="text-lg">🚇</span>
-          <h4 class="text-sm font-semibold text-slate-700">지하철역</h4>
-          <span class="ml-auto text-[11px] text-slate-500 font-medium">{{ transitStations.length }}곳</span>
+          <h4 class="text-sm font-semibold text-ink">지하철역</h4>
+          <span class="ml-auto text-[11px] text-muted font-medium">{{ transitStations.length }}곳</span>
         </div>
-        <ul class="divide-y divide-slate-50">
+        <ul class="divide-y divide-line-2">
           <li v-for="station in transitStations" :key="station.id">
             <NuxtLink
               :to="`/subway/${station.nameSlug}`"
-              class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+              class="flex items-center gap-3 px-4 py-3 hover:bg-background-light transition-colors"
             >
               <span
                 class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
@@ -28,14 +28,14 @@
               >
                 {{ station.line }}
               </span>
-              <span class="flex-1 text-sm text-slate-700 truncate">{{ station.name }}</span>
+              <span class="flex-1 text-sm text-ink truncate">{{ station.name }}</span>
               <span
                 class="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
                 :class="transitBadgeClass(station.distance)"
               >
                 {{ station.distance }}m
               </span>
-              <span class="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
+              <span class="material-symbols-outlined text-[16px] text-faint">chevron_right</span>
             </NuxtLink>
           </li>
         </ul>
@@ -46,25 +46,25 @@
         :key="group.category"
         class="rounded-2xl bg-white border border-line overflow-hidden"
       >
-        <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-50" :class="categoryBgClass(group.category)">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-line" :class="categoryBgClass(group.category)">
           <span class="text-lg">{{ group.icon }}</span>
-          <h4 class="text-sm font-semibold text-slate-700">{{ group.label }}</h4>
-          <span class="ml-auto text-[11px] text-slate-500 font-medium">{{ group.items.length }}곳</span>
+          <h4 class="text-sm font-semibold text-ink">{{ group.label }}</h4>
+          <span class="ml-auto text-[11px] text-muted font-medium">{{ group.items.length }}곳</span>
         </div>
-        <ul class="divide-y divide-slate-50">
+        <ul class="divide-y divide-line-2">
           <li v-for="facility in group.items" :key="facility.id">
             <HardLink
               :to="`/${facility.category}/${facility.id}`"
-              class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+              class="flex items-center gap-3 px-4 py-3 hover:bg-background-light transition-colors"
             >
-              <span class="flex-1 text-sm text-slate-700 truncate">{{ facility.name }}</span>
+              <span class="flex-1 text-sm text-ink truncate">{{ facility.name }}</span>
               <span
                 class="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
                 :class="distanceBadgeClass(facility.distance)"
               >
                 {{ facility.distance }}m
               </span>
-              <span class="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
+              <span class="material-symbols-outlined text-[16px] text-faint">chevron_right</span>
             </HardLink>
           </li>
         </ul>
@@ -148,7 +148,7 @@ const transitStations = computed<Station[]>(() =>
 function transitBadgeClass(distance: number): string {
   if (distance <= 300) return 'bg-emerald-50 text-emerald-600'
   if (distance <= 700) return 'bg-primary-50 text-primary-500'
-  return 'bg-slate-100 text-slate-500'
+  return 'bg-background-light text-muted'
 }
 
 const { data: facilityResponse, status } = await useAsyncData(
@@ -187,12 +187,12 @@ function categoryBgClass(category: FacilityCategory): string {
     hospital: 'bg-rose-50/60',
     pharmacy: 'bg-amber-50/60',
   }
-  return map[category] ?? 'bg-slate-50/60'
+  return map[category] ?? 'bg-background-light/60'
 }
 
 function distanceBadgeClass(distance?: number): string {
   if (!distance || distance <= 100) return 'bg-emerald-50 text-emerald-600'
   if (distance <= 300) return 'bg-primary-50 text-primary-500'
-  return 'bg-slate-100 text-slate-500'
+  return 'bg-background-light text-muted'
 }
 </script>
