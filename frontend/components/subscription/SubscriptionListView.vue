@@ -349,10 +349,13 @@ async function handleLoadMore(): Promise<void> {
   margin-bottom: 18px;
   border-bottom: 1px solid rgb(var(--border-rgb));
   padding-bottom: 17px;
+  /* 세그먼트는 한 줄이라 좁은 화면에서 넘치면 이 안에서 가로 스크롤 */
+  overflow-x: auto;
 }
 
 .status-tabs {
   margin-bottom: 18px;
+  overflow-x: auto;
 }
 
 .filter-controls {
