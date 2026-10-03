@@ -58,6 +58,7 @@ export const FILES = [
   'pages/subscription/sale/[type].vue',
   'pages/subscription/rent/index.vue',
   'pages/subscription/rent/[type].vue',
+  'components/subscription/SubscriptionNav.vue',
   'pages/auction/index.vue',
   'pages/auction/list.vue',
   'pages/auction/ranking.vue',
