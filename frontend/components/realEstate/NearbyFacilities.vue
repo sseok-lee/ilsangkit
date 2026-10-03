@@ -16,7 +16,7 @@
           <h4 class="text-sm font-semibold text-ink">지하철역</h4>
           <span class="ml-auto text-[11px] text-muted font-medium">{{ transitStations.length }}곳</span>
         </div>
-        <ul class="divide-y divide-line-2">
+        <ul class="divide-y divide-line">
           <li v-for="station in transitStations" :key="station.id">
             <NuxtLink
               :to="`/subway/${station.nameSlug}`"
@@ -51,7 +51,7 @@
           <h4 class="text-sm font-semibold text-ink">{{ group.label }}</h4>
           <span class="ml-auto text-[11px] text-muted font-medium">{{ group.items.length }}곳</span>
         </div>
-        <ul class="divide-y divide-line-2">
+        <ul class="divide-y divide-line">
           <li v-for="facility in group.items" :key="facility.id">
             <HardLink
               :to="`/${facility.category}/${facility.id}`"
