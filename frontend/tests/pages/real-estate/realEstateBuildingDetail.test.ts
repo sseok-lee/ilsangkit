@@ -411,9 +411,8 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(crumbs[5].name).toBe('반포자이')
   })
 
-  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(공용 MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
-  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // ---------------- SEO 회귀 가드 ----------------
+  // 머리는 PageHead 하나(기본 h1)가 모바일·데스크톱을 함께 맡는다 → raw HTML 의 literal <h1> 은 1개여야 한다.
   // 가드: h1 정확히 1개 + 건물명 (중복 h1 회귀 방지).
   it('건물명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 건물명', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')

@@ -321,7 +321,7 @@
       <AdBanner class="estate-ad-slot order-7 md:order-8" />
 
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
-      <div id="nearby" class="estate-nearby-group flex flex-col gap-0 order-12 md:order-12">
+      <div id="nearby" class="flex flex-col gap-0 order-12 md:order-12">
         <SectionBlock
           variant="flat"
           v-if="nearbyByType.apt.length > 0"

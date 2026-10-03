@@ -6,7 +6,7 @@
       <div class="hidden md:block overflow-x-auto rounded-lg overflow-hidden border border-line">
         <table class="w-full text-sm tabular-nums">
           <thead>
-            <tr class="border-b border-line">
+            <tr class="border-b border-line bg-background-light">
               <th
                 v-for="col in columns"
                 :key="col.key"
