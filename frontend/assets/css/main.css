@@ -249,11 +249,13 @@
 
   /* SummaryRow lead — 첫 칸 강조(단지 상세 최근 매매). 4칸 전용 */
   .summary-row--lead { grid-template-columns: 1.3fr 1fr; }
+  .summary-row--lead .summary-row__value { font-size: 1.1875rem; white-space: nowrap; }
   .summary-row--lead .summary-row__item:first-child { grid-column: 1 / -1; padding-bottom: 18px; border-bottom: 1px solid rgb(var(--border-rgb)); }
   .summary-row--lead .summary-row__item:first-child .summary-row__value { font-size: 2.25rem; font-weight: 700; line-height: 1.2; }
   .summary-row__note { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: rgb(var(--muted-rgb)); }
   @media (min-width: 768px) {
     .summary-row--lead { grid-template-columns: 1.55fr 0.8fr 1fr 1fr; align-items: center; }
+    .summary-row--lead .summary-row__value { font-size: 1.3125rem; }
     .summary-row--lead .summary-row__item:first-child { grid-column: auto; padding-bottom: 0; border-bottom: 0; }
     .summary-row__note { font-size: 13px; }
   }
