@@ -17,6 +17,9 @@ const FILES = [
   'pages/privacy.vue',
   'pages/terms.vue',
   'pages/subscription/[id].vue',
+  'pages/index.vue',
+  'components/subscription/HomeSubscriptionSection.vue',
+  'pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue',
 ]
 const ODD_WIDTH = /max-w-(?:6xl|\[(?:1152|1120|1040|1024)px\])/
 

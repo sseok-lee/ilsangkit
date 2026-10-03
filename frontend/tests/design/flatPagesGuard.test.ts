@@ -74,6 +74,15 @@ export const FILES = [
   'components/auction/AuctionBidHistory.vue',
   'components/auction/AuctionPriceCompare.vue',
   'components/auction/AuctionDetailInfo.vue',
+  'pages/index.vue',
+  'components/home/HomeMarketSection.vue',
+  'components/subscription/HomeSubscriptionSection.vue',
+  'components/realEstate/NearbyComplexCard.vue',
+  'components/realEstate/RentRatioBar.vue',
+  'components/realEstate/TransactionTable.vue',
+  'components/realEstate/ExactDealFilters.vue',
+  'components/realEstate/NearbyFacilities.vue',
+  'components/realEstate/DealPriceChart.vue',
 ]
 
 const RAW_GRAY = /\b(?:text|bg|border(?:-[trblxy])?|divide|ring|from|to|via|fill|stroke|placeholder)-(?:gray|slate)-\d{2,3}\b/
