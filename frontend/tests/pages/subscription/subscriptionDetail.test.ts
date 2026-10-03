@@ -100,15 +100,9 @@ const stubs = {
   DataSourceSection: { template: '<div data-testid="data-source" />', props: ['domain', 'lastSyncDate'] },
   AdBanner: { template: '<div data-testid="ad-banner" />' },
   SectionBlock: { template: '<section><h2 v-if="heading">{{ heading }}</h2><slot name="right" /><slot /></section>', props: ['heading', 'subtext'] },
-  // 공용 헤더: 실제처럼 literal h1 1개 + eyebrow 노출 (단일 h1 가드 의미 유지)
-  MobileDetailHeader: {
-    template: '<section class="md:hidden"><span v-if="eyebrow">{{ eyebrow }}</span><h1>{{ title }}</h1></section>',
-    props: ['title', 'eyebrow', 'status', 'stats', 'phone', 'copyable', 'hideDirections', 'kakaoMapUrl', 'naverMapUrl'],
-  },
-  // PageHero: title-tag로 제목 태그 결정(상세는 div 강등 → h1 아님)
-  PageHero: {
-    template: '<section class="hidden md:block"><component :is="titleTag || \'h1\'">{{ title }}</component><dl><template v-for="stat in stats" :key="stat.label"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></template></dl></section>',
-    props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
+  PageHead: {
+    props: ['eyebrow', 'title', 'description', 'titleTag'],
+    template: '<div class="page-head-stub"><p v-if="eyebrow">{{ eyebrow }}</p><h1>{{ title }}</h1><p v-if="description">{{ description }}</p><slot /><slot name="actions" /></div>',
   },
 }
 
