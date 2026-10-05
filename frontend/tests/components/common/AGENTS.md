@@ -14,7 +14,7 @@
 ## For AI Agents
 
 ### Working In This Directory
-- `PageHero`, `SectionBlock`, `Pagination`, `SearchBar`, `CategoryIcon` 테스트 누락 — 커버리지 확장 권장
+- `SectionBlock`, `Pagination`, `SearchBar`, `CategoryIcon` 테스트 누락 — 커버리지 확장 권장
 
 ### Testing Requirements
 - 렌더/props/slot 검증

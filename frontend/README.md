@@ -120,9 +120,9 @@ NUXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 
 ```vue
 <template>
-  <div class="card-base">
-    <h2 class="text-xl font-semibold">{{ title }}</h2>
-  </div>
+  <SectionBlock variant="flat" :heading="title">
+    <slot />
+  </SectionBlock>
 </template>
 
 <script setup lang="ts">
