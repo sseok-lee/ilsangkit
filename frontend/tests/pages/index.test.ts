@@ -243,6 +243,15 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('인기 지역')
   })
 
+  it('인기 지역 칩은 공통 칩(.ui-chip)이다', async () => {
+    const wrapper = await mountSuspended(IndexPage)
+
+    const chip = wrapper.find('a[href="/seoul/"]')
+    expect(chip.exists()).toBe(true)
+    expect(chip.classes()).toContain('ui-chip')
+    expect(chip.classes()).not.toContain('rounded-full')
+  })
+
   it('navigates to search page when search is triggered', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
