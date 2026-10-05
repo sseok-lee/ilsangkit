@@ -54,7 +54,6 @@ vi.mock('~/utils/seoConstants', () => ({
 const baseStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div />' },
   SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
   AdBanner: { template: '<div />' },
   ExplorationFilters: { template: '<div data-test="exploration-filters" />' },

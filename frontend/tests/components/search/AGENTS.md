@@ -9,7 +9,6 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `SearchInput.test.ts` | 입력 디바운스/자동완성 |
 | `SearchFilters.test.ts` | 필터 변경 이벤트 |
 
 ## For AI Agents

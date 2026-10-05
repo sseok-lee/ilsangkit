@@ -20,7 +20,7 @@ vi.stubGlobal('useAsyncData', (_k: string, _h: () => Promise<unknown>) => {
   return Object.assign(Promise.resolve({ data, status, error: ref(null), refresh: vi.fn() }), { data, status, pending: ref(false), error: ref(null), refresh: vi.fn() })
 })
 
-const stubs = { NuxtLink: { template: '<a><slot /></a>', props: ['to'] }, Breadcrumb: true, PageHero: true, SectionBlock: { template: '<section><slot /></section>' }, AdBanner: true, Pagination: true }
+const stubs = { NuxtLink: { template: '<a><slot /></a>', props: ['to'] }, Breadcrumb: true, SectionBlock: { template: '<section><slot /></section>' }, AdBanner: true, Pagination: true }
 
 async function mountSuspended(c: any) {
   const w = mount(defineComponent({ render() { return h(Suspense, null, { default: () => h(c) }) } }), { global: { stubs } })

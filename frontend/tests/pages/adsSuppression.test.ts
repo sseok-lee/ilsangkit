@@ -268,7 +268,6 @@ async function mountRegionAdPage() {
     global: {
       stubs: {
         Breadcrumb: { template: '<nav />' },
-        PageHero: { template: '<header />' },
         SectionBlock: { template: '<section><slot /></section>' },
         DistrictSummaryCard: { template: '<div />' },
         NearbyDistrictsNav: { template: '<div />' },

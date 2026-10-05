@@ -10,13 +10,11 @@
 | File | Description |
 |------|-------------|
 | `DataSourceSection.test.ts` | 데이터 출처 표기 (도메인 인지) |
-| `ErrorBoundary.test.ts` | Vue 에러 경계 |
 
 ## For AI Agents
 
 ### Working In This Directory
-- `PageHero`, `SectionBlock`, `Pagination`, `SearchBar`, `StatusBadge`, `CategoryIcon` 테스트 누락 — 커버리지 확장 권장
-- `ErrorBoundary`는 자식 컴포넌트 throw 시나리오 필요
+- `PageHero`, `SectionBlock`, `Pagination`, `SearchBar`, `CategoryIcon` 테스트 누락 — 커버리지 확장 권장
 
 ### Testing Requirements
 - 렌더/props/slot 검증

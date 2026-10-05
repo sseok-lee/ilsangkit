@@ -12,7 +12,6 @@
 | `FacilityCard.vue` | 카테고리 허브/검색 결과용 시설 카드 |
 | `FacilityList.vue` | 시설 목록 (가상 스크롤/페이지네이션) |
 | `FacilityDetail.vue` | 시설 상세 공용 래퍼 (카테고리별 Detail을 동적 import) |
-| `FacilityFeatureCard.vue` | 시설 핵심 기능 강조 카드 |
 | `FacilityRoadview.vue` | Kakao 로드뷰 임베드 |
 | `OperatingStatusBadge.vue` / `OperatingStatusBanner.vue` | 운영 상태 표시 |
 | `WasteScheduleCard.vue` | 쓰레기 배출 일정 카드 |

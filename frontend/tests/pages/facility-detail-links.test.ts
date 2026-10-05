@@ -63,7 +63,6 @@ vi.mock('~/composables/useKakaoMap', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
-  FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
 }
 
