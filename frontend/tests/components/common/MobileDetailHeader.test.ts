@@ -77,11 +77,14 @@ describe('common/MobileDetailHeader', () => {
     expect(w.find('[data-test="share-pill"]').attributes('aria-label')).toBe('이 시설 공유하기')
   })
 
-  it('stats를 칩으로 렌더하고 color 클래스를 적용한다', () => {
+  it('stats를 SummaryRow 로 렌더한다', () => {
     const w = mount(MobileDetailHeader, { props: { ...base, stats: [{ label: '최근거래', value: '9.8억', color: 'text-primary' }] } })
     expect(w.text()).toContain('최근거래')
     expect(w.text()).toContain('9.8억')
-    expect(w.find('.text-primary').exists()).toBe(true)
+  })
+
+  it('variant 기본값은 flat 이다', () => {
+    expect(mount(MobileDetailHeader, { props: base }).get('section').attributes('data-variant')).toBe('flat')
   })
 
   it('최소 props(title만)로도 크래시 없이 렌더한다', () => {

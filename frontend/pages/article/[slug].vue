@@ -47,8 +47,8 @@
       <div class="mt-8 grid min-w-0 gap-7" :class="readingDocument.toc.length ? 'md:grid-cols-[190px_minmax(0,760px)] md:gap-10' : 'max-w-[760px]'">
         <ContentToc :items="readingDocument.toc" />
         <div class="min-w-0 space-y-7">
-      <!-- "본문" SectionBlock -->
-      <SectionBlock class="reading-body">
+      <!-- "본문" -->
+      <section class="reading-body">
         <p v-if="article.summary" class="mb-7 rounded-md bg-primary-50 p-5 text-sm leading-7 text-muted">{{ article.summary }}</p>
         <div
           class="
@@ -94,7 +94,7 @@
             #{{ keyword }}
           </span>
         </div>
-      </SectionBlock>
+      </section>
 
       <!-- AdBanner: 본문 이후 1회 (항상-렌더 SectionBlock 뒤에 앵커 — 조건부 블록에 인접시키지 않음) -->
       <AdBanner />
@@ -167,7 +167,6 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { getContentCategoryLabel } from '~/utils/contentCategoryLabel'
 import { SITE_URL, VIEW_COUNT_DISPLAY_MIN } from '~/utils/seoConstants'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -281,7 +280,6 @@ if (article.value) {
 </script>
 
 <style scoped>
-.reading-body { border: 0; border-radius: 0; box-shadow: none; padding: 0; }
 .content-reading :deep(.prose) { color: rgb(var(--ink-rgb)); overflow-wrap: anywhere; }
 .content-reading :deep(.prose h2), .content-reading :deep(.prose h3) { scroll-margin-top: 100px; }
 .content-reading :deep(.prose h2) { font-size: 22px; border: 0; margin-top: 32px; }
