@@ -43,6 +43,7 @@ function openNavigation(url: string) {
         <div class="relative">
           <button
             class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
+            :aria-expanded="showNavDropdown"
             @click="showNavDropdown = !showNavDropdown"
           >
             <span aria-hidden="true" class="material-symbols-outlined text-[18px]">directions</span>

@@ -10,7 +10,7 @@ const template = (p: string) => readFileSync(resolve(root, p), 'utf8').split('<s
 const PAGES = ['pages/subscription/[id].vue', 'pages/[category]/[id].vue', 'pages/subway/[slug].vue']
 
 // <span ... class="material-symbols-outlined ..." ...> 태그 전체
-const ICON_TAG = /<span\b[^>]*class="material-symbols-outlined[^"]*"[^>]*>/g
+const ICON_TAG = /<span\b[^>]*class="[^"]*\bmaterial-symbols-outlined\b[^"]*"[^>]*>/g
 // 지도 확대 화면의 아이콘만 있는 카카오맵 길찾기 원형 버튼(size-11). 글자가 있는 드롭다운 링크는 대상이 아니다.
 const KAKAO_LINK = /<a\b(?=[^>]*(?:kakaoMapUrl|map\.kakao\.com\/link\/to))(?=[^>]*size-11)[^>]*>/g
 

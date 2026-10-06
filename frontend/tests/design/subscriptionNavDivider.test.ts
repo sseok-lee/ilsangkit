@@ -26,8 +26,8 @@ describe('청약 머리 × 탭 이중선', () => {
   for (const file of LIST_PAGES) {
     it(`${file}: 목록 컨테이너는 위 여백 없이 탭이 머리 여백에 붙는다`, () => {
       const src = read(file)
-      expect(src).toContain('<div class="page-container pb-5 md:pb-6">')
-      expect(src).not.toContain('<div class="page-container py-5 md:py-6">')
+      expect(src).toMatch(/<div class="page-container\b[^"]*\bpb-5\b/)
+      expect(src).not.toMatch(/<div class="page-container\b[^"]*\bpy-5\b/)
     })
   }
 
