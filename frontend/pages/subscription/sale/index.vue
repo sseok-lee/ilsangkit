@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white">
     <div class="page-container pt-3 md:pt-5">
-      <PageHead title="분양 청약 공고" description="아파트·오피스텔·무순위 청약의 접수기간을 비교하세요.">
+      <PageHead :border="false" title="분양 청약 공고" description="아파트·오피스텔·무순위 청약의 접수기간을 비교하세요.">
         <template #actions>
           <p class="text-right text-xs text-muted md:text-sm">
             <strong class="block font-semibold text-ink md:text-lg">한국부동산원 청약홈</strong>
@@ -10,7 +10,7 @@
         </template>
       </PageHead>
     </div>
-    <div class="page-container py-5 md:py-6">
+    <div class="page-container pb-5 md:pb-6">
       <SubscriptionListView :scope="scope" />
     </div>
   </div>

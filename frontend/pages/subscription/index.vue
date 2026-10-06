@@ -2,6 +2,7 @@
   <div class="subscription-hub bg-white text-ink" :aria-busy="pending ? 'true' : 'false'">
     <div class="page-container pt-3 md:pt-5 pb-14">
       <PageHead
+        :border="false"
         eyebrow="청약"
         title="청약·임대, 신청할 공고부터."
         description="한국부동산원 청약홈, 마이홈·LH, 민간 분양사가 제공하는 청약·임대 공고를 분양과 임대로 나눠 접수 상태와 공급 규모 중심으로 확인하세요."
