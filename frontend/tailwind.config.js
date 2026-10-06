@@ -118,8 +118,7 @@ export default {
         'full': '9999px',
       },
       boxShadow: {
-        'subtle': '0 2px 10px rgba(0, 0, 0, 0.03)',
-        'card': '0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.05)',     // sh-1
+        // 떠 있는 층 전용(스펙 2026-10-02 §7.3). 평면 요소에 그림자를 쓰지 않는다 — tests/design/shadowGuard.test.ts
         'card-2': '0 6px 24px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)',  // sh-2
       },
     },

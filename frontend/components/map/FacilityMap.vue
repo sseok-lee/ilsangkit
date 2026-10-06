@@ -18,7 +18,7 @@
     <div
       v-if="mapError"
       role="alert"
-      class="absolute inset-x-3 bottom-3 rounded-lg border border-red-200 bg-white/95 px-3 py-2 text-sm font-medium text-red-700 shadow-sm"
+      class="absolute inset-x-3 bottom-3 rounded-lg border border-red-200 bg-white/95 px-3 py-2 text-sm font-medium text-red-700 shadow-card-2"
     >
       지도 SDK를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
     </div>

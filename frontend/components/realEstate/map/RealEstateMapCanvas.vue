@@ -6,7 +6,7 @@
       data-testid="map-canvas-error"
       class="absolute inset-0 z-10 flex items-center justify-center bg-background-light/95 px-4"
     >
-      <div class="max-w-sm rounded-lg border border-line bg-white p-4 text-center shadow-card">
+      <div class="max-w-sm rounded-lg border border-line bg-white p-4 text-center">
         <p class="text-sm font-semibold text-slate-900">지도를 불러오지 못했습니다</p>
         <p class="mt-1 text-xs leading-relaxed text-slate-600">{{ loadError }}</p>
         <button
