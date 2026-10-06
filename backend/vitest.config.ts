@@ -24,6 +24,7 @@ export default defineConfig({
       '__tests__/integration/realEstateUrlPreservation.integration.test.ts',
       '__tests__/integration/rehearseReleaseDatabaseFaults.integration.test.ts',
       '__tests__/integration/summaryConsumers.integration.test.ts',
+      '__tests__/integration/affiliateBanners.integration.test.ts',
     ],
     coverage: {
       provider: 'v8',
