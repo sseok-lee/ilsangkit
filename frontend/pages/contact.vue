@@ -1,25 +1,22 @@
 <template>
-  <div class="bg-white text-strong">
-  <main class="help-page mx-auto max-w-[1200px] px-5 py-8 md:px-8 md:py-12">
-    <StaticPageHeader
-      title="문의하기"
-      lead="문의·데이터 오류 신고·제휴 제안을 받습니다."
-    />
+  <div class="bg-white text-ink">
+  <div class="page-container pt-4 pb-12 md:pt-6">
+    <PageHead title="문의하기" description="문의·데이터 오류 신고·제휴 제안을 받습니다." />
 
     <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
-    <div class="min-w-0 space-y-10 text-slate-600 text-sm md:text-base leading-relaxed">
+    <div class="min-w-0 space-y-10 text-muted text-sm md:text-base leading-relaxed">
       <section class="border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           연락처
         </h2>
         <p>
           일상킷 서비스 이용 중 궁금한 점이나 건의사항이 있으시면
           아래 이메일로 문의해 주세요. 확인 후 빠르게 답변드리겠습니다.
         </p>
-        <div class="mt-4 bg-slate-50 rounded-lg p-6">
+        <div class="mt-4 bg-background-light rounded-[10px] p-6">
           <dl class="space-y-3">
             <div>
-              <dt class="text-xs text-slate-500">이메일</dt>
+              <dt class="text-xs text-muted">이메일</dt>
               <dd class="mt-1">
                 <a
                   href="mailto:contact@ilsangkit.co.kr"
@@ -34,31 +31,31 @@
       </section>
 
       <section class="border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           문의 유형별 안내
         </h2>
         <div class="space-y-4">
           <div class="border-b border-line py-5">
-            <h3 class="text-sm font-bold text-slate-800 mb-2">서비스 이용 관련 문의</h3>
+            <h3 class="text-sm font-bold text-ink mb-2">서비스 이용 관련 문의</h3>
             <p class="text-sm">일상킷 서비스 사용 중 겪는 불편사항, 기능 개선 요청, 이용 방법 등에 대해 문의해 주세요.</p>
           </div>
           <div id="data-fix" class="border-b border-line py-5 scroll-mt-28">
-            <h3 class="text-sm font-bold text-slate-800 mb-2">데이터 오류 및 수정 요청</h3>
+            <h3 class="text-sm font-bold text-ink mb-2">데이터 오류 및 수정 요청</h3>
             <p class="text-sm">시설 위치, 운영시간, 전화번호 등의 정보가 실제와 다른 경우 알려주시면 빠르게 수정하겠습니다. 해당 시설의 이름과 정확한 정보를 함께 보내주시면 더 빠른 처리가 가능합니다.</p>
           </div>
           <div class="border-b border-line py-5">
-            <h3 class="text-sm font-bold text-slate-800 mb-2">제휴 및 협업 문의</h3>
+            <h3 class="text-sm font-bold text-ink mb-2">제휴 및 협업 문의</h3>
             <p class="text-sm">일상킷과의 데이터 연동, API 활용, 콘텐츠 협업 등 비즈니스 제휴에 관심이 있으시면 문의해 주세요.</p>
           </div>
           <div class="border-b border-line py-5">
-            <h3 class="text-sm font-bold text-slate-800 mb-2">기타 건의사항</h3>
+            <h3 class="text-sm font-bold text-ink mb-2">기타 건의사항</h3>
             <p class="text-sm">일상킷을 더 좋은 서비스로 만들기 위한 아이디어나 건의사항을 보내주세요. 모든 의견을 소중히 검토합니다.</p>
           </div>
         </div>
       </section>
 
       <section class="border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           답변 안내
         </h2>
         <div class="bg-primary-50 rounded-lg p-5">
@@ -80,7 +77,7 @@
       </section>
 
       <section class="border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           자주 묻는 질문
         </h2>
         <p class="mb-3">
@@ -89,7 +86,7 @@
       </section>
 
       <section class="border-b border-line pb-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">
+        <h2 class="text-lg font-semibold text-ink mb-3">
           관련 페이지
         </h2>
         <ul class="list-disc pl-5 space-y-2">
@@ -112,7 +109,7 @@
         </ul>
       </section>
     </div>
-      <aside class="self-start rounded-lg bg-[#F7F8FA] p-6 lg:sticky lg:top-28">
+      <aside class="self-start rounded-[10px] bg-background-light p-6 lg:sticky lg:top-28">
         <h2 class="mb-4 text-base font-bold">정보 확인과 문의</h2>
         <p class="text-sm leading-7 text-muted">데이터 출처와 이용 안내를 확인하고, 잘못된 정보나 개선 의견을 알려주세요.</p>
         <nav aria-label="도움말 바로가기" class="mt-4 flex flex-col">
@@ -122,11 +119,12 @@
         </nav>
       </aside>
     </div>
-  </main>
+  </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import PageHead from '~/components/common/PageHead.vue'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -144,11 +142,3 @@ setBreadcrumbSchema([
   { name: '문의하기', url: '/contact' },
 ])
 </script>
-
-<style scoped>
-.help-page :deep(h1) { font-size: 28px; line-height: 1.25; }
-.help-page :deep(h1 + p) { margin-top: 16px; }
-.help-page :deep(a:focus-visible), .help-page summary:focus-visible { outline: 2px solid #2450dc; outline-offset: 3px; }
-.help-page :deep(table) { min-width: 540px; }
-@media (min-width: 768px) { .help-page :deep(h1) { font-size: 36px; } }
-</style>

@@ -45,15 +45,15 @@ const dealRows = computed<Row[]>(() =>
   <div class="flex flex-col gap-4">
     <!-- 핵심 스탯 카드 -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="bg-slate-50 rounded-lg p-5 text-center">
+      <div class="bg-background-light rounded-lg p-5 text-center">
         <p class="text-caption text-faint mb-1">최저입찰가</p>
         <p class="text-base font-bold text-primary font-display tabular-nums">{{ formatWonKorean(item.minBidPrc) }}</p>
       </div>
-      <div class="bg-slate-50 rounded-lg p-5 text-center">
+      <div class="bg-background-light rounded-lg p-5 text-center">
         <p class="text-caption text-faint mb-1">입찰방식</p>
         <p class="text-base font-bold text-strong">{{ item.bidMethod ?? statusLabel(item.status) }}</p>
       </div>
-      <div class="bg-slate-50 rounded-lg p-5 text-center">
+      <div class="bg-background-light rounded-lg p-5 text-center">
         <p class="text-caption text-faint mb-1">집행기관</p>
         <p v-if="item.orgNm" class="text-base font-bold text-strong truncate">{{ item.orgNm }}</p>
         <p v-else class="text-sm font-medium text-faint">{{ EMPTY_FIELD_TEXT }}</p>
@@ -61,7 +61,7 @@ const dealRows = computed<Row[]>(() =>
     </div>
 
     <!-- 공매 기본정보 -->
-    <SectionBlock class="property-section" heading="공매 기본정보">
+    <SectionBlock variant="flat" heading="공매 기본정보">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in basicRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>
@@ -71,7 +71,7 @@ const dealRows = computed<Row[]>(() =>
     </SectionBlock>
 
     <!-- 면적 정보 -->
-    <SectionBlock class="property-section" v-if="areaRows.length" heading="면적 정보">
+    <SectionBlock variant="flat" v-if="areaRows.length" heading="면적 정보">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in areaRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>
@@ -81,7 +81,7 @@ const dealRows = computed<Row[]>(() =>
     </SectionBlock>
 
     <!-- 거래 조건 -->
-    <SectionBlock class="property-section" v-if="dealRows.length" heading="거래 조건">
+    <SectionBlock variant="flat" v-if="dealRows.length" heading="거래 조건">
       <dl class="divide-y divide-line -my-1">
         <div v-for="r in dealRows" :key="r.label" class="flex py-2.5 text-sm">
           <dt class="w-28 shrink-0 text-muted">{{ r.label }}</dt>

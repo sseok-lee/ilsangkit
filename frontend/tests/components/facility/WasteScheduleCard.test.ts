@@ -37,6 +37,16 @@ describe('WasteScheduleCard', () => {
     expect(wrapper.get('a').attributes('aria-label')).toContain('상세 정보 보기')
     expect(wrapper.emitted('select')).toBeUndefined()
   })
+
+  it('그림자 없는 10px 테두리 카드이고 hover 는 테두리만 바뀐다', () => {
+    const wrapper = mount(WasteScheduleCard, {
+      props: { region: schedule },
+      global: { stubs: { CategoryIcon: { template: '<span />' } } },
+    })
+    const card = wrapper.get('a')
+    expect(card.classes()).toEqual(expect.arrayContaining(['rounded-[10px]', 'border', 'border-line', 'hover:border-primary']))
+    expect(card.classes().some((c) => /shadow|translate/.test(c))).toBe(false)
+  })
 })
 
 // 운영 API 에는 요일·시간·방법이 다 있는데 카드는 유형 배지만 렌더해,

@@ -13,7 +13,7 @@
       ></span>
       <span
         class="relative inline-flex rounded-full h-2.5 w-2.5"
-        :class="statusInfo.unknown ? 'bg-slate-400' : (statusInfo.isOpen ? 'bg-green-500' : 'bg-red-400')"
+        :class="statusInfo.unknown ? 'bg-faint' : (statusInfo.isOpen ? 'bg-green-500' : 'bg-red-400')"
       ></span>
     </span>
     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -197,5 +197,5 @@ const statusInfo = computed<StatusInfo | null>(() => {
 
 const openClasses = 'bg-green-50 text-green-800 border border-green-200'
 const closedClasses = 'bg-red-50 text-red-800 border border-red-200'
-const neutralClasses = 'bg-slate-50 text-slate-600 border border-slate-200'
+const neutralClasses = 'bg-background-light text-muted border border-line'
 </script>

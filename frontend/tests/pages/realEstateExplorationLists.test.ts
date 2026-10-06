@@ -139,7 +139,6 @@ async function mountSuspended(component: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav />' },
-          PageHero: { template: '<header><slot /></header>' },
           SectionBlock: { template: '<section><slot name="heading" /><slot name="right" /><slot /></section>' },
           ExplorationFilters: { template: '<div data-testid="exploration-filters" />' },
           ExplorationBuildingRow: {
@@ -251,5 +250,17 @@ describe('national, city, and district exploration lists', () => {
     expect(source).not.toContain('avgLatestPrice')
     expect(source).not.toContain('평균 시세')
     expect(source).not.toContain('formatKoreanPrice')
+  })
+
+  it('uses the full domain-aware flat DataSourceSection (no compact) on all three pages', () => {
+    for (const relativePath of [
+      'pages/real-estate/[realEstateType]/index.vue',
+      'pages/real-estate/[realEstateType]/[city]/index.vue',
+      'pages/real-estate/[realEstateType]/[city]/[district]/index.vue',
+    ]) {
+      const source = readFileSync(resolve(process.cwd(), relativePath), 'utf8')
+      expect(source, relativePath).toContain('<DataSourceSection domain="real-estate" variant="flat" />')
+      expect(source, relativePath).not.toMatch(/<DataSourceSection[^>]*\bcompact\b/)
+    }
   })
 })

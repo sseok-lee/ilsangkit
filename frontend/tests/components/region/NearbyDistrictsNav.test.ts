@@ -51,4 +51,13 @@ describe('NearbyDistrictsNav', () => {
     })
     expect(wrapper.text()).toContain('공공화장실')
   })
+
+  it('상자 없이 h3 + UiChip 링크', () => {
+    const wrapper = mount(NearbyDistrictsNav, {
+      props: { citySlug: 'seoul', category: 'toilet', categoryLabel: '공공화장실', districts: nearby },
+    })
+    expect(wrapper.get('h3').text()).toContain('주변 지역')
+    expect(wrapper.findAll('a').every((a) => a.classes().includes('ui-chip'))).toBe(true)
+    expect(wrapper.html()).not.toMatch(/shadow-|rounded-xl|slate-/)
+  })
 })

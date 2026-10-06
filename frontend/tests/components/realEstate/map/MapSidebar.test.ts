@@ -380,7 +380,7 @@ describe('MapSidebar', () => {
       const r = raw as MapRegionItem
       const row = rows[idx]
       expect(row.find('.font-medium').text()).toBe(r.district)
-      expect(row.find('.text-slate-600').text()).toBe(r.name)
+      expect(row.find('.text-muted').text()).toBe(r.name)
       expect(row.text()).toContain(formatPyeongLabel(r))
       const expectedHref = toRealEstateListUrl({ type: 'apt-sale', city: r.name, district: r.district ?? '' })
       expect(row.find('a').attributes('href')).toBe(expectedHref)

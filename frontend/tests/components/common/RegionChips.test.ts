@@ -34,4 +34,21 @@ describe('RegionChips', () => {
     expect(current.exists()).toBe(true)
     expect(current.text()).toBe('서울')
   })
+
+  it('variant="flat" 은 UiChip 링크로 렌더하고 선택 칩에 aria-current·선택 클래스', () => {
+    const w = mountChips({ activeSlug: 'seoul', variant: 'flat' })
+    const links = w.findAll('a')
+    expect(links).toHaveLength(17) // 전체 + 시·도 16 (기존 테스트와 같은 수)
+    expect(links.every((a) => a.classes().includes('ui-chip'))).toBe(true)
+    const current = links.filter((a) => a.attributes('aria-current') === 'page')
+    expect(current.length).toBe(1)
+    expect(current[0].classes()).toContain('ui-chip--selected')
+    expect(w.html()).not.toMatch(/rounded-full|text-slate-/)
+  })
+
+  it('variant 없이도 flat 출력(UiChip, rounded-full 없음)', () => {
+    const w = mountChips()
+    expect(w.findAll('a')[0].classes()).toContain('ui-chip')
+    expect(w.html()).not.toMatch(/rounded-full|text-slate-/)
+  })
 })

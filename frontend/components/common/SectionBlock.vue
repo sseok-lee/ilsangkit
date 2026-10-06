@@ -1,15 +1,12 @@
 <template>
-  <section
-    class="bg-white border border-line rounded-xl shadow-card"
-    :class="paddingClass"
-  >
-    <header v-if="heading || $slots.heading || $slots.right" class="flex flex-col gap-2 md:flex-row md:justify-between md:items-end md:gap-4 mb-3">
+  <section class="section-flat">
+    <header v-if="heading || $slots.heading || $slots.right" class="flex flex-col gap-2 md:flex-row md:justify-between md:items-end md:gap-4 mb-4 md:mb-[22px]">
       <div class="min-w-0">
         <slot name="heading">
           <!-- 페이지 h1 바로 아래 섹션이 표준 사용처 → 기본 h2로 문서 개요 위계 정합 (h1→h3 점프 방지) -->
-          <h2 v-if="heading" class="text-display-2 text-strong">{{ heading }}</h2>
+          <h2 v-if="heading" class="ui-h2 text-strong">{{ heading }}</h2>
         </slot>
-        <p v-if="subtext" class="mt-1 text-faint text-xs md:text-sm">{{ subtext }}</p>
+        <p v-if="subtext" class="mt-[7px] text-muted text-[13px] md:text-sm">{{ subtext }}</p>
       </div>
       <div v-if="$slots.right" class="md:shrink-0">
         <slot name="right" />
@@ -20,22 +17,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   heading?: string
   subtext?: string
-  // 정보 위계에 따른 패딩 variant (shape 브리프: "Hero는 넓게, FAQ는 좁게")
-  size?: 'hero' | 'default' | 'compact'
+  // 흰색 평면형만 남았다(스펙 2026-10-02 §3.1). 호출부의 variant="flat" 은 명시로 남겨 둔다.
+  variant?: 'flat'
 }>(), {
   heading: '',
   subtext: '',
-  size: 'default',
-})
-
-const paddingClass = computed(() => {
-  if (props.size === 'hero') return 'p-5 md:p-6'
-  if (props.size === 'compact') return 'p-3 md:p-4'
-  return 'p-4 md:p-5'
+  variant: 'flat',
 })
 </script>

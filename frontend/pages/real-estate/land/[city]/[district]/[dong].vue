@@ -1,6 +1,6 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pt-3 md:pt-5 pb-10 flex flex-col">
       <Breadcrumb :items="breadcrumbItems" class="order-1 md:order-1" />
 
       <!-- T0: 모바일 핵심정보 헤더 (literal h1 1개 소유). 좌표 없음 → hideDirections(공유만). -->
@@ -9,41 +9,42 @@
         eyebrow="토지 실거래가"
         :stats="mobileHeaderStats"
         hide-directions
+        variant="flat"
         class="order-2 md:order-2"
         @share="handleShare"
       />
 
       <!-- T0: 데스크톱 제목 (title-tag="div"로 강등 → 단일 h1 유지) -->
-      <PageHero
-        class="property-hero hidden md:block order-2 md:order-2"
+      <PageHead
+        class="hidden md:block order-2 md:order-2"
         title-tag="div"
         eyebrow="토지 실거래가"
         :title="`${dong} 토지 실거래가`"
         :description="`${cityName} ${districtName} ${dong} 지역의 토지 매매 실거래가와 평당 시세를 확인하세요.`"
       />
 
-      <div v-if="landError" role="alert" class="order-3 rounded-lg border border-line p-5">
+      <div v-if="landError" role="alert" class="order-3 mt-6 rounded-lg border border-line p-5">
         <p>토지 정보를 불러오지 못했습니다.</p>
         <button type="button" class="min-h-11 px-4 text-primary" @click="refreshLand()">다시 시도</button>
       </div>
 
       <!-- T1: 헤드라인 카드 (대지 평당가) — 첫 광고보다 위로 승격 -->
-      <div class="order-3 md:order-3 property-stat">
-        <div class="text-eyebrow text-slate-500 mb-1">대지(일반 거래) 평당가</div>
+      <div data-testid="land-headline" class="order-3 md:order-3 mt-6 rounded-lg bg-background-light p-5 min-w-0">
+        <div class="text-eyebrow text-muted mb-1">대지(일반 거래) 평당가</div>
         <template v-if="summary && summary.avgPricePerPyeong != null">
           <div class="flex flex-wrap items-baseline gap-2">
-            <strong class="text-display-1 text-slate-900">
+            <strong class="text-display-1 text-ink">
               {{ formatManwonKorean(summary.avgPricePerPyeong) }}
             </strong>
-            <span class="text-caption text-slate-500">
+            <span class="text-caption text-muted">
               (㎡당 {{ formatManwonKorean(pyeongToSqm(summary.avgPricePerPyeong)) }})
             </span>
           </div>
-          <p class="mt-2 text-caption text-slate-500 leading-relaxed">
+          <p class="mt-2 text-caption text-muted leading-relaxed">
             비지분 대지 {{ summary.daeNonShareCount ?? 0 }}건 기준 · 최근 12개월 · 최신 거래 {{ formatLandDealDate(summary.latestDealDate) }} · 지분·도로 자투리 제외
           </p>
         </template>
-        <div v-else class="rounded-xl bg-background-light p-6 text-center text-caption text-slate-500">
+        <div v-else class="rounded-[10px] bg-background-light p-6 text-center text-caption text-muted">
           비지분 대지 거래 없음 — 아래 지목별 시세를 참고하세요
         </div>
       </div>
@@ -51,7 +52,7 @@
       <!-- Ad①: T0/T1 직후 (고가시성 보존) -->
       <AdBanner class="order-4 md:order-4" />
 
-      <SectionBlock v-if="detail" class="property-section order-5 md:order-5 min-w-0" heading="전체 거래 내역" :subtext="txCountLabel">
+      <SectionBlock v-if="detail" variant="flat" class="order-5 md:order-5 min-w-0" heading="전체 거래 내역" :subtext="txCountLabel">
         <form class="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_200px_auto]" @submit.prevent="submitTxSearch">
           <label class="grid gap-1 text-sm text-muted" for="land-tx-keyword">지번·지목·용도지역 검색
             <input id="land-tx-keyword" v-model="txDraft" maxlength="100" class="min-h-11 min-w-0 rounded-lg border border-line px-3 text-ink" placeholder="지번, 지목, 용도지역">
@@ -79,7 +80,7 @@
         <div v-else class="overflow-x-auto">
             <table class="min-w-[760px] w-full text-sm border-collapse tabular-nums">
               <thead>
-                <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
+                <tr class="border-b border-line text-left text-xs font-semibold text-muted">
                   <th class="py-2 pr-3">지번</th>
                   <th class="py-2 pr-3">지목</th>
                   <th class="py-2 pr-3">용도지역</th>
@@ -94,18 +95,18 @@
                 <tr
                   v-for="tx in txItems"
                   :key="tx.id"
-                  class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  class="border-b border-line hover:bg-background-light transition-colors"
                 >
-                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.jibun ?? '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.jimok ?? '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">{{ tx.landUse ?? '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700 text-right font-semibold">{{ formatManwonKorean(tx.dealAmount) }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700 text-right">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
-                  <td class="py-2.5 pr-3 text-slate-700">
+                  <td class="py-2.5 pr-3 text-ink">{{ tx.jibun ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-ink">{{ tx.jimok ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-ink">{{ tx.landUse ?? '-' }}</td>
+                  <td class="py-2.5 pr-3 text-ink text-right">{{ tx.dealArea != null ? tx.dealArea.toLocaleString('ko-KR') : '-' }}</td>
+                  <td class="py-2.5 pr-3 text-ink text-right font-semibold">{{ formatManwonKorean(tx.dealAmount) }}</td>
+                  <td class="py-2.5 pr-3 text-ink text-right">{{ formatManwonKorean(tx.pricePerPyeong) }}</td>
+                  <td class="py-2.5 pr-3 text-ink">
                     {{ tx.dealYear }}.{{ String(tx.dealMonth).padStart(2, '0') }}{{ tx.dealDay != null ? '.' + String(tx.dealDay).padStart(2, '0') : '' }}
                   </td>
-                  <td class="py-2.5 text-slate-500">
+                  <td class="py-2.5 text-muted">
                     <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">지분</span>
                   </td>
                 </tr>
@@ -122,55 +123,55 @@
         <template v-if="detail.statsMeta.isSampleCapped"> · 전체 {{ detail.statsMeta.totalTransactions.toLocaleString('ko-KR') }}건 중 최대 {{ detail.statsMeta.sampleLimit.toLocaleString('ko-KR') }}건 표본</template>
       </p>
       <!-- T1: 지목별 시세 -->
-      <SectionBlock class="property-section order-6 md:order-6" heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
+      <SectionBlock variant="flat" class="order-6 md:order-6" heading="지목별 시세" subtext="지목 그룹별 평균 평당가와 거래 건수입니다.">
         <div v-if="detail && detail.jimokGroups.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <div
             v-for="g in detail.jimokGroups"
             :key="g.group"
-            class="rounded-xl border p-4"
-            :class="g.group === '대지' ? 'border-primary/40 bg-primary-50/40' : 'bg-white border-slate-200'"
+            class="rounded-[10px] border p-4"
+            :class="g.group === '대지' ? 'border-primary/40 bg-primary-50/40' : 'bg-white border-line'"
           >
-            <span class="block text-display-3 text-slate-800">{{ g.group }}</span>
+            <span class="block text-display-3 text-ink">{{ g.group }}</span>
             <template v-if="g.avgPricePerPyeong != null">
-              <span class="block mt-1 text-body font-bold text-slate-900 tabular-nums">
+              <span class="block mt-1 text-body font-bold text-ink tabular-nums">
                 {{ formatManwonKorean(g.avgPricePerPyeong) }}
               </span>
-              <span class="block text-caption text-slate-500 mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
+              <span class="block text-caption text-muted mt-0.5 tabular-nums">{{ g.count.toLocaleString('ko-KR') }}건</span>
             </template>
-            <span v-else class="block mt-1 text-caption text-slate-500 tabular-nums">
+            <span v-else class="block mt-1 text-caption text-muted tabular-nums">
               거래 {{ g.count.toLocaleString('ko-KR') }}건
             </span>
           </div>
         </div>
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
+        <div v-else class="rounded-[10px] bg-background-light p-8 text-center text-muted text-sm">
           지목별 시세 데이터가 없습니다.
         </div>
       </SectionBlock>
 
       <!-- T3: 대지 거래 사례 -->
-      <SectionBlock class="property-section order-7 md:order-7" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
+      <SectionBlock variant="flat" class="order-7 md:order-7" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
         <div v-if="detail && detail.daeSamples.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div
             v-for="tx in detail.daeSamples"
             :key="tx.id"
-            class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-2"
+            class="bg-white rounded-[10px] border border-line p-4 flex flex-col gap-2"
           >
             <div class="flex items-center justify-between">
-              <span class="text-caption text-slate-500 tabular-nums">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
+              <span class="text-caption text-muted tabular-nums">{{ String(tx.dealYear).slice(2) }}.{{ String(tx.dealMonth).padStart(2, '0') }}.{{ tx.dealDay != null ? String(tx.dealDay).padStart(2, '0') : '??' }}</span>
               <span v-if="tx.shareDeal" class="rounded-full bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-700">지분</span>
             </div>
             <div class="flex flex-wrap items-baseline gap-1.5">
-              <strong class="text-body font-bold text-slate-900 tabular-nums">{{ formatManwonKorean(tx.dealAmount) }}</strong>
-              <span v-if="tx.dealArea != null" class="text-caption text-slate-500 tabular-nums">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
+              <strong class="text-body font-bold text-ink tabular-nums">{{ formatManwonKorean(tx.dealAmount) }}</strong>
+              <span v-if="tx.dealArea != null" class="text-caption text-muted tabular-nums">{{ tx.dealArea.toLocaleString('ko-KR') }}㎡</span>
             </div>
-            <div class="text-caption text-slate-600">
+            <div class="text-caption text-muted">
               평당 <span class="font-semibold text-primary tabular-nums">{{ formatManwonKorean(tx.pricePerPyeong) }}</span>
             </div>
-            <div v-if="tx.landUse" class="text-caption text-slate-500">{{ tx.landUse }}</div>
-            <div v-if="tx.jibun" class="text-caption text-slate-300 mt-0.5">{{ tx.jibun }}</div>
+            <div v-if="tx.landUse" class="text-caption text-muted">{{ tx.landUse }}</div>
+            <div v-if="tx.jibun" class="text-caption text-faint mt-0.5">{{ tx.jibun }}</div>
           </div>
         </div>
-        <div v-else class="rounded-xl bg-slate-50 p-8 text-center text-slate-500 text-sm">
+        <div v-else class="rounded-[10px] bg-background-light p-8 text-center text-muted text-sm">
           비지분 대지 거래 사례가 없습니다.
         </div>
       </SectionBlock>
@@ -182,7 +183,7 @@
       >
         <!-- 분기별 대지 평당가 추이 -->
         <SectionBlock
-        class="property-section"
+        variant="flat"
           v-if="detail.priceTimeline.length > 0"
           heading="분기별 대지 평당가 추이"
           subtext="비지분 대지 기준 분기별 평균 평당가입니다."
@@ -190,7 +191,7 @@
           <div class="overflow-x-auto">
             <table class="w-full text-sm border-collapse tabular-nums">
               <thead>
-                <tr class="border-b border-slate-200 text-left text-xs font-semibold text-slate-500">
+                <tr class="border-b border-line text-left text-xs font-semibold text-muted">
                   <th class="py-2 pr-3">분기</th>
                   <th class="py-2 pr-3 text-right">평균 평당가</th>
                   <th class="py-2 text-right">거래</th>
@@ -200,11 +201,11 @@
                 <tr
                   v-for="point in detail.priceTimeline"
                   :key="`${point.year}-Q${point.quarter}`"
-                  class="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  class="border-b border-line hover:bg-background-light transition-colors"
                 >
-                  <td class="py-2 pr-3 text-slate-700">{{ point.year }}년 {{ point.quarter }}Q</td>
-                  <td class="py-2 pr-3 text-slate-700 text-right">{{ formatManwonKorean(point.avgPricePerPyeong) }}</td>
-                  <td class="py-2 text-slate-700 text-right">{{ point.count }}건</td>
+                  <td class="py-2 pr-3 text-ink">{{ point.year }}년 {{ point.quarter }}Q</td>
+                  <td class="py-2 pr-3 text-ink text-right">{{ formatManwonKorean(point.avgPricePerPyeong) }}</td>
+                  <td class="py-2 text-ink text-right">{{ point.count }}건</td>
                 </tr>
               </tbody>
             </table>
@@ -213,7 +214,7 @@
 
         <!-- 용도지역 분포 -->
         <SectionBlock
-        class="property-section"
+        variant="flat"
           v-if="detail.landUseDistribution.length > 0"
           heading="용도지역 분포"
           subtext="거래된 토지의 용도지역별 건수입니다."
@@ -224,8 +225,8 @@
               :key="item.landUse"
               class="flex items-center justify-between rounded-lg border border-line bg-background-light px-3 py-2 text-sm"
             >
-              <span class="text-slate-700">{{ item.landUse }}</span>
-              <span class="font-semibold text-slate-900 tabular-nums">{{ item.count.toLocaleString('ko-KR') }}건</span>
+              <span class="text-ink">{{ item.landUse }}</span>
+              <span class="font-semibold text-ink tabular-nums">{{ item.count.toLocaleString('ko-KR') }}건</span>
             </li>
           </ul>
         </SectionBlock>
@@ -241,12 +242,12 @@
       <AdBanner class="order-10 md:order-10" />
 
       <!-- T5: FAQ -->
-      <SectionBlock class="property-section order-11 md:order-11" heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
-        <p class="text-sm text-slate-700 mb-6 leading-relaxed">{{ pageDescription }}</p>
+      <SectionBlock variant="flat" class="order-11 md:order-11" heading="자주 묻는 질문" subtext="토지 실거래가와 관련된 자주 묻는 질문입니다.">
+        <p class="text-sm text-ink mb-6 leading-relaxed">{{ pageDescription }}</p>
         <dl class="flex flex-col gap-4">
-          <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-xl border border-line bg-white p-4">
-            <dt class="text-body font-semibold text-slate-800">{{ faq.q }}</dt>
-            <dd class="mt-2 text-body text-slate-600 leading-relaxed">{{ faq.a }}</dd>
+          <div v-for="faq in LAND_FAQ" :key="faq.q" class="rounded-[10px] border border-line bg-white p-4">
+            <dt class="text-body font-semibold text-ink">{{ faq.q }}</dt>
+            <dd class="mt-2 text-body text-muted leading-relaxed">{{ faq.a }}</dd>
           </div>
         </dl>
       </SectionBlock>
@@ -254,7 +255,7 @@
 
       <!-- T6: 데이터 출처 (멀티루트 컴포넌트 → wrapper div에 order 부여) -->
       <div class="order-12 md:order-12">
-        <DataSourceSection domain="real-estate" />
+        <DataSourceSection variant="flat" domain="real-estate" />
       </div>
     </div>
   </div>
@@ -271,7 +272,7 @@ import { pyeongToSqm, formatManwonKorean, formatLandDealDate } from '~/types/lan
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import { isTransactionDocumentIndexable } from '~/utils/indexability'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Pagination from '~/components/common/Pagination.vue'
@@ -563,5 +564,3 @@ if (!noindex.value) {
   })
 }
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

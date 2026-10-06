@@ -29,6 +29,7 @@ Thumbs.db
 
 # Planning & Design (local only)
 design/
+!frontend/tests/design/
 design_backup/
 docs_backup/
 specs_backup/

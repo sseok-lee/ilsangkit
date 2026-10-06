@@ -53,4 +53,16 @@ describe('RegionTrashSchedule 조회 실패 표시', () => {
 
     expect(wrapper.text()).toContain('등록된 배출 일정이 없습니다')
   })
+
+  // SectionBlock 을 실제로 써서 #right 슬롯(개수 글자)과 flat 변형을 확인한다.
+  it('평면 섹션 + 개수 글자 "N건", 빈 상태 토큰색', () => {
+    const wrapper = mount(RegionTrashSchedule, {
+      props: { total: 12, loading: false, contact: null, schedules: [], currentPage: 1, totalPages: 1, error: null },
+      global: { stubs },
+    })
+    expect(wrapper.find('.section-flat').exists()).toBe(true)
+    expect(wrapper.html()).not.toMatch(/rounded-full bg-primary\/10|slate-/)
+    // subtext 에도 "12건" 이 있으므로 #right 슬롯 자체를 확인한다
+    expect(wrapper.get('header strong').text()).toBe('12')
+  })
 })

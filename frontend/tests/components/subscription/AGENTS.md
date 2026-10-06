@@ -14,7 +14,7 @@
 ## For AI Agents
 
 ### Working In This Directory
-- **누락**: `SubscriptionCard`, `SubscriptionListView`, `SpecialSupplyCard`, `HomeSubscriptionSection`, `TimelineItem` 테스트 — 확장 권장
+- **누락**: `HomeSubscriptionSection`, `TimelineItem` 테스트 — 확장 권장
 - 청약 유형 분류 동작은 backend 테스트 기준으로 프론트 렌더링 확인
 
 ### Testing Requirements

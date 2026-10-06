@@ -128,7 +128,7 @@ vi.mock('~/composables/useLand', () => ({
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: { template: '<div data-stub="hero" />', props: ['titleTag'] },
+  PageHead: { template: '<div data-stub="hero" />', props: ['titleTag'] },
   MobileDetailHeader: {
     template: '<section data-stub="mobile-header"><h1>{{ title }}</h1></section>',
     props: ['title', 'eyebrow', 'stats', 'hideDirections'],

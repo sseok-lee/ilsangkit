@@ -81,3 +81,53 @@ describe('RelatedGuides', () => {
     expect(wrapper.text()).toContain('가이드 D')
   })
 })
+
+describe('RelatedGuides — variant', () => {
+  const resp = { success: true, data: { items: [item(1, 'a', '가이드 A')] } }
+
+  it('flat 은 section-flat 루트·ui-h2 제목이며 그림자·회색 클래스가 없다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const wrapper = mountWithSuspense({ category: 'hospital', variant: 'flat' })
+    await flushPromises()
+    const section = wrapper.get('section')
+    expect(section.classes()).toContain('section-flat')
+    expect(section.get('h2').classes()).toContain('ui-h2')
+    expect(section.get('h2').text()).toBe('관련 가이드')
+    expect(section.html()).not.toMatch(/shadow-|slate-|gray-/)
+    expect(section.text()).toContain('가이드 A')
+  })
+
+  it('variant 없이도 section-flat 이다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const wrapper = mountWithSuspense({ category: 'hospital' })
+    await flushPromises()
+    expect(wrapper.get('section').classes()).toContain('section-flat')
+    expect(wrapper.html()).not.toMatch(/shadow-|slate-/)
+  })
+
+  it('inline 은 바깥 평면 섹션 없이 제목(h3)과 카드만 그린다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'inline' })
+    await flushPromises()
+    expect(w.find('section.section-flat').exists()).toBe(false)
+    expect(w.get('h3').text()).toBe('관련 가이드')
+    expect(w.get('h3').classes()).toContain('ui-h3')
+    expect(w.findAll('a').length).toBeGreaterThan(1)
+  })
+
+  it('inline 카드 제목은 h4 이다(h3 "관련 가이드" 아래 단계)', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'inline' })
+    await flushPromises()
+    expect(w.findAll('h3')).toHaveLength(1)
+    expect(w.get('h4').text()).toBe('가이드 A')
+  })
+
+  it('flat 카드 제목은 h3 이다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'flat' })
+    await flushPromises()
+    expect(w.find('h4').exists()).toBe(false)
+    expect(w.get('h3').text()).toBe('가이드 A')
+  })
+})

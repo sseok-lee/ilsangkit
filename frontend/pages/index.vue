@@ -1,7 +1,7 @@
 <template>
   <div class="housing-redesign flex flex-col">
     <section class="home-hero-shell w-full border-b border-line bg-white">
-      <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10 pb-8 md:pb-10">
+      <div class="page-container pt-6 md:pt-10 pb-8 md:pb-10">
         <div class="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8 lg:gap-12 items-center">
           <div class="min-w-0">
             <h1 class="sr-only">부동산 실거래가·생활시설 통합 검색 - 일상킷</h1>
@@ -18,7 +18,7 @@
             <div class="w-full md:max-w-[680px] mt-7">
           <form class="relative block" @submit.prevent="handleSearch">
             <label class="sr-only" for="home-hero-search">단지명·동네·시설 검색</label>
-            <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 shadow-card focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
+            <div class="flex items-stretch h-14 rounded-xl md:rounded-2xl bg-white border border-line-2 md:border-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary md:hover:border-line-2 md:focus-within:ring-4 md:focus-within:ring-primary/10 transition-all">
               <div class="flex items-center pl-4 pr-2 text-faint">
                 <span class="material-symbols-outlined">search</span>
               </div>
@@ -43,7 +43,7 @@
                 <button
                   type="submit"
                   aria-label="검색"
-                  class="h-11 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors shadow-md hover:shadow-lg flex items-center gap-1.5"
+                  class="h-11 px-4 md:px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-1.5"
                   @click.prevent="handleSearch"
                 >
                   <span class="material-symbols-outlined text-[18px] md:hidden">search</span>
@@ -86,12 +86,12 @@
       </div>
     </section>
 
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <section class="page-container py-6">
       <HomeMarketSection />
     </section>
 
     <!-- Ad: fold 아래 첫 섹션 경계 (히어로 검색은 홈의 핵심 기능이라 그 위/안에는 두지 않는다) -->
-    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="page-container">
       <AdBanner />
     </div>
 
@@ -99,7 +99,7 @@
     <HomeSubscriptionSection />
 
     <!-- 빠른 생활시설 찾기 (8 아이콘) -->
-    <section id="facilities" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <section id="facilities" class="page-container py-6">
       <div class="mb-4">
         <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">location_on</span>
@@ -112,7 +112,7 @@
           :key="q.id"
           :to="`/${q.id}`"
           :aria-label="q.label"
-          class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl shadow-card hover:border-primary hover:bg-primary/5 transition-all"
+          class="flex flex-col items-center justify-center py-3 px-2 bg-white border border-line rounded-xl hover:border-primary hover:bg-primary/5 transition-colors"
         >
           <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
           <span class="text-[13px] font-semibold text-strong">{{ q.label }}</span>
@@ -121,7 +121,7 @@
     </section>
 
     <!-- 인기 지역 -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <section class="page-container py-4">
       <div class="mb-4">
         <h2 class="text-display-2 text-strong flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
@@ -133,7 +133,7 @@
           v-for="city in CITY_LINKS"
           :key="city.slug"
           :to="`/${city.slug}/`"
-          class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full shadow-card text-strong hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
+          class="ui-chip"
         >
           {{ city.label }}
         </HardLink>
@@ -141,7 +141,7 @@
     </section>
 
     <!-- 오늘의 이슈 -->
-    <section v-if="recentArticles.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <section v-if="recentArticles.length > 0" class="page-container py-6">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-display-2 text-strong flex items-center gap-2">
@@ -162,7 +162,7 @@
           v-for="article in recentArticles"
           :key="article.id"
           :to="`/article/${article.slug}`"
-          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+          class="group bg-white border border-line rounded-xl overflow-hidden hover:border-primary/30 transition-colors duration-200"
         >
           <div class="aspect-video bg-background-light overflow-hidden">
             <img
@@ -192,7 +192,7 @@
     </section>
 
     <!-- 생활 가이드 -->
-    <section v-if="recentGuides.length > 0" class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <section v-if="recentGuides.length > 0" class="page-container py-6">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-display-2 text-strong flex items-center gap-2">
@@ -213,7 +213,7 @@
           v-for="guide in recentGuides"
           :key="guide.id"
           :to="`/guide/${guide.slug}`"
-          class="group bg-white border border-line rounded-xl overflow-hidden shadow-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+          class="group bg-white border border-line rounded-xl overflow-hidden hover:border-primary/30 transition-colors duration-200"
         >
           <div class="aspect-video bg-background-light overflow-hidden">
             <img
@@ -244,13 +244,13 @@
 
     <!-- Ad: 데이터 출처 위 (쿠팡 배너가 있던 자리)
          앞의 생활 가이드·오늘의 이슈는 v-if 조건부라 데이터가 없으면 이 광고가 위로 올라온다. -->
-    <div class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="page-container">
       <AdBanner />
     </div>
 
     <!-- 데이터 출처 요약 -->
-    <section class="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="bg-white border border-line rounded-2xl p-5 shadow-card flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+    <section class="page-container py-6">
+      <div class="bg-white border border-line rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
         <div class="flex items-start gap-3 flex-1">
           <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">verified</span>
           <div>

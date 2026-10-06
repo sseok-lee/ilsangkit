@@ -41,12 +41,7 @@ vi.mock('~/composables/useKakaoMap', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div />' },
-  FacilityFeatureCard: { template: '<div />' },
   Breadcrumb: { template: '<nav />' },
-  PageHero: {
-    template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component></section>',
-    props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
-  },
 }
 
 function baseFacility(over: Partial<FacilityDetail>): FacilityDetail {

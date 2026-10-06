@@ -1,19 +1,18 @@
 <template>
-  <div class="bg-background-light min-h-screen">
-    <div class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" class="mb-4" />
-
-      <!-- Hero -->
-      <PageHero
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="지역 허브"
         :title="`${districtName} 생활 정보`"
         :description="heroDescription"
-        class="mb-5"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- Ad: 헤더 직후 -->
-      <AdBanner class="mb-5" />
+      <AdBanner />
 
       <!-- 로딩 -->
       <div v-if="pending" class="flex justify-center py-20">
@@ -28,20 +27,15 @@
           :cards="realEstateCards"
         />
 
-        <div class="mb-4 rounded-xl border border-line bg-white p-4 md:p-5">
-          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 class="text-display-2 text-slate-900">생활시설 탐색</h2>
-              <p class="mt-1 text-xs text-slate-500 md:text-sm">카테고리를 고르거나 현재 지역 조건으로 전체 시설을 확인하세요.</p>
-            </div>
-            <NuxtLink
-              :to="{ path: '/facilities', query: { city, district } }"
-              class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-4 text-sm font-semibold text-primary hover:bg-primary/10"
-            >
-              생활시설 전체 보기
-            </NuxtLink>
-          </div>
-        </div>
+        <SectionBlock
+          variant="flat"
+          heading="생활시설 탐색"
+          subtext="카테고리를 고르거나 현재 지역 조건으로 전체 시설을 확인하세요."
+        >
+          <template #right>
+            <UiButton variant="secondary" :to="{ path: '/facilities', query: { city, district } }">생활시설 전체 보기</UiButton>
+          </template>
+        </SectionBlock>
 
         <!-- ② 생활시설 현황 -->
         <RegionFacilityCategoryGrid
@@ -54,21 +48,19 @@
         />
 
         <!-- Ad: Facilities 후 -->
-        <div class="mb-6">
-          <AdBanner />
-        </div>
+        <AdBanner />
 
         <!-- ③ 교차 CTA -->
         <RegionRealEstateCta :area-name="districtName" />
 
         <!-- 데이터 출처 -->
-        <DataSourceSection domain="facility" compact class="mt-2" />
+        <DataSourceSection domain="facility" compact variant="flat" />
       </div>
 
       <!-- 에러 -->
-      <div v-else class="rounded-xl bg-red-50 border border-red-200 p-8 text-center">
+      <div v-else class="mt-6 rounded-xl bg-red-50 border border-red-200 p-8 text-center">
         <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+          <span class="material-symbols-outlined text-[28px] text-red-400" aria-hidden="true">error_outline</span>
         </div>
         <p class="text-red-800 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
         <div class="mt-4 flex items-center justify-center gap-2">
@@ -76,21 +68,11 @@
             class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
             @click="retryFetch"
           >
-            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
             다시 시도
           </button>
-          <NuxtLink
-            :to="`/${city}`"
-            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            {{ cityName }} 허브로
-          </NuxtLink>
-          <NuxtLink
-            to="/"
-            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            홈으로
-          </NuxtLink>
+          <UiButton variant="secondary" :to="`/${city}`">{{ cityName }} 허브로</UiButton>
+          <UiButton variant="secondary" to="/">홈으로</UiButton>
         </div>
       </div>
     </div>
@@ -104,6 +86,9 @@ import { formatRegionAvgPrice } from '~/utils/regionPrice'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionFacilityCategoryGrid from '~/components/region/RegionFacilityCategoryGrid.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -219,7 +204,7 @@ const realEstateCards = computed(() => {
   ]
 })
 
-// 서술형 설명 (PageHero description으로 통합)
+// 서술형 설명 (PageHead description으로 통합)
 const heroDescription = computed(() => {
   const primary = `${cityName.value} ${districtName.value}의 부동산 시세와 생활시설을 한눈에 확인하세요`
   if (!areaData.value?.facilities) return primary

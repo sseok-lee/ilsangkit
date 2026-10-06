@@ -1,38 +1,41 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="공매"
         :title="pageHeading"
         :description="`온비드 부동산 공매 물건을 지역·용도·상태별로 조회하세요.`"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- 필터 -->
-      <SectionBlock class="property-section property-filter-pane" heading="필터" subtext="용도·상태·지역으로 공매 물건을 좁혀보세요.">
-        <AuctionFilters
-          :keyword="keyword"
-          :status-mode="statusMode"
-          @update:keyword="onKeyword"
-          @update:status-mode="onStatusMode"
-          :usage="usage"
-          :status="filterStatus"
-          :city="filterCity"
-          :district="filterDistrict"
-          @update:usage="onUsage"
-          @update:status="onStatus"
-          @update:city="onCity"
-          @update:district="onDistrict"
-        />
-        <label class="mt-4 grid gap-1 text-sm text-muted" for="auction-sort">정렬
-          <select id="auction-sort" :value="sort" class="min-h-11 rounded-lg border border-line px-3 text-ink" @change="applyQuery({ sort: ($event.target as HTMLSelectElement).value, page: undefined })">
-            <option value="deadline" :selected="sort === 'deadline'">마감 임박순</option>
-            <option value="apsl" :selected="sort === 'apsl'">감정가 높은순</option>
-            <option value="bidRate" :selected="sort === 'bidRate'">낙찰가율 높은순</option>
-          </select>
-        </label>
+      <SectionBlock variant="flat" heading="필터" subtext="용도·상태·지역으로 공매 물건을 좁혀보세요.">
+        <div class="rounded-lg bg-background-light p-5">
+          <AuctionFilters
+            :keyword="keyword"
+            :status-mode="statusMode"
+            @update:keyword="onKeyword"
+            @update:status-mode="onStatusMode"
+            :usage="usage"
+            :status="filterStatus"
+            :city="filterCity"
+            :district="filterDistrict"
+            @update:usage="onUsage"
+            @update:status="onStatus"
+            @update:city="onCity"
+            @update:district="onDistrict"
+          />
+          <label class="mt-4 grid gap-1 text-sm text-muted" for="auction-sort">정렬
+            <select id="auction-sort" :value="sort" class="min-h-11 rounded-lg border border-line px-3 text-ink" @change="applyQuery({ sort: ($event.target as HTMLSelectElement).value, page: undefined })">
+              <option value="deadline" :selected="sort === 'deadline'">마감 임박순</option>
+              <option value="apsl" :selected="sort === 'apsl'">감정가 높은순</option>
+              <option value="bidRate" :selected="sort === 'bidRate'">낙찰가율 높은순</option>
+            </select>
+          </label>
+        </div>
       </SectionBlock>
 
       <!-- Ad: 필터 직후 (시설·부동산 목록 페이지와 동일 위치) -->
@@ -45,7 +48,7 @@
       </div>
       <p v-else-if="pending" role="status" class="py-10 text-center text-muted">데이터를 불러오는 중입니다.</p>
       <SectionBlock
-        class="property-section"
+        variant="flat"
         v-else-if="data && data.items.length > 0"
         :heading="`${pageHeading} 목록`"
         subtext="감정가·최저가와 입찰 마감일을 확인하세요."
@@ -67,15 +70,15 @@
         />
       </SectionBlock>
 
-      <SectionBlock class="property-section" v-else-if="data && data.items.length === 0" :heading="`${pageHeading} 목록`">
+      <SectionBlock variant="flat" v-else-if="data && data.items.length === 0" :heading="`${pageHeading} 목록`">
         <EmptyState icon="gavel" title="조회된 공매 물건이 없습니다" description="필터를 변경하거나 전체 목록을 확인해 보세요.">
           <div class="flex items-center justify-center gap-3">
             <button
               v-if="hasActiveFilter"
-              class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+              class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-background-light text-ink rounded-lg text-sm font-medium hover:bg-line transition-colors"
               @click="resetFilters"
             >
-              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[16px]">refresh</span>
               필터 초기화
             </button>
             <NuxtLink
@@ -88,13 +91,13 @@
         </EmptyState>
       </SectionBlock>
 
-      <SectionBlock class="property-section" v-else :heading="`${pageHeading} 목록`">
+      <SectionBlock variant="flat" v-else :heading="`${pageHeading} 목록`">
         <div class="rounded-xl bg-background-light p-12 text-center">
           <p class="text-muted text-sm">데이터를 불러오는 중입니다.</p>
         </div>
       </SectionBlock>
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>
 </template>
@@ -112,7 +115,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import AuctionCard from '~/components/auction/AuctionCard.vue'
 import AuctionFilters from '~/components/auction/AuctionFilters.vue'
 import Pagination from '~/components/common/Pagination.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -309,5 +312,3 @@ useHead(() => {
   }
 })
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

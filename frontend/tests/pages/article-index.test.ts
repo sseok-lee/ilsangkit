@@ -101,7 +101,6 @@ function mockUseAsyncDataInvoking() {
 
 const globalStubs = {
   Breadcrumb: true,
-  PageHero: true,
   SectionBlock: { template: '<section><slot name="right" /><slot /></section>' },
   Pagination: true,
 }

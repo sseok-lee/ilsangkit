@@ -6,7 +6,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 defineProps<{ item: AuctionItem }>()
 </script>
 <template>
-  <SectionBlock heading="입찰 정보">
+  <SectionBlock variant="flat" heading="입찰 정보">
     <dl class="grid grid-cols-2 gap-y-2 text-sm">
       <dt class="text-muted">감정가</dt><dd class="text-right font-medium font-display tabular-nums text-strong">{{ formatWonKorean(item.apslAssAmt) }}</dd>
       <dt class="text-muted">최저입찰가</dt><dd class="text-right font-medium font-display tabular-nums text-strong">{{ formatWonKorean(item.minBidPrc) }}</dd>

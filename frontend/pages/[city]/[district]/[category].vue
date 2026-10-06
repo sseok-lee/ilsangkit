@@ -1,22 +1,24 @@
 <template>
-  <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
-
-    <!-- Hero -->
-    <PageHero
-      :eyebrow="isTrash ? '지역 쓰레기 배출' : '지역 시설 목록'"
-      :title="heroTitle"
-      :description="heroDescription"
-    />
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-8 md:pb-10 flex flex-col">
+      <PageHead
+        :eyebrow="isTrash ? '지역 쓰레기 배출' : '지역 시설 목록'"
+        :title="heroTitle"
+        :description="heroDescription"
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
     <!-- 지역 요약 (non-trash) -->
     <SectionBlock
+      variant="flat"
       v-if="summary && !isTrash"
       heading="지역 요약"
       subtext="이 지역의 전체 개수·상위 동·주변 지역을 한눈에 확인하세요."
     >
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="flex flex-col gap-6">
         <DistrictSummaryCard
           :summary="summary"
           :district-name="districtName"
@@ -34,6 +36,7 @@
     <!-- 진료과목 필터 (병원 전용) -->
     <HospitalDepartmentFilter
       v-if="category === 'hospital' && !isTrash"
+      variant="flat"
       v-model="selectedDepartments"
       @apply="handleDepartmentApply"
     />
@@ -95,7 +98,8 @@
     />
 
     <!-- 데이터 출처 -->
-    <DataSourceSection domain="facility" :category="(category as FacilityCategory)" />
+    <DataSourceSection variant="flat" domain="facility" :category="(category as FacilityCategory)" />
+    </div>
   </div>
 </template>
 
@@ -120,7 +124,7 @@ import { resolveRegionDisplay } from '~/utils/regionDisplayState'
 import { shouldShowTrashRegionAd } from '~/utils/trashRegionAds'
 import type { FacilityCategory, Facility } from '~/types/facility'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionRelatedCategories from '~/components/region/RegionRelatedCategories.vue'
 import RegionTrashSchedule from '~/components/region/RegionTrashSchedule.vue'

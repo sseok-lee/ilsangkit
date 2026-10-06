@@ -64,6 +64,31 @@ describe('RegionCascadingDropdown', () => {
     const text = mountIt({ city: 'seoul', cityValueMode: 'slug' }).text()
     expect(text).toContain('강남구')
   })
+
+  it('variant 없이도 flat 출력: 흰 바탕·7px·44px select, bg-slate-50 없음', () => {
+    const wrapper = mountIt()
+    const select = wrapper.get('select[aria-label="시/도 선택"]')
+    expect(select.classes()).toEqual(expect.arrayContaining(['bg-white', 'rounded-[7px]', 'min-h-[44px]']))
+    expect(select.classes()).not.toContain('bg-slate-50')
+  })
+
+  it('variant flat: 흰 바탕·1px 선·7px·44px select, 회색 계열 없음', () => {
+    const wrapper = mountIt({ variant: 'flat', city: '서울' })
+    for (const label of ['시/도 선택', '구/군 선택']) {
+      const select = wrapper.get(`select[aria-label="${label}"]`)
+      expect(select.classes()).toEqual(expect.arrayContaining([
+        'bg-white', 'border', 'border-line', 'rounded-[7px]', 'min-h-[44px]', 'pr-9', 'text-ink',
+      ]))
+      expect(select.classes().some((c) => /slate|gray/.test(c))).toBe(false)
+    }
+    for (const label of wrapper.findAll('label')) {
+      expect(label.classes()).toContain('text-muted')
+    }
+    for (const icon of wrapper.findAll('.material-symbols-outlined')) {
+      expect(icon.classes()).toContain('text-muted')
+      expect(icon.attributes('aria-hidden')).toBe('true')
+    }
+  })
 })
 
 

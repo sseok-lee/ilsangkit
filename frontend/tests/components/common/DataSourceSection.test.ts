@@ -113,3 +113,40 @@ describe('DataSourceSection — ⓘ 안내 문구(데이터셋 이름 미반복)
     expect(w.text()).not.toContain('테스트셋 기준 정보입니다')
   })
 })
+
+describe('DataSourceSection — variant', () => {
+  it('flat 은 section-flat 루트·ui-h2 제목이며 그림자·회색 클래스가 없다', () => {
+    const w = mountSection({ domain: 'facility', category: 'hospital', variant: 'flat', lastSyncDate: '2026-05-28' })
+    expect(w.get('section').classes()).toContain('section-flat')
+    expect(w.get('h2').classes()).toContain('ui-h2')
+    expect(w.get('h2').text()).toBe('데이터 출처')
+    expect(w.html()).not.toMatch(/shadow-|slate-|gray-/)
+    expect(w.text()).toContain('2026-05-28')
+  })
+
+  it('variant 없이도 flat(section-flat)이다', () => {
+    const w = mountSection({ domain: 'facility', category: 'hospital' })
+    expect(w.get('section').classes()).toContain('section-flat')
+    expect(w.html()).not.toMatch(/shadow-|slate-|gray-/)
+  })
+
+  it('compact + flat 은 출처 한 줄(.source-line)로 렌더하고 상자·그림자가 없다', () => {
+    const w = mountSection({ domain: 'facility', compact: true, variant: 'flat' })
+    const p = w.get('p.source-line')
+    expect(p.text()).toContain('데이터 출처')
+    expect(p.text()).toContain('공공데이터포털 (행정안전부·보건복지부 등)')
+    expect(p.find('a').attributes('href')).toBe('/about')
+    expect(w.html()).not.toMatch(/shadow-|rounded-xl|slate-|gray-/)
+  })
+
+  it('real-estate + flat(full) 은 국토교통부 출처를 표기한다', () => {
+    const w = mountSection({ domain: 'real-estate', variant: 'flat' })
+    expect(w.text()).toContain('국토교통부')
+  })
+
+  it('compact 는 variant 없이도 출처 한 줄(.source-line)이다', () => {
+    const w = mountSection({ domain: 'facility', compact: true })
+    expect(w.find('p.source-line').exists()).toBe(true)
+    expect(w.html()).not.toMatch(/shadow-|slate-/)
+  })
+})

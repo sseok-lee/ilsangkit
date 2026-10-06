@@ -36,4 +36,31 @@ describe('SectionBlock', () => {
     });
     expect(wrapper.text()).toContain('시·도로 좁히기');
   });
+
+  it('variant 를 주지 않아도 흰색 평면형이다', () => {
+    const w = mount(SectionBlock, { props: { heading: '제목', subtext: '설명' } })
+    const section = w.get('section')
+    expect(section.classes()).toContain('section-flat')
+    expect(section.classes()).not.toContain('shadow-card')
+    expect(w.get('h2').classes()).toContain('ui-h2')
+  })
+
+  it('variant="flat" 은 박스·그림자 없이 아래 구분선만 쓴다', () => {
+    const w = mount(SectionBlock, { props: { heading: '기본정보', variant: 'flat' } })
+    const cls = w.get('section').classes()
+    expect(cls).toContain('section-flat')
+    for (const c of ['bg-white', 'border', 'rounded-xl', 'shadow-card', 'p-4', 'md:p-5']) {
+      expect(cls).not.toContain(c)
+    }
+    expect(w.get('h2').classes()).toContain('ui-h2')
+  })
+
+  it('flat 에서도 subtext·right 슬롯을 렌더한다', () => {
+    const w = mount(SectionBlock, {
+      props: { heading: '지역', subtext: '시·도로 좁히기', variant: 'flat' },
+      slots: { right: '<a data-testid="more">전체 보기</a>' },
+    })
+    expect(w.text()).toContain('시·도로 좁히기')
+    expect(w.find('[data-testid="more"]').exists()).toBe(true)
+  })
 });

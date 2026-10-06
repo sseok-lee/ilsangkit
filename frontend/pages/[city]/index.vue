@@ -1,16 +1,15 @@
 <template>
-  <div class="bg-background-light min-h-screen">
-    <div class="mx-auto max-w-6xl px-4 py-6 md:px-6">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" class="mb-4" />
-
-      <!-- Hero -->
-      <PageHero
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="지역 허브"
         :title="`${cityName} 생활 정보`"
         :description="heroDescription"
-        class="mb-5"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- 로딩 -->
       <div v-if="pending" class="flex justify-center py-20">
@@ -27,81 +26,64 @@
         />
 
         <!-- ② 구/군 선택 -->
-        <section id="districts" class="mb-6 rounded-xl border border-line bg-white p-4 md:p-5">
-          <div class="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 class="text-display-2 text-slate-900 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[22px]">location_city</span>
-                구/군 선택
-              </h2>
-              <p class="mt-1 text-xs text-slate-500 md:text-sm">지역을 고르면 구·군별 시설과 부동산 정보를 함께 볼 수 있어요.</p>
-            </div>
-            <NuxtLink
-              :to="{ path: '/facilities', query: { city } }"
-              class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-4 text-sm font-semibold text-primary hover:bg-primary/10"
-            >
-              생활시설 전체 보기
-            </NuxtLink>
-          </div>
-          <div class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+        <SectionBlock
+          id="districts"
+          variant="flat"
+          heading="구/군 선택"
+          subtext="지역을 고르면 구·군별 시설과 부동산 정보를 함께 볼 수 있어요."
+        >
+          <template #right>
+            <UiButton variant="secondary" :to="{ path: '/facilities', query: { city } }">생활시설 전체 보기</UiButton>
+          </template>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-x-8 border-t border-line">
             <NuxtLink
               v-for="d in cityData.districts"
               :key="d.slug"
               :to="`/${city}/${d.slug}`"
-              class="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+              class="group flex min-h-[56px] items-center justify-between gap-3 py-3 pl-1 pr-1 border-b border-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
             >
-              <span class="font-bold text-slate-900">{{ d.name }}</span>
-              <span class="text-xs text-slate-500">시설 {{ d.facilityTotal.toLocaleString() }}개</span>
+              <strong class="font-semibold text-ink group-hover:text-primary">{{ d.name }}</strong>
+              <span class="text-[13px] text-muted tabular-nums">시설 {{ d.facilityTotal.toLocaleString() }}개</span>
             </NuxtLink>
           </div>
-        </section>
+        </SectionBlock>
 
         <!-- 카테고리별 바로가기 -->
-        <section id="categories" class="mb-6 rounded-xl border border-line bg-white p-4 md:p-5">
-          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">grid_view</span>
-            카테고리별 바로가기
-          </h2>
+        <SectionBlock id="categories" variant="flat" heading="카테고리별 바로가기">
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
             <NuxtLink
               v-for="cat in cityCategoryLinks"
               :key="cat.slug"
               :to="cat.to"
-              class="group flex min-h-[52px] items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 transition-colors hover:border-primary/30 hover:bg-primary/5"
+              class="group flex min-h-[56px] items-center gap-2.5 rounded-[10px] border border-line bg-white px-3.5 py-2.5 transition-colors hover:border-primary"
             >
-              <span class="material-symbols-outlined text-primary text-[22px]">{{ cat.icon }}</span>
-              <span class="font-semibold text-slate-900 text-sm">{{ cat.label }}</span>
+              <span class="material-symbols-outlined text-primary text-[22px]" aria-hidden="true">{{ cat.icon }}</span>
+              <span class="font-semibold text-ink text-[15px] group-hover:text-primary">{{ cat.label }}</span>
             </NuxtLink>
           </div>
-        </section>
+        </SectionBlock>
 
         <!-- Ad: District Grid 후 -->
-        <div class="mb-6">
-          <AdBanner />
-        </div>
+        <AdBanner />
 
         <!-- ③ 생활 가이드 -->
-        <section class="mb-6">
-          <h2 class="text-display-2 text-slate-900 flex items-center gap-2 mb-3">
-            <span class="material-symbols-outlined text-primary text-[22px]">menu_book</span>
-            생활 가이드
-          </h2>
+        <SectionBlock variant="flat" heading="생활 가이드">
           <ClientOnly>
             <RecentGuides />
           </ClientOnly>
-        </section>
+        </SectionBlock>
 
         <!-- ④ 교차 CTA -->
         <RegionRealEstateCta :area-name="cityName" />
 
         <!-- 데이터 출처 -->
-        <DataSourceSection domain="facility" compact class="mt-2" />
+        <DataSourceSection domain="facility" compact variant="flat" />
       </div>
 
       <!-- 에러 -->
-      <div v-else class="rounded-xl bg-red-50 border border-red-200 p-8 text-center">
+      <div v-else class="mt-6 rounded-xl bg-red-50 border border-red-200 p-8 text-center">
         <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+          <span class="material-symbols-outlined text-[28px] text-red-400" aria-hidden="true">error_outline</span>
         </div>
         <p class="text-red-800 font-semibold">{{ UI_MESSAGES.fetchError }}</p>
         <div class="mt-4 flex items-center justify-center gap-2">
@@ -109,15 +91,10 @@
             class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
             @click="retryFetch"
           >
-            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
             다시 시도
           </button>
-          <NuxtLink
-            to="/"
-            class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            홈으로
-          </NuxtLink>
+          <UiButton variant="secondary" to="/">홈으로</UiButton>
         </div>
       </div>
     </div>
@@ -132,6 +109,9 @@ import { CATEGORY_GROUPS, CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import RegionRealEstatePrices from '~/components/region/RegionRealEstatePrices.vue'
 import RegionRealEstateCta from '~/components/region/RegionRealEstateCta.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import SectionBlock from '~/components/common/SectionBlock.vue'
+import UiButton from '~/components/common/UiButton.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'

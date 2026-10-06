@@ -10,7 +10,7 @@
         <!-- Separator -->
         <span
           v-if="index > 0"
-          class="mx-1 text-slate-500"
+          class="mx-1 text-muted"
           aria-hidden="true"
         >
           /
@@ -20,7 +20,7 @@
         <NuxtLink
           v-if="!item.current"
           :to="item.href"
-          class="text-slate-600 hover:text-slate-900 transition-colors"
+          class="text-muted hover:text-ink transition-colors"
         >
           {{ item.label }}
         </NuxtLink>
@@ -29,7 +29,7 @@
         <span
           v-else
           aria-current="page"
-          class="font-semibold text-slate-900 truncate"
+          class="font-semibold text-ink truncate"
         >
           {{ item.label }}
         </span>

@@ -420,28 +420,43 @@ describe('TransactionTable', () => {
       expect(wrapper.text()).toContain('평당')
     })
 
-    it('detail 표현에서는 모바일에서 날짜와 금액을 먼저 보여주고 나머지는 details에 둔다', () => {
+    it('detail 표현의 모바일은 두 줄 목록 — 1줄 금액·날짜, 2줄 층·면적·평당가(접힘 없음)', () => {
       const wrapper = mount(TransactionTable, {
         props: {
-          transactions: [
-            {
-              ...mockSaleTransactions[0],
-              floor: 0,
-              dealAmount: 123456789,
-            },
-          ],
+          transactions: [{ ...mockSaleTransactions[0], floor: 0, dealAmount: 123456789 }],
           type: 'sale',
           loading: false,
           presentation: 'detail',
         },
       })
 
-      const detailCard = wrapper.get('[data-testid="detail-transaction-card"]')
-      expect(detailCard.text()).toContain('24.03.15')
-      expect(detailCard.text()).toContain('1만 2345억 6,789만원')
-      expect(detailCard.get('details').text()).toContain('0층')
-      expect(detailCard.get('details').text()).toContain('전용 84.5㎡')
-      expect(detailCard.get('details').text()).toContain('중개거래')
+      expect(wrapper.find('details').exists()).toBe(false)
+      const row = wrapper.get('[data-testid="detail-transaction-row"]')
+      expect(row.element.tagName).toBe('LI')
+      expect(row.get('[data-testid="tx-line1"]').text()).toContain('1만 2345억 6,789만원')
+      expect(row.get('[data-testid="tx-line1"]').text()).toContain('24.03.15')
+      const line2 = row.get('[data-testid="tx-line2"]').text()
+      expect(line2).toContain('0층')
+      expect(line2).toContain('전용 84.5㎡')
+      expect(line2).toContain('평당')
+      // 흔한 값(중개거래)은 태그로 보이지 않는다
+      expect(row.find('[data-testid="tx-tag"]').exists()).toBe(false)
+    })
+
+    it('detail 표현에서 직거래·취소처럼 흔하지 않은 값만 태그로 보인다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: {
+          transactions: [mockSaleTransactions[1], mockCancelledSale],
+          type: 'sale',
+          loading: false,
+          presentation: 'detail',
+        },
+      })
+
+      const rows = wrapper.findAll('[data-testid="detail-transaction-row"]')
+      expect(rows[0].findAll('[data-testid="tx-tag"]').map((t) => t.text())).toEqual(['직거래'])
+      expect(rows[1].findAll('[data-testid="tx-tag"]').map((t) => t.text())).toEqual(['취소'])
+      expect(rows[1].classes()).toContain('opacity-60')
     })
 
     it('detail 표현이어도 loading=true이면 거래 카드를 표시하지 않는다', () => {
@@ -455,19 +470,14 @@ describe('TransactionTable', () => {
       })
 
       expect(wrapper.find('[data-testid="skeleton-card"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="detail-transaction-card"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="detail-transaction-row"]').exists()).toBe(false)
     })
 
-    it('detail 표현에서 월세 120만원과 0 보증금을 표시한다', () => {
+    it('detail 표현의 전월세 모바일 두 줄 목록 — 금액·구분·날짜 / 층·면적·계약기간·갱신·변동률', () => {
       const wrapper = mount(TransactionTable, {
         props: {
           transactions: [
-            {
-              ...mockRentTransactions[0],
-              deposit: 0,
-              monthlyRent: 120,
-              floor: null,
-            },
+            { ...mockRentTransactions[0], deposit: 0, monthlyRent: 120, floor: null, contractTerm: '26.10~28.10' as unknown as number },
           ],
           type: 'rent',
           loading: false,
@@ -475,13 +485,39 @@ describe('TransactionTable', () => {
         },
       })
 
-      const detailCard = wrapper.get('[data-testid="detail-transaction-card"]')
-      expect(detailCard.text()).toContain('0만원 / 120만원')
-      expect(detailCard.get('details').text()).toContain('층 정보 없음')
-      expect(detailCard.get('details').text()).toContain('전용 84.5㎡')
-      expect(detailCard.get('details').text()).toContain('갱신')
-      expect(detailCard.get('details').text()).toContain('이전 4,500만원 / 180만원')
-      expect(detailCard.get('details').text()).toContain('계약 24개월')
+      expect(wrapper.find('details').exists()).toBe(false)
+      const row = wrapper.get('[data-testid="detail-transaction-row"]')
+      const line1 = row.get('[data-testid="tx-line1"]').text()
+      expect(line1).toContain('0만원 / 120만원')
+      expect(line1).toContain('월세')
+      expect(line1).toContain('24.03.15')
+      const line2 = row.get('[data-testid="tx-line2"]').text()
+      expect(line2).toContain('층 정보 없음')
+      expect(line2).toContain('전용 84.5㎡')
+      expect(line2).toContain('26.10~28.10')
+      expect(line2).not.toContain('개월')
+      expect(row.findAll('[data-testid="tx-tag"]').map((t) => t.text())).toEqual(['갱신'])
+      // 종전 4,500만 → 0 (보증금), 180 → 120 (월세) 변동률
+      expect(line2).toContain('보증금 ↓100.0%')
+      expect(line2).toContain('월세 ↓33.3%')
+    })
+
+    it('detail 표현의 전세 신규 계약은 태그·변동률 없이 보인다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: {
+          transactions: [
+            { ...mockRentTransactions[0], rentType: '전세', monthlyRent: 0, contractType: '신규', preDeposit: null, preMonthlyRent: null },
+          ],
+          type: 'rent',
+          loading: false,
+          presentation: 'detail',
+        },
+      })
+
+      const row = wrapper.get('[data-testid="detail-transaction-row"]')
+      expect(row.get('[data-testid="tx-line1"]').text()).toContain('전세')
+      expect(row.find('[data-testid="tx-tag"]').exists()).toBe(false)
+      expect(row.text()).not.toMatch(/[↑↓]/)
     })
   })
 })

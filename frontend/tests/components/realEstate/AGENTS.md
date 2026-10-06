@@ -9,13 +9,8 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `AreaSelector.test.ts` | 면적 범위 선택 |
-| `ComplexCard.test.ts` | 단지 카드 |
 | `NearbyFacilities.test.ts` | 주변 시설 |
-| `PriceTrendChart.test.ts` | 가격 차트 |
 | `RealEstateSearchFilter.test.ts` | 검색 필터 |
-| `RentTypeToggle.test.ts` | 전월세 전환 |
-| `TransactionModeTab.test.ts` | 매매/임대 탭 |
 | `TransactionTable.test.ts` | 거래 테이블 |
 
 ## For AI Agents

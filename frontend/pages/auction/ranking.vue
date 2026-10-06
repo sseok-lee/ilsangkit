@@ -1,17 +1,18 @@
 <template>
-  <div class="property-redesign bg-white min-h-screen">
-    <div class="mx-auto max-w-[1200px] px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <PageHero
-        class="property-hero"
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-10">
+      <PageHead
         eyebrow="공매"
         title="지역별 낙찰가율 랭킹"
         description="지역별·용도별 공매 낙찰가율 통계를 확인하세요. 온비드 공식 데이터 기반."
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- 용도/정렬 토글 -->
-      <SectionBlock class="property-section" heading="용도·정렬" subtext="용도를 고르고 정렬 기준을 바꿔 랭킹을 확인하세요.">
+      <SectionBlock variant="flat" heading="용도·정렬" subtext="용도를 고르고 정렬 기준을 바꿔 랭킹을 확인하세요.">
         <form class="mb-4 flex flex-wrap gap-2" @submit.prevent="submitKeyword">
           <label class="sr-only" for="auction-ranking-keyword">지역명 검색</label>
           <input id="auction-ranking-keyword" v-model="keywordDraft" maxlength="100" placeholder="시·도 또는 구·군" class="min-h-[44px] min-w-0 flex-1 rounded-lg border border-line px-3 py-2 text-sm">
@@ -39,12 +40,12 @@
       </SectionBlock>
 
       <!-- 랭킹 테이블 -->
-      <SectionBlock class="property-section" heading="지역별 낙찰가율" :subtext="`조건에 맞는 상위 ${rows?.length ?? 0}개 지역·용도 · 감정가 대비 낙찰가 비율`">
+      <SectionBlock variant="flat" heading="지역별 낙찰가율" :subtext="`조건에 맞는 상위 ${rows?.length ?? 0}개 지역·용도 · 감정가 대비 낙찰가 비율`">
         <div v-if="rankingError" role="alert" class="py-8 text-center">
-          <p class="text-sm text-slate-600">랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+          <p class="text-sm text-muted">랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
           <button type="button" class="mt-3 min-h-[44px] rounded-lg border border-line px-4 text-sm" @click="refresh()">다시 시도</button>
         </div>
-        <p v-else-if="pending" role="status" class="py-8 text-center text-sm text-slate-600">랭킹을 불러오는 중입니다.</p>
+        <p v-else-if="pending" role="status" class="py-8 text-center text-sm text-muted">랭킹을 불러오는 중입니다.</p>
         <AuctionRankingTable v-else-if="rows && rows.length > 0" :rows="rows" />
         <EmptyState
           v-else
@@ -64,7 +65,7 @@
       <AdBanner />
 
 
-      <DataSourceSection domain="auction" />
+      <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>
 </template>
@@ -79,7 +80,7 @@ import { isListingDocumentIndexable } from '~/utils/indexability'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { SITE_URL, DEFAULT_OG_IMAGE } from '~/utils/seoConstants'
 import AuctionRankingTable from '~/components/auction/AuctionRankingTable.vue'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -183,5 +184,3 @@ useHead(() => {
   }
 })
 </script>
-
-<style src="~/assets/css/remaining-property.css"></style>

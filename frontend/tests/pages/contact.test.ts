@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense } from 'vue'
 import ContactPage from '~/pages/contact.vue'
-import StaticPageHeader from '~/components/common/StaticPageHeader.vue'
 
 vi.mock('~/composables/useFacilityMeta', () => ({
   useFacilityMeta: () => ({ setMeta: vi.fn() }),
@@ -14,14 +13,14 @@ vi.mock('~/composables/useStructuredData', () => ({
 async function mountSuspended(component: any) {
   const wrapper = mount(
     defineComponent({ render() { return h(Suspense, null, { default: () => h(component) }) } }),
-    { global: { components: { StaticPageHeader }, stubs: { NuxtLink: { template: '<a><slot /></a>' } } } },
+    { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } },
   )
   await flushPromises()
   return wrapper
 }
 
 describe('Contact Page', () => {
-  it('renders the title via StaticPageHeader', async () => {
+  it('renders the title via PageHead', async () => {
     const wrapper = await mountSuspended(ContactPage)
     expect(wrapper.find('h1').text()).toContain('문의하기')
   })

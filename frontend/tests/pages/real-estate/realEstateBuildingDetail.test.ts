@@ -202,15 +202,12 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component></section>', props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'] },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
-          ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
           DataSourceSection: { template: '<div />' },
           RelatedGuides: { template: '<div />' },
           FacilityMap: { template: '<div />' },
-          TransactionModeTab: { template: '<div />' },
           ExactDealFilters: {
             template: '<button data-testid="emit-wolse" @click="$emit(\'patch\', { mode: \'wolse\' })">월세</button>',
             props: ['filters', 'options', 'pending'],
@@ -411,9 +408,8 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(crumbs[5].name).toBe('반포자이')
   })
 
-  // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(공용 MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
-  // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
+  // ---------------- SEO 회귀 가드 ----------------
+  // 머리는 PageHead 하나(기본 h1)가 모바일·데스크톱을 함께 맡는다 → raw HTML 의 literal <h1> 은 1개여야 한다.
   // 가드: h1 정확히 1개 + 건물명 (중복 h1 회귀 방지).
   it('건물명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 건물명', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
@@ -421,6 +417,9 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const h1s = wrapper.findAll('h1')
     expect(h1s.length).toBe(1)
     expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
+    const summary = wrapper.get('[aria-label="실거래 요약"]')
+    expect(summary.element.tagName).toBe('DL')
+    expect(summary.classes()).toContain('summary-row--lead')
   })
 
   it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
@@ -565,6 +564,9 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(src).not.toContain('heroStats')
     expect(src).not.toContain('MobileDetailHeader')
     expect(src).not.toContain('PageHero')
+    expect(src).toContain('<PageHead')
+    expect(src).toContain('estateSummaryItems')
+    expect(src).not.toContain('estate-detail-head')
   })
 
   it('재배치·건축년도 병기 변경 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {

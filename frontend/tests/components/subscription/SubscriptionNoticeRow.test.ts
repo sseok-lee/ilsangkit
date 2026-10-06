@@ -167,4 +167,11 @@ describe('SubscriptionNoticeRow', () => {
 
     expect(wrapper.emitted('open-detail')).toHaveLength(1)
   })
+
+  it('layout="panel" 이면 패널용 클래스를 붙이고 기본은 붙이지 않는다', () => {
+    const base = mount(SubscriptionNoticeRow, { props: { item: notice() } })
+    const panel = mount(SubscriptionNoticeRow, { props: { item: notice(), layout: 'panel' } })
+    expect(base.get('.notice-row').classes()).not.toContain('notice-row--panel')
+    expect(panel.get('.notice-row').classes()).toContain('notice-row--panel')
+  })
 })

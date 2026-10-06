@@ -91,3 +91,34 @@ describe('subway/[slug].vue FAQPage JSON-LD', () => {
     expect(content).toMatch(/buildSubwayJsonLd/)
   })
 })
+
+describe('subway/[slug].vue 흰색 평면형', () => {
+  const content = readFileSync(resolve(__dirname, '../../pages/subway/[slug].vue'), 'utf-8')
+
+  it('흰색 평면형: 정렬 컨테이너·PageHead·평면 섹션, :deep 덮어쓰기 없음', () => {
+    expect(content).toContain('page-container')
+    expect(content).not.toContain('max-w-[1120px]')
+    expect(content).not.toContain('<PageHero')
+    expect(content).toMatch(/<PageHead\b[^>]*title-tag="div"/)
+    expect(content).toMatch(/<MobileDetailHeader\b[^>]*variant="flat"/)
+    expect(content).toMatch(/<DetailNearby\b[^>]*section-variant="flat"/)
+    expect(content.match(/<SectionBlock\b/g)?.length).toBe(content.match(/<SectionBlock\b(?:[^>"]|"[^"]*")*variant="flat"/g)?.length)
+    expect(content).not.toMatch(/:deep\(/)
+  })
+
+  it('노선 알약에 그림자가 없고 노선 색 바인딩은 유지된다', () => {
+    const headline = content.slice(content.indexOf('data-test="line-headline"'), content.indexOf('</div>', content.indexOf('data-test="line-headline"')))
+    expect(headline).not.toMatch(/shadow-/)
+    expect(headline).toMatch(/backgroundColor: lineColor\(ln\)/)
+  })
+
+  it('사이드바 전화·공유 버튼은 줄바꿈되지 않고 공유 라벨은 짧다', () => {
+    expect(content).toMatch(/aria-label="공유하기"[\s\S]{0,300}?<\/span>\s*공유\s*<\/button>/)
+    const row = content.slice(content.indexOf('data-test="sidebar-call"'), content.indexOf('aria-label="공유하기"') + 1)
+    expect(row.match(/whitespace-nowrap/g)?.length).toBe(2)
+  })
+
+  it('길찾기 드롭다운 버튼은 aria-expanded 로 상태를 알린다', () => {
+    expect(content).toMatch(/:aria-expanded="showNavDropdown"/)
+  })
+})

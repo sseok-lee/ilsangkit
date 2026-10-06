@@ -24,9 +24,9 @@ const districts = computed(() => REGIONS[CITY_SLUG_MAP[props.citySlug]] ?? [])
 <style scoped>
 .land-region-stages { display:grid; grid-template-columns:180px minmax(0,1fr); gap:28px; }
 .land-region-stages.has-district { grid-template-columns:150px 180px minmax(0,1fr); }
-.land-parent-stage { background:#f7f8fa; border-radius:8px; padding:16px; align-self:start; max-height:560px; overflow-y:auto; }
+.land-parent-stage { background:rgb(var(--paper-rgb)); border-radius:8px; padding:16px; align-self:start; max-height:560px; overflow-y:auto; }
 .land-parent-stage h2 { font-size:16px; font-weight:700; padding:0 8px 12px; }
-.land-parent-stage a { display:flex; align-items:center; min-height:44px; padding:8px; font-size:14px; border-bottom:1px solid #e6e9f0; }
-.land-parent-stage a[aria-current] { color:#2450dc; font-weight:700; background:#fff; }
+.land-parent-stage a { display:flex; align-items:center; min-height:44px; padding:8px; font-size:14px; border-bottom:1px solid rgb(var(--border-rgb)); }
+.land-parent-stage a[aria-current] { color:rgb(var(--brand-rgb)); font-weight:700; background:rgb(var(--surface-rgb)); }
 @media(max-width:767px) { .land-region-stages, .land-region-stages.has-district { display:block; } .land-parent-stage { display:none; } }
 </style>

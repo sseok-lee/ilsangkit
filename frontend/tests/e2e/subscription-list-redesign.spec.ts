@@ -250,7 +250,7 @@ test('region failure does not widen the URL and slow races keep latest filters',
 test('filtered detail back restores pushed-history rows and scroll position without another list fetch', async ({ page, request }) => {
   await page.goto('/subscription/rent/public')
   await waitForHydrated(page)
-  await page.getByRole('button', { name: '접수 중' }).click()
+  await page.getByRole('radio', { name: '접수 중' }).click()
   await expect(page).toHaveURL(/status=ongoing/)
   await expect(await rows(page)).toHaveCount(20)
   await page.getByTestId('load-more').click()

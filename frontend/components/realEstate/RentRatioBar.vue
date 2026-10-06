@@ -12,7 +12,7 @@
         <span v-if="100 - jeonsePct > 0">월세 {{ 100 - jeonsePct }}%</span>
       </div>
     </div>
-    <p class="mt-1 text-xs text-slate-500">전체 거래 기준 전세 {{ jeonseCount }}건 · 월세 {{ wolseCount }}건</p>
+    <p class="mt-1 text-xs text-muted">전체 거래 기준 전세 {{ jeonseCount }}건 · 월세 {{ wolseCount }}건</p>
   </div>
 </template>
 

@@ -77,7 +77,6 @@ async function mountTrashSource(detail: ContractScheduleDetail) {
     global: {
       stubs: {
         Breadcrumb: { template: '<nav />' },
-        PageHero: { props: ['title', 'description'], template: '<header><h1>{{ title }}</h1><p>{{ description }}</p><slot name="sidebar" /></header>' },
         SectionBlock: { props: ['heading', 'subtext'], template: '<section><h2>{{ heading }}</h2><slot /></section>' },
         DataSourceSection: { template: '<div />' },
         NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },

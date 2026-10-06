@@ -66,12 +66,9 @@ beforeEach(() => {
 const globalStubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-  PageHero: {
-    props: ['title', 'description'],
-    template: '<div data-stub="hero"><h1>{{ title }}</h1><p>{{ description }}</p></div>',
-  },
+  PageHead: { props: ['title'], template: '<header><h1>{{ title }}</h1><slot name="breadcrumb" /><slot /></header>' },
   SectionBlock: {
-    props: ['heading', 'subtext'],
+    props: ['heading', 'subtext', 'variant'],
     template: '<section><h2 v-if="heading">{{ heading }}</h2><p v-if="subtext">{{ subtext }}</p><slot /><slot name="heading" /></section>',
   },
   AdBanner: { template: '<div />' },
@@ -193,5 +190,18 @@ describe('real-estate/[realEstateType]/[city]/index.vue — city hub', () => {
     const wrapper = await mountPage()
     expect(wrapper.text()).toContain('주요 건물')
     expect(wrapper.text()).toContain('강남타워')
+  })
+
+  it('구/군 목록 제목을 heading prop 으로 넘기고 h1 은 하나뿐이다', async () => {
+    const wrapper = await mountPage()
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+    expect(wrapper.findAll('h2').map((h) => h.text())).toContain('서울 구/군 목록')
+  })
+
+  it('구/군 카드는 그림자·떠오름 없이 테두리 카드다', async () => {
+    const wrapper = await mountPage()
+    const card = wrapper.findAll('a').find((a) => (a.attributes('href') ?? '').includes('gangnam'))!
+    expect(card.classes()).toEqual(expect.arrayContaining(['border', 'border-line', 'rounded-[10px]', 'hover:border-primary']))
+    expect(card.classes().some((c) => /shadow|translate/.test(c))).toBe(false)
   })
 })

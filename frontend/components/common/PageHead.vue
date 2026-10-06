@@ -1,0 +1,47 @@
+<template>
+  <div class="page-head" :class="{ 'page-head--flush': !border }">
+    <slot name="breadcrumb" />
+    <div class="page-head__row">
+      <div class="min-w-0">
+        <p v-if="eyebrow" class="page-head__eyebrow" data-testid="page-head-eyebrow">{{ eyebrow }}</p>
+        <!--
+          title-tag 기본 'h1'. 모바일 전용 헤더가 이미 h1 을 갖는 상세 페이지는 'div' 로 강등해
+          raw HTML 의 literal <h1> 을 1개로 유지한다(MobileDetailHeader 와 짝).
+        -->
+        <component
+          :is="titleTag"
+          class="ui-h1 text-strong"
+          v-bind="titleTag === 'h1' ? {} : { role: 'heading', 'aria-level': 1 }"
+        >
+          <slot name="title">{{ title }}</slot>
+        </component>
+        <p v-if="description || $slots.description" class="page-head__desc">
+          <slot name="description">{{ description }}</slot>
+        </p>
+      </div>
+      <div v-if="$slots.actions" class="page-head__actions">
+        <slot name="actions" />
+      </div>
+    </div>
+    <slot />
+  </div>
+</template>
+
+<script setup lang="ts">
+// 흰색 평면형 페이지 머리(스펙 2026-10-02 §3.4). 목록 페이지에는 요약 줄을 두지 않는다(D6) —
+// 상세 페이지는 기본 슬롯에 SummaryRow 를 넣어 머리 블록 안에 둔다(바깥에 두면 아래 테두리와 겹쳐 2px 선이 된다).
+// border=false: 바로 아래에 자체 선이 있는 탭(청약 SubscriptionNav 등)이 올 때 이중선을 피한다.
+withDefaults(defineProps<{
+  eyebrow?: string
+  title?: string
+  description?: string
+  titleTag?: string
+  border?: boolean
+}>(), {
+  eyebrow: '',
+  title: '',
+  description: '',
+  titleTag: 'h1',
+  border: true,
+})
+</script>

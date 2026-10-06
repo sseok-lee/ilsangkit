@@ -1,22 +1,22 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+  <div class="min-h-screen flex items-center justify-center bg-background-light px-4">
     <form
-      class="w-full max-w-sm bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-4"
+      class="w-full max-w-sm bg-white rounded-lg border border-line p-6 space-y-4"
       @submit.prevent="onSubmit"
     >
-      <h1 class="text-lg font-semibold text-slate-900 text-center">
+      <h1 class="text-lg font-semibold text-ink text-center">
         어드민 로그인
       </h1>
 
       <div>
-        <label for="admin-password" class="block text-sm text-slate-600 mb-1">비밀번호</label>
+        <label for="admin-password" class="block text-sm text-muted mb-1">비밀번호</label>
         <input
           id="admin-password"
           v-model="password"
           type="password"
           autocomplete="current-password"
           required
-          class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          class="w-full rounded-md border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         >
       </div>
 

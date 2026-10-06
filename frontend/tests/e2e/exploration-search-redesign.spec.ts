@@ -411,7 +411,7 @@ for (const width of [360, 390, 768, 1440]) {
     await hydrated(page)
     await expect(page.locator('.exploration-building-row')).toHaveCount(24)
     await expectNoOverflow(page)
-    await expectMinimumHeight(page, '.filter-link')
+    await expectMinimumHeight(page, '.ui-segmented__item', 38)
     await expect(page.locator('h1')).toHaveCSS('font-size', width < 768 ? '27px' : '36px')
     await screenshot(page, testInfo, `list-${width}`)
 

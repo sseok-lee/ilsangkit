@@ -51,7 +51,7 @@ id="admin-guide-content" v-model="draftContent" rows="18" data-testid="editor-co
     <div class="flex flex-wrap gap-2 pt-2 border-t border-line">
       <button type="button" data-testid="save-button" class="px-3 py-2 rounded-md text-sm font-medium bg-primary text-white" @click="$emit('save', patch)">저장</button>
       <button type="button" data-testid="publish-button" class="px-3 py-2 rounded-md text-sm font-medium bg-emerald-600 text-white" @click="$emit('publish')">발행</button>
-      <button type="button" data-testid="unpublish-button" class="px-3 py-2 rounded-md text-sm font-medium bg-slate-200 text-slate-700" @click="$emit('unpublish')">발행취소</button>
+      <button type="button" data-testid="unpublish-button" class="px-3 py-2 rounded-md text-sm font-medium bg-line text-ink" @click="$emit('unpublish')">발행취소</button>
       <button type="button" data-testid="delete-button" class="px-3 py-2 rounded-md text-sm font-medium bg-red-50 text-red-700 ml-auto" @click="$emit('delete')">삭제</button>
     </div>
   </div>

@@ -1,24 +1,24 @@
 <template>
-  <div class="bg-background-light text-slate-900 font-display min-h-screen">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-8 md:pb-10 flex flex-col gap-3">
-      <!-- Breadcrumb -->
-      <Breadcrumb :items="breadcrumbItems" />
-
-      <!-- Hero -->
-      <PageHero
+  <div class="bg-white text-ink min-h-screen">
+    <div class="page-container pb-8 md:pb-10 flex flex-col">
+      <PageHead
         :eyebrow="categoryParam === 'trash' ? '쓰레기 배출 목록' : '생활시설 목록'"
         :title="pageTitle"
         :description="pageDescription"
-      />
+      >
+        <template #breadcrumb>
+          <Breadcrumb :items="breadcrumbItems" class="mb-4" />
+        </template>
+      </PageHead>
 
       <!-- 헤더 검색(?keyword=) 결과 배지 + 검색 해제 -->
-      <div v-if="queryKeyword" class="flex items-center gap-2 text-sm">
+      <div v-if="queryKeyword" class="flex items-center gap-2 text-sm mt-4">
         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
           '{{ queryKeyword }}' 검색 결과 · {{ catLabel }}
         </span>
         <NuxtLink
           :to="queryCitySlug ? `/${categoryParam}?city=${queryCitySlug}` : `/${categoryParam}`"
-          class="text-slate-500 hover:text-primary inline-flex items-center gap-0.5"
+          class="text-muted hover:text-primary inline-flex items-center gap-0.5"
         >
           <span class="material-symbols-outlined text-[16px]">close</span>검색 해제
         </NuxtLink>
@@ -28,16 +28,17 @@
       <div
         v-if="facilityError"
         role="alert"
-        class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
+        class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
       >
         {{ facilityError }}
       </div>
 
       <!-- 지역 선택 -->
-      <SectionBlock heading="지역 선택">
+      <SectionBlock variant="flat" heading="지역 선택">
         <RegionChips
           :href-for="regionChipHref"
           :active-slug="queryCitySlug"
+          variant="flat"
         />
       </SectionBlock>
 
@@ -45,6 +46,7 @@
       <HospitalDepartmentFilter
         v-if="categoryParam === 'hospital'"
         v-model="selectedDepartments"
+        variant="flat"
         @apply="handleDepartmentApply"
       />
 
@@ -65,16 +67,16 @@
           @retry="refreshWasteAreas"
         />
 
-        <SectionBlock v-else heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역·동별 배출 요일과 방법`">
+        <SectionBlock v-else variant="flat" heading="배출 일정" :subtext="`${wasteTotal.toLocaleString('ko-KR')}건 · 지역·동별 배출 요일과 방법`">
           <template #right>
-            <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ wasteTotal.toLocaleString('ko-KR') }}건</span>
+            <span class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ wasteTotal.toLocaleString('ko-KR') }}</strong>건</span>
           </template>
 
           <!-- 로딩 상태 -->
           <div v-if="wasteLoading || initialLoading" class="flex items-center justify-center py-10" role="status" aria-label="배출 일정 로딩 중" aria-live="polite" aria-busy="true">
             <div class="text-center">
               <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-              <p class="text-slate-500 text-sm">배출 일정 조회 중...</p>
+              <p class="text-muted text-sm">배출 일정 조회 중...</p>
             </div>
           </div>
 
@@ -131,21 +133,14 @@
             description="해당 지역의 배출 정보가 아직 등록되지 않았어요"
           >
             <div class="flex items-center justify-center gap-3">
-              <button
-                v-if="queryCitySlug"
-                class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-                @click="resetCityFilter"
-              >
-                <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <UiButton v-if="queryCitySlug" variant="secondary" @click="resetCityFilter">
+                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
                 필터 초기화
-              </button>
-              <NuxtLink
-                to="/"
-                class="btn-primary inline-flex items-center gap-1.5 text-sm min-h-[44px]"
-              >
-                <span class="material-symbols-outlined text-[16px]">home</span>
+              </UiButton>
+              <UiButton variant="primary" to="/">
+                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">home</span>
                 홈으로 돌아가기
-              </NuxtLink>
+              </UiButton>
             </div>
           </EmptyState>
         </SectionBlock>
@@ -153,9 +148,9 @@
 
       <!-- Non-trash: facility card grid -->
       <template v-else>
-        <SectionBlock :heading="`${resultTitle} ${catLabel} 목록`">
+        <SectionBlock variant="flat" :heading="`${resultTitle} ${catLabel} 목록`">
           <template #right>
-            <span class="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">{{ displayTotal.toLocaleString('ko-KR') }}건</span>
+            <span class="text-sm text-muted tabular-nums"><strong class="font-semibold text-ink">{{ displayTotal.toLocaleString('ko-KR') }}</strong>곳</span>
           </template>
 
           <!-- Loading Skeleton -->
@@ -179,21 +174,14 @@
               description="다른 지역이나 검색어를 시도해보세요"
             >
               <div class="flex items-center justify-center gap-3">
-                <button
-                  v-if="queryCitySlug"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-                  @click="resetCityFilter"
-                >
-                  <span class="material-symbols-outlined text-[16px]">refresh</span>
+                <UiButton v-if="queryCitySlug" variant="secondary" @click="resetCityFilter">
+                  <span class="material-symbols-outlined text-[16px]" aria-hidden="true">refresh</span>
                   필터 초기화
-                </button>
-                <NuxtLink
-                  to="/"
-                  class="btn-primary inline-flex items-center gap-1.5 min-h-[44px] text-sm"
-                >
-                  <span class="material-symbols-outlined text-[16px]">home</span>
+                </UiButton>
+                <UiButton variant="primary" to="/">
+                  <span class="material-symbols-outlined text-[16px]" aria-hidden="true">home</span>
                   홈으로 돌아가기
-                </NuxtLink>
+                </UiButton>
               </div>
             </EmptyState>
 
@@ -213,51 +201,42 @@
 
       <!-- 관련 탐색 -->
       <SectionBlock
+        variant="flat"
         v-if="relatedCategories.length > 0 || popularRegionLinks.length > 0"
         heading="관련 탐색"
       >
         <div v-if="relatedCategories.length > 0" class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-slate-500 font-medium pr-1">관련 카테고리</span>
-          <NuxtLink
-            v-for="cat in relatedCategories"
-            :key="cat.slug"
-            :to="`/${cat.slug}`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {{ cat.label }}
-          </NuxtLink>
+          <span class="w-full text-[13px] font-semibold text-muted">관련 카테고리</span>
+          <UiChip v-for="cat in relatedCategories" :key="cat.slug" :to="`/${cat.slug}`">{{ cat.label }}</UiChip>
         </div>
-        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-3">
-          <span class="text-xs text-slate-500 font-medium pr-1">인기 지역</span>
-          <NuxtLink
+        <div v-if="popularRegionLinks.length > 0" class="flex flex-wrap items-center gap-2 mt-4">
+          <span class="w-full text-[13px] font-semibold text-muted">인기 지역</span>
+          <UiChip
             v-for="region in popularRegionLinks"
             :key="`${region.citySlug}-${region.districtSlug}`"
             :to="`/${region.citySlug}/${region.districtSlug}/${categoryParam}`"
-            class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-slate-700 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {{ region.label }} {{ catLabel }}
-          </NuxtLink>
+          >{{ region.label }} {{ catLabel }}</UiChip>
         </div>
       </SectionBlock>
 
       <!-- FAQ Section -->
-      <SectionBlock v-if="faqItems && faqItems.length > 0" heading="자주 묻는 질문">
+      <SectionBlock variant="flat" v-if="faqItems && faqItems.length > 0" heading="자주 묻는 질문">
         <div class="space-y-1">
           <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
-            <summary class="py-3 cursor-pointer font-medium text-slate-800 hover:text-primary">
+            <summary class="py-3 min-h-[44px] cursor-pointer font-medium text-ink hover:text-primary">
               {{ faq.question }}
             </summary>
-            <p class="pb-3 text-slate-600 text-sm leading-relaxed">{{ faq.answer }}</p>
+            <p class="pb-3 text-muted text-sm leading-relaxed">{{ faq.answer }}</p>
           </details>
         </div>
       </SectionBlock>
 
       <!-- 관련 가이드 (SSR 렌더 — 내부링크 색인 노출) -->
-      <RelatedGuides :category="categoryParam" />
+      <RelatedGuides :category="categoryParam" variant="flat" />
 
 
       <!-- 데이터 출처 -->
-      <DataSourceSection domain="facility" :category="categoryParam" />
+      <DataSourceSection domain="facility" :category="categoryParam" variant="flat" />
     </div>
   </div>
 </template>
@@ -279,9 +258,11 @@ import { FACILITY_DATA_SOURCE } from '~/utils/dataSource'
 import { buildPageHref, stripUiStateQuery } from '~/utils/paginationHref'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import EmptyState from '~/components/common/EmptyState.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import UiButton from '~/components/common/UiButton.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import LoadingSkeleton from '~/components/common/LoadingSkeleton.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
-import PageHero from '~/components/common/PageHero.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import WasteAreaList from '~/components/trash/WasteAreaList.vue'
 import RegionChips from '~/components/common/RegionChips.vue'

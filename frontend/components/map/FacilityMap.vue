@@ -11,14 +11,14 @@
     <div
       v-else
       role="status"
-      class="flex h-full min-h-[220px] items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-500"
+      class="flex h-full min-h-[220px] items-center justify-center bg-background-light px-4 text-center text-sm text-muted"
     >
       좌표 정보가 없어 지도를 표시할 수 없습니다.
     </div>
     <div
       v-if="mapError"
       role="alert"
-      class="absolute inset-x-3 bottom-3 rounded-lg border border-red-200 bg-white/95 px-3 py-2 text-sm font-medium text-red-700 shadow-sm"
+      class="absolute inset-x-3 bottom-3 rounded-lg border border-red-200 bg-white/95 px-3 py-2 text-sm font-medium text-red-700 shadow-card-2"
     >
       지도 SDK를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
     </div>

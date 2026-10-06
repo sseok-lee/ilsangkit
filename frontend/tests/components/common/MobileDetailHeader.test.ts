@@ -77,11 +77,14 @@ describe('common/MobileDetailHeader', () => {
     expect(w.find('[data-test="share-pill"]').attributes('aria-label')).toBe('이 시설 공유하기')
   })
 
-  it('stats를 칩으로 렌더하고 color 클래스를 적용한다', () => {
+  it('stats를 SummaryRow 로 렌더한다', () => {
     const w = mount(MobileDetailHeader, { props: { ...base, stats: [{ label: '최근거래', value: '9.8억', color: 'text-primary' }] } })
     expect(w.text()).toContain('최근거래')
     expect(w.text()).toContain('9.8억')
-    expect(w.find('.text-primary').exists()).toBe(true)
+  })
+
+  it('variant 기본값은 flat 이다', () => {
+    expect(mount(MobileDetailHeader, { props: base }).get('section').attributes('data-variant')).toBe('flat')
   })
 
   it('최소 props(title만)로도 크래시 없이 렌더한다', () => {
@@ -101,5 +104,63 @@ describe('common/MobileDetailHeader', () => {
 
   it('address 슬롯이 없으면 주소 영역을 렌더하지 않는다', () => {
     expect(mount(MobileDetailHeader, { props: base }).find('[data-test="address"]').exists()).toBe(false)
+  })
+})
+
+describe('MobileDetailHeader variant="flat"', () => {
+  const flatBase = {
+    title: '가가성형외과의원',
+    eyebrow: '병원',
+    stats: [{ label: '종별', value: '의원' }, { label: '의사', value: '3명', color: 'text-primary' }],
+    phone: '053-427-8877',
+    copyable: true,
+    variant: 'flat' as const,
+  }
+
+  it('h1 하나, 라벨은 글자, 박스·그림자 없음', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.findAll('h1').length).toBe(1)
+    expect(w.get('h1').classes()).toEqual(expect.arrayContaining(['ui-h1', 'min-w-0', '[overflow-wrap:anywhere]']))
+    const eyebrow = w.get('[data-test="eyebrow"]')
+    expect(eyebrow.classes()).toContain('page-head__eyebrow')
+    expect(eyebrow.attributes('style')).toBeUndefined()
+    expect(w.html()).not.toMatch(/shadow-|rounded-xl|bg-slate-|text-slate-/)
+  })
+
+  it('stats 를 SummaryRow 로 렌더하고 text-primary 는 brand tone 으로', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.findAll('dt').map((d) => d.text())).toEqual(['종별', '의사'])
+    expect(w.findAll('dd')[1].classes()).toContain('summary-row__value--brand')
+  })
+
+  it('공매 할인율(text-emerald-700)은 success tone 으로', () => {
+    const w = mount(MobileDetailHeader, {
+      props: { ...flatBase, stats: [{ label: '감정가', value: '5억' }, { label: '할인율', value: '-46%', color: 'text-emerald-700' }] },
+    })
+    expect(w.findAll('dd')[1].classes()).toContain('summary-row__value--success')
+    expect(w.findAll('dd')[0].classes()).not.toContain('summary-row__value--success')
+  })
+
+  it('동작 줄은 UiButton 이고 data-test·emit 을 유지한다', async () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    expect(w.get('[data-test="call-pill"]').attributes('href')).toBe('tel:053-427-8877')
+    expect(w.get('[data-test="call-pill"]').classes()).toContain('ui-btn--secondary')
+    await w.get('[data-test="copy-pill"]').trigger('click')
+    await w.get('[data-test="share-pill"]').trigger('click')
+    expect(w.emitted('copy')).toHaveLength(1)
+    expect(w.emitted('share')).toHaveLength(1)
+    const dir = w.get('[data-test="directions-pill"]')
+    expect(dir.classes()).toContain('ui-btn--primary')
+    await dir.trigger('click')
+    await w.get('[data-test="directions-kakao"]').trigger('click')
+    expect(w.emitted('directions')).toEqual([['kakao']])
+  })
+
+  it('동작 버튼은 min-w-0 으로 줄어든다', () => {
+    const w = mount(MobileDetailHeader, { props: flatBase })
+    for (const t of ['call-pill', 'copy-pill', 'share-pill']) {
+      expect(w.get(`[data-test="${t}"]`).classes()).toContain('min-w-0')
+    }
+    expect(w.get('[data-test="directions-pill"]').element.parentElement!.classList.contains('min-w-0')).toBe(true)
   })
 })

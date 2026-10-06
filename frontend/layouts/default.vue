@@ -3,7 +3,7 @@
     <!-- 본문 바로가기(스킵 링크): 키보드 포커스 시에만 노출 -->
     <a
       href="#main"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white focus:shadow-lg"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white focus:shadow-card-2"
     >본문 바로가기</a>
 
     <!-- Header -->

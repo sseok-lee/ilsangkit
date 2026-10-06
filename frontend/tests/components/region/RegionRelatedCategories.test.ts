@@ -54,4 +54,16 @@ describe('RegionRelatedCategories', () => {
     })
     expect(wrapper.find('[data-testid="region-related-categories"]').exists()).toBe(true)
   })
+
+  it('UiChip 링크 + flat 섹션', () => {
+    const wrapper = mount(RegionRelatedCategories, {
+      props: { city: 'seoul', district: 'gangnam', districtName: '강남구', categories: [{ slug: 'parking', name: '주차장' }] },
+      global: globalConfig,
+    })
+    // SectionBlock 이 stub 이라 variant 는 fallthrough 속성으로 확인한다.
+    expect(wrapper.get('section').attributes('variant')).toBe('flat')
+    const links = wrapper.findAll('[data-testid="region-related-categories"] a')
+    expect(links.length).toBeGreaterThan(0)
+    expect(links.every((a) => a.classes().includes('ui-chip'))).toBe(true)
+  })
 })

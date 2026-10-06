@@ -1,18 +1,18 @@
 <template>
-  <div class="detail-page min-h-screen bg-background-light flex flex-col text-strong">
+  <div class="detail-page min-h-screen bg-white flex flex-col text-ink">
     <div class="flex-1 w-full">
       <!-- Loading -->
       <div v-if="pending" class="flex items-center justify-center py-20 min-h-[400px]" role="status" aria-label="정보 로딩 중">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p class="text-gray-600">{{ UI_MESSAGES.loading }}</p>
+          <p class="text-muted">{{ UI_MESSAGES.loading }}</p>
         </div>
       </div>
 
       <!-- Error -->
       <div v-else-if="error || !station" class="max-w-lg mx-auto px-4 py-20 text-center">
-        <span class="material-symbols-outlined text-[64px] text-red-500 mb-4">error</span>
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">지하철역 정보를 불러올 수 없습니다</h2>
+        <span class="material-symbols-outlined text-[64px] text-red-500 mb-4" aria-hidden="true">error</span>
+        <h2 class="ui-h2 mb-2">지하철역 정보를 불러올 수 없습니다</h2>
         <NuxtLink to="/subway" class="inline-block mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
           지하철역 목록으로
         </NuxtLink>
@@ -31,17 +31,18 @@
           >
             <div v-if="isMapExpanded" class="md:hidden fixed inset-0 z-[60] bg-background-light">
               <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
-                <button class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm" @click="isMapExpanded = false">
-                  <span class="material-symbols-outlined text-strong">close</span>
+                <button class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-card-2 backdrop-blur-sm" aria-label="지도 닫기" @click="isMapExpanded = false">
+                  <span class="material-symbols-outlined text-strong" aria-hidden="true">close</span>
                 </button>
-                <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
+                <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
                 <a
                   :href="kakaoMapUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-sm"
+                  aria-label="카카오맵 길찾기 (새 창)"
+                  class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-card-2"
                 >
-                  <span class="material-symbols-outlined text-[20px]">directions</span>
+                  <span class="material-symbols-outlined text-[20px]" aria-hidden="true">directions</span>
                 </a>
               </div>
               <ClientOnly>
@@ -57,26 +58,27 @@
         </Teleport>
 
         <!-- Body -->
-        <div class="max-w-[1120px] mx-auto px-4 md:px-6 pt-3 md:pt-5 pb-10">
+        <div class="page-container pt-3 md:pt-5 pb-10">
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px] gap-4 lg:gap-8 lg:items-start">
-            <article class="flex flex-col gap-4 md:gap-5 w-full min-w-0">
+            <article class="flex flex-col w-full min-w-0">
               <!-- Breadcrumb + Share -->
               <div class="flex items-center justify-between gap-2">
                 <Breadcrumb :items="breadcrumbItems" />
                 <button
-                  class="flex shrink-0 items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-muted hover:text-primary hover:border-primary transition-colors text-sm"
+                  class="flex shrink-0 items-center gap-1.5 min-h-[44px] px-2.5 md:px-3 py-1.5 rounded-lg border border-line text-muted hover:text-primary hover:border-primary transition-colors text-sm"
                   aria-label="이 지하철역 공유하기"
                   @click="handleShare"
                 >
-                  <span class="material-symbols-outlined text-[16px]">share</span>
+                  <span class="material-symbols-outlined text-[16px]" aria-hidden="true">share</span>
                   <span class="hidden sm:inline">공유</span>
                 </button>
               </div>
 
-              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHero -->
+              <!-- Hero: 모바일 핵심 정보 헤더 / 데스크톱 PageHead -->
               <MobileDetailHeader
                 :title="displayName"
                 eyebrow="지하철역"
+                variant="flat"
                 :stats="heroStats"
                 :phone="station.phoneNumber"
                 copyable
@@ -86,23 +88,25 @@
                 @copy="copyStationAddress"
                 @directions="openDirections"
               />
-              <PageHero
-                class="hidden md:block"
-                title-tag="div"
-                eyebrow="지하철역"
-                :title="displayName"
-                :description="introText"
-                :stats="heroStats"
-              />
+              <div class="hidden md:block">
+                <PageHead
+                  title-tag="div"
+                  eyebrow="지하철역"
+                  :title="displayName"
+                  :description="introText"
+                >
+                  <SummaryRow v-if="summaryItems.length" class="mt-4" :items="summaryItems" />
+                </PageHead>
+              </div>
 
               <!-- Basic Info -->
-              <SectionBlock heading="역정보" subtext="위치·운영기관·연락처 정보">
+              <SectionBlock variant="flat" heading="역정보" subtext="위치·운영기관·연락처 정보">
                 <!-- 노선 headline (대표 정보 1순위) -->
                 <div v-if="lines.length > 0" data-test="line-headline" class="mb-4 flex flex-wrap gap-2">
                   <span
                     v-for="ln in lines"
                     :key="ln"
-                    class="inline-flex items-center text-sm font-bold px-3.5 py-1.5 rounded-full text-white shadow-sm"
+                    class="inline-flex items-center text-sm font-bold px-3.5 py-1.5 rounded-full text-white"
                     :style="{ backgroundColor: lineColor(ln) }"
                   >
                     {{ lineLabel(ln) }}
@@ -133,9 +137,9 @@
               <AdBanner />
 
               <!-- 위치·로드뷰 -->
-              <SectionBlock heading="위치·로드뷰" subtext="지도와 로드뷰로 역 주변을 확인하세요.">
+              <SectionBlock variant="flat" heading="위치·로드뷰" subtext="지도와 로드뷰로 역 주변을 확인하세요.">
                 <!-- 모바일 전용 라이브 지도 (데스크톱은 사이드바 지도 사용) -->
-                <div class="md:hidden relative h-[220px] w-full rounded-lg overflow-hidden border border-line mb-3">
+                <div class="md:hidden relative h-[220px] w-full rounded-[10px] overflow-hidden border border-line mb-3">
                   <ClientOnly>
                     <FacilityMap
                       :center="{ lat: station.lat, lng: station.lng }"
@@ -145,10 +149,10 @@
                     />
                   </ClientOnly>
                   <button
-                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
+                    class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 min-h-[44px] bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
                     @click="isMapExpanded = true"
                   >
-                    <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                    <span class="material-symbols-outlined text-[16px]" aria-hidden="true">open_in_full</span>
                     지도 크게 보기
                   </button>
                 </div>
@@ -159,6 +163,7 @@
 
               <!-- 주변 시설 (다른 지하철역 + 주차장·EV충전·화장실·시장) -->
               <DetailNearby
+                section-variant="flat"
                 :nearby-facilities="nearbyStations"
                 :nearby-loading="nearbyLoading"
                 :cross-facilities-grouped="crossFacilitiesGrouped"
@@ -170,31 +175,19 @@
               <AdBanner />
 
               <!-- 관련 탐색 -->
-              <SectionBlock heading="관련 탐색" subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요.">
+              <SectionBlock variant="flat" heading="관련 탐색" subtext="비슷한 카테고리나 인기 지역으로 탐색을 이어가세요.">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs text-muted font-medium pr-1">관련 카테고리</span>
-                  <NuxtLink
-                    v-for="cat in relatedCategories"
-                    :key="cat.slug"
-                    :to="`/${cat.slug}`"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-                  >
-                    {{ cat.label }}
-                  </NuxtLink>
+                  <span class="text-[13px] font-semibold text-muted pr-1">관련 카테고리</span>
+                  <UiChip v-for="cat in relatedCategories" :key="cat.slug" :to="`/${cat.slug}`">{{ cat.label }}</UiChip>
                 </div>
                 <div v-if="regionLink" class="flex flex-wrap items-center gap-2 mt-3">
-                  <span class="text-xs text-muted font-medium pr-1">지역</span>
-                  <NuxtLink
-                    :to="regionLink.href"
-                    class="px-3 py-1.5 bg-white border border-line rounded-full text-sm text-ink hover:border-primary hover:bg-primary/5 hover:text-primary transition-all"
-                  >
-                    {{ regionLink.label }}
-                  </NuxtLink>
+                  <span class="text-[13px] font-semibold text-muted pr-1">지역</span>
+                  <UiChip :to="regionLink.href">{{ regionLink.label }}</UiChip>
                 </div>
               </SectionBlock>
 
               <!-- FAQ -->
-              <SectionBlock v-if="faqItems.length > 0" heading="자주 묻는 질문">
+              <SectionBlock v-if="faqItems.length > 0" variant="flat" heading="자주 묻는 질문">
                 <div class="space-y-1">
                   <details v-for="(faq, i) in faqItems" :key="i" class="border-b border-line last:border-b-0">
                     <summary class="py-3 cursor-pointer font-medium text-ink hover:text-primary">{{ faq.question }}</summary>
@@ -205,13 +198,13 @@
 
 
               <!-- Data Source -->
-              <DataSourceSection domain="facility" category="subway" :last-sync-date="station?.updatedAt ? formatDotDate(station.updatedAt) : null" />
+              <DataSourceSection domain="facility" category="subway" variant="flat" :last-sync-date="station?.updatedAt ? formatDotDate(station.updatedAt) : null" />
             </article>
 
             <!-- Sidebar -->
             <aside class="hidden md:flex lg:sticky lg:top-24 w-full min-w-0 flex-col">
               <!-- Map -->
-              <div class="relative w-full aspect-[4/3] bg-[#e5e7eb] rounded-lg overflow-hidden border border-line shadow-none min-h-[260px]" role="img" aria-label="지하철역 위치 지도">
+              <div class="relative w-full aspect-[4/3] bg-background-light rounded-[10px] overflow-hidden border border-line min-h-[260px]" role="img" aria-label="지하철역 위치 지도">
                 <ClientOnly>
                   <FacilityMap
                     :center="{ lat: station.lat, lng: station.lng }"
@@ -223,40 +216,41 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-3 p-3 bg-white border border-line flex gap-2 shadow-none rounded-lg">
+              <div class="mt-3 flex gap-2">
                 <a
                   v-if="station.phoneNumber"
                   data-test="sidebar-call"
                   :href="`tel:${station.phoneNumber}`"
-                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 border border-line"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors whitespace-nowrap flex items-center justify-center gap-2 border border-line"
                   aria-label="전화 걸기"
                 >
-                  <span class="material-symbols-outlined">call</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">call</span>
                   전화
                 </a>
                 <button
-                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 border border-line"
+                  class="flex-1 h-11 rounded-lg bg-white text-strong font-bold text-sm hover:bg-background-light transition-colors whitespace-nowrap flex items-center justify-center gap-2 border border-line"
                   aria-label="공유하기"
                   @click="handleShare"
                 >
-                  <span class="material-symbols-outlined">share</span>
-                  공유하기
+                  <span class="material-symbols-outlined" aria-hidden="true">share</span>
+                  공유
                 </button>
                 <div class="relative flex-[2]">
                   <button
-                    class="w-full h-11 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors shadow-none flex items-center justify-center gap-2"
+                    class="w-full h-11 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                    :aria-expanded="showNavDropdown"
                     @click="showNavDropdown = !showNavDropdown"
                   >
-                    <span class="material-symbols-outlined">directions</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">directions</span>
                     길찾기
-                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">expand_more</span>
                   </button>
-                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-sm border border-line overflow-hidden z-20">
-                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                  <div v-if="showNavDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-card-2 border border-line overflow-hidden z-20">
+                    <a :href="kakaoMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-background-light flex items-center gap-3 transition-colors">
                       <img src="/images/icons/kakaomap.svg" alt="카카오맵" class="w-5 h-5 rounded" /> 카카오맵으로 길찾기
                     </a>
-                    <div class="h-px bg-background-light"></div>
-                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                    <div class="h-px bg-line"></div>
+                    <a :href="naverMapUrl" target="_blank" rel="noopener noreferrer" class="w-full px-4 py-3 text-left text-sm font-medium text-strong hover:bg-background-light flex items-center gap-3 transition-colors">
                       <img src="/images/icons/navermap.svg" alt="네이버맵" class="w-5 h-5 rounded" /> 네이버맵으로 길찾기
                     </a>
                   </div>
@@ -277,7 +271,9 @@ import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
-import PageHero from '~/components/common/PageHero.vue'
+import PageHead from '~/components/common/PageHead.vue'
+import SummaryRow from '~/components/common/SummaryRow.vue'
+import UiChip from '~/components/common/UiChip.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
@@ -368,6 +364,11 @@ const heroStats = computed(() => {
   if (lines.value.length === 0) return []
   return [{ label: '노선', value: `${lines.value.length}개` }]
 })
+
+// 데스크톱 요약 줄(스펙 §3.5) — heroStats 와 같은 값. 숫자와 단위를 나눠 SummaryRow 규격에 맞춘다.
+const summaryItems = computed(() =>
+  lines.value.length === 0 ? [] : [{ label: '노선', value: lines.value.length, unit: '개' }],
+)
 
 const relatedCategories = computed(() => {
   const related = RELATED_CATEGORIES['subway'] || []
@@ -611,13 +612,3 @@ useHead({
   ],
 })
 </script>
-<style scoped>
-.detail-page :deep(.shadow-card) {
-  box-shadow: none;
-}
-
-.detail-page :deep(section.bg-white),
-.detail-page :deep(.bg-white.border) {
-  box-shadow: none;
-}
-</style>

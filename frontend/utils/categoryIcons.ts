@@ -45,86 +45,70 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   subway: '지하철역',
 } as const
 
-export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string; bgDark: string }> = {
+export const CATEGORY_COLORS: Record<CategoryId, { primary: string; bg: string }> = {
   toilet: {
     primary: '#8b5cf6',
     bg: 'bg-purple-50',
-    bgDark: 'dark:bg-purple-900/20',
   },
   trash: {
     primary: '#10b981',
     bg: 'bg-green-50',
-    bgDark: 'dark:bg-green-900/20',
   },
   wifi: {
     primary: '#f59e0b',
     bg: 'bg-orange-50',
-    bgDark: 'dark:bg-orange-900/20',
   },
   clothes: {
     primary: '#ec4899',
     bg: 'bg-pink-50',
-    bgDark: 'dark:bg-pink-900/20',
   },
   parking: {
     primary: '#0ea5e9',
     bg: 'bg-sky-50',
-    bgDark: 'dark:bg-sky-900/20',
   },
   aed: {
     primary: '#ef4444',
     bg: 'bg-red-50',
-    bgDark: 'dark:bg-red-900/20',
   },
   library: {
     primary: '#d97706',
     bg: 'bg-amber-50',
-    bgDark: 'dark:bg-amber-900/20',
   },
   hospital: {
     primary: '#14b8a6',
     bg: 'bg-teal-50',
-    bgDark: 'dark:bg-teal-900/20',
   },
   pharmacy: {
     primary: '#10b981',
     bg: 'bg-emerald-50',
-    bgDark: 'dark:bg-emerald-900/20',
   },
   park: {
     primary: '#22c55e',
     bg: 'bg-green-50',
-    bgDark: 'dark:bg-green-900/20',
   },
   school: {
     primary: '#6366f1',
     bg: 'bg-indigo-50',
-    bgDark: 'dark:bg-indigo-900/20',
   },
   market: {
     primary: '#f97316',
     bg: 'bg-orange-50',
-    bgDark: 'dark:bg-orange-900/20',
   },
   childcare: {
     primary: '#ec4899',
     bg: 'bg-pink-50',
-    bgDark: 'dark:bg-pink-900/20',
   },
   'ev-charger': {
     primary: '#14b8a6',
     bg: 'bg-teal-50',
-    bgDark: 'dark:bg-teal-900/20',
   },
   sports: {
     primary: '#06b6d4',
     bg: 'bg-cyan-50',
-    bgDark: 'dark:bg-cyan-900/20',
   },
   subway: {
     primary: '#64748b',
-    bg: 'bg-slate-50',
-    bgDark: 'dark:bg-slate-900/20',
+    bg: 'bg-background-light',
   },
 } as const
 
