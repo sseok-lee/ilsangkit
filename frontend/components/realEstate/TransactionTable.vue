@@ -182,59 +182,35 @@
           </div>
         </div>
       </div>
-      <div v-else class="md:hidden space-y-3 px-1">
-        <article
+      <!-- 상세 화면 모바일: 두 줄 목록(1줄 금액·날짜, 2줄 층·면적·평당가). 흔하지 않은 값만 태그. -->
+      <ul v-else class="md:hidden border-t border-line" data-testid="detail-transaction-list">
+        <li
           v-for="tx in saleTransactions"
           :key="tx.id"
-          data-testid="detail-transaction-card"
-          :class="[
-            'rounded-lg border bg-white p-4',
-            tx.cancelDealDay ? 'border-red-200 opacity-60' : 'border-line',
-          ]"
+          data-testid="detail-transaction-row"
+          :class="['border-b border-line px-0.5 py-3.5', tx.cancelDealDay ? 'opacity-60' : '']"
         >
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="text-sm text-muted">{{ formatDate(tx) }}</p>
-              <strong class="mt-1 block font-display text-lg text-strong tabular-nums">
-                {{ formatDetailKoreanPrice(tx.dealAmount) }}
-              </strong>
-            </div>
+          <div data-testid="tx-line1" class="flex items-baseline justify-between gap-3">
+            <strong :class="['text-[17px] font-bold text-strong tabular-nums', tx.cancelDealDay ? 'line-through' : '']">
+              {{ formatDetailKoreanPrice(tx.dealAmount) }}
+            </strong>
+            <span class="shrink-0 text-[13px] text-muted tabular-nums">{{ formatDate(tx) }}</span>
+          </div>
+          <p data-testid="tx-line2" class="mt-1 text-[13px] text-muted tabular-nums">
+            <template v-if="!hideBuilding">{{ tx.buildingName }} · </template>{{ floorDetailLabel(tx.floor) }} · 전용 {{ formatArea(tx) }}<template v-if="pricePerPyeong(tx)"> · 평당 {{ pricePerPyeong(tx) }}</template>
+            <span
+              v-if="tx.dealType && tx.dealType !== '중개거래'"
+              data-testid="tx-tag"
+              class="ml-1.5 inline-flex items-center rounded px-1.5 py-px align-[1px] text-[11px] font-semibold bg-primary-50 text-primary-ink"
+            >{{ tx.dealType }}</span>
             <span
               v-if="tx.cancelDealDay"
-              class="inline-flex items-center rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-600"
-            >
-              취소
-            </span>
-          </div>
-          <details class="mt-3 border-t border-line pt-3 text-sm text-muted">
-            <summary class="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
-              거래 정보 보기
-            </summary>
-            <dl class="grid gap-2 pt-2">
-              <div v-if="!hideBuilding" class="flex justify-between gap-3">
-                <dt>건물</dt>
-                <dd class="text-right text-strong">{{ tx.buildingName }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>층</dt>
-                <dd class="text-right text-strong">{{ floorDetailLabel(tx.floor) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>면적</dt>
-                <dd class="text-right text-strong">전용 {{ formatArea(tx) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>거래유형</dt>
-                <dd class="text-right text-strong">{{ tx.dealType || '-' }}</dd>
-              </div>
-              <div v-if="tx.buyerType || tx.sellerType" class="flex justify-between gap-3">
-                <dt>매수/매도</dt>
-                <dd class="text-right text-strong">{{ tx.buyerType || '-' }} / {{ tx.sellerType || '-' }}</dd>
-              </div>
-            </dl>
-          </details>
-        </article>
-      </div>
+              data-testid="tx-tag"
+              class="ml-1.5 inline-flex items-center rounded px-1.5 py-px align-[1px] text-[11px] font-semibold bg-red-50 text-red-600"
+            >취소</span>
+          </p>
+        </li>
+      </ul>
     </template>
 
     <!-- 전월세 거래 내역 -->
@@ -401,68 +377,39 @@
           </div>
         </div>
       </div>
-      <div v-else class="md:hidden space-y-3 px-1">
-        <article
+      <!-- 상세 화면 모바일: 두 줄 목록(1줄 금액·구분·날짜, 2줄 층·면적·계약기간·갱신·변동률). -->
+      <ul v-else class="md:hidden border-t border-line" data-testid="detail-transaction-list">
+        <li
           v-for="tx in rentTransactions"
           :key="tx.id"
-          data-testid="detail-transaction-card"
-          class="rounded-lg border border-line bg-white p-4"
+          data-testid="detail-transaction-row"
+          class="border-b border-line px-0.5 py-3.5"
         >
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="text-sm text-muted">{{ formatDate(tx) }}</p>
-              <strong class="mt-1 block font-display text-lg text-strong tabular-nums">
-                {{ formatRentDetailPrice(tx) }}
-              </strong>
-            </div>
-            <span
-              :class="[
-                'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
-                tx.rentType === '전세'
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'bg-orange-50 text-orange-700',
-              ]"
-            >
-              {{ tx.rentType }}
+          <div data-testid="tx-line1" class="flex items-baseline justify-between gap-3">
+            <span class="min-w-0">
+              <strong class="text-[17px] font-bold text-strong tabular-nums">{{ formatRentDetailPrice(tx) }}</strong>
+              <span class="ml-1.5 text-[13px] text-muted">{{ tx.rentType }}</span>
             </span>
+            <span class="shrink-0 text-[13px] text-muted tabular-nums">{{ formatDate(tx) }}</span>
           </div>
-          <details class="mt-3 border-t border-line pt-3 text-sm text-muted">
-            <summary class="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
-              거래 정보 보기
-            </summary>
-            <dl class="grid gap-2 pt-2">
-              <div v-if="!hideBuilding" class="flex justify-between gap-3">
-                <dt>건물</dt>
-                <dd class="text-right text-strong">{{ tx.buildingName }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>층</dt>
-                <dd class="text-right text-strong">{{ floorDetailLabel(tx.floor) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>면적</dt>
-                <dd class="text-right text-strong">전용 {{ formatArea(tx) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>계약구분</dt>
-                <dd class="text-right text-strong">{{ tx.contractType || '-' }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>갱신권</dt>
-                <dd class="text-right text-strong">{{ tx.useRenewalRight || '-' }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>종전금액</dt>
-                <dd class="text-right text-strong">{{ previousRentLabel(tx) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3">
-                <dt>기간</dt>
-                <dd class="text-right text-strong">{{ tx.contractTerm ? `계약 ${tx.contractTerm}개월` : '-' }}</dd>
-              </div>
-            </dl>
-          </details>
-        </article>
-      </div>
+          <p data-testid="tx-line2" class="mt-1 text-[13px] text-muted tabular-nums">
+            <template v-if="!hideBuilding">{{ tx.buildingName }} · </template>{{ floorDetailLabel(tx.floor) }} · 전용 {{ formatArea(tx) }}<template v-if="contractTermLabel(tx)"> · {{ contractTermLabel(tx) }}</template>
+            <span
+              v-if="tx.contractType === '갱신'"
+              data-testid="tx-tag"
+              class="ml-1.5 inline-flex items-center rounded px-1.5 py-px align-[1px] text-[11px] font-semibold bg-primary-50 text-primary-ink"
+            >갱신</span>
+            <span
+              v-if="depositChangeRate(tx) !== null"
+              :class="['ml-1.5 text-xs font-semibold', depositChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down']"
+            >{{ tx.rentType === '전세' ? '' : '보증금 ' }}{{ formatChangeRate(depositChangeRate(tx)!) }}</span>
+            <span
+              v-if="tx.rentType !== '전세' && monthlyRentChangeRate(tx) !== null"
+              :class="['ml-1.5 text-xs font-semibold', monthlyRentChangeRate(tx)! > 0 ? 'text-delta-up' : 'text-delta-down']"
+            >월세 {{ formatChangeRate(monthlyRentChangeRate(tx)!) }}</span>
+          </p>
+        </li>
+      </ul>
     </template>
   </div>
 </template>
@@ -573,12 +520,11 @@ function formatRentDetailPrice(tx: RentTransaction): string {
   return `${formatDetailKoreanPrice(tx.deposit)} / ${formatDetailKoreanPrice(tx.monthlyRent ?? 0)}`
 }
 
-function previousRentLabel(tx: RentTransaction): string {
-  if (tx.preDeposit == null && tx.preMonthlyRent == null) return '-'
-  if (tx.rentType === '전세') {
-    return tx.preDeposit == null ? '-' : `이전 ${formatDetailKoreanPrice(tx.preDeposit)}`
-  }
-  return `이전 ${formatDetailKoreanPrice(tx.preDeposit ?? 0)} / ${formatDetailKoreanPrice(tx.preMonthlyRent ?? 0)}`
+// 계약기간: 원본은 "26.10~28.10" 문자열(타입은 개월 수 number 로 선언됨) — 숫자면 개월, 문자열이면 그대로.
+function contractTermLabel(tx: RentTransaction): string {
+  const term = tx.contractTerm as unknown
+  if (term == null || term === '') return ''
+  return typeof term === 'number' ? `${term}개월` : String(term)
 }
 
 function pricePerPyeong(tx: SaleTransaction): string | null {
