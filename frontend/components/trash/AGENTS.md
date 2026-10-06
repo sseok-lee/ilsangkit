@@ -10,7 +10,6 @@
 | File | Description |
 |------|-------------|
 | `RegionSelector.vue` | 시/군/구/동 선택기 (trash 전용 depth) |
-| `ScheduleList.vue` | 요일별 배출 일정 |
 | `WasteTypeSection.vue` | 쓰레기 유형(종량제/재활용/음식물/대형) 안내 |
 
 ## For AI Agents

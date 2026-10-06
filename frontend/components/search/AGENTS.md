@@ -9,7 +9,6 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `SearchInput.vue` | 검색 입력창 (자동완성/최근 검색어) |
 | `SearchFilters.vue` | 검색 필터 (카테고리/지역/반경) |
 
 ## For AI Agents
@@ -20,7 +19,7 @@
 - URL 쿼리스트링과 동기화 (뒤로가기 지원)
 
 ### Testing Requirements
-- `tests/components/search/SearchInput.test.ts`, `SearchFilters.test.ts`
+- `tests/components/search/SearchFilters.test.ts`
 
 ### Common Patterns
 - `v-model`로 상위에 상태 전달

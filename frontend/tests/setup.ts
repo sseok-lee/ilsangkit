@@ -116,8 +116,6 @@ config.global.stubs = {
   AdBanner: { template: '<div class="stub-ad-banner" />' },
   // 홈의 청약 섹션은 useAsyncData 의존 → 구조 테스트에서 스터브
   HomeSubscriptionSection: { template: '<section data-testid="subscription" class="stub-home-subscription" />' },
-  // 홈 인기단지 섹션
-  HomeTrendingBuildings: { template: '<section data-testid="trending-buildings" />' },
 }
 
 // Global test setup

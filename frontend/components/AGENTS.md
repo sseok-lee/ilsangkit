@@ -13,7 +13,6 @@ Nuxt auto-import되는 Vue 컴포넌트. 도메인(시설/부동산/청약/가�
 | Directory | Purpose |
 |-----------|---------|
 | `ads/` | AdSense 배너 래퍼 (see `ads/AGENTS.md`) |
-| `category/` | 카테고리 카드/칩/인트로 (see `category/AGENTS.md`) |
 | `city/` | 도시 페이지 전용 (see `city/AGENTS.md`) |
 | `common/` | 공용 UI (헤더/푸터/버튼/페이지네이션 등) (see `common/AGENTS.md`) |
 | `facility/` | 시설 상세/목록/지도 관련 (see `facility/AGENTS.md`) |

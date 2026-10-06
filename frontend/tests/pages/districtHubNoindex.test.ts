@@ -47,7 +47,6 @@ vi.mock('~/composables/useRegions', () => ({
 const stubs = {
   NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
   Breadcrumb: true,
-  PageHero: true,
   AdBanner: true,
   RegionRealEstatePrices: true,
   RegionFacilityCategoryGrid: true,

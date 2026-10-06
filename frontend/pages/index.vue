@@ -133,7 +133,7 @@
           v-for="city in CITY_LINKS"
           :key="city.slug"
           :to="`/${city.slug}/`"
-          class="inline-flex items-center min-h-[44px] px-3.5 py-2 text-sm bg-white border border-line rounded-full text-strong hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors"
+          class="ui-chip"
         >
           {{ city.label }}
         </HardLink>

@@ -9,13 +9,8 @@
 ## Key Files
 | File | Description |
 |------|-------------|
-| `ComplexCard.vue` | 건물/단지 카드 |
 | `TransactionTable.vue` | 거래 내역 테이블 (페이지네이션) |
-| `TransactionModeTab.vue` | 매매/전월세 탭 |
-| `PriceTrendChart.vue` | 시계열 가격 차트 |
 | `RealEstateSearchFilter.vue` | 지역/면적/가격 필터 |
-| `AreaSelector.vue` | 면적 범위 선택기 |
-| `RentTypeToggle.vue` | 전월세 전환 토글 |
 | `NearbyFacilities.vue` | 주변 시설 (교차 시너지) |
 
 ## For AI Agents
@@ -28,7 +23,7 @@
 - URL 생성은 `../../utils/realEstateUrl.ts` 경유 — 직접 문자열 결합 금지
 
 ### Testing Requirements
-- `tests/components/realEstate/` — 8개 (AreaSelector, ComplexCard, NearbyFacilities, PriceTrendChart, RealEstateSearchFilter, RentTypeToggle, TransactionModeTab, TransactionTable)
+- `tests/components/realEstate/` — 3개 (NearbyFacilities, RealEstateSearchFilter, TransactionTable)
 
 ### Common Patterns
 - 보증금/월세 포매팅은 `../../utils/formatDeposit.ts`

@@ -139,7 +139,6 @@ async function mountSuspended(component: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav />' },
-          PageHero: { template: '<header><slot /></header>' },
           SectionBlock: { template: '<section><slot name="heading" /><slot name="right" /><slot /></section>' },
           ExplorationFilters: { template: '<div data-testid="exploration-filters" />' },
           ExplorationBuildingRow: {

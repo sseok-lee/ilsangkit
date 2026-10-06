@@ -20,7 +20,7 @@
 ## For AI Agents
 
 ### Working In This Directory
-- `FacilityDetail`, `FacilityFeatureCard`, `FacilityRoadview`, `DetailRow`, `OperatingStatusBadge`/`Banner`, `WasteScheduleCard` 테스트 누락 — 추가 권장
+- `FacilityDetail`, `FacilityRoadview`, `DetailRow`, `OperatingStatusBadge`/`Banner`, `WasteScheduleCard` 테스트 누락 — 추가 권장
 - 카드 클릭 시 올바른 경로로 이동하는지 확인
 
 ### Testing Requirements

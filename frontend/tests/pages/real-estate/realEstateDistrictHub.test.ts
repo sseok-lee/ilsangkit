@@ -126,11 +126,9 @@ async function mountSuspended(component: any, options?: any) {
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
-          PageHero: { props: ['stats'], template: '<div data-stub="hero"><span v-for="s in (stats||[])" :key="s.label" class="hero-stat" :data-label="s.label">{{ s.value }}</span></div>' },
           PageHead: { props: ['title'], template: '<header><h1>{{ title }}</h1><slot name="breadcrumb" /><slot /></header>' },
           SectionBlock: { props: ['heading', 'subtext', 'variant'], template: '<section><h2 v-if="heading">{{ heading }}</h2><p v-if="subtext" data-stub="subtext">{{ subtext }}</p><slot /><slot name="heading" /><slot name="right" /></section>' },
           AdBanner: { template: '<div />' },
-          ComplexCard: { template: '<div />' },
           Pagination: { template: '<div />' },
           DataSourceSection: { template: '<div />' },
           ExplorationFilters: { template: '<div data-stub="filters" />' },

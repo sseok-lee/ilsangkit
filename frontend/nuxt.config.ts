@@ -250,9 +250,6 @@ export default defineNuxtConfig({
               if (id.includes('vue') || id.includes('@vue') || id.includes('pinia')) {
                 return 'vendor-vue'
               }
-              if (id.includes('lightweight-charts')) {
-                return 'vendor-charts'
-              }
               if (id.includes('marked') || id.includes('dompurify')) {
                 return 'vendor-markdown'
               }

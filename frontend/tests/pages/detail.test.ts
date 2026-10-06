@@ -76,15 +76,7 @@ vi.mock('~/composables/useKakaoMap', () => ({
 const globalStubs = {
   ClientOnly: { template: '<div><slot /></div>' },
   FacilityMap: { template: '<div data-testid="facility-map">Map</div>' },
-  FacilityFeatureCard: { template: '<div>FeatureCard</div>' },
   Breadcrumb: { template: '<nav>Breadcrumb</nav>' },
-  // PageHero는 Nuxt auto-import 컴포넌트라 테스트 env에 별도 stub 필요.
-  // 실제 PageHero 처럼 title-tag 로 제목 태그를 결정한다(기본 h1; 상세 페이지는 div 강등).
-  // 상세 페이지가 title-tag="div" 를 넘기므로 데스크톱 제목은 h1 이 아니어야 SEO 가드(단일 h1)가 성립. (2026-10 이후 상세는 PageHead 를 직접 import 한다 — stub 미사용)
-  PageHero: {
-    template: '<section><component :is="titleTag || \'h1\'">{{ title }}</component><p>{{ description }}</p></section>',
-    props: ['eyebrow', 'title', 'description', 'stats', 'titleTag'],
-  },
 }
 
 // Helper to mount async components with Suspense
@@ -245,7 +237,7 @@ describe('DetailPage', () => {
   })
 
   // ---------------- SEO 회귀 가드 (모바일 핵심정보 헤더 도입 후) ----------------
-  // 모바일 전용 헤더(MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHero(hidden md:block)는
+  // 모바일 전용 헤더(MobileDetailHeader, md:hidden)가 정식 h1. 데스크톱 PageHead(hidden md:block)는
   // title-tag="div"(role=heading aria-level=1)로 강등 → raw HTML 의 literal <h1> 은 1개여야 한다.
   // 가드: h1 정확히 1개 + 시설명 (네이버 등 비렌더 파서의 중복 h1 회귀 방지).
   it('시설명 H1은 raw HTML 에서 정확히 1개(모바일 헤더)이며 시설명', async () => {
