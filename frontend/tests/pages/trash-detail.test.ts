@@ -59,7 +59,12 @@ describe('TrashDetailPage - 원본 상세 직접 접근', () => {
     expect(source).toContain('<WasteScheduleContent')
     expect(source).toContain("content: 'noindex, follow'")
     expect(source).not.toContain("rel: 'canonical'")
-    expect(source).not.toContain('<AdBanner')
+  })
+
+  it('광고 A안: 제목 바로 아래와 원본 배출 일정 뒤, 두 자리에 광고를 싣는다', () => {
+    expect(source.match(/<AdBanner\b/g)?.length).toBe(2)
+    expect(source).toMatch(/<\/PageHead>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
+    expect(source).toMatch(/heading="원본 배출 일정"[\s\S]*?<\/SectionBlock>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
   })
 
   it('legacy fragment를 임시 복귀 문맥으로 소비하고 공유 URL에서는 제거한다', () => {
