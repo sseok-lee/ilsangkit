@@ -12,7 +12,7 @@
 
       <!-- Error State -->
       <div v-else-if="error" class="max-w-lg mx-auto px-4 py-20 text-center">
-        <span class="material-symbols-outlined text-[64px] text-red-500 mb-4">error</span>
+        <span class="material-symbols-outlined text-[64px] text-red-500 mb-4" aria-hidden="true">error</span>
         <h2 class="ui-h2 mb-2">시설 정보를 불러올 수 없습니다</h2>
         <p class="text-muted mb-6">{{ error.message }}</p>
         <div class="flex items-center justify-center gap-4">
@@ -48,16 +48,17 @@
                   aria-label="지도 닫기"
                   @click="isMapExpanded = false"
                 >
-                  <span class="material-symbols-outlined text-ink">close</span>
+                  <span class="material-symbols-outlined text-ink" aria-hidden="true">close</span>
                 </button>
                 <span class="text-sm font-bold text-ink bg-white/90 px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm truncate max-w-[60vw]">{{ displayName }}</span>
                 <a
                   :href="`https://map.kakao.com/link/to/${encodeURIComponent(displayName)},${facility.lat},${facility.lng}`"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="카카오맵 길찾기 (새 창)"
                   class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-card-2"
                 >
-                  <span class="material-symbols-outlined text-[20px]">directions</span>
+                  <span class="material-symbols-outlined text-[20px]" aria-hidden="true">directions</span>
                 </a>
               </div>
               <!-- Full screen map -->
@@ -85,7 +86,7 @@
                   aria-label="이 시설 공유하기"
                   @click="handleShare"
                 >
-                  <span class="material-symbols-outlined text-[16px]">share</span>
+                  <span class="material-symbols-outlined text-[16px]" aria-hidden="true">share</span>
                   <span class="hidden sm:inline">공유</span>
                 </button>
               </div>
@@ -152,9 +153,9 @@
                         class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
                         @click="showNavDropdown = !showNavDropdown"
                       >
-                        <span class="material-symbols-outlined text-[18px]">directions</span>
+                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">directions</span>
                         길찾기
-                        <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                        <span class="material-symbols-outlined text-[14px]" aria-hidden="true">expand_more</span>
                       </button>
                       <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line overflow-hidden z-20">
                         <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
@@ -183,7 +184,7 @@
                       class="md:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink min-h-[44px] px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
                       @click="isMapExpanded = true"
                     >
-                      <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                      <span class="material-symbols-outlined text-[16px]" aria-hidden="true">open_in_full</span>
                       지도 크게 보기
                     </button>
                   </div>

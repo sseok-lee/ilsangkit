@@ -18,18 +18,20 @@
             <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-white/80 to-transparent">
               <button
                 class="flex size-11 items-center justify-center rounded-full bg-white/90 shadow-card-2"
+                aria-label="지도 닫기"
                 @click="isMapExpanded = false"
               >
-                <span class="material-symbols-outlined text-ink">close</span>
+                <span class="material-symbols-outlined text-ink" aria-hidden="true">close</span>
               </button>
               <span class="text-sm font-bold text-strong bg-white/90 px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm truncate max-w-[60vw]">{{ subscription.houseName }}</span>
               <a
                 :href="kakaoMapUrl"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="카카오맵 길찾기 (새 창)"
                 class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-card-2"
               >
-                <span class="material-symbols-outlined text-[20px]">directions</span>
+                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">directions</span>
               </a>
             </div>
             <ClientOnly>
@@ -98,9 +100,9 @@
                 <span class="text-xs text-faint">{{ formatSupplyArea(unit.supplyArea) }}</span>
               </div>
               <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
-                <span class="text-muted">일반 <strong class="text-strong font-display tabular-nums">{{ formatCount(unit.generalCount, '호') }}</strong></span>
-                <span class="text-muted">특별 <strong class="text-strong font-display tabular-nums">{{ formatCount(unit.specialCount, '호') }}</strong></span>
-                <span class="text-muted">{{ unitPriceShortLabel }} <strong class="text-strong font-display tabular-nums">{{ formatUnitPrice(unit) }}</strong></span>
+                <span class="text-muted">일반 <strong class="text-strong tabular-nums">{{ formatCount(unit.generalCount, '호') }}</strong></span>
+                <span class="text-muted">특별 <strong class="text-strong tabular-nums">{{ formatCount(unit.specialCount, '호') }}</strong></span>
+                <span class="text-muted">{{ unitPriceShortLabel }} <strong class="text-strong tabular-nums">{{ formatUnitPrice(unit) }}</strong></span>
               </div>
             </div>
           </div>
@@ -123,13 +125,13 @@
                   <td class="py-3 px-4 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
                   <td class="py-3 px-4 text-muted text-right">{{ formatExclusiveArea(unit.houseType) }}</td>
                   <td class="py-3 px-4 text-muted text-right">{{ formatSupplyArea(unit.supplyArea) }}</td>
-                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ formatCount(unit.generalCount, '호') }}</td>
-                  <td class="py-3 px-4 text-muted text-right font-display tabular-nums">{{ formatCount(unit.specialCount, '호') }}</td>
-                  <td class="py-3 px-4 text-primary font-bold text-right font-display tabular-nums">{{ formatCount(unitTotal(unit), '호') }}</td>
-                  <td class="py-3 px-4 text-strong font-semibold text-right font-display tabular-nums">
+                  <td class="py-3 px-4 text-muted text-right tabular-nums">{{ formatCount(unit.generalCount, '호') }}</td>
+                  <td class="py-3 px-4 text-muted text-right tabular-nums">{{ formatCount(unit.specialCount, '호') }}</td>
+                  <td class="py-3 px-4 text-primary font-bold text-right tabular-nums">{{ formatCount(unitTotal(unit), '호') }}</td>
+                  <td class="py-3 px-4 text-strong font-semibold text-right tabular-nums">
                     {{ formatUnitPrice(unit) }}
                   </td>
-                  <td v-if="!isPublicRent" class="py-3 px-4 text-muted text-right font-display tabular-nums">
+                  <td v-if="!isPublicRent" class="py-3 px-4 text-muted text-right tabular-nums">
                     {{ calcPricePerPyeong(unit) }}
                   </td>
                 </tr>
@@ -137,9 +139,9 @@
               <tfoot v-if="unitTypes.length > 1">
                 <tr class="border-t-2 border-line-2 bg-background-light">
                   <td class="py-3 px-4 font-bold text-ink" colspan="3">합계</td>
-                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ formatCount(totalGeneral, '호') }}</td>
-                  <td class="py-3 px-4 font-bold text-ink text-right font-display tabular-nums">{{ formatCount(totalSpecial, '호') }}</td>
-                  <td class="py-3 px-4 font-bold text-primary text-right font-display tabular-nums">{{ formatCount(totalSupplyTotal, '호') }}</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right tabular-nums">{{ formatCount(totalGeneral, '호') }}</td>
+                  <td class="py-3 px-4 font-bold text-ink text-right tabular-nums">{{ formatCount(totalSpecial, '호') }}</td>
+                  <td class="py-3 px-4 font-bold text-primary text-right tabular-nums">{{ formatCount(totalSupplyTotal, '호') }}</td>
                   <td class="py-3 px-4"></td>
                   <td v-if="!isPublicRent" class="py-3 px-4"></td>
                 </tr>
@@ -167,16 +169,16 @@
               <tbody>
                 <tr v-for="row in competitionByModel" :key="row.modelNo" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(row.houseType) }}</td>
-                  <td class="py-3 px-3 text-right font-display tabular-nums" :class="getCompetitionClass(row.rank1Area)">{{ formatCompetition(row.rank1Area) }}</td>
-                  <td class="py-3 px-3 text-right font-display tabular-nums" :class="getCompetitionClass(row.rank1Other)">{{ formatCompetition(row.rank1Other) }}</td>
-                  <td class="py-3 px-3 text-right text-muted font-display tabular-nums">{{ formatCompetition(row.rank2Area) }}</td>
-                  <td class="py-3 px-3 text-right text-muted font-display tabular-nums">{{ formatCompetition(row.rank2Other) }}</td>
+                  <td class="py-3 px-3 text-right tabular-nums" :class="getCompetitionClass(row.rank1Area)">{{ formatCompetition(row.rank1Area) }}</td>
+                  <td class="py-3 px-3 text-right tabular-nums" :class="getCompetitionClass(row.rank1Other)">{{ formatCompetition(row.rank1Other) }}</td>
+                  <td class="py-3 px-3 text-right text-muted tabular-nums">{{ formatCompetition(row.rank2Area) }}</td>
+                  <td class="py-3 px-3 text-right text-muted tabular-nums">{{ formatCompetition(row.rank2Other) }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="text-xs text-faint mt-3 flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">info</span>
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">info</span>
             접수자수/공급세대수 기준 경쟁률입니다
           </p>
         </SectionBlock>
@@ -198,15 +200,15 @@
                 <tr v-for="score in validScores" :key="`${score.modelNo}-${score.regionCode}`" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(score.houseType) }}</td>
                   <td class="py-3 px-3 text-muted">{{ score.regionName || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-primary font-display tabular-nums">{{ score.minScore || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-red-600 font-display tabular-nums">{{ score.maxScore || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-bold text-strong font-display tabular-nums">{{ score.avgScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-primary tabular-nums">{{ score.minScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-red-600 tabular-nums">{{ score.maxScore || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-bold text-strong tabular-nums">{{ score.avgScore || '-' }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="text-xs text-faint mt-3 flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">info</span>
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">info</span>
             가점제 적용 단지의 1순위 당첨 가점입니다. 84점 만점 기준.
           </p>
         </SectionBlock>
@@ -225,19 +227,19 @@
               <tbody>
                 <tr v-for="unit in unitTypes" :key="unit.id" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(unit.houseType) }}</td>
-                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-muted text-right font-display tabular-nums">
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 text-muted text-right tabular-nums">
                     {{ formatCount(unit[col.key as keyof SubscriptionUnitType] as number | null, '세대') }}
                   </td>
-                  <td class="py-3 px-3 text-primary font-bold text-right font-display tabular-nums">{{ formatCount(unit.specialCount, '세대') }}</td>
+                  <td class="py-3 px-3 text-primary font-bold text-right tabular-nums">{{ formatCount(unit.specialCount, '세대') }}</td>
                 </tr>
               </tbody>
               <tfoot v-if="unitTypes.length > 1">
                 <tr class="border-t-2 border-line-2 bg-background-light">
                   <td class="py-3 px-3 font-bold text-ink">합계</td>
-                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-ink text-right font-display tabular-nums">
+                  <td v-for="col in activeSpecialColumns" :key="col.key" class="py-3 px-3 font-bold text-ink text-right tabular-nums">
                     {{ formatCount(specialColumnTotal(col.key), '세대') }}
                   </td>
-                  <td class="py-3 px-3 font-bold text-primary text-right font-display tabular-nums">{{ formatCount(totalSpecial, '세대') }}</td>
+                  <td class="py-3 px-3 font-bold text-primary text-right tabular-nums">{{ formatCount(totalSpecial, '세대') }}</td>
                 </tr>
               </tfoot>
             </table>
@@ -258,7 +260,7 @@
                 <tr v-for="status in specialStatuses" :key="status.houseType ?? status.id" class="border-b border-line hover:bg-background-light">
                   <td class="py-3 px-3 text-strong font-medium">{{ formatHouseType(status.houseType) }}</td>
                   <td v-for="col in activeSpecialStatusColumns" :key="col.key" class="py-3 px-3 text-right text-muted">
-                    <span class="block text-xs text-faint font-display tabular-nums">{{ formatCount(status[col.applyKey] as number | null, '명') }} / {{ formatCount(status[col.supplyKey] as number | null, '세대') }}</span>
+                    <span class="block text-xs text-faint tabular-nums">{{ formatCount(status[col.applyKey] as number | null, '명') }} / {{ formatCount(status[col.supplyKey] as number | null, '세대') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -277,9 +279,9 @@
                 class="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors px-2 py-1 rounded-lg hover:bg-primary-50"
                 @click="showNavDropdown = !showNavDropdown"
               >
-                <span class="material-symbols-outlined text-[18px]">directions</span>
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">directions</span>
                 길찾기
-                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">expand_more</span>
               </button>
               <div v-if="showNavDropdown" class="absolute right-0 top-full mt-2 w-56 bg-white rounded-[10px] shadow-card-2 border border-line-2 overflow-hidden z-20">
                 <button class="w-full px-4 py-3 text-left text-sm font-medium text-ink hover:bg-background-light flex items-center gap-3 transition-colors" @click="openNavigation(kakaoMapUrl)">
@@ -324,7 +326,7 @@
               class="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white/90 text-ink px-3 py-1.5 rounded-full shadow-card-2 backdrop-blur-sm text-xs font-medium hover:bg-white transition-colors"
               @click="isMapExpanded = true"
             >
-              <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">open_in_full</span>
               지도 크게 보기
             </button>
           </div>
@@ -379,9 +381,9 @@
                   <td class="px-4 py-3 font-medium text-strong">{{ supply.name || '원문 확인' }}</td>
                   <td class="px-4 py-3 text-muted">{{ supply.region || '원문 확인' }}</td>
                   <td class="px-4 py-3 text-muted">{{ supply.address || '원문 확인' }}</td>
-                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatPublicRentalCount(supply.supplyCount) }}</td>
-                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatWonAmount(supply.deposit) }}</td>
-                  <td class="px-4 py-3 text-right font-display tabular-nums">{{ formatWonAmount(supply.monthlyRent) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums">{{ formatPublicRentalCount(supply.supplyCount) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums">{{ formatWonAmount(supply.deposit) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums">{{ formatWonAmount(supply.monthlyRent) }}</td>
                   <td class="px-4 py-3 text-muted">{{ formatPublicRentalPeriod(supply) }}</td>
                 </tr>
               </tbody>
@@ -407,7 +409,7 @@
             </div>
             <div v-if="subscription.totalSupplyCount != null" class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">총 공급호수</span>
-              <span class="font-medium text-strong font-display tabular-nums">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
+              <span class="font-medium text-strong tabular-nums">{{ subscription.totalSupplyCount.toLocaleString() }}호</span>
             </div>
             <div v-if="subscription.constructorName" class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">시공사</span>
@@ -419,7 +421,7 @@
             </div>
             <div v-if="subscription.moveInMonth" class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">입주예정</span>
-              <span class="font-medium text-strong font-display tabular-nums">{{ formatMoveInMonth(subscription.moveInMonth) }}</span>
+              <span class="font-medium text-strong tabular-nums">{{ formatMoveInMonth(subscription.moveInMonth) }}</span>
             </div>
             <div v-if="subscription.inquiryTel" class="flex justify-between py-2 border-b border-line">
               <span class="text-muted">문의전화</span>
@@ -474,14 +476,14 @@
     <div v-else-if="error" class="flex items-center justify-center py-20 min-h-[400px]">
       <div class="text-center">
         <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-[28px] text-red-400">error_outline</span>
+          <span class="material-symbols-outlined text-[28px] text-red-400" aria-hidden="true">error_outline</span>
         </div>
         <p class="text-red-700 font-semibold">청약 정보를 불러올 수 없습니다</p>
         <NuxtLink
           to="/subscription"
           class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
         >
-          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
           목록으로
         </NuxtLink>
       </div>
