@@ -2,7 +2,7 @@
   <div
     v-if="open"
     :id="listboxId"
-    class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-lg overflow-hidden"
+    class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-card-2 overflow-hidden"
     role="listbox"
   >
     <!-- 빈 입력: 최근 + 인기 -->

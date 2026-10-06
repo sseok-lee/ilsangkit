@@ -65,7 +65,7 @@
             <!-- v-show(v-if 아님): 링크를 SSR DOM에 항상 노출해 크롤러/사이트링크 후보로 잡히게 함. 시각적으로는 hover 전 display:none -->
             <div
               v-show="activeDropdown === group.title"
-              class="absolute top-full left-0 mt-2 min-w-[196px] bg-white rounded-lg shadow-lg border border-line p-2 z-50"
+              class="absolute top-full left-0 mt-2 min-w-[196px] bg-white rounded-lg shadow-card-2 border border-line p-2 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -129,7 +129,7 @@
               data-testid="nav-mega-menu"
               role="region"
               aria-label="생활시설 메뉴"
-              class="absolute top-full right-0 mt-2 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-lg shadow-lg border border-line p-5 z-50"
+              class="absolute top-full right-0 mt-2 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-1 w-[360px] lg:w-[640px] max-w-[calc(100vw-1.5rem)] bg-white rounded-lg shadow-card-2 border border-line p-5 z-50"
               @mouseenter="cancelCloseDropdown"
               @mouseleave="scheduleCloseDropdown"
             >
@@ -202,7 +202,7 @@
       data-testid="mobile-menu"
       role="navigation"
       aria-label="모바일 메뉴"
-      class="xl:hidden fixed top-16 lg:top-20 left-0 right-0 bottom-0 z-40 bg-white border-b border-line shadow-lg overflow-y-auto"
+      class="xl:hidden fixed top-16 lg:top-20 left-0 right-0 bottom-0 z-40 bg-white border-b border-line shadow-card-2 overflow-y-auto"
       @keydown.tab="handleMobileMenuTab"
     >
       <nav class="flex flex-col p-4 gap-1">

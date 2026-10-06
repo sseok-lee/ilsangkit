@@ -4,7 +4,7 @@
     배치만 담당하고(w-fit + gap), 지도 위에서의 가독성은 각 트리거가 자기 배경과 그림자로
     책임진다. 판을 없앴으므로 트리거에 shadow 가 반드시 있어야 지도 라벨과 섞이지 않는다.
   -->
-  <div ref="root" class="w-fit max-w-full inline-flex flex-nowrap gap-1 rounded-xl border border-line bg-white/95 p-1 shadow-sm">
+  <div ref="root" class="w-fit max-w-full inline-flex flex-nowrap gap-1 rounded-xl border border-line bg-white/95 p-1 shadow-card-2">
     <!--
       6개 조합을 한 줄에 늘어놓는 대신 "무엇을"(아파트/빌라/오피스텔) 과 "어떻게"(매매/전월세)
       두 축으로 나눈다. 390px 에서 6칩은 4개만 보이고 가로 스크롤이 필요했는데, 2축은 두 컨트롤이
@@ -40,7 +40,7 @@
       <!-- v-show(v-if 아님): 닫혀 있어도 링크가 SSR DOM 에 남아야 크롤러가 본다. -->
       <ul
         v-show="openMenu === menu.key"
-        class="absolute top-full left-0 mt-1 min-w-[88px] sm:min-w-[120px] bg-white rounded-lg sm:rounded-xl shadow-lg border border-line-2 p-0.5 sm:p-1 z-50"
+        class="absolute top-full left-0 mt-1 min-w-[88px] sm:min-w-[120px] bg-white rounded-lg sm:rounded-xl shadow-card-2 border border-line-2 p-0.5 sm:p-1 z-50"
       >
         <li v-for="opt in menu.options" :key="opt.value">
           <a
