@@ -114,4 +114,20 @@ describe('RelatedGuides — variant', () => {
     expect(w.get('h3').classes()).toContain('ui-h3')
     expect(w.findAll('a').length).toBeGreaterThan(1)
   })
+
+  it('inline 카드 제목은 h4 이다(h3 "관련 가이드" 아래 단계)', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'inline' })
+    await flushPromises()
+    expect(w.findAll('h3')).toHaveLength(1)
+    expect(w.get('h4').text()).toBe('가이드 A')
+  })
+
+  it('flat 카드 제목은 h3 이다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'flat' })
+    await flushPromises()
+    expect(w.find('h4').exists()).toBe(false)
+    expect(w.get('h3').text()).toBe('가이드 A')
+  })
 })

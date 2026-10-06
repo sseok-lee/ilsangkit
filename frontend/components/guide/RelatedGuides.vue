@@ -1,6 +1,17 @@
 <template>
-  <section v-if="guides.length > 0 && variant === 'flat'" class="section-flat">
-    <div class="flex items-center justify-between mb-4 md:mb-[22px]">
+  <component
+    :is="variant === 'inline' ? 'div' : 'section'"
+    v-if="guides.length > 0"
+    :class="variant === 'inline' ? undefined : 'section-flat'"
+  >
+    <div v-if="variant === 'inline'" class="flex items-center justify-between mb-3">
+      <h3 class="ui-h3 text-strong">관련 가이드</h3>
+      <NuxtLink to="/guide" class="text-sm text-primary font-medium hover:underline flex items-center gap-1">
+        더보기
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+      </NuxtLink>
+    </div>
+    <div v-else class="flex items-center justify-between mb-4 md:mb-[22px]">
       <h2 class="ui-h2 text-strong">관련 가이드</h2>
       <NuxtLink
         to="/guide"
@@ -32,57 +43,19 @@
           </div>
         </div>
         <div class="p-3">
-          <h3 class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors">
+          <component
+            :is="variant === 'inline' ? 'h4' : 'h3'"
+            class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors"
+          >
             {{ guide.title }}
-          </h3>
+          </component>
           <p class="text-xs text-muted mt-1 line-clamp-1">
             {{ guide.summary }}
           </p>
         </div>
       </NuxtLink>
     </div>
-  </section>
-  <div v-else-if="guides.length > 0 && variant === 'inline'">
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="ui-h3 text-strong">관련 가이드</h3>
-      <NuxtLink to="/guide" class="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-        더보기
-        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
-      </NuxtLink>
-    </div>
-    <!-- flat 분기와 같은 카드 격자 -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <NuxtLink
-        v-for="guide in guides"
-        :key="guide.id"
-        :to="`/guide/${guide.slug}`"
-        class="group flex flex-col rounded-lg border border-line overflow-hidden hover:border-primary/30 transition-colors duration-200"
-      >
-        <div class="aspect-video bg-background-light overflow-hidden">
-          <img
-            v-if="guide.thumbnailUrl"
-            :src="`${publicApiBase}${guide.thumbnailUrl}`"
-            :alt="guide.title"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            width="400"
-            height="225"
-          />
-          <div v-else class="w-full h-full flex items-center justify-center">
-            <span class="material-symbols-outlined text-[36px] text-faint" aria-hidden="true">article</span>
-          </div>
-        </div>
-        <div class="p-3">
-          <h3 class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors">
-            {{ guide.title }}
-          </h3>
-          <p class="text-xs text-muted mt-1 line-clamp-1">
-            {{ guide.summary }}
-          </p>
-        </div>
-      </NuxtLink>
-    </div>
-  </div>
+  </component>
 </template>
 
 <script setup lang="ts">
