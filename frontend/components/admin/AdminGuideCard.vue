@@ -6,7 +6,7 @@
     :class="selected ? 'border-primary bg-primary/5' : 'border-line bg-white hover:border-primary/30'"
     @click="$emit('select', guide.id)"
   >
-    <div class="shrink-0 w-16 h-16 rounded-md bg-slate-100 overflow-hidden">
+    <div class="shrink-0 w-16 h-16 rounded-md bg-background-light overflow-hidden">
       <img v-if="guide.thumbnailUrl" :src="guide.thumbnailUrl" :alt="guide.title" class="w-full h-full object-cover">
     </div>
     <div class="flex-1 min-w-0">
@@ -17,7 +17,7 @@
           :class="STATUS_CLASS[guide.status]"
         >{{ STATUS_LABEL[guide.status] }}</span>
       </div>
-      <h3 class="text-sm font-semibold text-slate-900 truncate">{{ guide.title }}</h3>
+      <h3 class="text-sm font-semibold text-ink truncate">{{ guide.title }}</h3>
       <p class="text-xs text-muted mt-1">{{ guide.category }} · {{ guide.articleType }}</p>
     </div>
   </button>

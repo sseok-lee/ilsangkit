@@ -4,7 +4,7 @@
       <div class="flex items-center gap-2.5 min-w-0">
         <span
           v-if="iconImg"
-          class="w-[30px] h-[30px] rounded-lg bg-slate-50 flex items-center justify-center shrink-0"
+          class="w-[30px] h-[30px] rounded-lg bg-background-light flex items-center justify-center shrink-0"
         >
           <img :src="`/icons/category/${iconImg}.webp?v2`" :alt="label" class="w-[19px] h-[19px]" width="19" height="19" />
         </span>

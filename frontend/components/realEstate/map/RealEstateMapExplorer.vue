@@ -10,7 +10,7 @@
           <p class="text-xl font-extrabold tracking-[-0.02em] text-ink">부동산 실거래가</p>
         </div>
         <MapFilterBar :type="type" @update:type="onTypeChange" />
-        <div class="ml-auto inline-flex rounded-xl border border-line bg-background-light p-1 text-sm font-semibold text-slate-700">
+        <div class="ml-auto inline-flex rounded-xl border border-line bg-background-light p-1 text-sm font-semibold text-ink">
           <button type="button" class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-line bg-white px-4 text-primary" aria-current="page">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9 18 3.8 20.6V6.6L9 4m0 14 6 2.6m-6-2.6V4m6 16.6 5.2-2.6V4L15 6.6m0 14V6.6M15 6.6 9 4" />

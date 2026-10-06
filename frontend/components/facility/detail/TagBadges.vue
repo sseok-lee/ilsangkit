@@ -32,7 +32,7 @@ const chipBaseClass = computed(() => {
 
 const variantClass = computed(() => ({
   teal: 'bg-teal-50 text-teal-700 border border-teal-200',
-  gray: 'bg-gray-100 text-gray-700',
+  gray: 'bg-background-light text-ink',
   sky: 'bg-sky-100 text-sky-800',
   custom: '',
 }[props.variant]))

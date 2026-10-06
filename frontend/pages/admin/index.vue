@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-50 flex flex-col">
+  <div class="min-h-screen bg-background-light flex flex-col">
     <header class="bg-white border-b border-line px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-1">
         <button
@@ -8,7 +8,7 @@
           type="button"
           :data-testid="`tab-${t.value}`"
           class="px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
-          :class="tab === t.value ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'"
+          :class="tab === t.value ? 'bg-primary text-white' : 'text-muted hover:bg-background-light'"
           @click="onTabChange(t.value)"
         >
           {{ t.label }}
@@ -42,7 +42,7 @@
         <button
           type="button"
           data-testid="notice-dismiss"
-          class="shrink-0 text-xs text-muted hover:text-slate-900"
+          class="shrink-0 text-xs text-muted hover:text-ink"
           @click="notice = ''"
         >
           닫기
@@ -61,7 +61,7 @@
               type="button"
               :data-testid="`filter-${f.value}`"
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-              :class="statusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-slate-600'"
+              :class="statusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-muted'"
               @click="onFilterChange(f.value)"
             >
               {{ f.label }}
@@ -118,7 +118,7 @@
               type="button"
               :data-testid="`guide-filter-${f.value}`"
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-              :class="guideStatusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-slate-600'"
+              :class="guideStatusFilter === f.value ? 'bg-primary text-white' : 'bg-white border border-line text-muted'"
               @click="onGuideFilterChange(f.value)"
             >
               {{ f.label }}

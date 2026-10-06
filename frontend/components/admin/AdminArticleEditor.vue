@@ -95,7 +95,7 @@
       <button
         type="button"
         data-testid="unpublish-button"
-        class="px-3 py-2 rounded-md text-sm font-medium bg-slate-200 text-slate-700"
+        class="px-3 py-2 rounded-md text-sm font-medium bg-line text-ink"
         @click="$emit('unpublish')"
       >
         발행취소
@@ -111,7 +111,7 @@
       <button
         type="button"
         data-testid="regenerate-button"
-        class="px-3 py-2 rounded-md text-sm font-medium bg-slate-100 text-slate-700"
+        class="px-3 py-2 rounded-md text-sm font-medium bg-background-light text-ink"
         @click="$emit('regenerate')"
       >
         재생성

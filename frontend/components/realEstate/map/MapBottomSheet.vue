@@ -10,7 +10,7 @@
       :aria-label="expanded ? '목록 접기' : '목록 펼치기'"
       @click="expanded = !expanded"
     >
-      <span class="block w-10 h-1 rounded-full bg-slate-300" />
+      <span class="block w-10 h-1 rounded-full bg-line" />
     </button>
     <!--
       목록(MapSidebar)만 담는다. 페이지에 더 이상 본문 스크롤이 없으므로(layouts/map.vue가

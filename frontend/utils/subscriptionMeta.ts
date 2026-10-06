@@ -119,10 +119,10 @@ export function subscriptionTypeBadge(
   // 타임라인 칩용 압축 라벨 (의도적: getSourceTypeLabel '무순위'와 다름)
   if (sourceType === 'REMAINING') return { label: '무순위·잔여', classes: 'bg-orange-50 text-orange-700', kind: 'sale' }
   if (sourceType === 'OPTIONAL') return { label: '임의공급', classes: 'bg-fuchsia-50 text-fuchsia-700', kind: 'sale' }
-  if (sourceType === 'PRIVATE_RENT') return { label: '민간임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
-  if (sourceType === 'PUBLIC_RENT') return { label: '공공임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
+  if (sourceType === 'PRIVATE_RENT') return { label: '민간임대', classes: 'bg-background-light text-muted', kind: 'rent' }
+  if (sourceType === 'PUBLIC_RENT') return { label: '공공임대', classes: 'bg-background-light text-muted', kind: 'rent' }
   if (sourceType === 'APT' && rentType != null && PUBLIC_RENT_TYPES.includes(rentType)) {
-    return { label: '공공임대', classes: 'bg-slate-100 text-slate-600', kind: 'rent' }
+    return { label: '공공임대', classes: 'bg-background-light text-muted', kind: 'rent' }
   }
   // APT 분양 (rentType null 또는 분양 rentType)
   return { label: '아파트', classes: 'bg-indigo-50 text-indigo-700', kind: 'sale' }

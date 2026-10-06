@@ -5,9 +5,9 @@
     rel="nofollow noopener noreferrer"
     class="block rounded-lg border border-line bg-white p-4 transition-colors hover:border-primary/30"
   >
-    <p class="text-base font-semibold text-slate-900 line-clamp-1">{{ post.title }}</p>
-    <p class="mt-2 text-sm text-slate-600 line-clamp-2 leading-relaxed">{{ snippet }}</p>
-    <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+    <p class="text-base font-semibold text-ink line-clamp-1">{{ post.title }}</p>
+    <p class="mt-2 text-sm text-muted line-clamp-2 leading-relaxed">{{ snippet }}</p>
+    <div class="mt-3 flex items-center justify-between text-xs text-muted">
       <span>{{ post.bloggerName }} · {{ formattedDate }}</span>
       <span class="material-symbols-outlined text-[16px]">open_in_new</span>
     </div>

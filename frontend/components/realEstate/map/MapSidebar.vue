@@ -1,15 +1,15 @@
 <template>
   <div class="flex flex-col h-full overflow-y-auto bg-white">
     <div class="px-4 py-3 border-b border-line sticky top-0 bg-white z-10">
-      <p class="text-sm font-semibold text-slate-900">{{ heading }}</p>
-      <p v-if="showCountNote" class="text-xs text-slate-600 mt-0.5">
+      <p class="text-sm font-semibold text-ink">{{ heading }}</p>
+      <p v-if="showCountNote" class="text-xs text-muted mt-0.5">
         이 영역에 {{ props.total.toLocaleString('ko-KR') }}곳 — 상위 {{ visibleRows.length.toLocaleString('ko-KR') }}곳 표시
       </p>
     </div>
 
     <div v-if="props.error" data-testid="map-sidebar-error" class="mx-4 mt-3 rounded-lg border border-line bg-background-light p-3">
-      <p class="text-sm font-semibold text-slate-900">지도 데이터를 불러오지 못했습니다</p>
-      <p class="mt-1 text-xs leading-relaxed text-slate-600">{{ props.error }}</p>
+      <p class="text-sm font-semibold text-ink">지도 데이터를 불러오지 못했습니다</p>
+      <p class="mt-1 text-xs leading-relaxed text-muted">{{ props.error }}</p>
       <div class="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
@@ -21,7 +21,7 @@
         <a
           v-if="props.listHref"
           :href="props.listHref"
-          class="min-h-[44px] inline-flex items-center rounded-lg border border-line bg-white px-3 text-xs font-semibold text-slate-700"
+          class="min-h-[44px] inline-flex items-center rounded-lg border border-line bg-white px-3 text-xs font-semibold text-ink"
         >
           {{ props.listLabel }}
         </a>
@@ -59,8 +59,8 @@
           >
             <span class="flex items-start justify-between gap-3">
               <span class="min-w-0">
-              <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
-              <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
+              <span class="block text-sm font-medium text-ink truncate">{{ row.title }}</span>
+              <span v-if="row.subtitle" class="block text-xs text-muted truncate">{{ row.subtitle }}</span>
               </span>
               <span class="material-symbols-outlined text-[18px] text-faint" aria-hidden="true">chevron_right</span>
             </span>
@@ -68,7 +68,7 @@
               <p
                 v-if="row.dealsUnavailable"
                 data-testid="deal-bundle-error"
-                class="text-sm text-slate-600"
+                class="text-sm text-muted"
               >
                 거래 정보를 불러오지 못했습니다
               </p>
@@ -97,8 +97,8 @@
             @click.exact.prevent="emit('select', row.item)"
           >
             <span class="min-w-0">
-              <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
-              <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
+              <span class="block text-sm font-medium text-ink truncate">{{ row.title }}</span>
+              <span v-if="row.subtitle" class="block text-xs text-muted truncate">{{ row.subtitle }}</span>
             </span>
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </a>
@@ -114,8 +114,8 @@
             @click="emit('select', row.item)"
           >
             <span class="min-w-0">
-              <span class="block text-sm font-medium text-slate-900 truncate">{{ row.title }}</span>
-              <span v-if="row.subtitle" class="block text-xs text-slate-600 truncate">{{ row.subtitle }}</span>
+              <span class="block text-sm font-medium text-ink truncate">{{ row.title }}</span>
+              <span v-if="row.subtitle" class="block text-xs text-muted truncate">{{ row.subtitle }}</span>
             </span>
             <span class="text-sm font-semibold text-primary whitespace-nowrap">{{ row.price }}</span>
           </button>
@@ -125,7 +125,7 @@
         <button
           type="button"
           data-testid="map-sidebar-more"
-          class="w-full min-h-[44px] flex items-center justify-center rounded-lg border border-line bg-white text-sm font-medium text-slate-700 hover:bg-background-light transition-colors"
+          class="w-full min-h-[44px] flex items-center justify-center rounded-lg border border-line bg-white text-sm font-medium text-ink hover:bg-background-light transition-colors"
           @click="showMore"
         >
           더보기
