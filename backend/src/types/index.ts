@@ -5,3 +5,4 @@ export * from './api.js';
 export * from './facility.js';
 export * from './category.js';
 export * from './region.js';
+export * from './affiliateBanner.js';
