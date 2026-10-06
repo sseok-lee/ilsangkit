@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -8,15 +8,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8')
 const ANY_SHADOW = /(?:^|[\s"'`:])shadow(?:-[\w[\]().,/#%-]+)?(?=[\s"'`])/
 
-// msw-demo.vue 는 .gitignore 대상(로컬 전용)이라 CI 체크아웃에는 없다.
+// msw-demo.vue 는 .gitignore 대상(로컬 전용 개발 데모)이라 가드 대상에서 뺀다.
 const FILES = [
   'pages/article/[slug].vue',
   'components/blog/BlogReviewCard.vue',
   'components/realEstate/map/RealEstateMapCanvas.vue',
   'components/realEstate/map/RealEstateMapExplorer.vue',
   'pages/admin/login.vue',
-  'pages/msw-demo.vue',
-].filter((f) => existsSync(resolve(root, f)))
+]
 
 describe('평면 요소 그림자 0', () => {
   for (const file of FILES) {
