@@ -37,6 +37,9 @@
         </ul>
       </PageHead>
 
+      <!-- Ad: 제목 아래 -->
+      <AdBanner />
+
       <div class="mt-6 flex flex-wrap gap-2">
         <UiButton
           v-if="returnContext"
@@ -62,6 +65,9 @@
           :condition-text="sourceConditionText"
         />
       </SectionBlock>
+
+      <!-- Ad: 배출 일정 뒤 -->
+      <AdBanner />
 
       <!-- 주의사항과 문의 -->
       <SectionBlock

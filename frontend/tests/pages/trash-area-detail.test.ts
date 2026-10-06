@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h, ref, Suspense } from 'vue'
@@ -165,5 +167,14 @@ describe('/trash/areas/:areaId', () => {
     expect(wrapper.findAll('h1')).toHaveLength(1)
     expect(wrapper.html()).not.toMatch(/-\[#[0-9a-fA-F]{3,8}\]|max-w-\[1120px\]/)
     expect(wrapper.find('main').exists()).toBe(false)
+  })
+})
+
+describe('/trash/areas/:areaId 광고 배치', () => {
+  it('광고 A안: 제목 바로 아래와 배출 일정 뒤, 두 자리에 광고를 싣는다', () => {
+    const areaSource = readFileSync(resolve(process.cwd().endsWith('/frontend') ? process.cwd() : join(process.cwd(), 'frontend'), 'pages/trash/areas/[areaId].vue'), 'utf8')
+    expect(areaSource.match(/<AdBanner\b/g)?.length).toBe(2)
+    expect(areaSource).toMatch(/<\/PageHead>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
+    expect(areaSource).toMatch(/heading="배출 일정"[\s\S]*?<\/SectionBlock>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
   })
 })
