@@ -98,7 +98,7 @@ describe('DetailNearby', () => {
     expect(sections.every((s) => s.attributes('variant') === 'flat')).toBe(true)
   })
 
-  it('sectionVariant 미지정이면 card 를 전달한다', () => {
+  it('sectionVariant 미지정이면 flat 을 전달한다', () => {
     const wrapper = mount(DetailNearby, {
       props: {
         nearbyFacilities: [makeFacility('a', '가까운 화장실 A')],
@@ -115,6 +115,6 @@ describe('DetailNearby', () => {
       },
       global: globalConfig,
     })
-    expect(wrapper.findAll('section').every((s) => s.attributes('variant') === 'card')).toBe(true)
+    expect(wrapper.findAll('section').every((s) => s.attributes('variant') === 'flat')).toBe(true)
   })
 })

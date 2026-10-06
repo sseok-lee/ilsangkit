@@ -37,9 +37,12 @@ describe('SectionBlock', () => {
     expect(wrapper.text()).toContain('시·도로 좁히기');
   });
 
-  it('기본 variant 는 기존 카드 그대로다(PR7 전까지 사용처 화면 불변)', () => {
-    const cls = mount(SectionBlock).get('section').classes()
-    expect(cls).toEqual(expect.arrayContaining(['bg-white', 'border', 'border-line', 'rounded-xl', 'shadow-card']))
+  it('variant 를 주지 않아도 흰색 평면형이다', () => {
+    const w = mount(SectionBlock, { props: { heading: '제목', subtext: '설명' } })
+    const section = w.get('section')
+    expect(section.classes()).toContain('section-flat')
+    expect(section.classes()).not.toContain('shadow-card')
+    expect(w.get('h2').classes()).toContain('ui-h2')
   })
 
   it('variant="flat" 은 박스·그림자 없이 아래 구분선만 쓴다', () => {

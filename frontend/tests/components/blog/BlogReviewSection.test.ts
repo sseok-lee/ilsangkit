@@ -64,7 +64,6 @@ describe('BlogReviewSection', () => {
     expect(flat.find('[data-testid="blog-section"]').classes()).not.toContain('mt-8')
     const card = mount(BlogReviewSection, { props })
     await flushPromises(); await nextTick()
-    expect(card.find('h2').classes()).not.toContain('ui-h2')
     expect(card.find('[data-testid="blog-section"]').classes()).toContain('mt-8')
   })
 })

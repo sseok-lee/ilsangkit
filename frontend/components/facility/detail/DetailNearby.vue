@@ -1,5 +1,5 @@
 <template>
-  <div :class="sectionVariant === 'flat' ? 'flex flex-col' : 'flex flex-col gap-3 md:gap-4'">
+  <div class="flex flex-col">
     <!-- Same-category nearby -->
     <SectionBlock
       v-if="nearbyLoading || nearbyFacilities.length > 0"
@@ -73,6 +73,6 @@ withDefaults(defineProps<{
   crossFacilitiesGrouped: CrossGroup[]
   crossLoading: boolean
   categoryMeta: CategoryMetaLike
-  sectionVariant?: 'card' | 'flat'
-}>(), { sectionVariant: 'card' })
+  sectionVariant?: 'flat'
+}>(), { sectionVariant: 'flat' })
 </script>
