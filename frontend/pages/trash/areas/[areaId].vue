@@ -7,6 +7,9 @@
       </template>
     </PageHead>
 
+    <!-- Ad: 제목 아래 -->
+    <AdBanner />
+
     <div v-if="returnContext" class="mt-6 flex flex-wrap gap-2">
       <UiButton variant="secondary" :href="returnContext.href" @click="returnToContext">{{ returnContext.label }}</UiButton>
     </div>
@@ -52,6 +55,9 @@
         <p class="mt-1 text-sm text-muted">구·군 원문 목록에서 아직 연결이 필요한 자료를 확인할 수 있습니다.</p>
       </div>
     </SectionBlock>
+
+    <!-- Ad: 배출 일정 뒤 -->
+    <AdBanner />
 
     <SectionBlock
       v-if="detail.predecessorOrSuccessorLinks.length > 0 || detail.unresolved.href"

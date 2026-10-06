@@ -65,19 +65,18 @@ describe('useAdsPolicy.shouldServeAds', () => {
   it('기본은 true', () => {
     expect(useAdsPolicy().shouldServeAds.value).toBe(true)
   })
-  it('ad-free waste paths are false even when adsEnabled=true and the script was already allowed elsewhere', () => {
+  it('쓰레기 원본·동별 안내는 광고를 싣는다 (광고 위치 A안으로 재도입)', () => {
     const route = reactive({ path: '/search' })
     ;(globalThis as any).useRuntimeConfig = () => ({ public: { adsEnabled: true } })
     ;(globalThis as any).useRoute = () => route
     const policy = useAdsPolicy()
 
-    expect(policy.shouldServeAds.value).toBe(true)
     route.path = '/trash/6567'
-    expect(policy.shouldServeAds.value).toBe(false)
+    expect(policy.shouldServeAds.value).toBe(true)
     route.path = '/trash/areas/101'
-    expect(policy.shouldServeAds.value).toBe(false)
+    expect(policy.shouldServeAds.value).toBe(true)
   })
-  it('mounted ad slot unmounts reactively on ad-free waste soft navigation', async () => {
+  it('mounted ad slot unmounts reactively on ad-free soft navigation', async () => {
     const route = reactive({ path: '/search' })
     ;(globalThis as any).useRuntimeConfig = () => ({ public: { adsEnabled: true } })
     ;(globalThis as any).useRoute = () => route
@@ -90,7 +89,7 @@ describe('useAdsPolicy.shouldServeAds', () => {
     const wrapper = mount(RuntimeAdSlot)
 
     expect(wrapper.find('.ad-slot').exists()).toBe(true)
-    route.path = '/trash/areas/101'
+    route.path = '/real-estate'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.ad-slot').exists()).toBe(false)
   })
@@ -148,9 +147,9 @@ describe('isAdFreePath', () => {
     expect(isAdFreePath('/real-estate/apt-rent/seoul/gangnam/도곡렉슬')).toBe(false)
   })
 
-  it('신규 쓰레기 원본/동별 안내는 광고 없음', () => {
-    expect(isAdFreePath('/trash/6567')).toBe(true)
-    expect(isAdFreePath('/trash/areas/101')).toBe(true)
+  it('쓰레기 원본/동별 안내는 광고 제외 경로가 아니다', () => {
+    expect(isAdFreePath('/trash/6567')).toBe(false)
+    expect(isAdFreePath('/trash/areas/101')).toBe(false)
   })
 
   it('접두어만 같은 다른 경로를 잘못 막지 않는다', () => {

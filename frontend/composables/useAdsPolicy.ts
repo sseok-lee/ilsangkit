@@ -34,7 +34,9 @@ export function useAdsEnabled(): boolean {
  * 그건 슬롯 코드가 아니라 스크립트가 만드는 것이라 스크립트 주입 자체를 막아야 한다.
  */
 const AD_FREE_PATHS = new Set(['/real-estate'])
-const AD_FREE_PATTERNS = [/^\/trash\/areas\/[1-9]\d*$/, /^\/trash\/[1-9]\d*$/]
+// 쓰레기 원본(/trash/:id)·동별 안내(/trash/areas/:id)는 한때 여기서 막았으나 2026-10 에 광고를
+// 다시 싣기로 했다(제목 아래 + 일정 뒤 두 자리). 패턴 목록은 정확 일치로 못 막는 경로용으로 남긴다.
+const AD_FREE_PATTERNS: RegExp[] = []
 
 /** 경로 끝 슬래시만 다른 경우(/real-estate/)도 같은 페이지다. */
 export function isAdFreePath(pathname: string): boolean {
