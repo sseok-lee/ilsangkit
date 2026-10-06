@@ -53,3 +53,31 @@ describe('사이트 전체 원시 회색 가드', () => {
     expect(readFileSync(resolve(root, 'utils/categoryIcons.ts'), 'utf8')).not.toMatch(/bgDark|dark:/)
   })
 })
+
+// 토큰과 같은(또는 거의 같은) 중립 hex. main.css 는 토큰 정의 자체라 검사하지 않는다.
+// 의미 색(주황·빨강·녹색 등)은 대상이 아니다.
+const NEUTRAL_HEX = /#(?:15213b|0c1424|56627a|677087|e6e9f0|d7dce7|2450dc|f7f8fa|fbfcfe|eef1f5|aeb7c8|eef0f4|eef2ff)\b/gi
+
+const HEX_ALLOW: Array<{ file: string; count: number; reason: string }> = [
+  { file: 'components/realEstate/DealPriceChart.vue', count: 6, reason: 'canvas strokeStyle/fillStyle 은 CSS 변수를 읽지 못한다' },
+]
+
+describe('사이트 전체 중립 hex 가드', () => {
+  const HEX_FILES = FILES.filter((f) => f !== 'assets/css/main.css')
+
+  it('예외 목록 밖 중립 hex 0', () => {
+    const bad = HEX_FILES.flatMap((f) => {
+      const hits = read(f).match(NEUTRAL_HEX) ?? []
+      const allow = HEX_ALLOW.find((a) => a.file === f)
+      if (allow && hits.length === allow.count) return []
+      return hits.map((h) => `${f}: ${h}`)
+    })
+    expect(bad).toEqual([])
+  })
+
+  it('예외 목록의 개수가 실제와 같다(죽은 예외 금지)', () => {
+    for (const a of HEX_ALLOW) {
+      expect(read(a.file).match(NEUTRAL_HEX)?.length ?? 0, a.file).toBe(a.count)
+    }
+  })
+})

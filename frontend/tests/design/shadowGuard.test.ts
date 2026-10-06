@@ -20,7 +20,7 @@ const ALLOW: Array<{ file: string; token: string; count: number; reason: string 
   { file: 'components/map/FacilityMap.vue', token: 'box-shadow: 0 1px 4px rgb(0 0 0 / 0.2)', count: 1, reason: '지도 내부 현재 위치 점' },
   { file: 'assets/css/main.css', token: 'shadow-[0_1px_3px_rgba(21,33,59,0.18)]', count: 1, reason: '지도 내부 가격 라벨·지역 버블' },
   { file: 'assets/css/main.css', token: 'shadow-[0_3px_10px_rgba(21,33,59,0.16)]', count: 1, reason: '지도 내부 펼침 카드' },
-  { file: 'pages/search.vue', token: 'box-shadow: 0 0 0 2px rgb(36 80 220 / 12%)', count: 1, reason: '포커스 링(:focus-within)' },
+  { file: 'pages/search.vue', token: 'box-shadow: 0 0 0 2px rgb(var(--brand-rgb) / 12%)', count: 1, reason: '포커스 링(:focus-within)' },
 ]
 
 function walk(dir: string): string[] {

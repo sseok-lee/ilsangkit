@@ -79,18 +79,18 @@ const emit = defineEmits<{ more: [] }>()
   gap: 0.125rem;
   border-radius: 0.5rem;
   padding: 0.5rem;
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
   font-size: 0.8125rem;
   font-weight: 700;
 }
 
 .search-result-group__more:hover {
-  background: #eef2ff;
+  background: rgb(var(--brand-tint-rgb));
 }
 
 .search-result-group__items--rows {
   overflow: hidden;
-  border-top: 1px solid #e6e9f0;
-  background: #fff;
+  border-top: 1px solid rgb(var(--border-rgb));
+  background: rgb(var(--surface-rgb));
 }
 </style>
