@@ -103,7 +103,7 @@
       <section
         v-if="article.sources && article.sources.length"
         data-testid="article-sources"
-        class="bg-white border border-line rounded-xl shadow-card p-4 md:p-5"
+        class="border-t border-line pt-5"
       >
         <p class="text-sm font-semibold text-ink mb-3">출처</p>
         <ul class="flex flex-col gap-2">

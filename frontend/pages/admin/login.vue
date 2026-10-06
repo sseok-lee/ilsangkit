@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-slate-50 px-4">
     <form
-      class="w-full max-w-sm bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-4"
+      class="w-full max-w-sm bg-white rounded-lg border border-line p-6 space-y-4"
       @submit.prevent="onSubmit"
     >
       <h1 class="text-lg font-semibold text-slate-900 text-center">

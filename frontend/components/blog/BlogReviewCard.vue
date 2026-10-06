@@ -3,7 +3,7 @@
     :href="post.url"
     target="_blank"
     rel="nofollow noopener noreferrer"
-    class="block rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md"
+    class="block rounded-lg border border-line bg-white p-4 transition-colors hover:border-primary/30"
   >
     <p class="text-base font-semibold text-slate-900 line-clamp-1">{{ post.title }}</p>
     <p class="mt-2 text-sm text-slate-600 line-clamp-2 leading-relaxed">{{ snippet }}</p>
