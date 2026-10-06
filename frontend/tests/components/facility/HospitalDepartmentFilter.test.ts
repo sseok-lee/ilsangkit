@@ -37,8 +37,9 @@ describe('HospitalDepartmentFilter variant="flat"', () => {
     expect(w.html()).not.toMatch(/(?:text|bg|border)-(?:slate|gray)-\d|shadow-|rounded-2xl/)
   })
 
-  it('기본 variant(card) 는 기존 카드 그대로다', () => {
+  it('variant 없이도 flat 출력(section-flat, 카드 클래스 없음)', () => {
     const w = mount(HospitalDepartmentFilter, { props: { modelValue: [] } })
-    expect(w.get('div').classes()).toEqual(expect.arrayContaining(['rounded-2xl', 'border-slate-200']))
+    expect(w.get('section').classes()).toContain('section-flat')
+    expect(w.html()).not.toMatch(/rounded-2xl|border-slate-200/)
   })
 })

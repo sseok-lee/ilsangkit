@@ -39,27 +39,17 @@ import { computed, onMounted } from 'vue'
 import { useRegions } from '~/composables/useRegions'
 
 const props = withDefaults(
-  defineProps<{ city: string; district: string; cityValueMode?: 'short' | 'slug'; preserveCurrentSelection?: boolean; variant?: 'card' | 'flat' }>(),
-  { cityValueMode: 'short', preserveCurrentSelection: false, variant: 'card' },
+  defineProps<{ city: string; district: string; cityValueMode?: 'short' | 'slug'; preserveCurrentSelection?: boolean; variant?: 'flat' }>(),
+  { cityValueMode: 'short', preserveCurrentSelection: false, variant: 'flat' },
 )
 const emit = defineEmits<{ 'update:city': [string]; 'update:district': [string] }>()
 
-// variant 기본 card — 경매·청약 필터 화면을 지킨다. PR7 에서 flat 으로 바꾼다.
 // 클래스는 리터럴로만 쓴다(Tailwind 퍼지).
-const FIELD_CLASS = {
-  card: {
-    label: 'block text-xs font-medium text-slate-600 mb-1.5',
-    select: 'w-full bg-slate-50 border border-line rounded-lg py-2.5 px-3 text-slate-900 text-base md:text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer',
-    icon: 'material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[18px]',
-  },
-  flat: {
-    label: 'block text-[13px] font-semibold text-muted mb-1.5',
-    select: 'w-full bg-white border border-line rounded-[7px] min-h-[44px] py-2 pl-3 pr-9 text-ink text-base md:text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer',
-    icon: 'material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-[18px]',
-  },
+const fieldClass = {
+  label: 'block text-[13px] font-semibold text-muted mb-1.5',
+  select: 'w-full bg-white border border-line rounded-[7px] min-h-[44px] py-2 pl-3 pr-9 text-ink text-base md:text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer',
+  icon: 'material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-[18px]',
 } as const
-
-const fieldClass = computed(() => FIELD_CLASS[props.variant])
 
 const { loadRegions, citiesWithDistricts, getDistrictsByCity } = useRegions()
 
