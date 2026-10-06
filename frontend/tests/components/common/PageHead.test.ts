@@ -68,4 +68,14 @@ describe('PageHead', () => {
     const w = mount(PageHead, { props: { title: '병원' } })
     expect(w.find('.page-head').element.children.length).toBe(1)
   })
+
+  it('border 기본값은 true — page-head--flush 가 없다', () => {
+    const w = mount(PageHead, { props: { title: '청약' } })
+    expect(w.get('.page-head').classes()).not.toContain('page-head--flush')
+  })
+
+  it('border=false 면 page-head--flush 로 아래 선을 끈다', () => {
+    const w = mount(PageHead, { props: { title: '청약', border: false } })
+    expect(w.get('.page-head').classes()).toContain('page-head--flush')
+  })
 })

@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white">
     <div class="page-container pt-3 md:pt-5">
-      <PageHead title="임대주택 모집공고" description="공공임대부터 공공지원 민간임대까지, 지역별로 찾아보세요.">
+      <PageHead :border="false" title="임대주택 모집공고" description="공공임대부터 공공지원 민간임대까지, 지역별로 찾아보세요.">
         <template #actions>
           <p class="text-right text-xs text-muted md:text-sm">
             <strong class="block font-semibold text-ink md:text-lg">청약홈 · 마이홈 · LH</strong>
@@ -10,7 +10,7 @@
         </template>
       </PageHead>
     </div>
-    <div class="page-container py-5 md:py-6">
+    <div class="page-container pb-5 md:pb-6">
       <SubscriptionListView :scope="scope" />
     </div>
   </div>

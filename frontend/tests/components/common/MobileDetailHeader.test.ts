@@ -133,6 +133,14 @@ describe('MobileDetailHeader variant="flat"', () => {
     expect(w.findAll('dd')[1].classes()).toContain('summary-row__value--brand')
   })
 
+  it('공매 할인율(text-emerald-700)은 success tone 으로', () => {
+    const w = mount(MobileDetailHeader, {
+      props: { ...flatBase, stats: [{ label: '감정가', value: '5억' }, { label: '할인율', value: '-46%', color: 'text-emerald-700' }] },
+    })
+    expect(w.findAll('dd')[1].classes()).toContain('summary-row__value--success')
+    expect(w.findAll('dd')[0].classes()).not.toContain('summary-row__value--success')
+  })
+
   it('동작 줄은 UiButton 이고 data-test·emit 을 유지한다', async () => {
     const w = mount(MobileDetailHeader, { props: flatBase })
     expect(w.get('[data-test="call-pill"]').attributes('href')).toBe('tel:053-427-8877')

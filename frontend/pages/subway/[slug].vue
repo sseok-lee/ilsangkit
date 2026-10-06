@@ -39,6 +39,7 @@
                   :href="kakaoMapUrl"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="카카오맵 길찾기 (새 창)"
                   class="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-card-2"
                 >
                   <span class="material-symbols-outlined text-[20px]" aria-hidden="true">directions</span>
