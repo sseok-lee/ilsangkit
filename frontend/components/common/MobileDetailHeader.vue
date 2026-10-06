@@ -83,12 +83,17 @@ const emit = defineEmits<{
   (e: 'directions', provider: 'kakao' | 'naver'): void
 }>()
 
-// flat 은 stats 를 SummaryRow 로. 부동산 상세가 넘기는 color='text-primary' 만 brand tone 으로 옮긴다.
+// flat 은 stats 를 SummaryRow 로. 호출부가 넘기는 글자색 클래스를 요약 줄 tone 으로 옮긴다
+// (부동산 상세 text-primary → brand, 공매 할인율 text-emerald-700 → success).
+const TONE_BY_COLOR: Record<string, SummaryItem['tone']> = {
+  'text-primary': 'brand',
+  'text-emerald-700': 'success',
+}
 const summaryItems = computed<SummaryItem[]>(() =>
   (props.stats ?? []).map((s) => ({
     label: s.label,
     value: s.value,
-    tone: s.color === 'text-primary' ? 'brand' : undefined,
+    tone: s.color ? TONE_BY_COLOR[s.color] : undefined,
   })),
 )
 
