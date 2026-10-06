@@ -28,7 +28,7 @@ describe('WeekdayHoursTable', () => {
   it('closed 행은 회색 스타일', () => {
     const w = mount(WeekdayHoursTable, { props: { title: '요일별 진료시간', timeHeader: '진료시간', rows } })
     const closedCell = w.findAll('tbody tr')[2].findAll('td')[1]
-    expect(closedCell.classes()).toContain('text-gray-400')
+    expect(closedCell.classes()).toContain('text-faint')
   })
 
   it('allDay 행은 green 스타일', () => {

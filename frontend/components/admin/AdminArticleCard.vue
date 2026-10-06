@@ -6,7 +6,7 @@
     :class="selected ? 'border-primary bg-primary/5' : 'border-line bg-white hover:border-primary/30'"
     @click="$emit('select', article.id)"
   >
-    <div class="shrink-0 w-16 h-16 rounded-md bg-slate-100 overflow-hidden">
+    <div class="shrink-0 w-16 h-16 rounded-md bg-background-light overflow-hidden">
       <img
         v-if="article.thumbnailUrl"
         :src="article.thumbnailUrl"
@@ -28,7 +28,7 @@
           {{ STATUS_LABEL[article.status] }}
         </span>
       </div>
-      <h3 class="text-sm font-semibold text-slate-900 truncate">{{ article.title }}</h3>
+      <h3 class="text-sm font-semibold text-ink truncate">{{ article.title }}</h3>
       <p class="text-xs text-muted mt-1">{{ formatDotDate(article.createdAt) }}</p>
     </div>
   </button>

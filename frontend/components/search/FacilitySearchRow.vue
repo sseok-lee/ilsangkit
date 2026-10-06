@@ -89,8 +89,8 @@ const details = computed(() => {
   justify-content: center;
   gap: 0.375rem;
   padding: 1rem 0.75rem;
-  border-bottom: 1px solid #e6e9f0;
-  color: #15213b;
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  color: rgb(var(--ink-rgb));
   text-decoration: none;
 }
 
@@ -102,7 +102,7 @@ const details = computed(() => {
 
 .facility-search-row__address,
 .facility-search-row__details {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 0.8125rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -115,7 +115,7 @@ const details = computed(() => {
 }
 
 .facility-search-row:focus-visible {
-  outline: 2px solid #2450dc;
+  outline: 2px solid rgb(var(--brand-rgb));
   outline-offset: -2px;
 }
 

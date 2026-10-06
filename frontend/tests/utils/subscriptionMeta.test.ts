@@ -51,7 +51,7 @@ describe('subscriptionTypeBadge', () => {
     const b = subscriptionTypeBadge('APT', PUBLIC_RENT_TYPES[0])
     expect(b.label).toBe('공공임대')
     expect(b.kind).toBe('rent')
-    expect(b.classes).toContain('slate')
+    expect(b.classes).toContain('text-muted')
   })
 
   it('APT + legacy 임대주택 rentType도 공공임대(회색, rent)', () => {
@@ -59,21 +59,21 @@ describe('subscriptionTypeBadge', () => {
     const b = subscriptionTypeBadge('APT', '임대주택')
     expect(b.label).toBe('공공임대')
     expect(b.kind).toBe('rent')
-    expect(b.classes).toContain('slate')
+    expect(b.classes).toContain('text-muted')
   })
 
   it('PUBLIC_RENT는 공공임대(회색, rent)', () => {
     const b = subscriptionTypeBadge('PUBLIC_RENT', '국민임대')
     expect(b.label).toBe('공공임대')
     expect(b.kind).toBe('rent')
-    expect(b.classes).toContain('slate')
+    expect(b.classes).toContain('text-muted')
   })
 
   it('PRIVATE_RENT는 민간임대(회색, rent)', () => {
     const b = subscriptionTypeBadge('PRIVATE_RENT', null)
     expect(b.label).toBe('민간임대')
     expect(b.kind).toBe('rent')
-    expect(b.classes).toContain('slate')
+    expect(b.classes).toContain('text-muted')
   })
 })
 

@@ -49,7 +49,7 @@
             class="min-h-[44px] flex items-center px-2.5 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm whitespace-nowrap transition-colors"
             :class="opt.value === menu.current.value
               ? 'bg-primary text-white font-medium'
-              : 'text-slate-700 hover:bg-background-light'"
+              : 'text-ink hover:bg-background-light'"
             :aria-current="opt.value === menu.current.value ? 'true' : undefined"
             @click.exact.prevent="select(menu.toType(opt.value))"
           >

@@ -67,12 +67,12 @@ const dateText = computed(() => props.deal ? formatDealDate(props.deal) : '')
   grid-template-columns: minmax(3rem, 0.4fr) minmax(9rem, 1.1fr) minmax(7rem, 0.7fr) minmax(6rem, 0.6fr);
   align-items: center;
   gap: 1rem;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   min-width: 0;
 }
 
 .deal-kind {
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 0.8125rem;
   font-weight: 700;
 }
@@ -89,7 +89,7 @@ const dateText = computed(() => props.deal ? formatDealDate(props.deal) : '')
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  color: #15213b;
+  color: rgb(var(--ink-rgb));
   font-size: 0.875rem;
   line-height: 1.35;
 }
@@ -97,7 +97,7 @@ const dateText = computed(() => props.deal ? formatDealDate(props.deal) : '')
 .deal-empty {
   grid-column: 1 / -1;
   margin: 0;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
   font-size: 0.875rem;
 }
 
@@ -108,7 +108,7 @@ const dateText = computed(() => props.deal ? formatDealDate(props.deal) : '')
 
 .deal-snapshot--compact .deal-kind {
   grid-column: 1;
-  color: #2450dc;
+  color: rgb(var(--brand-rgb));
   font-size: 0.75rem;
 }
 
@@ -169,7 +169,7 @@ const dateText = computed(() => props.deal ? formatDealDate(props.deal) : '')
 
 .deal-snapshot--compact .deal-conditions {
   align-self: auto;
-  color: #56627a;
+  color: rgb(var(--muted-rgb));
 }
 
 </style>

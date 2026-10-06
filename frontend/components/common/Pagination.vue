@@ -42,7 +42,7 @@
 
     <!-- Page numbers -->
     <template v-for="page in visiblePages" :key="page">
-      <span v-if="page === '...'" class="px-1 text-slate-500 text-sm">...</span>
+      <span v-if="page === '...'" class="px-1 text-muted text-sm">...</span>
       <button
         v-else-if="!hrefFor"
         :class="pageClass(page as number)"

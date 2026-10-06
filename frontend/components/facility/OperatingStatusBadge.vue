@@ -24,15 +24,15 @@ const props = defineProps<Props>()
 const statusClasses = computed(() => {
   switch (props.status) {
     case 'open24h':
-      return 'text-slate-700 bg-slate-100'
+      return 'text-ink bg-background-light'
     case 'openNow':
-      return 'text-slate-700 bg-slate-100'
+      return 'text-ink bg-background-light'
     case 'closed':
-      return 'text-slate-500 bg-slate-100'
+      return 'text-muted bg-background-light'
     case 'limited':
-      return 'text-slate-600 bg-slate-100'
+      return 'text-muted bg-background-light'
     default:
-      return 'text-slate-600 bg-slate-100'
+      return 'text-muted bg-background-light'
   }
 })
 
@@ -47,7 +47,7 @@ const dotColor = computed(() => {
     case 'limited':
       return 'bg-amber-500'
     default:
-      return 'bg-slate-400'
+      return 'bg-faint'
   }
 })
 

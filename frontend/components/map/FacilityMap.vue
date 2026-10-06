@@ -11,7 +11,7 @@
     <div
       v-else
       role="status"
-      class="flex h-full min-h-[220px] items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-500"
+      class="flex h-full min-h-[220px] items-center justify-center bg-background-light px-4 text-center text-sm text-muted"
     >
       좌표 정보가 없어 지도를 표시할 수 없습니다.
     </div>

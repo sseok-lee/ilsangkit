@@ -2,15 +2,15 @@
   <div
     v-if="open"
     :id="listboxId"
-    class="search-ac bg-white text-slate-800 border border-line rounded-b-xl shadow-card-2 overflow-hidden"
+    class="search-ac bg-white text-ink border border-line rounded-b-xl shadow-card-2 overflow-hidden"
     role="listbox"
   >
     <!-- 빈 입력: 최근 + 인기 -->
     <template v-if="!query">
       <div v-if="recent.length" class="pt-2">
         <div class="px-4 py-1 flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-500">최근 검색</span>
-          <button class="text-[11px] text-slate-500 hover:text-slate-600" @mousedown.prevent @click="clearRecent">전체 삭제</button>
+          <span class="text-xs font-bold text-muted">최근 검색</span>
+          <button class="text-[11px] text-muted hover:text-ink" @mousedown.prevent @click="clearRecent">전체 삭제</button>
         </div>
         <ul class="pb-1">
           <li
@@ -19,19 +19,19 @@
             :id="optionId(recentEntryIndex(idx))"
             role="option"
             :aria-selected="recentEntryIndex(idx) === activeIndex"
-            class="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer"
+            class="flex items-center justify-between px-4 py-2 hover:bg-background-light cursor-pointer"
             :class="{ 'bg-primary-50': recentEntryIndex(idx) === activeIndex }"
             @mousedown.prevent
             @click="goKeyword(kw)"
           >
             <span class="flex items-center gap-2.5 text-sm">
-              <span class="material-symbols-outlined text-slate-500 text-[18px]">history</span>
+              <span class="material-symbols-outlined text-muted text-[18px]">history</span>
               {{ kw }}
             </span>
             <button
               type="button"
               aria-label="최근 검색어 삭제"
-              class="material-symbols-outlined text-slate-300 text-[16px] hover:text-slate-500"
+              class="material-symbols-outlined text-faint text-[16px] hover:text-muted"
               @mousedown.prevent
               @click.stop="removeRecent(kw)"
             >
@@ -40,8 +40,8 @@ close
           </li>
         </ul>
       </div>
-      <div v-if="popular.length" class="px-4 pt-2 pb-3 border-t border-slate-100">
-        <p class="text-xs font-bold text-slate-500 mb-2">인기 검색</p>
+      <div v-if="popular.length" class="px-4 pt-2 pb-3 border-t border-line">
+        <p class="text-xs font-bold text-muted mb-2">인기 검색</p>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="(kw, i) in popular"
@@ -49,7 +49,7 @@ close
             :id="optionId(popularEntryIndex(i))"
             role="option"
             :aria-selected="popularEntryIndex(i) === activeIndex"
-            class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-line rounded-full text-xs hover:border-primary/40 hover:text-primary"
+            class="inline-flex items-center gap-1 px-2.5 py-1 bg-background-light border border-line rounded-full text-xs hover:border-primary/40 hover:text-primary"
             :class="{ 'border-primary text-primary': popularEntryIndex(i) === activeIndex }"
             @mousedown.prevent
             @click="goKeyword(kw)"
@@ -70,15 +70,15 @@ close
           role="option"
           :aria-selected="idx === activeIndex"
           :data-suggest-type="it.type"
-          class="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 cursor-pointer"
+          class="flex items-center gap-2.5 px-4 py-2 hover:bg-background-light cursor-pointer"
           :class="{ 'bg-primary-50': idx === activeIndex }"
           @mousedown.prevent
           @click="select(it)"
         >
-          <span class="material-symbols-outlined text-slate-500 text-[18px]">{{ icon(it.type) }}</span>
+          <span class="material-symbols-outlined text-muted text-[18px]">{{ icon(it.type) }}</span>
           <span class="text-sm flex-1 truncate">
             {{ it.label }}
-            <span v-if="it.sublabel" class="text-slate-500 text-xs"> · {{ it.sublabel }}</span>
+            <span v-if="it.sublabel" class="text-muted text-xs"> · {{ it.sublabel }}</span>
           </span>
         </li>
       </ul>
@@ -86,7 +86,7 @@ close
         :id="optionId(items.length)"
         role="option"
         :aria-selected="items.length === activeIndex"
-        class="px-4 py-2.5 hover:bg-slate-50 cursor-pointer flex items-center gap-2.5 border-t border-slate-100"
+        class="px-4 py-2.5 hover:bg-background-light cursor-pointer flex items-center gap-2.5 border-t border-line"
         :class="{ 'bg-primary-50': items.length === activeIndex }"
         @mousedown.prevent
         @click="goKeyword(query)"

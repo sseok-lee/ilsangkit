@@ -18,7 +18,7 @@
         </div>
         <template v-else>
           <p class="mb-4 text-sm text-muted">전체 {{ totalCount.toLocaleString('ko-KR') }}건 · 최신순</p>
-          <NuxtLink v-if="presentation.featured" :to="`/guide/${presentation.featured.slug}`" class="mb-4 grid min-w-0 gap-6 rounded-lg bg-[#F7F8FA] p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary md:p-8" :class="presentation.featured.thumbnailUrl ? 'md:grid-cols-[1fr_280px]' : ''">
+          <NuxtLink v-if="presentation.featured" :to="`/guide/${presentation.featured.slug}`" class="mb-4 grid min-w-0 gap-6 rounded-lg bg-background-light p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary md:p-8" :class="presentation.featured.thumbnailUrl ? 'md:grid-cols-[1fr_280px]' : ''">
             <div class="min-w-0 self-center">
               <p class="text-xs font-semibold text-primary">추천 가이드 · {{ getContentCategoryLabel(presentation.featured.category) }}</p>
               <h2 class="mt-3 break-words text-2xl font-bold leading-snug">{{ presentation.featured.title }}</h2>

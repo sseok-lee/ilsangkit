@@ -1,13 +1,13 @@
 <template>
   <ClientOnly>
-    <div class="relative w-full h-full rounded-xl border border-slate-200 overflow-hidden bg-slate-100">
+    <div class="relative w-full h-full rounded-xl border border-line overflow-hidden bg-background-light">
       <!-- Loading -->
       <div v-if="loading" class="absolute inset-0 flex items-center justify-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
 
       <!-- Unavailable -->
-      <div v-else-if="!available" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-500">
+      <div v-else-if="!available" class="absolute inset-0 flex flex-col items-center justify-center bg-background-light text-muted">
         <span class="material-symbols-outlined text-[36px] mb-2">visibility_off</span>
         <p class="text-sm font-medium">이 위치의 로드뷰를 지원하지 않습니다</p>
       </div>
