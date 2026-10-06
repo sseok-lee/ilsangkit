@@ -56,7 +56,7 @@ describe('사이트 전체 원시 회색 가드', () => {
 
 // 토큰과 같은(또는 거의 같은) 중립 hex. main.css 는 토큰 정의 자체라 검사하지 않는다.
 // 의미 색(주황·빨강·녹색 등)은 대상이 아니다.
-const NEUTRAL_HEX = /#(?:15213b|0c1424|56627a|677087|e6e9f0|d7dce7|2450dc|f7f8fa|fbfcfe|eef1f5|aeb7c8|eef0f4|eef2ff)\b/gi
+const NEUTRAL_HEX = /#(?:15213b|0c1424|56627a|677087|e6e9f0|d7dce7|2450dc|f7f8fa|fbfcfe|eef1f5|aeb7c8|eef0f4|eef2ff)(?:[0-9a-f]{2})?\b/gi
 
 const HEX_ALLOW: Array<{ file: string; count: number; reason: string }> = [
   { file: 'components/realEstate/DealPriceChart.vue', count: 6, reason: 'canvas strokeStyle/fillStyle 은 CSS 변수를 읽지 못한다' },

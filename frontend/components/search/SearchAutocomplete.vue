@@ -10,7 +10,7 @@
       <div v-if="recent.length" class="pt-2">
         <div class="px-4 py-1 flex items-center justify-between">
           <span class="text-xs font-bold text-muted">최근 검색</span>
-          <button class="text-[11px] text-muted hover:text-muted" @mousedown.prevent @click="clearRecent">전체 삭제</button>
+          <button class="text-[11px] text-muted hover:text-ink" @mousedown.prevent @click="clearRecent">전체 삭제</button>
         </div>
         <ul class="pb-1">
           <li
