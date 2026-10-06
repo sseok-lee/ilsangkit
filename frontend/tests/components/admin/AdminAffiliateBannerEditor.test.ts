@@ -242,6 +242,55 @@ describe('AdminAffiliateBannerEditor', () => {
     expect(api.setStatus).toHaveBeenCalledWith('banner-1', false)
   })
 
+  it('keeps a saved banner preview unverified until its image load event before enabling', async () => {
+    api.setStatus.mockResolvedValueOnce(banner({ isEnabled: true }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: { banner: banner({ isEnabled: false }) },
+    })
+
+    expect(wrapper.find('[data-testid="preview-state"]').text()).toContain('이미지 확인 중')
+    await wrapper.find('[data-testid="status-enable"]').trigger('click')
+
+    expect(api.setStatus).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('이미지를 불러올 수 없습니다')
+
+    await wrapper.find('[data-testid="preview-image"]').trigger('load')
+    await wrapper.find('[data-testid="status-enable"]').trigger('click')
+
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+  })
+
+  it('restores saved preview as unverified after cancelling source edits and waits for a new image load', async () => {
+    api.setStatus.mockResolvedValueOnce(banner({ imageSourceType: 'upload', imageAssetId: 'asset-1', isEnabled: true }))
+    const saved = banner({
+      imageSourceType: 'upload',
+      imageAssetId: 'asset-1',
+      externalImageUrl: null,
+      imageUrl: '/api/images/affiliate-banners/saved.png',
+      isEnabled: false,
+    })
+    const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: saved } })
+
+    await wrapper.find('[data-testid="preview-image"]').trigger('error')
+    expect(wrapper.find('[data-testid="preview-state"]').text()).toContain('이미지를 불러올 수 없습니다')
+
+    await wrapper.find('[data-testid="source-url"]').setValue(true)
+    await wrapper.find('[data-testid="external-image-url"]').setValue('https://image.example.com/draft.png')
+    await wrapper.find('[data-testid="cancel-button"]').trigger('click')
+    await flush()
+
+    expect(wrapper.find('[data-testid="preview-image"]').attributes('src')).toBe('/api/images/affiliate-banners/saved.png')
+    expect(wrapper.find('[data-testid="preview-state"]').text()).toContain('이미지 확인 중')
+
+    await wrapper.find('[data-testid="status-enable"]').trigger('click')
+    expect(api.setStatus).not.toHaveBeenCalled()
+
+    await wrapper.find('[data-testid="preview-image"]').trigger('load')
+    await wrapper.find('[data-testid="status-enable"]').trigger('click')
+
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+  })
+
   it('prevents duplicate status requests while a status change is pending', async () => {
     const status = deferred<AffiliateBannerDto>()
     api.setStatus.mockReturnValueOnce(status.promise)
@@ -338,6 +387,20 @@ describe('AdminAffiliateBannerEditor', () => {
     const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: null } })
 
     await wrapper.find('[data-testid="target-url"]').setValue('https://coupa.ng/copy')
+    await wrapper.find('[data-testid="copy-target-url"]').trigger('click')
+    await flush()
+
+    expect(wrapper.text()).toContain('복사하지 못했습니다. 주소를 직접 복사하세요')
+  })
+
+  it('shows a copy fallback message when Clipboard API is unavailable', async () => {
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: undefined,
+    })
+    const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: null } })
+
+    await wrapper.find('[data-testid="target-url"]').setValue('https://coupa.ng/no-clipboard')
     await wrapper.find('[data-testid="copy-target-url"]').trigger('click')
     await flush()
 

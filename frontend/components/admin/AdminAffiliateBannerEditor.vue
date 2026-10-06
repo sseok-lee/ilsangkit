@@ -208,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useAdminAffiliateBanners } from '~/composables/useAdminAffiliateBanners'
 import type {
   AffiliateBannerDraft,
@@ -245,6 +245,7 @@ const message = ref('')
 const imageGeneration = ref(0)
 const uploadRequestId = ref(0)
 const statusRequestId = ref(0)
+const applyingDraft = ref(false)
 const preview = ref<{ generation: number; src: string } | null>(null)
 const previewState = ref<PreviewState>('idle')
 
@@ -278,9 +279,7 @@ watch(
     snapshot.value = canonicalDraft.value
     altTextEdited.value = Boolean(banner?.altText)
     message.value = ''
-    imageGeneration.value += 1
-    preview.value = banner?.imageUrl ? { generation: imageGeneration.value, src: banner.imageUrl } : null
-    previewState.value = banner?.imageUrl ? 'loaded' : 'idle'
+    setPreviewFromImage(banner?.imageUrl ?? null)
     emit('dirty-change', false)
   },
   { immediate: true }
@@ -303,6 +302,7 @@ watch(
 watch(
   () => draft.imageSourceType,
   (source) => {
+    if (applyingDraft.value) return
     message.value = ''
     if (source === 'upload') {
       draft.externalImageUrl = null
@@ -316,6 +316,7 @@ watch(
 watch(
   () => draft.externalImageUrl,
   () => {
+    if (applyingDraft.value) return
     if (draft.imageSourceType !== 'url') return
     invalidatePreview()
   }
@@ -352,6 +353,7 @@ function cloneBanner(banner: AffiliateBannerDto): AffiliateBannerDto {
 }
 
 function assignDraft(next: AffiliateBannerDraft) {
+  applyingDraft.value = true
   draft.provider = next.provider
   draft.name = next.name
   draft.imageSourceType = next.imageSourceType
@@ -359,6 +361,9 @@ function assignDraft(next: AffiliateBannerDraft) {
   draft.externalImageUrl = next.externalImageUrl
   draft.targetUrl = next.targetUrl
   draft.altText = next.altText
+  void nextTick(() => {
+    applyingDraft.value = false
+  })
 }
 
 function canonicalize(value: AffiliateBannerDraft): string {
@@ -391,6 +396,23 @@ function invalidatePreview() {
   uploading.value = false
   preview.value = null
   previewState.value = 'idle'
+}
+
+function setPreviewFromImage(
+  imageUrl: string | null,
+  verifiedPreview?: { src: string; state: PreviewState } | null
+) {
+  imageGeneration.value += 1
+  if (!imageUrl) {
+    preview.value = null
+    previewState.value = 'idle'
+    return
+  }
+
+  preview.value = { generation: imageGeneration.value, src: imageUrl }
+  previewState.value = verifiedPreview?.src === imageUrl && verifiedPreview.state === 'loaded'
+    ? 'loaded'
+    : 'loading'
 }
 
 function startUrlPreview() {
@@ -467,11 +489,10 @@ async function save() {
     assignDraft(fromBanner(dto))
     snapshot.value = canonicalDraft.value
     altTextEdited.value = Boolean(dto.altText)
-    imageGeneration.value += 1
-    preview.value = dto.imageUrl && currentPreview?.src === dto.imageUrl
-      ? { generation: imageGeneration.value, src: dto.imageUrl }
-      : null
-    previewState.value = preview.value ? currentPreviewState : 'idle'
+    setPreviewFromImage(
+      dto.imageUrl,
+      currentPreview ? { src: currentPreview.src, state: currentPreviewState } : null
+    )
     emit('saved', dto)
     emit('dirty-change', false)
   } catch {
@@ -519,16 +540,21 @@ function resetFromSnapshot() {
   const parsed = JSON.parse(snapshot.value) as AffiliateBannerDraft
   assignDraft(parsed)
   message.value = ''
-  imageGeneration.value += 1
-  preview.value = savedBanner.value?.imageUrl ? { generation: imageGeneration.value, src: savedBanner.value.imageUrl } : null
-  previewState.value = savedBanner.value?.imageUrl ? 'loaded' : 'idle'
+  setPreviewFromImage(savedBanner.value?.imageUrl ?? null)
 }
 
 async function copyTargetUrl() {
   if (!draft.targetUrl) return
-  if ((import.meta as ImportMeta & { client?: boolean }).client === false || typeof navigator === 'undefined') return
+  if (
+    (import.meta as ImportMeta & { client?: boolean }).client === false
+    || typeof navigator === 'undefined'
+    || typeof navigator.clipboard?.writeText !== 'function'
+  ) {
+    message.value = '복사하지 못했습니다. 주소를 직접 복사하세요'
+    return
+  }
   try {
-    await navigator.clipboard?.writeText(draft.targetUrl)
+    await navigator.clipboard.writeText(draft.targetUrl)
     message.value = ''
   } catch {
     message.value = '복사하지 못했습니다. 주소를 직접 복사하세요'

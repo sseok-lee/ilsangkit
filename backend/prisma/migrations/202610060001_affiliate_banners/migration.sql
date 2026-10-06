@@ -37,4 +37,3 @@ CREATE TABLE `AffiliateBannerAsset` (
 
 -- AddForeignKey
 ALTER TABLE `AffiliateBanner` ADD CONSTRAINT `AffiliateBanner_imageAssetId_fkey` FOREIGN KEY (`imageAssetId`) REFERENCES `AffiliateBannerAsset`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-

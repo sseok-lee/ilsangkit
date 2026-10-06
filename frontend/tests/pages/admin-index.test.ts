@@ -1,6 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import AdminIndexPage from '~/pages/admin/index.vue'
+
+const routeLeave = vi.hoisted(() => ({
+  guard: undefined as undefined | ((_to: unknown, _from: unknown, next: (value?: false | void) => void) => void),
+}))
+
+vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: vi.fn((guard) => {
+    routeLeave.guard = guard
+  }),
+}))
 
 function makeSummary(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -74,7 +84,10 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
   let guidePublishMock: ReturnType<typeof vi.fn>
   let guideUnpublishMock: ReturnType<typeof vi.fn>
   let guideRemoveMock: ReturnType<typeof vi.fn>
-  let confirmSpy: ReturnType<typeof vi.spyOn>
+  let affiliateListMock: ReturnType<typeof vi.fn>
+  let logoutMock: ReturnType<typeof vi.fn>
+  let navigateToMock: ReturnType<typeof vi.fn>
+  let confirmSpy: MockInstance<typeof window.confirm>
 
   beforeEach(() => {
     listMock = vi.fn().mockResolvedValue({ items: [makeSummary()], total: 1, page: 1, totalPages: 1 })
@@ -93,6 +106,9 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     guidePublishMock = vi.fn().mockResolvedValue(makeGuideDetail({ status: 'published', published: true }))
     guideUnpublishMock = vi.fn().mockResolvedValue(makeGuideDetail({ status: 'draft', published: false }))
     guideRemoveMock = vi.fn().mockResolvedValue({ deleted: true })
+    affiliateListMock = vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 1 })
+    logoutMock = vi.fn().mockResolvedValue(undefined)
+    navigateToMock = vi.fn()
 
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('useAdminArticles', () => ({
@@ -114,8 +130,19 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
       unpublish: guideUnpublishMock,
       remove: guideRemoveMock,
     }))
+    vi.stubGlobal('useAdminAffiliateBanners', () => ({
+      list: affiliateListMock,
+      get: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      setStatus: vi.fn(),
+      uploadImage: vi.fn(),
+    }))
+    vi.stubGlobal('useAdminAuth', () => ({ logout: logoutMock }))
+    vi.stubGlobal('navigateTo', navigateToMock)
 
     confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    routeLeave.guard = undefined
   })
 
   afterEach(() => {
@@ -137,6 +164,20 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
     await wrapper.find('[data-testid="tab-guide"]').trigger('click')
     await flushPromises()
     return wrapper
+  }
+
+  function mountWithAffiliateStub() {
+    return mount(AdminIndexPage, {
+      global: {
+        stubs: {
+          AdminAffiliateBannerPanel: {
+            name: 'AdminAffiliateBannerPanel',
+            emits: ['dirty-change'],
+            template: '<section data-testid="affiliate-panel"><slot /></section>',
+          },
+        },
+      },
+    })
   }
 
   it('마운트 시 list()를 호출하고 반환된 초안을 카드로 렌더한다 (제목·카테고리·상태)', async () => {
@@ -479,6 +520,105 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
 
       expect(wrapper.text()).not.toContain('DB connection refused')
       expect(wrapper.find('[data-testid="error"]').exists()).toBe(true)
+    })
+  })
+
+  describe('제휴 배너 탭', () => {
+    it('기본 마운트에서는 affiliate API를 호출하지 않고 탭 진입 시 패널을 처음 렌더한다', async () => {
+      const wrapper = mountWithAffiliateStub()
+      await flushPromises()
+
+      expect(affiliateListMock).not.toHaveBeenCalled()
+      expect(wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).exists()).toBe(false)
+
+      await wrapper.find('[data-testid="tab-affiliate"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).exists()).toBe(true)
+      expect(wrapper.text()).toContain('사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.')
+    })
+
+    it('affiliate dirty 상태에서 탭 이동 취소 시 active tab과 editor를 유지하고 새 문서 이동을 만들지 않는다', async () => {
+      confirmSpy.mockReturnValue(false)
+      const wrapper = mountWithAffiliateStub()
+      await flushPromises()
+
+      await wrapper.find('[data-testid="tab-affiliate"]').trigger('click')
+      await flushPromises()
+      const panel = wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' })
+      panel.vm.$emit('dirty-change', true)
+      await flushPromises()
+
+      await wrapper.find('[data-testid="tab-article"]').trigger('click')
+      await flushPromises()
+
+      expect(confirmSpy).toHaveBeenCalledWith('저장하지 않은 제휴 배너 변경 내용이 있습니다. 이동하시겠습니까?')
+      expect(wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).exists()).toBe(true)
+      expect(wrapper.find('[data-testid="admin-article-card"]').exists()).toBe(false)
+    })
+
+    it('affiliate dirty 상태에서 확인 수락 시 다른 탭으로 진입한다', async () => {
+      confirmSpy.mockReturnValue(true)
+      const wrapper = mountWithAffiliateStub()
+      await flushPromises()
+
+      await wrapper.find('[data-testid="tab-affiliate"]').trigger('click')
+      await flushPromises()
+      wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).vm.$emit('dirty-change', true)
+      await flushPromises()
+
+      await wrapper.find('[data-testid="tab-guide"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).exists()).toBe(false)
+      expect(wrapper.find('[data-testid="admin-guide-card"]').exists()).toBe(true)
+    })
+
+    it('route leave 확인 취소/수락과 beforeunload 등록 해제를 처리한다', async () => {
+      const addSpy = vi.spyOn(window, 'addEventListener')
+      const removeSpy = vi.spyOn(window, 'removeEventListener')
+      const wrapper = mountWithAffiliateStub()
+      await flushPromises()
+      await wrapper.find('[data-testid="tab-affiliate"]').trigger('click')
+      await flushPromises()
+      wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).vm.$emit('dirty-change', true)
+      await flushPromises()
+
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(true)
+
+      confirmSpy.mockReturnValue(false)
+      const cancelNext = vi.fn()
+      routeLeave.guard?.({}, {}, cancelNext)
+      expect(cancelNext).toHaveBeenCalledWith(false)
+
+      confirmSpy.mockReturnValue(true)
+      const acceptNext = vi.fn()
+      routeLeave.guard?.({}, {}, acceptNext)
+      expect(acceptNext).toHaveBeenCalledWith()
+
+      wrapper.unmount()
+      expect(addSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+      expect(removeSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+      addSpy.mockRestore()
+      removeSpy.mockRestore()
+    })
+
+    it('dirty 상태에서 로그아웃 확인을 취소하면 기존 로그아웃 동작을 실행하지 않는다', async () => {
+      confirmSpy.mockReturnValue(false)
+      const wrapper = mountWithAffiliateStub()
+      await flushPromises()
+      await wrapper.find('[data-testid="tab-affiliate"]').trigger('click')
+      await flushPromises()
+      wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).vm.$emit('dirty-change', true)
+      await flushPromises()
+
+      await wrapper.find('[data-testid="logout-button"]').trigger('click')
+      await flushPromises()
+
+      expect(logoutMock).not.toHaveBeenCalled()
+      expect(navigateToMock).not.toHaveBeenCalled()
     })
   })
 })

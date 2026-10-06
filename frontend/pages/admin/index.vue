@@ -34,6 +34,14 @@
       >
         {{ generating ? '생성 중...' : '정책 생성' }}
       </button>
+      <button
+        type="button"
+        data-testid="logout-button"
+        class="px-3 py-2 rounded-md text-sm font-medium bg-background-light text-ink"
+        @click="onLogout"
+      >
+        로그아웃
+      </button>
     </header>
 
     <div v-if="notice" data-testid="notice" class="max-w-7xl mx-auto w-full px-4 pt-3">
@@ -108,7 +116,7 @@
         </section>
       </template>
 
-      <template v-else>
+      <template v-else-if="tab === 'guide'">
         <!-- 좌측: 가이드 목록 -->
         <aside class="md:w-96 shrink-0 flex flex-col gap-3">
           <div class="flex flex-wrap gap-2">
@@ -162,6 +170,15 @@
           </p>
         </section>
       </template>
+
+      <template v-else>
+        <section class="flex-1 min-w-0">
+          <p class="mb-3 rounded-md border border-line bg-white px-3 py-2 text-sm text-muted">
+            사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.
+          </p>
+          <AdminAffiliateBannerPanel @dirty-change="onAffiliateDirtyChange" />
+        </section>
+      </template>
     </div>
   </div>
 </template>
@@ -169,7 +186,9 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'admin', layout: false })
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
+import AdminAffiliateBannerPanel from '~/components/admin/AdminAffiliateBannerPanel.vue'
 import AdminArticleCard from '~/components/admin/AdminArticleCard.vue'
 import AdminArticleEditor from '~/components/admin/AdminArticleEditor.vue'
 import AdminGuideCard from '~/components/admin/AdminGuideCard.vue'
@@ -201,10 +220,11 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'rejected', label: '반려됨' },
 ]
 
-type AdminTab = 'article' | 'guide'
+type AdminTab = 'article' | 'guide' | 'affiliate'
 const TABS: { value: AdminTab; label: string }[] = [
   { value: 'article', label: '오늘의 이슈' },
   { value: 'guide', label: '생활 가이드' },
+  { value: 'affiliate', label: '제휴 배너' },
 ]
 type GuideStatusFilter = AdminGuideStatus | 'all'
 const GUIDE_FILTERS: { value: GuideStatusFilter; label: string }[] = [
@@ -228,6 +248,8 @@ const guides = ref<AdminGuideSummary[]>([])
 const selectedGuide = ref<AdminGuideDetail | null>(null)
 const guideStatusFilter = ref<GuideStatusFilter>('all')
 const guidesLoaded = ref(false)
+const affiliateDirty = ref(false)
+const AFFILIATE_DIRTY_CONFIRM = '저장하지 않은 제휴 배너 변경 내용이 있습니다. 이동하시겠습니까?'
 
 async function load() {
   loading.value = true
@@ -362,9 +384,15 @@ async function loadGuides() {
 }
 
 function onTabChange(value: AdminTab) {
+  if (value !== 'affiliate' && affiliateDirty.value && !confirm(AFFILIATE_DIRTY_CONFIRM)) return
+  if (tab.value === 'affiliate' && value !== 'affiliate') affiliateDirty.value = false
   tab.value = value
   error.value = ''
   if (value === 'guide' && !guidesLoaded.value) loadGuides()
+}
+
+function onAffiliateDirtyChange(value: boolean) {
+  affiliateDirty.value = value
 }
 
 function onGuideFilterChange(value: GuideStatusFilter) {
@@ -424,5 +452,33 @@ async function onDeleteGuide() {
   }
 }
 
-onMounted(load)
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!affiliateDirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+async function onLogout() {
+  if (affiliateDirty.value && !confirm(AFFILIATE_DIRTY_CONFIRM)) return
+  await useAdminAuth().logout()
+  return navigateTo('/admin/login')
+}
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!affiliateDirty.value || confirm(AFFILIATE_DIRTY_CONFIRM)) {
+    affiliateDirty.value = false
+    next()
+    return
+  }
+  next(false)
+})
+
+onMounted(() => {
+  load()
+  if (typeof window !== 'undefined') window.addEventListener('beforeunload', onBeforeUnload)
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('beforeunload', onBeforeUnload)
+})
 </script>
