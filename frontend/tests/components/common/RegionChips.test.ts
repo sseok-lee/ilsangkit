@@ -46,8 +46,9 @@ describe('RegionChips', () => {
     expect(w.html()).not.toMatch(/rounded-full|text-slate-/)
   })
 
-  it('기본 variant(card) 출력은 그대로다', () => {
+  it('variant 없이도 flat 출력(UiChip, rounded-full 없음)', () => {
     const w = mountChips()
-    expect(w.findAll('a')[0].classes()).toEqual(expect.arrayContaining(['rounded-full', 'border-line']))
+    expect(w.findAll('a')[0].classes()).toContain('ui-chip')
+    expect(w.html()).not.toMatch(/rounded-full|text-slate-/)
   })
 })

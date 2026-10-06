@@ -458,7 +458,7 @@
         <AdBanner class="order-10 md:order-10" />
 
         <!-- 관련 가이드 -->
-        <RelatedGuides class="order-11 md:order-11" :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
+        <RelatedGuides variant="flat" class="order-11 md:order-11" :categories="['subscription', 'apt-sale', 'apt-rent']" :limit="3" />
 
         <!-- Ad: 본문 마무리 (하단) -->
         <AdBanner class="order-12 md:order-12" />

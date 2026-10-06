@@ -1,6 +1,17 @@
 <template>
-  <section v-if="guides.length > 0 && variant === 'flat'" class="section-flat">
-    <div class="flex items-center justify-between mb-4 md:mb-[22px]">
+  <component
+    :is="variant === 'inline' ? 'div' : 'section'"
+    v-if="guides.length > 0"
+    :class="variant === 'inline' ? undefined : 'section-flat'"
+  >
+    <div v-if="variant === 'inline'" class="flex items-center justify-between mb-3">
+      <h3 class="ui-h3 text-strong">관련 가이드</h3>
+      <NuxtLink to="/guide" class="text-sm text-primary font-medium hover:underline flex items-center gap-1">
+        더보기
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+      </NuxtLink>
+    </div>
+    <div v-else class="flex items-center justify-between mb-4 md:mb-[22px]">
       <h2 class="ui-h2 text-strong">관련 가이드</h2>
       <NuxtLink
         to="/guide"
@@ -32,62 +43,19 @@
           </div>
         </div>
         <div class="p-3">
-          <h3 class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors">
+          <component
+            :is="variant === 'inline' ? 'h4' : 'h3'"
+            class="text-sm font-bold text-ink line-clamp-2 group-hover:text-primary transition-colors"
+          >
             {{ guide.title }}
-          </h3>
+          </component>
           <p class="text-xs text-muted mt-1 line-clamp-1">
             {{ guide.summary }}
           </p>
         </div>
       </NuxtLink>
     </div>
-  </section>
-  <section v-else-if="guides.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-      <h2 class="text-slate-900 text-display-2 flex items-center gap-2">
-        <span class="material-symbols-outlined text-primary text-[20px]">menu_book</span>
-        관련 가이드
-      </h2>
-      <NuxtLink
-        to="/guide"
-        class="text-sm text-primary font-medium hover:underline flex items-center gap-1"
-      >
-        더보기
-        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-      </NuxtLink>
-    </div>
-    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <NuxtLink
-        v-for="guide in guides"
-        :key="guide.id"
-        :to="`/guide/${guide.slug}`"
-        class="group flex flex-col rounded-lg border border-slate-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-      >
-        <div class="aspect-video bg-slate-100 overflow-hidden">
-          <img
-            v-if="guide.thumbnailUrl"
-            :src="`${publicApiBase}${guide.thumbnailUrl}`"
-            :alt="guide.title"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            width="400"
-            height="225"
-          />
-          <div v-else class="w-full h-full flex items-center justify-center">
-            <span class="material-symbols-outlined text-[36px] text-slate-300">article</span>
-          </div>
-        </div>
-        <div class="p-3">
-          <h3 class="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-primary transition-colors">
-            {{ guide.title }}
-          </h3>
-          <p class="text-xs text-slate-500 mt-1 line-clamp-1">
-            {{ guide.summary }}
-          </p>
-        </div>
-      </NuxtLink>
-    </div>
-  </section>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -100,10 +68,10 @@ const props = withDefaults(defineProps<{
   categories?: string[]
   excludeSlug?: string
   limit?: number
-  variant?: 'card' | 'flat'
+  variant?: 'flat' | 'inline'
 }>(), {
   limit: 3,
-  variant: 'card',
+  variant: 'flat',
 })
 
 const config = useRuntimeConfig()

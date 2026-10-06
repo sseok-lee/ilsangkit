@@ -65,11 +65,11 @@ describe('RegionCascadingDropdown', () => {
     expect(text).toContain('강남구')
   })
 
-  it('variant 기본 card: 기존 회색 select 클래스를 그대로 유지한다', () => {
+  it('variant 없이도 flat 출력: 흰 바탕·7px·44px select, bg-slate-50 없음', () => {
     const wrapper = mountIt()
     const select = wrapper.get('select[aria-label="시/도 선택"]')
-    expect(select.classes()).toContain('bg-slate-50')
-    expect(select.classes()).toContain('rounded-lg')
+    expect(select.classes()).toEqual(expect.arrayContaining(['bg-white', 'rounded-[7px]', 'min-h-[44px]']))
+    expect(select.classes()).not.toContain('bg-slate-50')
   })
 
   it('variant flat: 흰 바탕·1px 선·7px·44px select, 회색 계열 없음', () => {

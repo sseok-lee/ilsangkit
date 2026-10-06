@@ -47,8 +47,8 @@
       <div class="mt-8 grid min-w-0 gap-7" :class="readingDocument.toc.length ? 'md:grid-cols-[190px_minmax(0,760px)] md:gap-10' : 'max-w-[760px]'">
         <ContentToc :items="readingDocument.toc" />
         <div class="min-w-0 space-y-7">
-      <!-- "본문" SectionBlock -->
-      <SectionBlock class="reading-body">
+      <!-- "본문" -->
+      <section class="reading-body">
         <p v-if="guide.summary" class="mb-7 rounded-md bg-primary-50 p-5 text-sm leading-7 text-muted">{{ guide.summary }}</p>
         <div
           class="
@@ -94,14 +94,15 @@
             #{{ keyword }}
           </span>
         </div>
-      </SectionBlock>
+      </section>
 
       <!-- AdBanner: 본문 이후 1회 -->
       <AdBanner />
 
       <!-- "관련 정보" SectionBlock -->
-      <SectionBlock heading="관련 정보" subtext="같은 주제의 가이드와 바로가기 링크를 확인하세요.">
+      <SectionBlock variant="flat" heading="관련 정보" subtext="같은 주제의 가이드와 바로가기 링크를 확인하세요.">
         <RelatedGuides
+          variant="inline"
           v-if="guide.category"
           :category="guide.category"
           :exclude-slug="guide.slug"
@@ -345,7 +346,6 @@ if (guide.value) {
 </script>
 
 <style scoped>
-.reading-body { border: 0; border-radius: 0; box-shadow: none; padding: 0; }
 .content-reading :deep(.prose) { color: rgb(var(--ink-rgb)); overflow-wrap: anywhere; }
 .content-reading :deep(.prose h2), .content-reading :deep(.prose h3) { scroll-margin-top: 100px; }
 .content-reading :deep(.prose h2) { font-size: 22px; border: 0; margin-top: 32px; }

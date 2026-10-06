@@ -45,6 +45,6 @@ function onCity(value: string) {
         </select>
       </label>
     </div>
-    <RegionCascadingDropdown :city="city" :district="district" city-value-mode="short" preserve-current-selection @update:city="onCity" @update:district="emit('update:district', $event)" />
+    <RegionCascadingDropdown variant="flat" :city="city" :district="district" city-value-mode="short" preserve-current-selection @update:city="onCity" @update:district="emit('update:district', $event)" />
   </div>
 </template>
