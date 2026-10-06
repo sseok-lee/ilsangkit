@@ -55,15 +55,16 @@ describe('BlogReviewSection', () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/real-estate/apt-sale/'))
   })
 
-  it('variant=flat 이면 SectionBlock 평면형 + 래퍼 mt-8 없음, 기본은 card + mt-8', async () => {
+  it('variant=flat 이면 SectionBlock 평면형 + 래퍼 mt-8 없음, variant 없이도 동일', async () => {
     fetchMock.mockResolvedValue({ success: true, data: { posts: mkPosts(3) } })
     const props = { kind: 'facility' as const, primaryKey: 'parking', secondaryKey: '123' }
     const flat = mount(BlogReviewSection, { props: { ...props, variant: 'flat' as const } })
     await flushPromises(); await nextTick()
     expect(flat.find('h2').classes()).toContain('ui-h2')
     expect(flat.find('[data-testid="blog-section"]').classes()).not.toContain('mt-8')
-    const card = mount(BlogReviewSection, { props })
+    const noVariant = mount(BlogReviewSection, { props })
     await flushPromises(); await nextTick()
-    expect(card.find('[data-testid="blog-section"]').classes()).toContain('mt-8')
+    expect(noVariant.find('h2').classes()).toContain('ui-h2')
+    expect(noVariant.find('[data-testid="blog-section"]').classes()).not.toContain('mt-8')
   })
 })

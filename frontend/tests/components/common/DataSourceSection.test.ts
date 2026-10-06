@@ -124,10 +124,10 @@ describe('DataSourceSection — variant', () => {
     expect(w.text()).toContain('2026-05-28')
   })
 
-  it('기본(card)은 기존 그림자 카드를 유지한다', () => {
+  it('variant 없이도 flat(section-flat)이다', () => {
     const w = mountSection({ domain: 'facility', category: 'hospital' })
-    expect(w.get('div').classes()).toContain('shadow-sm')
-    expect(w.find('section').exists()).toBe(false)
+    expect(w.get('section').classes()).toContain('section-flat')
+    expect(w.html()).not.toMatch(/shadow-|slate-|gray-/)
   })
 
   it('compact + flat 은 출처 한 줄(.source-line)로 렌더하고 상자·그림자가 없다', () => {
@@ -144,8 +144,9 @@ describe('DataSourceSection — variant', () => {
     expect(w.text()).toContain('국토교통부')
   })
 
-  it('compact 기본(card)은 기존 상자 그대로', () => {
+  it('compact 는 variant 없이도 출처 한 줄(.source-line)이다', () => {
     const w = mountSection({ domain: 'facility', compact: true })
-    expect(w.get('div').classes()).toEqual(expect.arrayContaining(['shadow-sm', 'border-slate-200']))
+    expect(w.find('p.source-line').exists()).toBe(true)
+    expect(w.html()).not.toMatch(/shadow-|slate-/)
   })
 })

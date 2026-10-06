@@ -97,10 +97,21 @@ describe('RelatedGuides — variant', () => {
     expect(section.text()).toContain('가이드 A')
   })
 
-  it('기본(card)은 기존 그림자 카드를 유지한다', async () => {
+  it('variant 없이도 section-flat 이다', async () => {
     mockFetch.mockResolvedValue(resp)
     const wrapper = mountWithSuspense({ category: 'hospital' })
     await flushPromises()
-    expect(wrapper.get('section').classes()).toContain('shadow-sm')
+    expect(wrapper.get('section').classes()).toContain('section-flat')
+    expect(wrapper.html()).not.toMatch(/shadow-|slate-/)
+  })
+
+  it('inline 은 바깥 평면 섹션 없이 제목(h3)과 카드만 그린다', async () => {
+    mockFetch.mockResolvedValue(resp)
+    const w = mountWithSuspense({ category: 'hospital', variant: 'inline' })
+    await flushPromises()
+    expect(w.find('section.section-flat').exists()).toBe(false)
+    expect(w.get('h3').text()).toBe('관련 가이드')
+    expect(w.get('h3').classes()).toContain('ui-h3')
+    expect(w.findAll('a').length).toBeGreaterThan(1)
   })
 })

@@ -2,7 +2,7 @@
   <section
     ref="rootEl"
     data-testid="blog-section"
-    :class="['min-h-[1px]', (hasResults || loading) && variant !== 'flat' ? 'mt-8' : '']"
+    class="min-h-[1px]"
   >
     <SectionBlock
       v-if="hasResults || loading"
@@ -10,7 +10,7 @@
       :variant="variant"
     >
       <div v-if="loading" class="flex flex-col gap-3">
-        <div v-for="i in 5" :key="i" class="h-24 rounded-xl animate-pulse" :class="variant === 'flat' ? 'bg-line' : 'bg-slate-100'" />
+        <div v-for="i in 5" :key="i" class="h-24 rounded-xl animate-pulse bg-line" />
       </div>
 
       <div v-else class="flex flex-col gap-3">
@@ -32,8 +32,8 @@ import BlogReviewCard from './BlogReviewCard.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
 const props = withDefaults(
-  defineProps<{ kind: BlogReviewKind; primaryKey: string; secondaryKey: string; variant?: 'card' | 'flat' }>(),
-  { variant: 'card' },
+  defineProps<{ kind: BlogReviewKind; primaryKey: string; secondaryKey: string; variant?: 'flat' }>(),
+  { variant: 'flat' },
 )
 
 const { posts, loading, fetchPosts } = useBlogReviews()
