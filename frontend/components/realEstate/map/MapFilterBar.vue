@@ -3,8 +3,9 @@
     감싸는 흰 판을 두지 않는다 — 컨트롤이 2개뿐이라 판이 지도를 가리기만 한다. 이 div 는
     배치만 담당하고(w-fit + gap), 지도 위에서의 가독성은 각 트리거가 자기 배경과 그림자로
     책임진다. 판을 없앴으므로 트리거에 shadow 가 반드시 있어야 지도 라벨과 섞이지 않는다.
+    lg 이상에서는 지도 위가 아니라 흰 상단 막대 안에 놓이므로 그림자를 끈다.
   -->
-  <div ref="root" class="w-fit max-w-full inline-flex flex-nowrap gap-1 rounded-xl border border-line bg-white/95 p-1 shadow-card-2">
+  <div ref="root" class="w-fit max-w-full inline-flex flex-nowrap gap-1 rounded-xl border border-line bg-white/95 p-1 shadow-card-2 lg:shadow-none">
     <!--
       6개 조합을 한 줄에 늘어놓는 대신 "무엇을"(아파트/빌라/오피스텔) 과 "어떻게"(매매/전월세)
       두 축으로 나눈다. 390px 에서 6칩은 4개만 보이고 가로 스크롤이 필요했는데, 2축은 두 컨트롤이
