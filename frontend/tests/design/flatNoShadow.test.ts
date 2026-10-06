@@ -33,6 +33,10 @@ describe('평면 요소 그림자 0', () => {
 
   it('지도/목록 토글 활성은 테두리로 표시', () => {
     const src = read('components/realEstate/map/RealEstateMapExplorer.vue')
-    expect(src).toMatch(/rounded-lg border border-line bg-white px-4 text-primary"\s+aria-current="page"/)
+    const tag = src.match(/<button\b[^>]*aria-current="page"[^>]*>/)?.[0] ?? ''
+    expect(tag).not.toBe('')
+    const classes = (tag.match(/\bclass="([^"]*)"/)?.[1] ?? '').split(/\s+/)
+    expect(classes).toEqual(expect.arrayContaining(['border', 'border-line', 'bg-white', 'text-primary']))
+    expect(classes.some((c) => /(^|:)!?shadow/.test(c))).toBe(false)
   })
 })
