@@ -52,6 +52,9 @@ const bannerDto = {
   imageUrl: 'https://images.example.com/banner.png',
   targetUrl: 'https://example.com/go?a=%2B&a=2+b',
   altText: '여름 준비',
+  disclosureOverride: null,
+  disclosureText: null,
+  disclosureSource: 'missing',
   isEnabled: false,
   createdAt: '2026-10-06T01:02:03.000Z',
   updatedAt: '2026-10-06T01:02:03.000Z',
@@ -126,7 +129,10 @@ describe('admin affiliate banner routes', () => {
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ success: true, data: bannerDto });
-    expect(mockCreateAffiliateBanner).toHaveBeenCalledWith(draft);
+    expect(mockCreateAffiliateBanner).toHaveBeenCalledWith({
+      ...draft,
+      disclosureOverride: null,
+    });
   });
 
   it('rejects unauthenticated list requests', async () => {
@@ -158,6 +164,31 @@ describe('admin affiliate banner routes', () => {
       .set('Origin', ORIGIN)
       .send({ isEnabled: true });
     expect(massAssignment.status).toBe(422);
+    expect(mockUpdateAffiliateBanner).not.toHaveBeenCalled();
+  });
+
+  it('rejects computed disclosure fields through create and patch contracts', async () => {
+    const create = await request(makeApp())
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        name: '여름 준비',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/banner.png',
+        targetUrl: 'https://example.com/go?a=%2B&a=2+b',
+        altText: '여름 준비',
+        disclosureText: '계산 결과',
+      });
+    expect(create.status).toBe(422);
+    expect(mockCreateAffiliateBanner).not.toHaveBeenCalled();
+
+    const patch = await request(makeApp())
+      .patch('/api/admin/affiliate-banners/6ea02ad2-d1be-4d01-946d-d08005f01d4e')
+      .set('Origin', ORIGIN)
+      .send({ disclosureSource: 'provider' });
+    expect(patch.status).toBe(422);
     expect(mockUpdateAffiliateBanner).not.toHaveBeenCalled();
   });
 
@@ -199,6 +230,21 @@ describe('admin affiliate banner routes', () => {
       '6ea02ad2-d1be-4d01-946d-d08005f01d4e',
       { name: '새 이름' },
     );
+  });
+
+  it('returns validation errors from active disclosure checks as 422', async () => {
+    mockSetAffiliateBannerStatus.mockRejectedValueOnce(
+      new ValidationError('수익 고지 문구를 등록한 뒤 사용으로 설정하세요'),
+    );
+
+    const res = await request(makeApp())
+      .patch('/api/admin/affiliate-banners/6ea02ad2-d1be-4d01-946d-d08005f01d4e/status')
+      .set('Origin', ORIGIN)
+      .send({ isEnabled: true });
+
+    expect(res.status).toBe(422);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it.each([

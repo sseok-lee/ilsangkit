@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PAGINATION } from '../constants/index.js';
+import { affiliateDisclosureTextSchema } from './affiliateDisclosure.js';
 
 export const affiliateBannerProviderSchema = z.enum(['coupang', 'ali', 'toss']);
 export const affiliateBannerImageSourceTypeSchema = z.enum(['upload', 'url']);
@@ -44,9 +45,15 @@ const affiliateBannerDraftShape = {
   externalImageUrl: httpsUrl.nullable(),
   targetUrl: httpsUrl,
   altText: z.string().trim().min(1).max(200),
+  disclosureOverride: affiliateDisclosureTextSchema.nullable(),
 };
 
-export const affiliateBannerCreateSchema = z.object(affiliateBannerDraftShape).strict().refine((value) => {
+const affiliateBannerCreateObject = z.object({
+  ...affiliateBannerDraftShape,
+  disclosureOverride: affiliateDisclosureTextSchema.nullable().default(null),
+}).strict();
+
+export const affiliateBannerCreateSchema = affiliateBannerCreateObject.refine((value) => {
   if (value.imageSourceType === 'upload') {
     return value.imageAssetId !== null && value.externalImageUrl === null;
   }
@@ -66,7 +73,7 @@ export const affiliateBannerQuerySchema = z.object({
   isEnabled: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
 }).strict();
 
-export type AffiliateBannerCreateInput = z.infer<typeof affiliateBannerCreateSchema>;
+export type AffiliateBannerCreateInput = z.input<typeof affiliateBannerCreateObject>;
 export type AffiliateBannerPatchInput = z.infer<typeof affiliateBannerPatchSchema>;
 export type AffiliateBannerQueryInput = z.infer<typeof affiliateBannerQuerySchema>;
 export type AffiliateBannerStatusInput = z.infer<typeof affiliateBannerStatusSchema>;

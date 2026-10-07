@@ -1,4 +1,8 @@
-export type AffiliateProvider = 'coupang' | 'ali' | 'toss';
+import type { ResolvedAffiliateDisclosure } from './affiliateDisclosure.js';
+
+export const AFFILIATE_PROVIDERS = ['coupang', 'ali', 'toss'] as const;
+
+export type AffiliateProvider = (typeof AFFILIATE_PROVIDERS)[number];
 export type AffiliateImageSourceType = 'upload' | 'url';
 
 export interface AffiliateBannerDraft {
@@ -9,11 +13,12 @@ export interface AffiliateBannerDraft {
   externalImageUrl: string | null;
   targetUrl: string;
   altText: string;
+  disclosureOverride: string | null;
 }
 
 export type AffiliateBannerPatch = Partial<AffiliateBannerDraft>;
 
-export interface AffiliateBannerDto extends AffiliateBannerDraft {
+export interface AffiliateBannerDto extends AffiliateBannerDraft, ResolvedAffiliateDisclosure {
   id: string;
   imageUrl: string;
   isEnabled: boolean;

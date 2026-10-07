@@ -8,6 +8,7 @@ import {
   affiliateBannerPatchSchema,
   affiliateBannerQuerySchema,
   affiliateBannerStatusSchema,
+  type AffiliateBannerCreateInput,
 } from '../schemas/affiliateBanner.js';
 import {
   createAffiliateBanner,
@@ -17,7 +18,6 @@ import {
   updateAffiliateBanner,
 } from '../services/adminAffiliateBannerService.js';
 import type {
-  AffiliateBannerDraft,
   AffiliateBannerPatch,
   AffiliateBannerQuery,
 } from '../types/affiliateBanner.js';
@@ -51,7 +51,7 @@ router.post(
   requireSameOrigin,
   validate(affiliateBannerCreateSchema, 'body'),
   asyncHandler(async (req, res) => {
-    const data = await createAffiliateBanner(req.body as AffiliateBannerDraft);
+    const data = await createAffiliateBanner(req.body as AffiliateBannerCreateInput);
     res.status(201).json({ success: true, data });
   }),
 );
