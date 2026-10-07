@@ -50,6 +50,8 @@
       </SectionBlock>
 
 
+      <AffiliateBanner />
+
       <section>
         <DataSourceSection variant="flat" domain="real-estate" />
       </section>

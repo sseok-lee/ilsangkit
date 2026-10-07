@@ -140,6 +140,10 @@
       </div>
     </section>
 
+    <div class="page-container">
+      <AffiliateBanner />
+    </div>
+
     <!-- 오늘의 이슈 -->
     <section v-if="recentArticles.length > 0" class="page-container py-6">
       <div class="flex items-center justify-between mb-4">

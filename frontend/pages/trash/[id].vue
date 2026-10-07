@@ -197,6 +197,7 @@
 
       <!-- 데이터 정보 -->
       <DataSourceSection domain="facility" category="trash" variant="flat" :last-sync-date="lastSyncDate" />
+      <AffiliateBanner />
     </template>
   </div>
   </div>

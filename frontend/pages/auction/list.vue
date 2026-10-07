@@ -97,6 +97,8 @@
         </div>
       </SectionBlock>
 
+      <AffiliateBanner />
+
       <DataSourceSection variant="flat" domain="auction" />
     </div>
   </div>

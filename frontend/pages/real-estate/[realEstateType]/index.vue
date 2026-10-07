@@ -105,6 +105,8 @@
         </SectionBlock>
       </template>
 
+      <AffiliateBanner />
+
       <!-- FAQ -->
       <SectionBlock v-if="faqs.length > 0" variant="flat" heading="자주 묻는 질문">
         <div class="space-y-1">

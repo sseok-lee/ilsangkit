@@ -71,6 +71,8 @@
         </p>
       </SectionBlock>
 
+      <AffiliateBanner />
+
       <DataSourceSection domain="real-estate" variant="flat" />
     </div>
   </div>

@@ -161,6 +161,8 @@
                 </div>
               </SectionBlock>
 
+              <AffiliateBanner />
+
               <!-- 주변 시설 (다른 지하철역 + 주차장·EV충전·화장실·시장) -->
               <DetailNearby
                 section-variant="flat"

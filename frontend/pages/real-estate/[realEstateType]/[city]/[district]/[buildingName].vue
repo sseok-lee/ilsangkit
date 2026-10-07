@@ -321,6 +321,8 @@
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner class="estate-ad-slot order-7 md:order-8" />
 
+      <AffiliateBanner class="order-10" />
+
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
       <div id="nearby" class="flex flex-col gap-0 order-12 md:order-12">
         <SectionBlock

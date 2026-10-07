@@ -535,7 +535,7 @@ describe('admin dashboard (pages/admin/index.vue)', () => {
       await flushPromises()
 
       expect(wrapper.findComponent({ name: 'AdminAffiliateBannerPanel' }).exists()).toBe(true)
-      expect(wrapper.text()).toContain('사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.')
+      expect(wrapper.text()).toContain('고지 문구가 등록된 사용 가능 배너는 모바일 광고 영역에 무작위로 노출됩니다.')
     })
 
     it('affiliate dirty 상태에서 탭 이동 취소 시 active tab과 editor를 유지하고 새 문서 이동을 만들지 않는다', async () => {

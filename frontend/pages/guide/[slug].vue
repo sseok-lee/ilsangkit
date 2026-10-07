@@ -134,6 +134,8 @@
         </p>
       </div>
 
+      <AffiliateBanner />
+
       <!-- Back to list -->
       <div>
         <NuxtLink

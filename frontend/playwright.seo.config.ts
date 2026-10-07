@@ -7,6 +7,7 @@ const useLocalChromeFallback = !process.env.CI && process.env.ILSK_SEO_USE_SYSTE
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: [
+    'mobile-affiliate-placement.spec.ts',
     'seo-rendering-recovery.spec.ts',
     'real-estate-nearby.spec.ts',
     'real-estate-mode-navigation.spec.ts',
