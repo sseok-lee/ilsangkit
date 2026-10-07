@@ -137,6 +137,8 @@
         </section>
       </div>
 
+      <AffiliateBanner />
+
       <section class="hub-faq" aria-labelledby="faq-title">
         <div class="section-heading">
           <div>

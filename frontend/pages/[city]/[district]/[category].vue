@@ -97,6 +97,8 @@
       :categories="otherCategories"
     />
 
+    <AffiliateBanner v-if="showRegionAd" />
+
     <!-- 데이터 출처 -->
     <DataSourceSection variant="flat" domain="facility" :category="(category as FacilityCategory)" />
     </div>

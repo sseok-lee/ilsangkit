@@ -318,6 +318,8 @@ if (item.value) {
       </div>
 
 
+      <AffiliateBanner />
+
       <DataSourceSection variant="flat" domain="auction" :last-sync-date="null" />
     </div>
   </div>

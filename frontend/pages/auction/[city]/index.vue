@@ -45,6 +45,7 @@
 
 
       <DataSourceSection variant="flat" domain="auction" />
+      <AffiliateBanner />
     </div>
   </div>
 </template>

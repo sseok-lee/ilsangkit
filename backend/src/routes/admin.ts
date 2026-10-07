@@ -33,10 +33,15 @@ import {
   unpublishGuide,
   rejectGuide,
 } from '../services/adminGuideService.js';
+import adminAffiliateBannersRouter from './adminAffiliateBanners.js';
+import adminAffiliateDisclosuresRouter from './adminAffiliateDisclosures.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
+
+router.use('/affiliate-banners', adminAffiliateBannersRouter);
+router.use('/affiliate-provider-disclosures', adminAffiliateDisclosuresRouter);
 
 // 생성 트리거 공통 경로 — /generate, /:id/regenerate가 공유. 2단계로 분리:
 // Phase 1(assertGenerationReady): 키 preflight(503) → dist 스크립트 존재확인(500) → 단일-플라이트 락 확보(409).

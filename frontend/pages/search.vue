@@ -178,6 +178,7 @@
           <NuxtLink to="/seoul/gangnam">강남구 생활정보 <span aria-hidden="true">☷</span></NuxtLink>
           <small>실거래 가격은 계약일·면적·층에 따라 다릅니다. 세부 조건은 각 건물 상세에서 확인하세요.</small>
         </aside>
+        <AffiliateBanner v-if="hasSuccessfulResults" />
       </div>
     </div>
   </main>

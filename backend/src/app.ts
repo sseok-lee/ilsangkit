@@ -2,8 +2,6 @@
 // @SPEC docs/planning/02-trd.md#백엔드-아키텍처
 
 import express, { Application, Request, Response, NextFunction } from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import facilitiesRouter from './routes/facilities.js';
@@ -23,12 +21,15 @@ import auctionRouter from './routes/auction.js';
 import searchRouter from './routes/search.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
+import affiliateBannersRouter from './routes/affiliateBanners.js';
 import adminRouter from './routes/admin.js';
+import adminAffiliateBannerImagesRouter from './routes/adminAffiliateBannerImages.js';
 import { AppError, ValidationError } from './lib/errors.js';
 import { requestIdMiddleware } from './middlewares/requestId.js';
 import { globalRateLimiter } from './middlewares/rateLimit.js';
 import { helmetConfig, corsOptions, sanitizeInput } from './middlewares/security.js';
 import { checkActiveSummaryReadiness, type SummaryReadinessResult } from './services/realEstateSummaryReadiness.js';
+import { getImageRoot } from './config/imageStorage.js';
 
 const app: Application = express();
 
@@ -74,25 +75,28 @@ app.use((_, res, next) => {
   next();
 });
 
+app.use('/api/admin', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(helmetConfig);
 app.use(cors(corsOptions));
 app.use(requestIdMiddleware);
 app.use(globalRateLimiter); // Apply global rate limiter
+app.use(cookieParser());
+app.use('/api/admin/affiliate-banner-images', adminAffiliateBannerImagesRouter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 app.use(sanitizeInput);
 
 // Static file serving (uploaded images)
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../assets/images');
 app.use(
   '/api/images',
   (_req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   },
-  express.static(uploadDir, {
+  express.static(getImageRoot(), {
     maxAge: '7d',
     immutable: true,
     dotfiles: 'deny',
@@ -172,6 +176,7 @@ app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
 app.use('/api/auction', auctionRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/affiliate-banners', affiliateBannersRouter);
 app.use('/api/admin', adminRouter);
 
 // 404 handler

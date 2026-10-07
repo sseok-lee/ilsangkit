@@ -4,6 +4,7 @@
 
 export * from './facility'
 export * from './wasteArea'
+export * from './affiliateBanner'
 
 // Legacy aliases for backward compatibility
 // api.ts에서 사용되던 별칭들을 여기로 통합

@@ -53,6 +53,8 @@
         <!-- ③ 교차 CTA -->
         <RegionRealEstateCta :area-name="districtName" />
 
+        <AffiliateBanner />
+
         <!-- 데이터 출처 -->
         <DataSourceSection domain="facility" compact variant="flat" />
       </div>

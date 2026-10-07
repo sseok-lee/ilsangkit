@@ -321,6 +321,8 @@
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner class="estate-ad-slot order-7 md:order-8" />
 
+      <AffiliateBanner class="order-10" />
+
       <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
       <div id="nearby" class="flex flex-col gap-0 order-12 md:order-12">
         <SectionBlock
@@ -451,6 +453,7 @@
       <!-- 관련 가이드 -->
       <RelatedGuides variant="flat" class="order-12 md:order-12" :categories="PROPERTY_GUIDE_CATEGORIES" :limit="3" />
 
+      <AffiliateBanner class="order-12" />
 
       <!-- 데이터 출처 -->
       <!-- DataSourceSection은 멀티 루트 템플릿(compact/full v-if·v-else)이라 class fall-through가 안 됨 → order를 wrapper div에 부여 -->

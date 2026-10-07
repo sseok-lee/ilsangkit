@@ -148,6 +148,8 @@
         </div>
       </SectionBlock>
 
+      <AffiliateBanner class="order-6" />
+
       <!-- T3: 대지 거래 사례 -->
       <SectionBlock variant="flat" class="order-7 md:order-7" heading="대지 거래 사례" subtext="비지분 대지 거래 최신 사례입니다.">
         <div v-if="detail && detail.daeSamples.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -252,6 +254,7 @@
         </dl>
       </SectionBlock>
 
+      <AffiliateBanner class="order-12" />
 
       <!-- T6: 데이터 출처 (멀티루트 컴포넌트 → wrapper div에 order 부여) -->
       <div class="order-12 md:order-12">

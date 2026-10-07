@@ -4,6 +4,7 @@
 import dotenv from 'dotenv';
 import app from './app.js';
 import prisma from './lib/prisma.js';
+import { startAffiliateBannerCleanup } from './jobs/affiliateBannerCleanup.js';
 import { assertActiveSummaryReady } from './services/realEstateSummaryReadiness.js';
 
 // Load environment variables
@@ -24,10 +25,20 @@ const server = app.listen(PORT, HOST, () => {
   console.info(`Health check: http://${HOST}:${PORT}/api/health`);
 });
 
+const cleanupJob = process.env.AFFILIATE_BANNER_CLEANUP_ENABLED === 'true'
+  ? startAffiliateBannerCleanup()
+  : null;
+
 // PM2 재시작 시 Prisma 커넥션 정리 — MySQL zombie 트랜잭션 방지
-async function gracefulShutdown(signal: string) {
+async function gracefulShutdown(signal: string): Promise<void> {
   console.info(`${signal} received, shutting down`);
-  server.close(() => console.info('HTTP server closed'));
+  await new Promise<void>((resolve) => {
+    server.close(() => {
+      console.info('HTTP server closed');
+      resolve();
+    });
+  });
+  await cleanupJob?.stop();
   await prisma.$disconnect();
   process.exit(0);
 }

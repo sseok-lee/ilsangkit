@@ -58,6 +58,23 @@ enum WasteMatchState {
   conflict
 }
 
+enum AffiliateProvider {
+  coupang
+  ali
+  toss
+}
+
+enum AffiliateImageSourceType {
+  upload
+  url
+}
+
+enum AffiliateAssetStatus {
+  pending
+  ready
+  deleting
+}
+
 // @TASK T0.4 - 공공화장실 테이블
 model Toilet {
   id          String   @id @db.VarChar(50)
@@ -866,6 +883,46 @@ model AdminLoginThrottle {
   failedAttempts Int       @default(0)
   lockedUntil    DateTime?
   updatedAt      DateTime  @updatedAt
+}
+
+model AffiliateBanner {
+  id               String                   @id @default(uuid()) @db.Char(36)
+  provider         AffiliateProvider
+  name             String                   @db.VarChar(100)
+  imageSourceType  AffiliateImageSourceType
+  imageAssetId     String?                  @unique @db.Char(36)
+  imageAsset       AffiliateBannerAsset?    @relation(fields: [imageAssetId], references: [id], onDelete: Restrict)
+  externalImageUrl String?                  @db.Text
+  targetUrl        String                   @db.Text
+  altText          String                   @db.VarChar(200)
+  disclosureOverride String?                 @db.Text
+  isEnabled        Boolean                  @default(false)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([provider, isEnabled, updatedAt])
+  @@index([updatedAt])
+}
+
+model AffiliateProviderDisclosure {
+  provider              AffiliateProvider @id
+  defaultDisclosureText String            @db.Text
+  updatedAt             DateTime          @updatedAt
+}
+
+model AffiliateBannerAsset {
+  id         String               @id @default(uuid()) @db.Char(36)
+  storageKey String               @unique @db.VarChar(128)
+  mimeType   String               @db.VarChar(32)
+  byteSize   Int
+  status     AffiliateAssetStatus @default(pending)
+  unlinkedAt DateTime?            @default(now())
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  banner     AffiliateBanner?
+
+  @@index([status, unlinkedAt])
+  @@index([status, createdAt])
 }
 
 // 생성 단일-플라이트 락 (고정 id='singleton'). stale-timeout 재확보.

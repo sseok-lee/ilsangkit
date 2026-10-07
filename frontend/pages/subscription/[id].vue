@@ -393,6 +393,8 @@
           <p v-else class="rounded-lg border border-line bg-background-light p-4 text-sm text-muted">단지별 공급 조건은 원문 확인이 필요합니다.</p>
         </SectionBlock>
 
+        <AffiliateBanner class="order-8" />
+
         <!-- "기본정보" 블록 -->
         <SectionBlock variant="flat" class="order-9 md:order-9" heading="기본정보" subtext="시공사·시행사·문의처 등 청약 개요를 모았습니다.">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">

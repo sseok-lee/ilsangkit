@@ -160,6 +160,8 @@
 
     <DataSourceSection domain="subscription" variant="flat" class="source-note" />
 
+    <AffiliateBanner v-if="showAds" />
+
     <section class="faq" aria-labelledby="subscription-list-faq-title">
       <h2 id="subscription-list-faq-title">공고를 보기 전에</h2>
       <div>

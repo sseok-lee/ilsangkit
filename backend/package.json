@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
+    "test:affiliate-integration": "vitest run --config vitest.affiliate.config.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:load": "tsx src/scripts/loadTest.ts",

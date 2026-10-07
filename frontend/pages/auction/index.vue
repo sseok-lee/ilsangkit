@@ -56,6 +56,8 @@
         <p v-if="regionsError" role="alert" class="text-sm text-muted">지역 정보를 불러오지 못했습니다.</p>
       </SectionBlock>
 
+      <AffiliateBanner />
+
       <!-- 부가④ 마감임박 물건 -->
       <SectionBlock variant="flat" v-if="deadline && deadline.items.length > 0" heading="마감 임박 물건" subtext="입찰 마감이 가까운 물건입니다.">
         <div class="flex flex-col">

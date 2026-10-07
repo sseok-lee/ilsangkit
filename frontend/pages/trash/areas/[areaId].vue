@@ -71,6 +71,7 @@
     </SectionBlock>
 
     <DataSourceSection domain="facility" category="trash" variant="flat" :last-sync-date="formattedDate" />
+    <AffiliateBanner />
   </div>
   </div>
 </template>

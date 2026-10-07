@@ -43,6 +43,7 @@
 
 
       <DataSourceSection variant="flat" domain="real-estate" />
+      <AffiliateBanner />
     </div>
   </div>
 </template>

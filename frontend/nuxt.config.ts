@@ -3,6 +3,11 @@ import { CITY_SLUGS } from './shared/regionSlugs'
 
 const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
 const gaId = process.env.NUXT_PUBLIC_GA_ID || ''
+const baseCsp = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.kakao.com https://*.kakaocdn.net http://*.daumcdn.net https://*.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.googletagservices.com https://adservice.google.com https://partner.googleadservices.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' ${apiBase} data: https://*.kakaocdn.net http://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://*.kakao.com http://*.kakao.com https://www.google-analytics.com https://*.google-analytics.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google https://www.googletagservices.com https://www.googletagmanager.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' ${apiBase} https://*.kakao.com https://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.googlesyndication.com https://cdn.jsdelivr.net https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com; frame-src https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; object-src 'none'; worker-src 'self' blob:`
+const adminCsp = baseCsp.replace(/img-src[^;]*;/, `img-src 'self' ${apiBase} data: https:;`)
+// Admin-registered affiliate images may use any validated HTTPS CDN.
+// Broaden only image sources; script, connection and frame permissions stay unchanged.
+const publicCsp = baseCsp.replace(/img-src([^;]*);/, 'img-src$1 https:;')
 const explorationRealEstateTypes = [
   'apt-sale',
   'apt-rent',
@@ -93,6 +98,11 @@ export default defineNuxtConfig({
           handler: 'NetworkOnly',
         },
         {
+          // Never replay a disabled banner or outdated disclosure from the API cache.
+          urlPattern: /\/api\/affiliate-banners\/random\/?(?:\?|$)/,
+          handler: 'NetworkOnly',
+        },
+        {
           urlPattern: /^https?:\/\/.*\/api\/.*/,
           handler: 'NetworkFirst',
           options: {
@@ -172,9 +182,11 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
           'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
           'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
-          'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.kakao.com http://*.daumcdn.net https://*.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.googletagservices.com https://adservice.google.com https://partner.googleadservices.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' ${apiBase} data: https://*.kakaocdn.net http://*.kakaocdn.net https://*.daumcdn.net http://*.daumcdn.net https://*.kakao.com http://*.kakao.com https://www.google-analytics.com https://*.google-analytics.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google https://www.googletagservices.com https://www.googletagmanager.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' ${apiBase} https://*.kakao.com https://*.daumcdn.net http://*.daumcdn.net https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.googlesyndication.com https://cdn.jsdelivr.net https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com; frame-src https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; object-src 'none'; worker-src 'self' blob:`,
+          'Content-Security-Policy': publicCsp,
         },
       },
+      '/admin': { headers: { 'Content-Security-Policy': adminCsp, 'Cache-Control': 'no-store' } },
+      '/admin/**': { headers: { 'Content-Security-Policy': adminCsp, 'Cache-Control': 'no-store' } },
       // 시설 카테고리 — 10분 SWR
       '/toilet/**': { swr: 600 },
       '/wifi/**': { swr: 600 },

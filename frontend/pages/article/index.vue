@@ -25,6 +25,7 @@
           <div v-else class="py-16 text-center text-muted">해당 주제의 이슈가 아직 없습니다.</div>
           <AdBanner class="mt-6" />
           <Pagination class="flex-wrap" :current-page="filters.page" :total-pages="totalPages" :href-for="pageHref" @page-change="goToPage" />
+          <AffiliateBanner />
         </template>
       </section>
     </main>
