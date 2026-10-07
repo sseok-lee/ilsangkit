@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import AdminAffiliateBannerPanel from '~/components/admin/AdminAffiliateBannerPanel.vue'
 import type { AffiliateBannerDto, AffiliateBannerPage } from '~/types/affiliateBanner'
+import type { AffiliateProviderDisclosureDto } from '~/types/affiliateDisclosure'
 
 const apiMocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -11,9 +12,17 @@ const apiMocks = vi.hoisted(() => ({
   setStatus: vi.fn(),
   uploadImage: vi.fn(),
 }))
+const disclosureApiMocks = vi.hoisted(() => ({
+  list: vi.fn(),
+  save: vi.fn(),
+}))
 
 vi.mock('~/composables/useAdminAffiliateBanners', () => ({
   useAdminAffiliateBanners: () => apiMocks,
+}))
+
+vi.mock('~/composables/useAdminAffiliateDisclosures', () => ({
+  useAdminAffiliateDisclosures: () => disclosureApiMocks,
 }))
 
 vi.mock('~/composables/useApiBase', () => ({
@@ -41,11 +50,22 @@ function banner(overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto
     imageUrl: 'https://example.com/a.png',
     targetUrl: 'https://example.com/deal?a=1',
     altText: '쿠팡 배너',
+    disclosureOverride: null,
+    disclosureText: '쿠팡 테스트 기본',
+    disclosureSource: 'provider',
     isEnabled: false,
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt: '2026-10-02T00:00:00.000Z',
     ...overrides,
   }
+}
+
+function disclosures(overrides: Partial<AffiliateProviderDisclosureDto>[] = []): AffiliateProviderDisclosureDto[] {
+  return [
+    { provider: 'coupang', defaultDisclosureText: '쿠팡 테스트 기본', updatedAt: null },
+    { provider: 'ali', defaultDisclosureText: '알리 테스트 기본', updatedAt: null },
+    { provider: 'toss', defaultDisclosureText: null, updatedAt: null },
+  ].map((item, index) => ({ ...item, ...overrides[index] }))
 }
 
 function page(items: AffiliateBannerDto[], overrides: Partial<AffiliateBannerPage> = {}): AffiliateBannerPage {
@@ -69,8 +89,11 @@ describe('AdminAffiliateBannerPanel', () => {
     vi.mocked(apiMocks.update).mockReset()
     vi.mocked(apiMocks.setStatus).mockReset()
     vi.mocked(apiMocks.uploadImage).mockReset()
+    vi.mocked(disclosureApiMocks.list).mockReset()
+    vi.mocked(disclosureApiMocks.save).mockReset()
     listMock = apiMocks.list.mockResolvedValue(page([banner()]))
     getMock = apiMocks.get.mockResolvedValue(banner())
+    disclosureApiMocks.list.mockResolvedValue(disclosures())
   })
 
   afterEach(() => {
@@ -104,6 +127,141 @@ describe('AdminAffiliateBannerPanel', () => {
     await wrapper.get('[data-testid="affiliate-page-next"]').trigger('click')
     await flushPromises()
     expect(listMock).toHaveBeenLastCalledWith({ page: 2, limit: 10, provider: 'ali', isEnabled: true })
+  })
+
+
+  it('shows row disclosure status for provider, banner, and missing disclosure states', async () => {
+    listMock.mockResolvedValue(page([
+      banner({ id: 'provider-row', name: '업체 기본 행', disclosureSource: 'provider', disclosureText: '기본 문구' }),
+      banner({ id: 'banner-row', name: '배너 개별 행', disclosureSource: 'banner', disclosureOverride: '개별 문구', disclosureText: '개별 문구' }),
+      banner({ id: 'missing-row', name: '문구 없음 행', disclosureSource: 'missing', disclosureText: null }),
+      banner({ id: 'enabled-missing-row', name: '활성 문구 없음 행', disclosureSource: 'missing', disclosureText: null, isEnabled: true }),
+    ]))
+
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="affiliate-row-provider-row"]').text()).toContain('업체 기본')
+    expect(wrapper.get('[data-testid="affiliate-row-banner-row"]').text()).toContain('배너 개별')
+    expect(wrapper.get('[data-testid="affiliate-row-missing-row"]').text()).toContain('문구 미등록')
+    expect(wrapper.get('[data-testid="affiliate-row-enabled-missing-row"]').text()).toContain('문구 설정 필요')
+  })
+
+  it('keeps banner dirty state when settings navigation is cancelled and aggregates settings dirty upward', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true)
+    listMock.mockResolvedValue(page([banner({ id: 'banner-a' })]))
+    getMock.mockResolvedValue(banner({ id: 'banner-a' }))
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-row-banner-a"]').trigger('click')
+    await flushPromises()
+
+    wrapper.findComponent({ name: 'AdminAffiliateBannerEditor' }).vm.$emit('dirty-change', true)
+    await wrapper.get('[data-testid="affiliate-section-disclosures"]').trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(wrapper.findComponent({ name: 'AdminAffiliateBannerEditor' }).exists()).toBe(true)
+    expect(wrapper.emitted('dirty-change')?.at(-1)?.[0]).toBe(true)
+
+    await wrapper.get('[data-testid="affiliate-section-disclosures"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'AdminAffiliateDisclosureSettings' }).exists()).toBe(true)
+
+    wrapper.findComponent({ name: 'AdminAffiliateDisclosureSettings' }).vm.$emit('dirty-change', true)
+    expect(wrapper.emitted('dirty-change')?.at(-1)?.[0]).toBe(true)
+    wrapper.findComponent({ name: 'AdminAffiliateDisclosureSettings' }).vm.$emit('dirty-change', false)
+    expect(wrapper.emitted('dirty-change')?.at(-1)?.[0]).toBe(false)
+  })
+
+  it('refreshes settings, current list, and selected detail after a disclosure save while preserving filters and selection', async () => {
+    disclosureApiMocks.list
+      .mockResolvedValueOnce(disclosures())
+      .mockResolvedValueOnce(disclosures([{ defaultDisclosureText: '쿠팡 저장 문구' }]))
+    listMock
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a', provider: 'ali' })], { page: 1, totalPages: 2 }))
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a', provider: 'ali', name: '필터 유지 배너' })], { page: 1, totalPages: 2 }))
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a', provider: 'ali', name: '재조회 배너' })], { page: 1, totalPages: 2 }))
+    getMock
+      .mockResolvedValueOnce(banner({ id: 'banner-a', provider: 'ali', name: '선택 전' }))
+      .mockResolvedValueOnce(banner({ id: 'banner-a', provider: 'ali', name: '선택 최신', disclosureText: '쿠팡 저장 문구' }))
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="affiliate-provider-filter"]').setValue('ali')
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-row-banner-a"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-section-disclosures"]').trigger('click')
+    await flushPromises()
+
+    wrapper.findComponent({ name: 'AdminAffiliateDisclosureSettings' }).vm.$emit('saved', {
+      provider: 'coupang',
+      defaultDisclosureText: '쿠팡 저장 문구',
+      updatedAt: '2026-10-07T01:00:00.000Z',
+    } satisfies AffiliateProviderDisclosureDto)
+    await wrapper.get('[data-testid="affiliate-section-banners"]').trigger('click')
+    await flushPromises()
+
+    expect(disclosureApiMocks.list).toHaveBeenCalledTimes(2)
+    expect(listMock).toHaveBeenLastCalledWith({ page: 1, limit: 10, provider: 'ali' })
+    expect(getMock).toHaveBeenLastCalledWith('banner-a')
+    expect(wrapper.findComponent({ name: 'AdminAffiliateBannerEditor' }).props('banner')).toMatchObject({
+      id: 'banner-a',
+      name: '선택 최신',
+      disclosureText: '쿠팡 저장 문구',
+    })
+  })
+
+  it('distinguishes disclosure refresh failures and retries saved-read refreshes without another save', async () => {
+    disclosureApiMocks.list
+      .mockResolvedValueOnce(disclosures())
+      .mockResolvedValueOnce(disclosures([{ defaultDisclosureText: '쿠팡 저장 문구' }]))
+      .mockResolvedValueOnce(disclosures([{ defaultDisclosureText: '쿠팡 저장 문구' }]))
+      .mockResolvedValueOnce(disclosures([{ defaultDisclosureText: '쿠팡 저장 문구' }]))
+    listMock
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a' })]))
+      .mockRejectedValueOnce(new Error('list failed'))
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a' })]))
+      .mockResolvedValueOnce(page([banner({ id: 'banner-a', name: '최종 목록' })]))
+    getMock
+      .mockResolvedValueOnce(banner({ id: 'banner-a' }))
+      .mockRejectedValueOnce(new Error('detail failed'))
+      .mockResolvedValueOnce(banner({ id: 'banner-a', name: '최종 상세', disclosureText: '쿠팡 저장 문구' }))
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-row-banner-a"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-section-disclosures"]').trigger('click')
+    await flushPromises()
+
+    wrapper.findComponent({ name: 'AdminAffiliateDisclosureSettings' }).vm.$emit('saved', {
+      provider: 'coupang',
+      defaultDisclosureText: '쿠팡 저장 문구',
+      updatedAt: '2026-10-07T01:00:00.000Z',
+    } satisfies AffiliateProviderDisclosureDto)
+    await wrapper.get('[data-testid="affiliate-section-banners"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('문구는 저장됐지만 목록을 새로 불러오지 못했습니다')
+
+    await wrapper.get('[data-testid="affiliate-retry"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('문구는 저장됐지만 선택한 배너를 새로 불러오지 못했습니다')
+
+    await wrapper.get('[data-testid="affiliate-retry"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="affiliate-error"]').exists()).toBe(false)
+    expect(disclosureApiMocks.list).toHaveBeenCalledTimes(4)
+    expect(listMock).toHaveBeenCalledTimes(4)
+    expect(getMock).toHaveBeenCalledTimes(3)
+    expect(disclosureApiMocks.save).not.toHaveBeenCalled()
+    expect(wrapper.findComponent({ name: 'AdminAffiliateBannerEditor' }).props('banner')).toMatchObject({
+      id: 'banner-a',
+      name: '최종 상세',
+      disclosureText: '쿠팡 저장 문구',
+    })
   })
 
   it('ignores stale list and get responses so old requests cannot replace the current row or editor', async () => {

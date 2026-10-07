@@ -141,6 +141,69 @@
 
     <section class="rounded-md border border-line p-3">
       <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs font-semibold text-muted">수익 고지 문구</span>
+        <button
+          type="button"
+          data-testid="configure-disclosure"
+          class="rounded-md bg-background-light px-3 py-1.5 text-xs font-medium text-ink disabled:opacity-60"
+          :disabled="inputLocked"
+          @click="emit('configure-disclosure', draft.provider)"
+        >
+          업체별 문구 설정
+        </button>
+      </div>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <label class="inline-flex items-center gap-2">
+          <input
+            v-model="disclosureMode"
+            data-testid="disclosure-mode-provider"
+            type="radio"
+            value="provider"
+            :disabled="inputLocked"
+            class="accent-primary"
+            @change="setDisclosureMode('provider')"
+          >
+          업체 기본 문구 사용
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input
+            v-model="disclosureMode"
+            data-testid="disclosure-mode-banner"
+            type="radio"
+            value="banner"
+            :disabled="inputLocked"
+            class="accent-primary"
+            @change="setDisclosureMode('banner')"
+          >
+          이 배너에 별도 문구 사용
+        </label>
+      </div>
+      <textarea
+        v-if="disclosureMode === 'banner'"
+        v-model="draft.disclosureOverride"
+        data-testid="disclosure-override"
+        rows="4"
+        :disabled="inputLocked"
+        class="mt-3 w-full resize-y rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+      <p v-if="disclosureNotice" data-testid="disclosure-notice" class="mt-2 text-sm text-muted">
+        {{ disclosureNotice }}
+      </p>
+      <p v-if="disclosureHelp" data-testid="disclosure-help" class="mt-2 text-sm text-muted">
+        {{ disclosureHelp }}
+      </p>
+      <p
+        v-if="previewDisclosure.disclosureText !== null"
+        data-testid="disclosure-preview"
+        class="mt-2 whitespace-pre-wrap break-words text-sm text-muted"
+      >
+        {{ previewDisclosure.disclosureText }}
+      </p>
+      <p class="mt-1 text-xs text-muted">출처: {{ disclosureSourceLabel }}</p>
+    </section>
+
+    <section class="rounded-md border border-line p-3">
+      <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
         <span class="text-xs font-semibold text-muted">미리보기</span>
         <span data-testid="preview-state" class="text-xs text-muted">{{ previewStateLabel }}</span>
       </div>
@@ -157,6 +220,7 @@
           @error="onPreviewResult(item.generation, 'error')"
         >
         <span class="text-xs font-medium text-strong">광고·제휴 / {{ providerLabel }}</span>
+        <span v-if="savedBanner?.isEnabled && savedBanner.disclosureSource === 'missing'" class="text-xs font-medium text-red-600">문구 설정 필요</span>
         <p class="break-all text-xs text-muted">{{ draft.targetUrl }}</p>
       </div>
       <p v-else class="text-xs text-muted">이미지를 업로드하거나 외부 URL 미리보기를 실행하세요.</p>
@@ -215,13 +279,31 @@ import type {
   AffiliateBannerDto,
   AffiliateProvider,
 } from '~/types/affiliateBanner'
+import type {
+  AffiliateDisclosureLoadState,
+  AffiliateProviderDisclosureDto,
+  ResolvedAffiliateDisclosure,
+} from '~/types/affiliateDisclosure'
+import {
+  normalizeAffiliateDisclosureText,
+  resolveAffiliateDisclosure,
+} from '~/utils/affiliateDisclosure'
 
 type PreviewState = 'idle' | 'loading' | 'loaded' | 'error'
 
-const props = defineProps<{ banner: AffiliateBannerDto | null }>()
+const props = withDefaults(defineProps<{
+  banner: AffiliateBannerDto | null
+  providerDisclosures?: readonly AffiliateProviderDisclosureDto[]
+  disclosureLoadState?: AffiliateDisclosureLoadState
+}>(), {
+  providerDisclosures: () => [],
+  disclosureLoadState: 'ready',
+})
 const emit = defineEmits<{
   saved: [dto: AffiliateBannerDto]
   'dirty-change': [value: boolean]
+  'configure-disclosure': [provider: AffiliateProvider]
+  'busy-change': [value: boolean]
 }>()
 
 const providers: Record<AffiliateProvider, string> = {
@@ -246,6 +328,8 @@ const imageGeneration = ref(0)
 const uploadRequestId = ref(0)
 const statusRequestId = ref(0)
 const applyingDraft = ref(false)
+const disclosureMode = ref<'provider' | 'banner'>('provider')
+const disclosureNotice = ref('')
 const preview = ref<{ generation: number; src: string } | null>(null)
 const previewState = ref<PreviewState>('idle')
 
@@ -254,6 +338,40 @@ const canonicalDraft = computed(() => canonicalize(draft))
 const isDirty = computed(() => canonicalDraft.value !== snapshot.value)
 const inputLocked = computed(() => submitting.value || statusChanging.value)
 const mutationBusy = computed(() => submitting.value || uploading.value || statusChanging.value)
+const providerDisclosureText = computed(() => findProviderDisclosure(draft.provider))
+const previewDisclosure = computed<ResolvedAffiliateDisclosure>(() => {
+  if (disclosureMode.value === 'banner') {
+    const normalized = normalizeAffiliateDisclosureText(draft.disclosureOverride ?? '')
+    if (normalized.length < 1 || normalized.length > 1000) {
+      return { disclosureText: null, disclosureSource: 'missing' }
+    }
+    return { disclosureText: normalized, disclosureSource: 'banner' }
+  }
+  if (props.disclosureLoadState !== 'ready') {
+    return { disclosureText: null, disclosureSource: 'missing' }
+  }
+  return resolveAffiliateDisclosure(null, providerDisclosureText.value)
+})
+const disclosureSourceLabel = computed(() => {
+  if (previewDisclosure.value.disclosureSource === 'banner') return '배너 개별'
+  if (previewDisclosure.value.disclosureSource === 'provider') return '업체 기본'
+  return '문구 미등록'
+})
+const disclosureHelp = computed(() => {
+  if (disclosureMode.value === 'banner' && previewDisclosure.value.disclosureText === null) {
+    return '수익 고지 문구는 1~1,000자로 입력하세요'
+  }
+  if (disclosureMode.value === 'provider' && props.disclosureLoadState === 'loading') {
+    return '업체별 문구 설정을 불러오는 중입니다'
+  }
+  if (disclosureMode.value === 'provider' && props.disclosureLoadState === 'error') {
+    return '업체별 문구 설정을 불러오지 못했습니다'
+  }
+  if (disclosureMode.value === 'provider' && previewDisclosure.value.disclosureText === null) {
+    return '업체 기본 문구를 등록하거나 이 배너의 문구를 입력하세요'
+  }
+  return ''
+})
 const imageChanged = computed(() => {
   if (!savedBanner.value) return false
   return draft.imageSourceType !== savedBanner.value.imageSourceType
@@ -283,6 +401,16 @@ watch(
     emit('dirty-change', false)
   },
   { immediate: true }
+)
+
+watch(
+  () => draft.provider,
+  (next, previous) => {
+    if (applyingDraft.value || next === previous) return
+    draft.disclosureOverride = null
+    disclosureMode.value = 'provider'
+    disclosureNotice.value = '업체가 변경되어 기본 문구 사용으로 전환했습니다'
+  }
 )
 
 watch(
@@ -324,6 +452,8 @@ watch(
 
 watch(isDirty, (value) => emit('dirty-change', value))
 
+watch(mutationBusy, (value) => emit('busy-change', value))
+
 function emptyDraft(): AffiliateBannerDraft {
   return {
     provider: 'coupang',
@@ -333,6 +463,7 @@ function emptyDraft(): AffiliateBannerDraft {
     externalImageUrl: null,
     targetUrl: '',
     altText: '',
+    disclosureOverride: null,
   }
 }
 
@@ -345,6 +476,7 @@ function fromBanner(banner: AffiliateBannerDto): AffiliateBannerDraft {
     externalImageUrl: banner.externalImageUrl,
     targetUrl: banner.targetUrl,
     altText: banner.altText,
+    disclosureOverride: banner.disclosureOverride,
   }
 }
 
@@ -361,6 +493,9 @@ function assignDraft(next: AffiliateBannerDraft) {
   draft.externalImageUrl = next.externalImageUrl
   draft.targetUrl = next.targetUrl
   draft.altText = next.altText
+  draft.disclosureOverride = next.disclosureOverride
+  disclosureMode.value = next.disclosureOverride === null ? 'provider' : 'banner'
+  disclosureNotice.value = ''
   void nextTick(() => {
     applyingDraft.value = false
   })
@@ -375,10 +510,14 @@ function canonicalize(value: AffiliateBannerDraft): string {
     externalImageUrl: value.imageSourceType === 'url' ? value.externalImageUrl : null,
     targetUrl: value.targetUrl,
     altText: value.altText,
+    disclosureOverride: value.disclosureOverride,
   })
 }
 
 function toRequestDraft(): AffiliateBannerDraft {
+  const disclosureOverride = draft.disclosureOverride === null
+    ? null
+    : normalizeAffiliateDisclosureText(draft.disclosureOverride)
   return {
     provider: draft.provider,
     name: draft.name,
@@ -387,7 +526,91 @@ function toRequestDraft(): AffiliateBannerDraft {
     externalImageUrl: draft.imageSourceType === 'url' ? draft.externalImageUrl : null,
     targetUrl: draft.targetUrl,
     altText: draft.altText,
+    disclosureOverride,
   }
+}
+
+function findProviderDisclosure(provider: AffiliateProvider): string | null {
+  const setting = props.providerDisclosures.find((item) => item.provider === provider)?.defaultDisclosureText
+  return setting ?? null
+}
+
+function setDisclosureMode(mode: 'provider' | 'banner') {
+  disclosureMode.value = mode
+  draft.disclosureOverride = mode === 'provider' ? null : (draft.disclosureOverride ?? '')
+  disclosureNotice.value = ''
+}
+
+function savedDisclosureReady(): boolean {
+  if (!savedBanner.value) return false
+  if (savedBanner.value.disclosureOverride !== null) {
+    return normalizeAffiliateDisclosureText(savedBanner.value.disclosureOverride).length > 0
+  }
+  if (props.disclosureLoadState !== 'ready') return false
+  return findProviderDisclosure(savedBanner.value.provider) !== null
+}
+
+function validateDisclosureForSave(): boolean {
+  if (disclosureMode.value === 'banner' && previewDisclosure.value.disclosureText === null) {
+    message.value = '수익 고지 문구는 1~1,000자로 입력하세요'
+    return false
+  }
+  if (savedBanner.value?.isEnabled && previewDisclosure.value.disclosureText === null) {
+    message.value = '수익 고지 문구를 등록한 뒤 사용으로 설정하세요'
+    return false
+  }
+  return true
+}
+
+
+type BackendErrorEnvelope = {
+  error?: {
+    code?: unknown
+    message?: unknown
+    details?: unknown
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' ? value as Record<string, unknown> : null
+}
+
+function readErrorStatus(error: unknown): number | null {
+  const record = asRecord(error)
+  if (!record) return null
+  if (typeof record.statusCode === 'number') return record.statusCode
+  if (typeof record.status === 'number') return record.status
+  const response = asRecord(record.response)
+  if (typeof response?.status === 'number') return response.status
+  return null
+}
+
+function readErrorData(error: unknown): BackendErrorEnvelope | null {
+  const record = asRecord(error)
+  if (!record) return null
+  const data = asRecord(record.data) ?? asRecord(asRecord(record.response)?._data)
+  return data as BackendErrorEnvelope | null
+}
+
+function detailsMentionDisclosure(details: unknown): boolean {
+  if (details === undefined) return false
+  try {
+    return JSON.stringify(details).includes('disclosureOverride')
+      || JSON.stringify(details).includes('defaultDisclosureText')
+      || JSON.stringify(details).includes('disclosure')
+  } catch {
+    return false
+  }
+}
+
+function disclosureServerValidationMessage(error: unknown): string | null {
+  if (readErrorStatus(error) !== 422) return null
+  const data = readErrorData(error)
+  if (data?.error?.code !== 'VALIDATION_ERROR') return null
+  const serverMessage = typeof data.error.message === 'string' ? data.error.message : ''
+  if (serverMessage.includes('수익 고지')) return serverMessage
+  if (detailsMentionDisclosure(data.error.details)) return '수익 고지 문구는 1~1,000자로 입력하세요'
+  return null
 }
 
 function invalidatePreview() {
@@ -475,6 +698,7 @@ async function save() {
     message.value = '기존 활성 배너는 편집을 취소하고 사용 안 함으로 전환한 뒤 이미지를 바꾸세요'
     return
   }
+  if (!validateDisclosureForSave()) return
 
   submitting.value = true
   message.value = ''
@@ -495,8 +719,8 @@ async function save() {
     )
     emit('saved', dto)
     emit('dirty-change', false)
-  } catch {
-    message.value = '저장하지 못했습니다'
+  } catch (error) {
+    message.value = disclosureServerValidationMessage(error) ?? '저장하지 못했습니다'
   } finally {
     submitting.value = false
   }
@@ -514,6 +738,10 @@ async function changeStatus(isEnabled: boolean) {
     message.value = '이미지를 불러올 수 없습니다'
     return
   }
+  if (isEnabled && !savedDisclosureReady()) {
+    message.value = '수익 고지 문구를 등록한 뒤 사용으로 설정하세요'
+    return
+  }
 
   const requestId = statusRequestId.value + 1
   statusRequestId.value = requestId
@@ -527,9 +755,9 @@ async function changeStatus(isEnabled: boolean) {
     snapshot.value = canonicalDraft.value
     emit('saved', dto)
     emit('dirty-change', false)
-  } catch {
+  } catch (error) {
     if (requestId === statusRequestId.value) {
-      message.value = '상태를 변경하지 못했습니다'
+      message.value = disclosureServerValidationMessage(error) ?? '상태를 변경하지 못했습니다'
     }
   } finally {
     if (requestId === statusRequestId.value) statusChanging.value = false

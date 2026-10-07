@@ -12,6 +12,9 @@ const dto = (overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto =>
   imageUrl: 'https://image.example.com/banner.png',
   targetUrl: 'https://coupa.ng/a?x=%2B&x=1',
   altText: '쿠팡 배너',
+  disclosureOverride: null,
+  disclosureText: '쿠팡 테스트 기본',
+  disclosureSource: 'provider',
   isEnabled: false,
   createdAt: '2026-10-06T00:00:00.000Z',
   updatedAt: '2026-10-06T00:00:00.000Z',
@@ -26,6 +29,7 @@ const draft = (overrides: Partial<AffiliateBannerDraft> = {}): AffiliateBannerDr
   externalImageUrl: 'https://image.example.com/banner.png',
   targetUrl: 'https://coupa.ng/a?x=%2B&x=1',
   altText: '쿠팡 배너',
+  disclosureOverride: null,
   ...overrides,
 })
 
@@ -86,7 +90,7 @@ describe('useAdminAffiliateBanners', () => {
     })
   })
 
-  it('omits unknown JSON keys and source-opposite image fields from create/update bodies', async () => {
+  it('sends disclosure overrides while omitting read-only disclosure fields and source-opposite image fields', async () => {
     vi.mocked($fetch)
       .mockResolvedValueOnce({ success: true, data: dto() })
       .mockResolvedValueOnce({ success: true, data: dto() })
@@ -97,14 +101,20 @@ describe('useAdminAffiliateBanners', () => {
         imageSourceType: 'upload',
         imageAssetId: 'asset-1',
         externalImageUrl: 'https://ignored.example.com/banner.png',
+        disclosureOverride: '쿠팡 테스트 예외',
       }),
       isEnabled: true,
       imageUrl: 'ignored',
+      disclosureText: '읽기 전용 계산 결과',
+      disclosureSource: 'banner',
     } as AffiliateBannerDraft & Record<string, unknown>)
     await api.update('banner-1', {
       imageSourceType: 'url',
       imageAssetId: 'asset-2',
       externalImageUrl: 'https://image.example.com/new.png',
+      disclosureOverride: null,
+      disclosureText: '읽기 전용 계산 결과',
+      disclosureSource: 'provider',
       extra: 'ignored',
     } as Partial<AffiliateBannerDraft> & Record<string, unknown>)
 
@@ -113,17 +123,23 @@ describe('useAdminAffiliateBanners', () => {
         imageSourceType: 'upload',
         imageAssetId: 'asset-1',
         externalImageUrl: null,
+        disclosureOverride: '쿠팡 테스트 예외',
       }),
     })
     expect(vi.mocked($fetch).mock.calls[0][1]?.body).not.toHaveProperty('isEnabled')
     expect(vi.mocked($fetch).mock.calls[0][1]?.body).not.toHaveProperty('imageUrl')
+    expect(vi.mocked($fetch).mock.calls[0][1]?.body).not.toHaveProperty('disclosureText')
+    expect(vi.mocked($fetch).mock.calls[0][1]?.body).not.toHaveProperty('disclosureSource')
     expect(vi.mocked($fetch).mock.calls[1][1]).toMatchObject({
       body: {
         imageSourceType: 'url',
         imageAssetId: null,
         externalImageUrl: 'https://image.example.com/new.png',
+        disclosureOverride: null,
       },
     })
+    expect(vi.mocked($fetch).mock.calls[1][1]?.body).not.toHaveProperty('disclosureText')
+    expect(vi.mocked($fetch).mock.calls[1][1]?.body).not.toHaveProperty('disclosureSource')
   })
 
   it('passes server errors through to the caller', async () => {

@@ -1,3 +1,5 @@
+import type { AffiliateDisclosureSource } from './affiliateDisclosure'
+
 export type AffiliateProvider = 'coupang' | 'ali' | 'toss'
 export type AffiliateImageSourceType = 'upload' | 'url'
 
@@ -9,6 +11,7 @@ export interface AffiliateBannerDraft {
   externalImageUrl: string | null
   targetUrl: string
   altText: string
+  disclosureOverride: string | null
 }
 
 export type AffiliateBannerPatch = Partial<AffiliateBannerDraft>
@@ -16,6 +19,8 @@ export type AffiliateBannerPatch = Partial<AffiliateBannerDraft>
 export interface AffiliateBannerDto extends AffiliateBannerDraft {
   id: string
   imageUrl: string
+  disclosureText: string | null
+  disclosureSource: AffiliateDisclosureSource
   isEnabled: boolean
   createdAt: string
   updatedAt: string

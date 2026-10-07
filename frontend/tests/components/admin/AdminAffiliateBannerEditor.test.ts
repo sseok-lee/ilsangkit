@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import AdminAffiliateBannerEditor from '~/components/admin/AdminAffiliateBannerEditor.vue'
 import type { AffiliateBannerDto } from '~/types/affiliateBanner'
+import type { AffiliateProviderDisclosureDto } from '~/types/affiliateDisclosure'
 
 const api = {
   create: vi.fn(),
@@ -35,11 +36,35 @@ const banner = (overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto
   imageUrl: 'https://image.example.com/banner.png',
   targetUrl: 'https://coupa.ng/a?x=%2B&x=1',
   altText: '쿠팡 배너',
+  disclosureOverride: null,
+  disclosureText: '쿠팡 테스트 기본',
+  disclosureSource: 'provider',
   isEnabled: false,
   createdAt: '2026-10-06T00:00:00.000Z',
   updatedAt: '2026-10-06T00:00:00.000Z',
   ...overrides,
 })
+
+const providerDisclosures: AffiliateProviderDisclosureDto[] = [
+  { provider: 'coupang', defaultDisclosureText: '쿠팡 테스트 기본', updatedAt: null },
+  { provider: 'ali', defaultDisclosureText: '알리 테스트 기본', updatedAt: null },
+  { provider: 'toss', defaultDisclosureText: null, updatedAt: null },
+]
+
+
+function backendValidationError(details: unknown, message = '입력값이 올바르지 않습니다') {
+  return {
+    statusCode: 422,
+    data: {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message,
+        details,
+      },
+    },
+  }
+}
 
 async function flush() {
   await nextTick()
@@ -62,6 +87,221 @@ beforeEach(() => {
 })
 
 describe('AdminAffiliateBannerEditor', () => {
+  it('clears an old provider override in the draft and restores it on cancel', async () => {
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({
+          disclosureOverride: '쿠팡 테스트 예외',
+          disclosureText: '쿠팡 테스트 예외',
+          disclosureSource: 'banner',
+        }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="provider"]').setValue('ali')
+
+    expect(wrapper.get('[data-testid="disclosure-preview"]').text()).toBe('알리 테스트 기본')
+    expect(api.update).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="cancel-button"]').trigger('click')
+    await flush()
+
+    expect(wrapper.get('[data-testid="disclosure-preview"]').text()).toBe('쿠팡 테스트 예외')
+  })
+
+  it('renders disclosure preview as plain text even when no image preview is available', async () => {
+    const htmlText = '<img src=x onerror=alert(1)><a href="https://example.com">링크</a>'
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: null,
+        providerDisclosures: [
+          { provider: 'coupang', defaultDisclosureText: htmlText, updatedAt: null },
+          providerDisclosures[1],
+          providerDisclosures[2],
+        ],
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    expect(wrapper.find('[data-testid="preview-image"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="disclosure-preview"]').text()).toBe(htmlText)
+    expect(wrapper.find('[data-testid="disclosure-preview"] img').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="disclosure-preview"] a').exists()).toBe(false)
+  })
+
+  it('blocks empty individual disclosure saves without falling back to provider text', async () => {
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: null,
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="name"]').setValue('빈 개별 문구')
+    await wrapper.get('[data-testid="external-image-url"]').setValue('https://image.example.com/banner.png')
+    await wrapper.get('[data-testid="target-url"]').setValue('https://coupa.ng/empty')
+    await wrapper.get('[data-testid="disclosure-mode-banner"]').setValue(true)
+    await wrapper.get('[data-testid="disclosure-override"]').setValue('   ')
+    await wrapper.get('form').trigger('submit')
+
+    expect(api.create).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('수익 고지 문구는 1~1,000자로 입력하세요')
+    expect(wrapper.find('[data-testid="disclosure-preview"]').exists()).toBe(false)
+  })
+
+
+  it('maps backend disclosure validation envelopes on save to disclosure guidance and keeps the draft', async () => {
+    api.create.mockRejectedValueOnce(backendValidationError({
+      fieldErrors: { disclosureOverride: ['String must contain at most 1000 character(s)'] },
+      formErrors: [],
+    }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: null,
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="name"]').setValue('서버 검증 배너')
+    await wrapper.get('[data-testid="external-image-url"]').setValue('https://image.example.com/banner.png')
+    await wrapper.get('[data-testid="target-url"]').setValue('https://coupa.ng/server-validation')
+    await wrapper.get('[data-testid="disclosure-mode-banner"]').setValue(true)
+    await wrapper.get('[data-testid="disclosure-override"]').setValue('서버에서 거절한 문구')
+    await wrapper.get('form').trigger('submit')
+    await flush()
+
+    expect(api.create).toHaveBeenCalledOnce()
+    expect(wrapper.text()).toContain('수익 고지 문구는 1~1,000자로 입력하세요')
+    expect((wrapper.get('[data-testid="disclosure-override"]').element as HTMLTextAreaElement).value).toBe('서버에서 거절한 문구')
+  })
+
+  it('maps backend disclosure validation envelopes on status changes to disclosure guidance', async () => {
+    api.setStatus.mockRejectedValueOnce(backendValidationError(
+      undefined,
+      '수익 고지 문구를 등록한 뒤 사용으로 설정하세요'
+    ))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({ isEnabled: false }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    await flush()
+
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+    expect(wrapper.text()).toContain('수익 고지 문구를 등록한 뒤 사용으로 설정하세요')
+  })
+
+  it('blocks enabling saved missing disclosures but allows disabling without disclosure settings', async () => {
+    const saved = banner({
+      isEnabled: true,
+      disclosureOverride: null,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    })
+    api.setStatus.mockResolvedValueOnce(banner({ isEnabled: false }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: saved,
+        providerDisclosures: [],
+        disclosureLoadState: 'error',
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    expect(api.setStatus).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('수익 고지 문구를 등록한 뒤 사용으로 설정하세요')
+
+    await wrapper.get('[data-testid="status-disable"]').trigger('click')
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', false)
+  })
+
+
+  it.each(['loading', 'error'] as const)('blocks stale provider-inherited enables while disclosure settings are %s', async (loadState) => {
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({
+          isEnabled: false,
+          disclosureOverride: null,
+          disclosureText: '오래된 업체 기본 문구',
+          disclosureSource: 'provider',
+        }),
+        providerDisclosures: [],
+        disclosureLoadState: loadState,
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+
+    expect(api.setStatus).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('수익 고지 문구를 등록한 뒤 사용으로 설정하세요')
+  })
+
+  it('requires the current loaded provider default before enabling provider-inherited banners', async () => {
+    api.setStatus.mockResolvedValueOnce(banner({ isEnabled: true }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({
+          isEnabled: false,
+          disclosureOverride: null,
+          disclosureText: '오래된 업체 기본 문구',
+          disclosureSource: 'provider',
+        }),
+        providerDisclosures: [],
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    expect(api.setStatus).not.toHaveBeenCalled()
+
+    await wrapper.setProps({
+      providerDisclosures: [{ provider: 'coupang', defaultDisclosureText: null, updatedAt: null }],
+      disclosureLoadState: 'ready',
+    })
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    expect(api.setStatus).not.toHaveBeenCalled()
+
+    await wrapper.setProps({
+      providerDisclosures: [{ provider: 'coupang', defaultDisclosureText: '현재 업체 기본 문구', updatedAt: null }],
+      disclosureLoadState: 'ready',
+    })
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+  })
+
+  it('still allows disabling provider-inherited banners when disclosure settings fail to load', async () => {
+    api.setStatus.mockResolvedValueOnce(banner({ isEnabled: false }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({
+          isEnabled: true,
+          disclosureOverride: null,
+          disclosureText: '오래된 업체 기본 문구',
+          disclosureSource: 'provider',
+        }),
+        providerDisclosures: [],
+        disclosureLoadState: 'error',
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-disable"]').trigger('click')
+
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', false)
+  })
+
   it('keeps URL text changes idle until explicit preview and never renders a clickable affiliate link', async () => {
     const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: null } })
 
@@ -213,7 +453,9 @@ describe('AdminAffiliateBannerEditor', () => {
     const saved = banner({ isEnabled: true })
     const saveDeferred = deferred<AffiliateBannerDto>()
     api.update.mockReturnValueOnce(saveDeferred.promise)
-    const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: saved } })
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: { banner: saved, providerDisclosures, disclosureLoadState: 'ready' },
+    })
 
     await wrapper.find('[data-testid="name"]').setValue('수정 중')
     await wrapper.find('[data-testid="status-disable"]').trigger('click')
@@ -245,7 +487,7 @@ describe('AdminAffiliateBannerEditor', () => {
   it('keeps a saved banner preview unverified until its image load event before enabling', async () => {
     api.setStatus.mockResolvedValueOnce(banner({ isEnabled: true }))
     const wrapper = mount(AdminAffiliateBannerEditor, {
-      props: { banner: banner({ isEnabled: false }) },
+      props: { banner: banner({ isEnabled: false }), providerDisclosures, disclosureLoadState: 'ready' },
     })
 
     expect(wrapper.find('[data-testid="preview-state"]').text()).toContain('이미지 확인 중')
@@ -269,7 +511,9 @@ describe('AdminAffiliateBannerEditor', () => {
       imageUrl: '/api/images/affiliate-banners/saved.png',
       isEnabled: false,
     })
-    const wrapper = mount(AdminAffiliateBannerEditor, { props: { banner: saved } })
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: { banner: saved, providerDisclosures, disclosureLoadState: 'ready' },
+    })
 
     await wrapper.find('[data-testid="preview-image"]').trigger('error')
     expect(wrapper.find('[data-testid="preview-state"]').text()).toContain('이미지를 불러올 수 없습니다')

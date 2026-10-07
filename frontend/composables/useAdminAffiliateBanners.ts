@@ -17,6 +17,7 @@ const draftKeys = [
   'externalImageUrl',
   'targetUrl',
   'altText',
+  'disclosureOverride',
 ] as const
 
 function normalizeImageFields<T extends AffiliateBannerDraft | AffiliateBannerPatch>(input: T): T {

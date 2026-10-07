@@ -1,5 +1,29 @@
 <template>
-  <section class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+  <section class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        data-testid="affiliate-section-banners"
+        class="rounded-md px-3 py-2 text-sm font-medium"
+        :class="activeSection === 'banners' ? 'bg-primary text-white' : 'bg-white text-ink border border-line'"
+        :disabled="editorBusy || settingsBusy"
+        @click="showBanners"
+      >
+        배너 관리
+      </button>
+      <button
+        type="button"
+        data-testid="affiliate-section-disclosures"
+        class="rounded-md px-3 py-2 text-sm font-medium"
+        :class="activeSection === 'disclosures' ? 'bg-primary text-white' : 'bg-white text-ink border border-line'"
+        :disabled="editorBusy || settingsBusy"
+        @click="showDisclosures()"
+      >
+        업체별 문구
+      </button>
+    </div>
+
+    <section v-show="activeSection === 'banners'" class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
     <aside class="flex min-w-0 flex-col gap-3">
       <div class="flex flex-wrap items-end gap-2">
         <div class="min-w-32 flex-1">
@@ -81,7 +105,7 @@
           </span>
           <span class="min-w-0">
             <span class="block truncate text-sm font-semibold text-ink">{{ item.name }}</span>
-            <span class="mt-1 block text-xs text-muted">{{ providerLabels[item.provider] }} / {{ item.imageSourceType === 'upload' ? '업로드' : 'URL' }} / {{ item.isEnabled ? '사용 중' : '사용 안 함' }}</span>
+            <span class="mt-1 block text-xs text-muted">{{ providerLabels[item.provider] }} / {{ item.imageSourceType === 'upload' ? '업로드' : 'URL' }} / {{ item.isEnabled ? '사용 중' : '사용 안 함' }} / {{ disclosureRowLabel(item) }}</span>
             <span class="mt-1 block truncate text-xs text-muted">수정일 {{ formatDate(item.updatedAt) }}</span>
           </span>
         </button>
@@ -119,25 +143,50 @@
         v-if="editorOpen"
         :key="editorSession"
         :banner="selectedBanner"
+        :provider-disclosures="providerDisclosures"
+        :disclosure-load-state="disclosureLoadState"
         @saved="(dto) => onSaved(dto, editorSession)"
         @dirty-change="onEditorDirtyChange"
+        @busy-change="onEditorBusyChange"
+        @configure-disclosure="showDisclosures"
       />
       <p v-else class="py-20 text-center text-sm text-muted">
         왼쪽에서 배너를 선택하거나 새 배너를 등록하세요
       </p>
     </section>
+    </section>
+
+    <section v-show="activeSection === 'disclosures'" class="min-w-0 rounded-lg border border-line bg-white p-4">
+      <AdminAffiliateDisclosureSettings
+        :key="settingsSession"
+        :settings="providerDisclosures"
+        :load-state="disclosureLoadState"
+        :initial-provider="settingsInitialProvider"
+        @saved="onDisclosureSaved"
+        @dirty-change="onSettingsDirtyChange"
+        @busy-change="onSettingsBusyChange"
+        @retry="loadDisclosures"
+      />
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import AdminAffiliateDisclosureSettings from '~/components/admin/AdminAffiliateDisclosureSettings.vue'
 import AdminAffiliateBannerEditor from '~/components/admin/AdminAffiliateBannerEditor.vue'
 import { useAdminAffiliateBanners } from '~/composables/useAdminAffiliateBanners'
+import { useAdminAffiliateDisclosures } from '~/composables/useAdminAffiliateDisclosures'
 import { useApiBase } from '~/composables/useApiBase'
 import type { AffiliateBannerDto, AffiliateProvider } from '~/types/affiliateBanner'
+import type {
+  AffiliateDisclosureLoadState,
+  AffiliateProviderDisclosureDto,
+} from '~/types/affiliateDisclosure'
 
 type StatusFilter = '' | 'true' | 'false'
 type ListLoadResult = 'applied' | 'stale' | 'failed'
+type DisclosureLoadResult = 'applied' | 'stale' | 'failed'
 
 const emit = defineEmits<{
   'dirty-change': [value: boolean]
@@ -151,10 +200,14 @@ const providerLabels: Record<AffiliateProvider, string> = {
 
 const GENERIC_ERROR = '문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
 const REFRESH_ERROR = '저장은 완료됐지만 목록을 새로고침하지 못했습니다.'
+const DISCLOSURE_LIST_REFRESH_ERROR = '문구는 저장됐지만 목록을 새로 불러오지 못했습니다'
+const DISCLOSURE_DETAIL_REFRESH_ERROR = '문구는 저장됐지만 선택한 배너를 새로 불러오지 못했습니다'
 const DIRTY_CONFIRM = '저장하지 않은 제휴 배너 변경 내용이 있습니다. 이동하시겠습니까?'
+const SETTINGS_DIRTY_CONFIRM = '저장하지 않은 업체별 문구 변경 내용이 있습니다. 이동하시겠습니까?'
 const limit = 10
 
 const api = useAdminAffiliateBanners()
+const disclosureApi = useAdminAffiliateDisclosures()
 const apiBase = useApiBase()
 const banners = ref<AffiliateBannerDto[]>([])
 const selectedBanner = ref<AffiliateBannerDto | null>(null)
@@ -171,10 +224,24 @@ const detailGeneration = ref(0)
 const editorSession = ref(0)
 const expectedSaveId = ref<string | null>('new')
 const brokenImages = ref(new Set<string>())
+const activeSection = ref<'banners' | 'disclosures'>('banners')
+const providerDisclosures = ref<AffiliateProviderDisclosureDto[]>([])
+const disclosureLoadState = ref<AffiliateDisclosureLoadState>('loading')
+const disclosureGeneration = ref(0)
+const settingsDirty = ref(false)
+const settingsBusy = ref(false)
+const editorBusy = ref(false)
+const settingsSession = ref(0)
+const settingsInitialProvider = ref<AffiliateProvider>('coupang')
+const disclosureSavedSinceRefresh = ref(false)
 
 function confirmDiscard() {
   if (!isDirty.value) return true
   return window.confirm(DIRTY_CONFIRM)
+}
+
+function emitDirty() {
+  emit('dirty-change', isDirty.value || settingsDirty.value)
 }
 
 async function loadList(): Promise<ListLoadResult> {
@@ -203,7 +270,28 @@ async function loadList(): Promise<ListLoadResult> {
   }
 }
 
+async function loadDisclosures(): Promise<DisclosureLoadResult> {
+  const generation = disclosureGeneration.value + 1
+  disclosureGeneration.value = generation
+  disclosureLoadState.value = 'loading'
+  try {
+    const rows = await disclosureApi.list()
+    if (generation !== disclosureGeneration.value) return 'stale'
+    providerDisclosures.value = rows
+    disclosureLoadState.value = 'ready'
+    return 'applied'
+  } catch {
+    if (generation !== disclosureGeneration.value) return 'stale'
+    disclosureLoadState.value = 'error'
+    return 'failed'
+  }
+}
+
 function retry() {
+  if (disclosureSavedSinceRefresh.value) {
+    refreshAfterDisclosureChange()
+    return
+  }
   loadList()
 }
 
@@ -217,7 +305,7 @@ function onProviderFilterChange(event: Event) {
   providerFilter.value = next
   page.value = 1
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
   loadList()
 }
 
@@ -231,7 +319,7 @@ function onStatusFilterChange(event: Event) {
   statusFilter.value = next
   page.value = 1
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
   loadList()
 }
 
@@ -240,7 +328,7 @@ function goToPage(nextPage: number) {
   if (!confirmDiscard()) return
   page.value = nextPage
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
   loadList()
 }
 
@@ -252,7 +340,7 @@ function openNew() {
   selectedBanner.value = null
   editorOpen.value = true
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
 }
 
 async function selectBanner(id: string) {
@@ -261,7 +349,7 @@ async function selectBanner(id: string) {
   detailGeneration.value = generation
   error.value = ''
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
   try {
     const dto = await api.get(id)
     if (generation !== detailGeneration.value) return
@@ -282,7 +370,7 @@ async function onSaved(dto: AffiliateBannerDto, session: number) {
   selectedBanner.value = dto
   editorOpen.value = true
   isDirty.value = false
-  emit('dirty-change', false)
+  emitDirty()
   banners.value = upsertBanner(banners.value, dto)
   const refreshed = await loadList()
   if (refreshed === 'failed') error.value = REFRESH_ERROR
@@ -290,7 +378,102 @@ async function onSaved(dto: AffiliateBannerDto, session: number) {
 
 function onEditorDirtyChange(value: boolean) {
   isDirty.value = value
-  emit('dirty-change', value)
+  emitDirty()
+}
+
+function onSettingsDirtyChange(value: boolean) {
+  settingsDirty.value = value
+  emitDirty()
+}
+
+function onEditorBusyChange(value: boolean) {
+  editorBusy.value = value
+}
+
+function onSettingsBusyChange(value: boolean) {
+  settingsBusy.value = value
+}
+
+async function showDisclosures(provider?: AffiliateProvider) {
+  if (editorBusy.value || settingsBusy.value) return
+  if (activeSection.value === 'banners' && !confirmDiscard()) return
+  if (provider) settingsInitialProvider.value = provider
+  else if (selectedBanner.value) settingsInitialProvider.value = selectedBanner.value.provider
+  detailGeneration.value += 1
+  listGeneration.value += 1
+  loading.value = false
+  isDirty.value = false
+  editorSession.value += 1
+  activeSection.value = 'disclosures'
+  emitDirty()
+}
+
+async function showBanners() {
+  if (editorBusy.value || settingsBusy.value) return
+  if (activeSection.value === 'disclosures' && settingsDirty.value && !window.confirm(SETTINGS_DIRTY_CONFIRM)) return
+  if (activeSection.value === 'disclosures') {
+    settingsDirty.value = false
+    settingsSession.value += 1
+  }
+  activeSection.value = 'banners'
+  emitDirty()
+  if (disclosureSavedSinceRefresh.value) {
+    await refreshAfterDisclosureChange()
+  }
+}
+
+function onDisclosureSaved(dto: AffiliateProviderDisclosureDto) {
+  providerDisclosures.value = upsertDisclosure(providerDisclosures.value, dto)
+  settingsDirty.value = false
+  disclosureSavedSinceRefresh.value = true
+  emitDirty()
+}
+
+async function refreshAfterDisclosureChange(): Promise<void> {
+  error.value = ''
+  const disclosureResult = await loadDisclosures()
+  const listResult = await loadList()
+  if (listResult === 'failed') {
+    error.value = DISCLOSURE_LIST_REFRESH_ERROR
+    if (disclosureResult === 'failed') disclosureLoadState.value = 'error'
+    return
+  }
+  disclosureSavedSinceRefresh.value = false
+  if (selectedBanner.value?.id) {
+    const selectedId = selectedBanner.value.id
+    const generation = detailGeneration.value + 1
+    detailGeneration.value = generation
+    try {
+      const dto = await api.get(selectedId)
+      if (generation !== detailGeneration.value) return
+      selectedBanner.value = dto
+      editorSession.value += 1
+      expectedSaveId.value = dto.id
+    } catch {
+      if (generation === detailGeneration.value) {
+        error.value = DISCLOSURE_DETAIL_REFRESH_ERROR
+        disclosureSavedSinceRefresh.value = true
+      }
+    }
+  }
+  if (disclosureResult === 'failed') disclosureLoadState.value = 'error'
+}
+
+function upsertDisclosure(
+  items: AffiliateProviderDisclosureDto[],
+  dto: AffiliateProviderDisclosureDto
+): AffiliateProviderDisclosureDto[] {
+  const index = items.findIndex((item) => item.provider === dto.provider)
+  if (index === -1) return [...items, dto]
+  const next = [...items]
+  next[index] = dto
+  return next
+}
+
+function disclosureRowLabel(item: AffiliateBannerDto): string {
+  if (item.disclosureSource === 'provider') return '업체 기본'
+  if (item.disclosureSource === 'banner') return '배너 개별'
+  return item.isEnabled ? '문구 설정 필요' : '문구 미등록'
 }
 
 function upsertBanner(items: AffiliateBannerDto[], dto: AffiliateBannerDto) {
@@ -315,5 +498,12 @@ function resolveImageUrl(value: string) {
 
 onMounted(() => {
   loadList()
+  loadDisclosures()
+})
+
+onUnmounted(() => {
+  listGeneration.value += 1
+  detailGeneration.value += 1
+  disclosureGeneration.value += 1
 })
 </script>
