@@ -172,10 +172,13 @@ onBeforeUnmount(() => {
 }
 
 .affiliate-banner__disclosure {
-  margin: 0 auto 8px;
+  margin: 0 auto 12px;
   max-width: 360px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
+  text-align: center;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 .affiliate-banner__link {

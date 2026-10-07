@@ -38,29 +38,49 @@ async function installBanner(page: Page, mode: 'ready' | 'empty' | 'error' | 'br
   return () => requests
 }
 
-async function expectBanner(page: Page) {
-  const slot = page.getByTestId('affiliate-banner')
-  await expect(slot).toHaveCount(1)
-  await slot.scrollIntoViewIfNeeded()
-  await expect(slot).toBeVisible()
-  const image = page.getByTestId('affiliate-image')
-  await expect(image).toHaveJSProperty('naturalWidth', 640)
-  await expect(page.getByTestId('affiliate-disclosure')).toHaveText(banner.disclosureText)
-  const disclosureBox = await page.getByTestId('affiliate-disclosure').boundingBox()
-  const imageBox = await image.boundingBox()
-  expect(disclosureBox!.y + disclosureBox!.height).toBeLessThanOrEqual(imageBox!.y)
-  await expect(page.getByTestId('affiliate-link')).toHaveAttribute('rel', 'sponsored nofollow noopener noreferrer')
-  await expect(page.getByTestId('affiliate-link')).toHaveAttribute('target', '_blank')
-  await expect(image).toHaveAttribute('alt', banner.altText)
+async function expectBanner(page: Page, expectedCount = 1) {
+  const slots = page.getByTestId('affiliate-banner')
+  await expect(slots).toHaveCount(expectedCount)
+  for (let index = 0; index < expectedCount; index += 1) {
+    const slot = slots.nth(index)
+    await slot.scrollIntoViewIfNeeded()
+    await expect(slot).toBeVisible()
+    const image = slot.getByTestId('affiliate-image')
+    await expect(image).toHaveJSProperty('naturalWidth', 640)
+    const disclosure = slot.getByTestId('affiliate-disclosure')
+    await expect(disclosure).toHaveText(banner.disclosureText)
+    const disclosureBox = await disclosure.boundingBox()
+    const imageBox = await image.boundingBox()
+    expect(disclosureBox!.y + disclosureBox!.height).toBeLessThanOrEqual(imageBox!.y)
+    const link = slot.getByTestId('affiliate-link')
+    await expect(link).toHaveAttribute('rel', 'sponsored nofollow noopener noreferrer')
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(image).toHaveAttribute('alt', banner.altText)
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 }
 
-async function expectBetween(page: Page, before: Locator, after: Locator) {
-  const slot = await page.getByTestId('affiliate-banner').boundingBox()
+async function expectBetween(page: Page, before: Locator, after: Locator, slotLocator = page.getByTestId('affiliate-banner').first()) {
+  const slot = await slotLocator.boundingBox()
   const previous = await before.boundingBox()
   const next = await after.boundingBox()
   expect(previous!.y + previous!.height).toBeLessThanOrEqual(slot!.y)
   expect(slot!.y + slot!.height).toBeLessThanOrEqual(next!.y)
+}
+
+async function expectImmediatelyBeforeDataSource(page: Page, slot: Locator) {
+  const dataSource = sectionWithHeading(page, '데이터 출처')
+  await expect(dataSource).toBeVisible()
+  const slotHandle = await slot.elementHandle()
+  expect(slotHandle).not.toBeNull()
+  const isImmediatePreviousSibling = await dataSource.evaluate((source, banner) =>
+    source.parentElement?.previousElementSibling === banner,
+  slotHandle)
+  await slotHandle?.dispose()
+  expect(isImmediatePreviousSibling).toBe(true)
+  const slotBox = await slot.boundingBox()
+  const dataSourceBox = await dataSource.boundingBox()
+  expect(slotBox!.y + slotBox!.height).toBeLessThanOrEqual(dataSourceBox!.y)
 }
 
 function sectionWithHeading(page: Page, name: string) {
@@ -158,15 +178,24 @@ test('approved detail, list and region placements render across content families
       await test.step(path, async () => {
         expect((await page.goto(path))?.status()).toBe(200)
         await hydrated(page)
-        await expectBanner(page)
+        const expectedBannerCount = path.includes('회복아파트') || path.includes('역삼동') ? 2 : 1
+        await expectBanner(page, expectedBannerCount)
         const slot = page.getByTestId('affiliate-banner')
         if (path.includes('회복아파트')) {
-          await expect(slot).toHaveCSS('order', '10')
-          await expectBetween(page, page.locator('#location'), page.locator('#nearby'))
+          const firstSlot = slot.first()
+          const dataSourceSlot = slot.nth(1)
+          await expect(firstSlot).toHaveCSS('order', '10')
+          await expectBetween(page, page.locator('#location'), page.locator('#nearby'), firstSlot)
+          await expect(dataSourceSlot).toHaveCSS('order', '12')
+          await expectImmediatelyBeforeDataSource(page, dataSourceSlot)
         }
         if (path.includes('역삼동')) {
-          await expect(slot).toHaveCSS('order', '6')
-          await expectBetween(page, sectionWithHeading(page, '지목별 시세'), sectionWithHeading(page, '대지 거래 사례'))
+          const firstSlot = slot.first()
+          const dataSourceSlot = slot.nth(1)
+          await expect(firstSlot).toHaveCSS('order', '6')
+          await expectBetween(page, sectionWithHeading(page, '지목별 시세'), sectionWithHeading(page, '대지 거래 사례'), firstSlot)
+          await expect(dataSourceSlot).toHaveCSS('order', '12')
+          await expectImmediatelyBeforeDataSource(page, dataSourceSlot)
         }
         if (path.startsWith('/subscription/')) {
           await expect(slot).toHaveCSS('order', '8')
@@ -177,6 +206,11 @@ test('approved detail, list and region placements render across content families
         }
         if (path === '/' || path.includes('회복아파트') || path.includes('역삼동') || path === '/subscription/90002') {
           await page.screenshot({ path: resolve(`test-results/mobile-affiliate/${encodeURIComponent(path)}-390.png`) })
+        }
+        if (expectedBannerCount === 2) {
+          await page.setViewportSize({ width: 768, height: 900 })
+          await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+          await page.setViewportSize({ width: 390, height: 900 })
         }
       })
     }
