@@ -31,6 +31,14 @@ describe('affiliate banner input', () => {
     ).toBe(false);
   });
 
+  it('defaults only create and leaves omitted patch keys absent', () => {
+    expect(affiliateBannerCreateSchema.parse(draft).disclosureOverride).toBeNull();
+    expect(affiliateBannerPatchSchema.parse({ name: '새 이름' })).toEqual({ name: '새 이름' });
+    expect(affiliateBannerPatchSchema.parse({ disclosureOverride: null }))
+      .toEqual({ disclosureOverride: null });
+    expect(affiliateBannerPatchSchema.safeParse({ disclosureOverride: '  ' }).success).toBe(false);
+  });
+
   it('parses the literal false filter as false', () => {
     expect(affiliateBannerQuerySchema.parse({ isEnabled: 'false' }).isEnabled).toBe(
       false,

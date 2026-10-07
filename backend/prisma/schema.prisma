@@ -895,12 +895,19 @@ model AffiliateBanner {
   externalImageUrl String?                  @db.Text
   targetUrl        String                   @db.Text
   altText          String                   @db.VarChar(200)
+  disclosureOverride String?                 @db.Text
   isEnabled        Boolean                  @default(false)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
   @@index([provider, isEnabled, updatedAt])
   @@index([updatedAt])
+}
+
+model AffiliateProviderDisclosure {
+  provider              AffiliateProvider @id
+  defaultDisclosureText String            @db.Text
+  updatedAt             DateTime          @updatedAt
 }
 
 model AffiliateBannerAsset {

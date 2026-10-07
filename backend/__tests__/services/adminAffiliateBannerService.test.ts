@@ -12,6 +12,7 @@ const {
   mockBannerUpdate,
   mockAssetFindUnique,
   mockAssetUpdateMany,
+  mockDisclosureFindMany,
   mockStat,
 } = vi.hoisted(() => ({
   mockTransaction: vi.fn(),
@@ -23,6 +24,7 @@ const {
   mockBannerUpdate: vi.fn(),
   mockAssetFindUnique: vi.fn(),
   mockAssetUpdateMany: vi.fn(),
+  mockDisclosureFindMany: vi.fn(),
   mockStat: vi.fn(),
 }));
 
@@ -38,6 +40,9 @@ vi.mock('../../src/lib/prisma.js', () => ({
       count: mockBannerCount,
       findMany: mockBannerFindMany,
       findUnique: mockBannerFindUnique,
+    },
+    affiliateProviderDisclosure: {
+      findMany: mockDisclosureFindMany,
     },
   },
 }));
@@ -87,6 +92,7 @@ function bannerRow(overrides: Record<string, unknown> = {}) {
     createdAt: baseDate,
     updatedAt: baseDate,
     imageAsset: null,
+    disclosureOverride: null,
     ...overrides,
   };
 }
@@ -113,6 +119,9 @@ function tx() {
       findUnique: mockAssetFindUnique,
       updateMany: mockAssetUpdateMany,
     },
+    affiliateProviderDisclosure: {
+      findMany: mockDisclosureFindMany,
+    },
   };
 }
 
@@ -121,6 +130,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockTransaction.mockImplementation(async (fn) => fn(tx()));
   mockStat.mockResolvedValue({ isFile: () => true });
+  mockDisclosureFindMany.mockResolvedValue([]);
   vi.stubGlobal('fetch', vi.fn());
 });
 
@@ -136,6 +146,9 @@ describe('admin affiliate banner service', () => {
     }));
     expect(result.isEnabled).toBe(false);
     expect(result.targetUrl).toBe(externalDraft.targetUrl);
+    expect(result.disclosureOverride).toBeNull();
+    expect(result.disclosureText).toBeNull();
+    expect(result.disclosureSource).toBe('missing');
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -155,12 +168,84 @@ describe('admin affiliate banner service', () => {
     }));
   });
 
+  it('loads list disclosure defaults once and resolves each banner without copying defaults', async () => {
+    mockBannerCount.mockResolvedValue(2);
+    mockBannerFindMany.mockResolvedValue([
+      bannerRow({ provider: 'coupang', disclosureOverride: null }),
+      bannerRow({ provider: 'ali', disclosureOverride: '배너 개별 문구' }),
+    ]);
+    mockDisclosureFindMany.mockResolvedValue([
+      { provider: 'coupang', defaultDisclosureText: '쿠팡 기본 문구' },
+      { provider: 'ali', defaultDisclosureText: '알리 기본 문구' },
+    ]);
+
+    const result = await listAffiliateBanners({ page: 1, limit: 20 });
+
+    expect(mockDisclosureFindMany).toHaveBeenCalledTimes(1);
+    expect(mockDisclosureFindMany).toHaveBeenCalledWith({
+      where: { provider: { in: ['coupang', 'ali'] } },
+      select: { provider: true, defaultDisclosureText: true },
+    });
+    expect(result.items).toMatchObject([
+      {
+        provider: 'coupang',
+        disclosureOverride: null,
+        disclosureText: '쿠팡 기본 문구',
+        disclosureSource: 'provider',
+      },
+      {
+        provider: 'ali',
+        disclosureOverride: '배너 개별 문구',
+        disclosureText: '배너 개별 문구',
+        disclosureSource: 'banner',
+      },
+    ]);
+  });
+
   it('preserves tracking URL on read', async () => {
     mockBannerFindUnique.mockResolvedValue(bannerRow());
 
     const result = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
 
     expect(result.targetUrl).toBe('https://example.com/go?a=%2B&a=2+b');
+  });
+
+  it('reflects provider default changes on reread without changing banner timestamps', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow());
+    mockDisclosureFindMany
+      .mockResolvedValueOnce([{ provider: 'coupang', defaultDisclosureText: '첫 기본 문구' }])
+      .mockResolvedValueOnce([{ provider: 'coupang', defaultDisclosureText: '바뀐 기본 문구' }]);
+
+    const first = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
+    const second = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
+
+    expect(first).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: '첫 기본 문구',
+      disclosureSource: 'provider',
+      updatedAt: baseDate.toISOString(),
+    });
+    expect(second).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: '바뀐 기본 문구',
+      disclosureSource: 'provider',
+      updatedAt: baseDate.toISOString(),
+    });
+  });
+
+  it('preserves banner override when a provider default exists', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: '개별 예외 문구' }));
+    mockDisclosureFindMany.mockResolvedValue([
+      { provider: 'coupang', defaultDisclosureText: '쿠팡 기본 문구' },
+    ]);
+
+    const result = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
+
+    expect(result).toMatchObject({
+      disclosureOverride: '개별 예외 문구',
+      disclosureText: '개별 예외 문구',
+      disclosureSource: 'banner',
+    });
   });
 
   it('locks affiliate assets once in sorted order', async () => {
@@ -261,6 +346,15 @@ describe('admin affiliate banner service', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('blocks missing disclosure before writing enabled state', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: null }));
+    mockDisclosureFindMany.mockResolvedValue([]);
+
+    await expect(setAffiliateBannerStatus('6ea02ad2-d1be-4d01-946d-d08005f01d4e', true))
+      .rejects.toMatchObject({ statusCode: 422, code: 'VALIDATION_ERROR' });
+    expect(mockBannerUpdate).not.toHaveBeenCalled();
+  });
+
   it('updates upload banners to URL after saving the row and then detaches the old asset', async () => {
     const detachedAt = new Date('2026-10-06T04:00:00.000Z');
     vi.useFakeTimers();
@@ -305,6 +399,102 @@ describe('admin affiliate banner service', () => {
       data: { unlinkedAt: detachedAt },
     });
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps existing override when provider is unchanged and patch omits disclosure', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: '기존 개별 문구' }));
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      name: '새 이름',
+    });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({
+      provider: 'coupang',
+      name: '새 이름',
+      disclosureOverride: '기존 개별 문구',
+    });
+    expect(result).toMatchObject({
+      disclosureOverride: '기존 개별 문구',
+      disclosureText: '기존 개별 문구',
+      disclosureSource: 'banner',
+    });
+  });
+
+  it('clears an omitted override when provider changes', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ provider: 'coupang', disclosureOverride: '쿠팡 개별 문구' }));
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      provider: 'ali',
+    });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({
+      provider: 'ali',
+      disclosureOverride: null,
+    });
+    expect(result).toMatchObject({
+      provider: 'ali',
+      disclosureOverride: null,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    });
+  });
+
+  it('uses an explicit new override when provider changes', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ provider: 'coupang', disclosureOverride: '쿠팡 개별 문구' }));
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      provider: 'ali',
+      disclosureOverride: '알리 개별 문구',
+    });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({
+      provider: 'ali',
+      disclosureOverride: '알리 개별 문구',
+    });
+    expect(result).toMatchObject({
+      disclosureOverride: '알리 개별 문구',
+      disclosureText: '알리 개별 문구',
+      disclosureSource: 'banner',
+    });
+  });
+
+  it('blocks enabled banner edits that remove the resolved disclosure before asset or row writes', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({
+      isEnabled: true,
+      disclosureOverride: '기존 개별 문구',
+      imageSourceType: 'upload',
+      imageAssetId: '11111111-1111-4111-8111-111111111111',
+      externalImageUrl: null,
+      imageAsset: readyAsset(),
+    }));
+    mockDisclosureFindMany.mockResolvedValue([]);
+
+    await expect(updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      disclosureOverride: null,
+    })).rejects.toMatchObject({ statusCode: 422, code: 'VALIDATION_ERROR' });
+
+    expect(mockStat).not.toHaveBeenCalled();
+    expect(mockBannerUpdate).not.toHaveBeenCalled();
+    expect(mockAssetUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('allows inactive banners to save without a resolved disclosure', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ isEnabled: false, disclosureOverride: '기존 개별 문구' }));
+    mockDisclosureFindMany.mockResolvedValue([]);
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      disclosureOverride: null,
+    });
+
+    expect(result).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    });
   });
 
   it('updates URL banners to upload after saving the row and then marks the new asset linked', async () => {
@@ -469,12 +659,13 @@ describe('admin affiliate banner service', () => {
     mockBannerFindUnique.mockResolvedValue(bannerRow());
     mockBannerUpdate
       .mockResolvedValueOnce(bannerRow({ externalImageUrl: 'https://images.example.com/updated.png' }))
-      .mockResolvedValueOnce(bannerRow({ isEnabled: true }));
+      .mockResolvedValueOnce(bannerRow({ isEnabled: true, disclosureOverride: '사용 문구' }));
 
     await createAffiliateBanner(externalDraft);
     await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
       externalImageUrl: 'https://images.example.com/updated.png',
     });
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: '사용 문구' }));
     await setAffiliateBannerStatus('6ea02ad2-d1be-4d01-946d-d08005f01d4e', true);
 
     expect(global.fetch).not.toHaveBeenCalled();

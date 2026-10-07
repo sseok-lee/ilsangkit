@@ -3,7 +3,9 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import prisma from '../lib/prisma.js';
 import { ConflictError, NotFoundError, ValidationError } from '../lib/errors.js';
-import { affiliateBannerCreateSchema } from '../schemas/affiliateBanner.js';
+import { affiliateBannerCreateSchema, type AffiliateBannerCreateInput } from '../schemas/affiliateBanner.js';
+import { resolveAffiliateDisclosure } from '../utils/affiliateDisclosure.js';
+import { loadAffiliateDisclosureDefaults } from './adminAffiliateDisclosureService.js';
 import { getAffiliateAssetPaths } from './affiliateBannerAssetService.js';
 import type {
   AffiliateBannerDto,
@@ -47,6 +49,9 @@ type BannerTransaction = Prisma.TransactionClient & {
     findUnique: (args: unknown) => Promise<AffiliateBannerAssetRow | null>;
     updateMany: (args: unknown) => Promise<{ count: number }>;
   };
+  affiliateProviderDisclosure: {
+    findMany: (args: unknown) => Promise<Array<{ provider: AffiliateBannerDraft['provider']; defaultDisclosureText: string }>>;
+  };
 };
 
 function isPrismaKnownRequestError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
@@ -89,10 +94,15 @@ async function withBannerTransaction<T>(work: (tx: BannerTransaction) => Promise
   }
 }
 
-function toDto(row: AffiliateBannerRow): AffiliateBannerDto {
+function toDto(row: AffiliateBannerRow, defaults: ReadonlyMap<AffiliateBannerDraft['provider'], string>): AffiliateBannerDto {
   const imageUrl = row.imageSourceType === 'upload'
     ? `/api/images/${row.imageAsset?.storageKey ?? ''}`
     : row.externalImageUrl ?? '';
+  const disclosureOverride = row.disclosureOverride ?? null;
+  const resolved = resolveAffiliateDisclosure(
+    disclosureOverride,
+    defaults.get(row.provider) ?? null,
+  );
 
   return {
     id: row.id,
@@ -103,6 +113,8 @@ function toDto(row: AffiliateBannerRow): AffiliateBannerDto {
     externalImageUrl: row.externalImageUrl,
     targetUrl: row.targetUrl,
     altText: row.altText,
+    disclosureOverride,
+    ...resolved,
     imageUrl,
     isEnabled: row.isEnabled,
     createdAt: row.createdAt.toISOString(),
@@ -129,6 +141,7 @@ function mergeBannerPatch(existing: AffiliateBannerRow, patch: AffiliateBannerPa
     externalImageUrl: existing.externalImageUrl,
     targetUrl: existing.targetUrl,
     altText: existing.altText,
+    disclosureOverride: existing.disclosureOverride ?? null,
   };
 
   if (patch.imageSourceType === 'url') {
@@ -137,7 +150,16 @@ function mergeBannerPatch(existing: AffiliateBannerRow, patch: AffiliateBannerPa
     base.externalImageUrl = null;
   }
 
-  return parseBannerDraft({ ...base, ...patch });
+  const merged = { ...base, ...patch };
+  if (
+    patch.provider !== undefined
+    && patch.provider !== existing.provider
+    && !Object.prototype.hasOwnProperty.call(patch, 'disclosureOverride')
+  ) {
+    merged.disclosureOverride = null;
+  }
+
+  return parseBannerDraft(merged);
 }
 
 async function lockBanner(tx: BannerTransaction, id: string): Promise<AffiliateBannerRow> {
@@ -177,7 +199,11 @@ async function loadUsableAsset(tx: BannerTransaction, assetId: string, currentBa
   return asset;
 }
 
-async function assertBannerCanBeEnabled(tx: BannerTransaction, banner: AffiliateBannerRow): Promise<void> {
+async function assertBannerCanBeEnabled(
+  tx: BannerTransaction,
+  banner: AffiliateBannerRow,
+  defaults: ReadonlyMap<AffiliateBannerDraft['provider'], string>,
+): Promise<void> {
   const draft = parseBannerDraft({
     provider: banner.provider,
     name: banner.name,
@@ -186,10 +212,25 @@ async function assertBannerCanBeEnabled(tx: BannerTransaction, banner: Affiliate
     externalImageUrl: banner.externalImageUrl,
     targetUrl: banner.targetUrl,
     altText: banner.altText,
+    disclosureOverride: banner.disclosureOverride ?? null,
   });
+  assertResolvedDisclosurePresent(draft, defaults);
   if (draft.imageSourceType === 'upload' && draft.imageAssetId) {
     await lockAffiliateAssets(tx, [draft.imageAssetId]);
     await loadUsableAsset(tx, draft.imageAssetId, banner.id);
+  }
+}
+
+function assertResolvedDisclosurePresent(
+  draft: AffiliateBannerDraft,
+  defaults: ReadonlyMap<AffiliateBannerDraft['provider'], string>,
+): void {
+  const resolved = resolveAffiliateDisclosure(
+    draft.disclosureOverride,
+    defaults.get(draft.provider) ?? null,
+  );
+  if (resolved.disclosureText === null) {
+    throw new ValidationError('수익 고지 문구를 등록한 뒤 사용으로 설정하세요');
   }
 }
 
@@ -212,8 +253,11 @@ export async function listAffiliateBanners(query: AffiliateBannerQuery): Promise
     }),
   ]);
 
+  const rows = items as unknown as AffiliateBannerRow[];
+  const defaults = await loadAffiliateDisclosureDefaults(rows.map((item) => item.provider));
+
   return {
-    items: items.map((item) => toDto(item as unknown as AffiliateBannerRow)),
+    items: rows.map((item) => toDto(item, defaults)),
     total,
     page,
     totalPages: total === 0 ? 0 : Math.ceil(total / limit),
@@ -226,12 +270,15 @@ export async function getAffiliateBanner(id: string): Promise<AffiliateBannerDto
     include: { imageAsset: true },
   });
   if (!banner) throw new NotFoundError('배너를 찾을 수 없습니다');
-  return toDto(banner as unknown as AffiliateBannerRow);
+  const row = banner as unknown as AffiliateBannerRow;
+  const defaults = await loadAffiliateDisclosureDefaults([row.provider]);
+  return toDto(row, defaults);
 }
 
-export async function createAffiliateBanner(input: AffiliateBannerDraft): Promise<AffiliateBannerDto> {
+export async function createAffiliateBanner(input: AffiliateBannerCreateInput): Promise<AffiliateBannerDto> {
   const draft = parseBannerDraft(input);
   return withBannerTransaction(async (tx) => {
+    const defaults = await loadAffiliateDisclosureDefaults([draft.provider], tx);
     let asset: AffiliateBannerAssetRow | null = null;
     if (draft.imageSourceType === 'upload' && draft.imageAssetId) {
       await lockAffiliateAssets(tx, [draft.imageAssetId]);
@@ -248,7 +295,7 @@ export async function createAffiliateBanner(input: AffiliateBannerDraft): Promis
         data: { unlinkedAt: null },
       });
     }
-    return toDto(row);
+    return toDto(row, defaults);
   });
 }
 
@@ -256,6 +303,10 @@ export async function updateAffiliateBanner(id: string, patch: AffiliateBannerPa
   return withBannerTransaction(async (tx) => {
     const existing = await lockBanner(tx, id);
     const draft = mergeBannerPatch(existing, patch);
+    const defaults = await loadAffiliateDisclosureDefaults([draft.provider], tx);
+    if (existing.isEnabled) {
+      assertResolvedDisclosurePresent(draft, defaults);
+    }
     const assetIds = [existing.imageAssetId, draft.imageAssetId].filter((value): value is string => Boolean(value));
     await lockAffiliateAssets(tx, assetIds);
 
@@ -282,21 +333,22 @@ export async function updateAffiliateBanner(id: string, patch: AffiliateBannerPa
         data: { unlinkedAt: new Date() },
       });
     }
-    return toDto(row);
+    return toDto(row, defaults);
   });
 }
 
 export async function setAffiliateBannerStatus(id: string, isEnabled: boolean): Promise<AffiliateBannerDto> {
   return withBannerTransaction(async (tx) => {
     const existing = await lockBanner(tx, id);
+    const defaults = await loadAffiliateDisclosureDefaults([existing.provider], tx);
     if (isEnabled) {
-      await assertBannerCanBeEnabled(tx, existing);
+      await assertBannerCanBeEnabled(tx, existing, defaults);
     }
     const row = await tx.affiliateBanner.update({
       where: { id },
       data: { isEnabled },
       include: { imageAsset: true },
     });
-    return toDto(row);
+    return toDto(row, defaults);
   });
 }
