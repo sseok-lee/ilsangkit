@@ -174,7 +174,7 @@
       <template v-else>
         <section class="flex-1 min-w-0">
           <p class="mb-3 rounded-md border border-line bg-white px-3 py-2 text-sm text-muted">
-            사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.
+            고지 문구가 등록된 사용 가능 배너는 모바일 광고 영역에 무작위로 노출됩니다.
           </p>
           <AdminAffiliateBannerPanel @dirty-change="onAffiliateDirtyChange" />
         </section>

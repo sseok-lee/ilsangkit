@@ -73,6 +73,8 @@
           </ClientOnly>
         </SectionBlock>
 
+        <AffiliateBanner />
+
         <!-- ④ 교차 CTA -->
         <RegionRealEstateCta :area-name="cityName" />
 

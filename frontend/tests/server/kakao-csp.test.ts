@@ -58,12 +58,15 @@ describe('Kakao CDN CSP contract', () => {
     }
   })
 
-  it.each(publicPaths)('%s preserves the existing image permissions', (path) => {
+  it.each(publicPaths)('%s permits HTTPS affiliate images while preserving map image permissions', (path) => {
     const images = policyFor(path).get('img-src')
     expect(images).toEqual(expect.arrayContaining([
       "'self'", 'data:', 'https://*.kakaocdn.net', 'https://*.daumcdn.net',
     ]))
-    expect(images).not.toContain('https:')
+    expect(images).toContain('https:')
+    expect(images).not.toContain('*')
+    expect(images).not.toContain('http:')
+    expect(policyFor(path).get('frame-src')).not.toContain('https:')
   })
 
   it.each(adminPaths)('%s preserves the admin image policy and no-store', (path) => {

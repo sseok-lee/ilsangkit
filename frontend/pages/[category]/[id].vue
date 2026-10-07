@@ -195,6 +195,8 @@
                 </div>
               </SectionBlock>
 
+              <AffiliateBanner />
+
               <!-- 주변 시설 (same + cross category) -->
               <DetailNearby
                 section-variant="flat"

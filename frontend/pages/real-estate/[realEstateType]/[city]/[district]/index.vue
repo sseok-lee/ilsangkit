@@ -92,6 +92,8 @@
         </SectionBlock>
       </template>
 
+      <AffiliateBanner />
+
       <!-- 지역 내 다른 카테고리 (교차 링크) -->
       <SectionBlock variant="flat" heading="이 지역의 생활 인프라">
         <div class="flex flex-wrap gap-2">

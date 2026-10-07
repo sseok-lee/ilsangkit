@@ -400,7 +400,7 @@ async function installFixtureRoutes(page: Page, state: ApiState) {
 
   await page.route('**/api/affiliate-banners**', async (route) => {
     state.affiliatePublicRequests += 1
-    await route.abort('blockedbyclient')
+    await fulfillJson(route, 200, envelope(null))
   })
 }
 
@@ -413,7 +413,7 @@ async function openAffiliateTab(page: Page) {
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByText('글이 없습니다')).toBeVisible()
   await page.getByTestId('tab-affiliate').click()
-  await expect(page.getByText('사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.')).toBeVisible()
+  await expect(page.getByText('고지 문구가 등록된 사용 가능 배너는 모바일 광고 영역에 무작위로 노출됩니다.')).toBeVisible()
 }
 
 
@@ -481,7 +481,7 @@ function adminCspImageSources(value: string): string[] {
 }
 
 test.describe('admin affiliate banner integration harness', () => {
-  test('admin document permits external image previews without loosening public CSP', async ({ request }) => {
+  test('admin previews and public affiliate images permit HTTPS sources', async ({ request }) => {
     const admin = await request.get('/admin')
     const home = await request.get('/')
     const adminCsp = admin.headers()['content-security-policy'] ?? ''
@@ -489,10 +489,10 @@ test.describe('admin affiliate banner integration harness', () => {
 
     expect(admin.headers()['cache-control']).toContain('no-store')
     expect(adminCspImageSources(adminCsp)).toContain('https:')
-    expect(adminCspImageSources(homeCsp)).not.toContain('https:')
+    expect(adminCspImageSources(homeCsp)).toContain('https:')
   })
 
-  test('banner management covers provider disclosure, upload, URL preview, dirty navigation, persistence, clipboard, screenshots, and public absence', async ({ page }, testInfo) => {
+  test('banner management covers provider disclosure, upload, URL preview, dirty navigation, persistence, clipboard, screenshots, and empty public inventory', async ({ page }, testInfo) => {
     const state = newState()
     await installFixtureRoutes(page, state)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:3001' })
@@ -584,7 +584,7 @@ test.describe('admin affiliate banner integration harness', () => {
       await dialog.dismiss()
     })
     await page.getByTestId('tab-guide').click()
-    await expect(page.getByText('사용 가능으로 설정해도 아직 사이트에는 노출되지 않습니다.')).toBeVisible()
+    await expect(page.getByText('고지 문구가 등록된 사용 가능 배너는 모바일 광고 영역에 무작위로 노출됩니다.')).toBeVisible()
     await expect(page.getByTestId('name')).toHaveValue('이동 취소 초안')
 
     let publicDocumentRequests = 0
@@ -601,6 +601,7 @@ test.describe('admin affiliate banner integration harness', () => {
     await expect(page.getByTestId('name')).toHaveValue('이동 취소 초안')
     expect(dialogCount).toBe(1)
     expect(publicDocumentRequests).toBe(0)
+    expect(state.affiliatePublicRequests).toBe(0)
 
     page.once('dialog', async (dialog) => {
       await dialog.accept()
@@ -612,11 +613,12 @@ test.describe('admin affiliate banner integration harness', () => {
     await pushRouteFromPage(page, '/')
     await page.waitForURL('/')
     const publicResponse = await publicDocumentResponse
-    expect(adminCspImageSources(publicResponse.headers()['content-security-policy'] ?? '')).not.toContain('https:')
+    expect(adminCspImageSources(publicResponse.headers()['content-security-policy'] ?? '')).toContain('https:')
     expect(publicDocumentRequests).toBe(1)
     await expect(page.locator('[data-testid^="affiliate-row-"]')).toHaveCount(0)
     await expect(page.locator('a[href*="vendor.example.test"]')).toHaveCount(0)
-    expect(state.affiliatePublicRequests).toBe(0)
+    await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+    if ((page.viewportSize()?.width ?? 1280) >= 768) expect(state.affiliatePublicRequests).toBe(0)
   })
 
   test('provider disclosures follow provider changes, survive reload, and escape HTML text', async ({ page }) => {

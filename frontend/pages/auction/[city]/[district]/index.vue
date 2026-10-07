@@ -31,6 +31,8 @@
         </div>
       </SectionBlock>
 
+      <AffiliateBanner />
+
       <!-- 진행중 물건 -->
       <SectionBlock variant="flat" v-if="activeItems.length > 0" heading="진행중 물건" subtext="현재 입찰 진행 중인 공매 물건입니다.">
         <div class="flex flex-col">

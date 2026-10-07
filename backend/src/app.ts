@@ -21,6 +21,7 @@ import auctionRouter from './routes/auction.js';
 import searchRouter from './routes/search.js';
 import facilityNaverBlogRouter from './routes/facilityNaverBlog.js';
 import realEstateNaverBlogRouter from './routes/realEstateNaverBlog.js';
+import affiliateBannersRouter from './routes/affiliateBanners.js';
 import adminRouter from './routes/admin.js';
 import adminAffiliateBannerImagesRouter from './routes/adminAffiliateBannerImages.js';
 import { AppError, ValidationError } from './lib/errors.js';
@@ -175,6 +176,7 @@ app.use('/api/transit', transitRouter);
 app.use('/api/subway', subwayRouter);
 app.use('/api/auction', auctionRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/affiliate-banners', affiliateBannersRouter);
 app.use('/api/admin', adminRouter);
 
 // 404 handler

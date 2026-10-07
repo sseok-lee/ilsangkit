@@ -128,6 +128,8 @@
       </SectionBlock>
 
 
+      <AffiliateBanner />
+
       <!-- 데이터 출처 -->
       <DataSourceSection domain="facility" category="subway" variant="flat" />
     </div>

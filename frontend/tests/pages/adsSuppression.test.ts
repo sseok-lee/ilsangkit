@@ -4,9 +4,33 @@ import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h, Suspense } from 'vue'
+import { parse as parseSfc } from '@vue/compiler-sfc'
+import { parse as parseTemplate, type ElementNode, type TemplateChildNode } from '@vue/compiler-dom'
 
 const root = process.cwd().endsWith('/frontend') ? process.cwd() : join(process.cwd(), 'frontend')
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8')
+
+function templateElements(file: string): ElementNode[] {
+  const { descriptor } = parseSfc(read(file))
+  const ast = parseTemplate(descriptor.template?.content ?? '')
+  const result: ElementNode[] = []
+
+  function visit(nodes: TemplateChildNode[]) {
+    for (const node of nodes) {
+      if (node.type !== 1) continue
+      result.push(node)
+      visit(node.children)
+    }
+  }
+
+  visit(ast.children)
+  return result
+}
+
+function directiveValue(node: ElementNode, name: string): string | undefined {
+  const directive = node.props.find(prop => prop.type === 7 && prop.name === name)
+  return directive?.type === 7 ? directive.exp?.loc.source : undefined
+}
 
 const pages: [string, RegExp][] = [
   ['pages/[city]/index.vue', /suppressAds\(\s*fetchFailed\.value\s*\|\|\s*isNoindex\.value\s*\)/],
@@ -35,8 +59,15 @@ describe('degraded/noindex 페이지는 reactive로 광고를 억제한다', () 
 describe('subscription list 광고 슬롯 생명주기', () => {
   it('필터/실패 시 두 인페이지 광고 슬롯을 unmount하고 기본 상태에서만 렌더한다', () => {
     const src = read('components/subscription/SubscriptionListView.vue')
+    const nodes = templateElements('components/subscription/SubscriptionListView.vue')
+    const adBanners = nodes.filter(node => node.tag === 'AdBanner')
+    const affiliateBanners = nodes.filter(node => node.tag === 'AffiliateBanner')
+
     expect(src).toContain('const showAds = computed(() => !filtered.value && !failed.value)')
-    expect(src.match(/v-if="showAds"/g)).toHaveLength(2)
+    expect(adBanners).toHaveLength(2)
+    expect(src.match(/<div v-if="showAds" class="ad-slot">\s*<AdBanner \/>/g)).toHaveLength(2)
+    expect(affiliateBanners).toHaveLength(1)
+    expect(directiveValue(affiliateBanners[0], 'if')).toBe('showAds')
     expect(src).toContain('await loadMore()')
     expect(src).not.toContain(':key="page"')
   })
