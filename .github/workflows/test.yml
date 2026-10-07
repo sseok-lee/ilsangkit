@@ -27,9 +27,42 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - run: cd backend && npm ci
+      - run: cd backend && npx prisma generate
       - run: cd backend && npx prisma db push --skip-generate
       - run: cd backend && npm run lint
       - run: cd backend && npm run test
+      - name: Verify affiliate disclosure migration and integration
+        env:
+          AFFILIATE_TEST_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+          AFFILIATE_TEST_DATABASE_URL: mysql://root:testpassword@127.0.0.1:3307/ilsangkit_affiliate_test
+          MYSQL_PWD: testpassword
+        run: |
+          docker exec -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot -e 'CREATE DATABASE ilsangkit_affiliate_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+          docker exec -i -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test < backend/prisma/migrations/202610060001_affiliate_banners/migration.sql
+          docker exec -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test -e "INSERT INTO AffiliateBanner (id,provider,name,imageSourceType,targetUrl,externalImageUrl,altText,isEnabled,updatedAt) VALUES ('00000000-0000-4000-8000-000000000007','coupang','migration-fixture','url','https://example.test/go?a=1','https://example.test/banner.png','fixture',true,'2026-10-07 00:00:00.000')"
+          docker exec -i -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test < backend/prisma/migrations/202610070001_affiliate_disclosures/migration.sql
+          cd backend
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { PrismaClient } from '@prisma/client';
+          const db = new PrismaClient({ datasources: { db: { url: process.env.AFFILIATE_TEST_DATABASE_URL } } });
+          const id = '00000000-0000-4000-8000-000000000007';
+          try {
+            const row = await db.affiliateBanner.findUniqueOrThrow({ where: { id } });
+            assert.equal(row.isEnabled, true);
+            assert.equal(row.provider, 'coupang');
+            assert.equal(row.name, 'migration-fixture');
+            assert.equal(row.targetUrl, 'https://example.test/go?a=1');
+            assert.equal(row.externalImageUrl, 'https://example.test/banner.png');
+            assert.equal(row.disclosureOverride, null);
+            assert.equal(row.updatedAt.toISOString(), '2026-10-07T00:00:00.000Z');
+            assert.equal(await db.affiliateProviderDisclosure.count(), 0);
+          } finally {
+            await db.affiliateBanner.deleteMany({ where: { id } });
+            await db.$disconnect();
+          }
+          NODE
+          npm run test:affiliate-integration
       - name: Verify deployment and release runtime contracts
         run: node --test scripts/deploy/*.test.mjs
 

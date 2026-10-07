@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import type { Application } from 'express';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { assertAffiliateTestDatabase } from './affiliateBannerDatabase.js';
 
 const fsMockState = vi.hoisted(() => ({
@@ -56,12 +56,22 @@ const fixtureAssetIds = new Set<string>();
 const fixtureBannerIds = new Set<string>();
 const fixtureStorageKeys = new Map<string, string>();
 const triggerNames = new Set<string>();
+const affiliateProviders = ['coupang', 'ali', 'toss'] as const;
 
 let uploadRoot: string;
 let app: Application;
 let pngBytes: Buffer;
 let webpBytes: Buffer;
 let gifBytes: Buffer;
+let providerDisclosureSnapshotReady = false;
+
+type AffiliateProvider = (typeof affiliateProviders)[number];
+type ProviderDisclosureSnapshot = Map<AffiliateProvider, {
+  defaultDisclosureText: string;
+  updatedAt: Date;
+} | null>;
+
+const providerDisclosureSnapshot: ProviderDisclosureSnapshot = new Map();
 
 function deferred<T = void>(): { promise: Promise<T>; resolve: (value: T | PromiseLike<T>) => void; reject: (reason?: unknown) => void } {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -126,9 +136,13 @@ function wrapTransactionClient<T extends object>(tx: T): T {
   return new Proxy(tx, {
     get(target, property, receiver) {
       if (property === '$queryRaw') {
+        const queryRaw = Reflect.get(target, property, receiver);
         return (...args: unknown[]) => {
           noteAffiliateAssetLock(args);
-          return Reflect.get(target, property, receiver).apply(target, args);
+          if (typeof queryRaw !== 'function') {
+            throw new TypeError('$queryRaw is not callable');
+          }
+          return queryRaw.apply(target, args) as unknown;
         };
       }
       const value = Reflect.get(target, property, receiver);
@@ -143,6 +157,9 @@ function wrapPrismaClient<T extends object>(client: T): T {
       if (property === '$transaction') {
         return (arg: unknown, options?: unknown) => {
           const transaction = Reflect.get(target, property, receiver);
+          if (typeof transaction !== 'function') {
+            throw new TypeError('$transaction is not callable');
+          }
           if (typeof arg === 'function') {
             return transaction.call(target, (tx: object) => arg(wrapTransactionClient(tx)), options);
           }
@@ -214,7 +231,50 @@ async function retryCleanup(work: () => Promise<void>): Promise<void> {
   throw lastError;
 }
 
-async function cleanupOwnedFixtures(): Promise<void> {
+async function snapshotOriginalProviderDisclosures(): Promise<void> {
+  const rows = await prisma.affiliateProviderDisclosure.findMany({
+    where: { provider: { in: [...affiliateProviders] } },
+    select: { provider: true, defaultDisclosureText: true, updatedAt: true },
+  }) as Array<{ provider: AffiliateProvider; defaultDisclosureText: string; updatedAt: Date }>;
+
+  providerDisclosureSnapshot.clear();
+  for (const provider of affiliateProviders) {
+    providerDisclosureSnapshot.set(provider, null);
+  }
+  for (const row of rows) {
+    providerDisclosureSnapshot.set(row.provider, {
+      defaultDisclosureText: row.defaultDisclosureText,
+      updatedAt: row.updatedAt,
+    });
+  }
+  providerDisclosureSnapshotReady = true;
+}
+
+async function resetProviderDisclosuresForTest(): Promise<void> {
+  if (!providerDisclosureSnapshotReady) {
+    throw new Error('Provider disclosure snapshot was not prepared; refusing to mutate fixed provider rows');
+  }
+  await prisma.affiliateProviderDisclosure.deleteMany({
+    where: { provider: { in: [...affiliateProviders] } },
+  });
+}
+
+async function restoreOriginalProviderDisclosures(): Promise<void> {
+  if (!providerDisclosureSnapshotReady) return;
+
+  await prisma.affiliateProviderDisclosure.deleteMany({
+    where: { provider: { in: [...affiliateProviders] } },
+  });
+  for (const [provider, row] of providerDisclosureSnapshot) {
+    if (!row) continue;
+    await prisma.$executeRaw`
+      INSERT INTO AffiliateProviderDisclosure (provider, defaultDisclosureText, updatedAt)
+      VALUES (${provider}, ${row.defaultDisclosureText}, ${row.updatedAt})
+    `;
+  }
+}
+
+async function cleanupTrackedFixtures(): Promise<void> {
   for (const triggerName of triggerNames) {
     await mysqlExecute(`DROP TRIGGER IF EXISTS \`${triggerName}\``);
   }
@@ -244,6 +304,25 @@ async function cleanupOwnedFixtures(): Promise<void> {
   fixtureBannerIds.clear();
   fixtureAssetIds.clear();
   fixtureStorageKeys.clear();
+}
+
+async function cleanupOwnedFixtures(cleanupWork = cleanupTrackedFixtures): Promise<void> {
+  let cleanupError: unknown;
+  try {
+    await cleanupWork();
+  } catch (error) {
+    cleanupError = error;
+  } finally {
+    try {
+      await restoreOriginalProviderDisclosures();
+    } catch (restoreError) {
+      if (cleanupError) {
+        throw new AggregateError([cleanupError, restoreError], 'Failed to clean affiliate fixtures and restore provider disclosures');
+      }
+      throw restoreError;
+    }
+  }
+  if (cleanupError) throw cleanupError;
 }
 
 async function insertReadyAsset(bytes = pngBytes): Promise<{ id: string; storageKey: string }> {
@@ -285,6 +364,20 @@ async function insertExternalBanner(): Promise<string> {
   return id;
 }
 
+async function saveDefaultDisclosure(provider: AffiliateProvider, text: string): Promise<void> {
+  const saved = await request(app)
+    .put(`/api/admin/affiliate-provider-disclosures/${provider}`)
+    .set('Origin', ORIGIN)
+    .send({ defaultDisclosureText: text });
+
+  expect(saved.status).toBe(200);
+  expect(saved.body.success).toBe(true);
+  expect(saved.body.data).toMatchObject({
+    provider,
+    defaultDisclosureText: text.replace(/\r\n/g, '\n').trim(),
+  });
+}
+
 async function withHeldAssetLock<T>(
   assetId: string,
   work: (releaseLock: () => void) => Promise<T>,
@@ -318,31 +411,30 @@ async function withHeldAssetLock<T>(
   }
 }
 
-async function mysqlExecute(sql: string): Promise<void> {
+async function runAffiliateMysql(sql: string, delimiter = false): Promise<void> {
+  assertAffiliateTestDatabase(AFFILIATE_URL);
+  const target = new URL(AFFILIATE_URL);
+  const container = process.env.AFFILIATE_TEST_MYSQL_CONTAINER || 'ilsangkit-mysql';
   await execFileAsync('docker', [
     'exec',
-    'ilsangkit-mysql',
+    '-e',
+    'MYSQL_PWD',
+    container,
     'mysql',
-    '-uroot',
-    '-prootpassword',
+    `-u${decodeURIComponent(target.username)}`,
     'ilsangkit_affiliate_test',
+    ...(delimiter ? ['--delimiter=//'] : []),
     '-e',
     sql,
-  ]);
+  ], { env: { ...process.env, MYSQL_PWD: decodeURIComponent(target.password) } });
+}
+
+async function mysqlExecute(sql: string): Promise<void> {
+  await runAffiliateMysql(sql);
 }
 
 async function mysqlExecuteWithDelimiter(sql: string): Promise<void> {
-  await execFileAsync('docker', [
-    'exec',
-    'ilsangkit-mysql',
-    'mysql',
-    '-uroot',
-    '-prootpassword',
-    'ilsangkit_affiliate_test',
-    '--delimiter=//',
-    '-e',
-    sql,
-  ]);
+  await runAffiliateMysql(sql, true);
 }
 
 async function waitForObservedAssetLockEntries(assetId: string, expectedCount: number): Promise<number> {
@@ -458,6 +550,11 @@ beforeAll(async () => {
     readFile(new URL('../fixtures/affiliate-banner.gif', import.meta.url)),
   ]);
   app = await importApp();
+  await snapshotOriginalProviderDisclosures();
+});
+
+beforeEach(async () => {
+  await resetProviderDisclosuresForTest();
 });
 
 afterEach(async () => {
@@ -504,6 +601,13 @@ describe('affiliate banner real API and storage integration', () => {
     const readRes = await request(app).get(`/api/admin/affiliate-banners/${bannerId}`);
     expect(readRes.status).toBe(200);
     expect(readRes.body.data.targetUrl).toBe('https://example.com/go?a=%2B&a=2+b');
+    expect(readRes.body.data).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    });
+
+    await saveDefaultDisclosure('coupang', '통합 테스트 기본 문구');
 
     const enableRes = await request(app)
       .patch(`/api/admin/affiliate-banners/${bannerId}/status`)
@@ -511,6 +615,11 @@ describe('affiliate banner real API and storage integration', () => {
       .send({ isEnabled: true });
     expect(enableRes.status).toBe(200);
     expect(enableRes.body.data.isEnabled).toBe(true);
+    expect(enableRes.body.data).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: '통합 테스트 기본 문구',
+      disclosureSource: 'provider',
+    });
 
     const second = await postUpload(webpBytes);
     const replaceRes = await request(app)
@@ -548,14 +657,20 @@ describe('affiliate banner real API and storage integration', () => {
 
     const transactionalFault = await postUpload(pngBytes);
     await installAssetUpdateFailureTrigger(transactionalFault.imageAssetId);
-    const transactionalFailure = await request(app)
-      .patch(`/api/admin/affiliate-banners/${bannerId}`)
-      .set('Origin', ORIGIN)
-      .send({
-        imageSourceType: 'upload',
-        imageAssetId: transactionalFault.imageAssetId,
-        externalImageUrl: null,
-      });
+    const expectedRollbackLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let transactionalFailure: { status: number };
+    try {
+      transactionalFailure = await request(app)
+        .patch(`/api/admin/affiliate-banners/${bannerId}`)
+        .set('Origin', ORIGIN)
+        .send({
+          imageSourceType: 'upload',
+          imageAssetId: transactionalFault.imageAssetId,
+          externalImageUrl: null,
+        });
+    } finally {
+      expectedRollbackLog.mockRestore();
+    }
     expect(transactionalFailure.status).toBe(500);
 
     const afterTransactionalRollback = await prisma.affiliateBanner.findUnique({ where: { id: bannerId } });
@@ -571,11 +686,410 @@ describe('affiliate banner real API and storage integration', () => {
     const restartedRead = await request(restartedApp).get(`/api/admin/affiliate-banners/${bannerId}`);
     expect(restartedRead.status).toBe(200);
     expect(restartedRead.body.data.imageAssetId).toBe(second.imageAssetId);
+    expect(restartedRead.body.data).toMatchObject({
+      disclosureText: '통합 테스트 기본 문구',
+      disclosureSource: 'provider',
+    });
 
     const staticReplacement = await request(restartedApp).get(second.imageUrl);
     expect(staticReplacement.status).toBe(200);
     expect(Buffer.compare(staticReplacement.body, webpBytes)).toBe(0);
     app = restartedApp;
+  });
+
+  it('keeps legacy enabled flags but requires disclosure before further edits', async () => {
+    const bannerId = await insertExternalBanner();
+    await prisma.affiliateBanner.update({
+      where: { id: bannerId },
+      data: { isEnabled: true },
+    });
+    const before = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } });
+
+    const read = await request(app).get(`/api/admin/affiliate-banners/${bannerId}`);
+    expect(read.status).toBe(200);
+    expect(read.body.data).toMatchObject({
+      isEnabled: true,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    });
+
+    const rejected = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({ name: '변경 거부 대상' });
+    expect(rejected.status).toBe(422);
+    expect((await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } })).name).toBe(before.name);
+
+    await saveDefaultDisclosure('coupang', '테스트 기본 문구');
+
+    const reread = await request(app).get(`/api/admin/affiliate-banners/${bannerId}`);
+    expect(reread.status).toBe(200);
+    expect(reread.body.data).toMatchObject({
+      disclosureText: '테스트 기본 문구',
+      disclosureSource: 'provider',
+    });
+    expect(reread.body.data.updatedAt).toBe(before.updatedAt.toISOString());
+  });
+
+  it('rejects enabled image replacement that removes its only disclosure without mutating banner or asset state', async () => {
+    const oldAsset = await insertReadyAsset();
+    const newAsset = await insertReadyAsset(webpBytes);
+    await prisma.affiliateBannerAsset.update({
+      where: { id: oldAsset.id },
+      data: { unlinkedAt: null },
+    });
+    const bannerId = uuid();
+    trackBanner(bannerId);
+    await prisma.affiliateBanner.create({
+      data: {
+        id: bannerId,
+        provider: 'coupang',
+        name: 'enabled atomic rejection',
+        imageSourceType: 'upload',
+        imageAssetId: oldAsset.id,
+        externalImageUrl: null,
+        targetUrl: 'https://example.com/enabled-atomic',
+        altText: 'enabled atomic rejection',
+        disclosureOverride: '기존 개별 문구',
+        isEnabled: true,
+      },
+    });
+
+    const beforeBanner = await prisma.affiliateBanner.findUniqueOrThrow({
+      where: { id: bannerId },
+      select: {
+        id: true,
+        provider: true,
+        name: true,
+        imageSourceType: true,
+        imageAssetId: true,
+        externalImageUrl: true,
+        targetUrl: true,
+        altText: true,
+        disclosureOverride: true,
+        isEnabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    const beforeOldAsset = await prisma.affiliateBannerAsset.findUniqueOrThrow({
+      where: { id: oldAsset.id },
+      select: { id: true, storageKey: true, status: true, unlinkedAt: true, createdAt: true, updatedAt: true },
+    });
+    const beforeNewAsset = await prisma.affiliateBannerAsset.findUniqueOrThrow({
+      where: { id: newAsset.id },
+      select: { id: true, storageKey: true, status: true, unlinkedAt: true, createdAt: true, updatedAt: true },
+    });
+
+    const rejected = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({
+        imageSourceType: 'upload',
+        imageAssetId: newAsset.id,
+        externalImageUrl: null,
+        disclosureOverride: null,
+      });
+    expect(rejected.status).toBe(422);
+
+    await expect(prisma.affiliateBanner.findUniqueOrThrow({
+      where: { id: bannerId },
+      select: {
+        id: true,
+        provider: true,
+        name: true,
+        imageSourceType: true,
+        imageAssetId: true,
+        externalImageUrl: true,
+        targetUrl: true,
+        altText: true,
+        disclosureOverride: true,
+        isEnabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })).resolves.toEqual(beforeBanner);
+    await expect(prisma.affiliateBannerAsset.findUniqueOrThrow({
+      where: { id: oldAsset.id },
+      select: { id: true, storageKey: true, status: true, unlinkedAt: true, createdAt: true, updatedAt: true },
+    })).resolves.toEqual(beforeOldAsset);
+    await expect(prisma.affiliateBannerAsset.findUniqueOrThrow({
+      where: { id: newAsset.id },
+      select: { id: true, storageKey: true, status: true, unlinkedAt: true, createdAt: true, updatedAt: true },
+    })).resolves.toEqual(beforeNewAsset);
+  });
+
+  it('restores provider rows even when fixture cleanup fails', async () => {
+    await saveDefaultDisclosure('coupang', '복구되어야 할 임시 문구');
+    const primaryError = new Error('forced cleanup failure');
+
+    await expect(cleanupOwnedFixtures(async () => {
+      throw primaryError;
+    })).rejects.toBe(primaryError);
+
+    const restored = await prisma.affiliateProviderDisclosure.findMany({
+      where: { provider: { in: [...affiliateProviders] } },
+      select: { provider: true, defaultDisclosureText: true, updatedAt: true },
+    }) as Array<{ provider: AffiliateProvider; defaultDisclosureText: string; updatedAt: Date }>;
+    const restoredByProvider = new Map(restored.map((row) => [row.provider, row]));
+    for (const provider of affiliateProviders) {
+      const snapshot = providerDisclosureSnapshot.get(provider) ?? null;
+      const row = restoredByProvider.get(provider);
+      if (!snapshot) {
+        expect(row).toBeUndefined();
+      } else {
+        expect(row).toMatchObject({
+          provider,
+          defaultDisclosureText: snapshot.defaultDisclosureText,
+          updatedAt: snapshot.updatedAt,
+        });
+      }
+    }
+  });
+
+  it('creates, lists, updates status, and preserves raw disclosure text as DTO fields', async () => {
+    await saveDefaultDisclosure('ali', '  <b>알리 기본</b>\r\n둘째 줄  ');
+
+    const inherited = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'ali',
+        name: 'provider inherited disclosure',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/provider.png',
+        targetUrl: 'https://example.com/provider',
+        altText: 'provider inherited disclosure',
+      });
+    expect(inherited.status).toBe(201);
+    const inheritedId = String(inherited.body.data.id);
+    trackBanner(inheritedId);
+    expect(inherited.body.data).toMatchObject({
+      disclosureOverride: null,
+      disclosureText: '<b>알리 기본</b>\n둘째 줄',
+      disclosureSource: 'provider',
+    });
+
+    const overridden = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'ali',
+        name: 'banner override disclosure',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/override.png',
+        targetUrl: 'https://example.com/override',
+        altText: 'banner override disclosure',
+        disclosureOverride: '  <i>개별 문구</i>\r\n둘째 줄  ',
+      });
+    expect(overridden.status).toBe(201);
+    const overriddenId = String(overridden.body.data.id);
+    trackBanner(overriddenId);
+    expect(overridden.body.data).toMatchObject({
+      disclosureOverride: '<i>개별 문구</i>\n둘째 줄',
+      disclosureText: '<i>개별 문구</i>\n둘째 줄',
+      disclosureSource: 'banner',
+    });
+
+    const list = await request(app).get('/api/admin/affiliate-banners?provider=ali&page=1&limit=10');
+    expect(list.status).toBe(200);
+    expect(list.body.data.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: inheritedId,
+        disclosureText: '<b>알리 기본</b>\n둘째 줄',
+        disclosureSource: 'provider',
+      }),
+      expect.objectContaining({
+        id: overriddenId,
+        disclosureText: '<i>개별 문구</i>\n둘째 줄',
+        disclosureSource: 'banner',
+      }),
+    ]));
+
+    const enabled = await request(app)
+      .patch(`/api/admin/affiliate-banners/${inheritedId}/status`)
+      .set('Origin', ORIGIN)
+      .send({ isEnabled: true });
+    expect(enabled.status).toBe(200);
+    expect(enabled.body.data).toMatchObject({
+      isEnabled: true,
+      disclosureText: '<b>알리 기본</b>\n둘째 줄',
+      disclosureSource: 'provider',
+    });
+
+    const disabledWithoutDisclosure = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'toss',
+        name: 'inactive missing disclosure',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/missing.png',
+        targetUrl: 'https://example.com/missing',
+        altText: 'inactive missing disclosure',
+      });
+    expect(disabledWithoutDisclosure.status).toBe(201);
+    const missingId = String(disabledWithoutDisclosure.body.data.id);
+    trackBanner(missingId);
+    expect(disabledWithoutDisclosure.body.data).toMatchObject({
+      isEnabled: false,
+      disclosureText: null,
+      disclosureSource: 'missing',
+    });
+
+    const rejectedEnable = await request(app)
+      .patch(`/api/admin/affiliate-banners/${missingId}/status`)
+      .set('Origin', ORIGIN)
+      .send({ isEnabled: true });
+    expect(rejectedEnable.status).toBe(422);
+    expect((await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: missingId } })).isEnabled).toBe(false);
+  });
+
+  it('resets an omitted override only when provider changes and keeps explicit overrides', async () => {
+    await saveDefaultDisclosure('coupang', '쿠팡 기본 문구');
+    await saveDefaultDisclosure('ali', '알리 기본 문구');
+
+    const created = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        name: 'provider change source',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/change-source.png',
+        targetUrl: 'https://example.com/change-source',
+        altText: 'provider change source',
+        disclosureOverride: '쿠팡 개별 문구',
+      });
+    expect(created.status).toBe(201);
+    const bannerId = String(created.body.data.id);
+    trackBanner(bannerId);
+
+    const sameProvider = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({ name: 'same provider keeps override' });
+    expect(sameProvider.status).toBe(200);
+    expect(sameProvider.body.data).toMatchObject({
+      provider: 'coupang',
+      name: 'same provider keeps override',
+      disclosureOverride: '쿠팡 개별 문구',
+      disclosureText: '쿠팡 개별 문구',
+      disclosureSource: 'banner',
+    });
+
+    const changedProvider = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({ provider: 'ali' });
+    expect(changedProvider.status).toBe(200);
+    expect(changedProvider.body.data).toMatchObject({
+      provider: 'ali',
+      disclosureOverride: null,
+      disclosureText: '알리 기본 문구',
+      disclosureSource: 'provider',
+    });
+
+    const explicitOverride = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        disclosureOverride: '새 쿠팡 개별 문구',
+      });
+    expect(explicitOverride.status).toBe(200);
+    expect(explicitOverride.body.data).toMatchObject({
+      provider: 'coupang',
+      disclosureOverride: '새 쿠팡 개별 문구',
+      disclosureText: '새 쿠팡 개별 문구',
+      disclosureSource: 'banner',
+    });
+  });
+
+  it('updates provider defaults without touching inherited banner timestamps or banner overrides', async () => {
+    await saveDefaultDisclosure('coupang', '첫 기본 문구');
+
+    const first = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        name: 'first inherited banner',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/inherited-a.png',
+        targetUrl: 'https://example.com/inherited-a',
+        altText: 'first inherited banner',
+      });
+    expect(first.status).toBe(201);
+    const firstId = String(first.body.data.id);
+    trackBanner(firstId);
+
+    const second = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        name: 'second inherited banner',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/inherited-b.png',
+        targetUrl: 'https://example.com/inherited-b',
+        altText: 'second inherited banner',
+      });
+    expect(second.status).toBe(201);
+    const secondId = String(second.body.data.id);
+    trackBanner(secondId);
+
+    const exception = await request(app)
+      .post('/api/admin/affiliate-banners')
+      .set('Origin', ORIGIN)
+      .send({
+        provider: 'coupang',
+        name: 'override banner',
+        imageSourceType: 'url',
+        imageAssetId: null,
+        externalImageUrl: 'https://images.example.com/override-default.png',
+        targetUrl: 'https://example.com/override-default',
+        altText: 'override banner',
+        disclosureOverride: '개별 예외 문구',
+      });
+    expect(exception.status).toBe(201);
+    const exceptionId = String(exception.body.data.id);
+    trackBanner(exceptionId);
+
+    const beforeFirst = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: firstId } });
+    const beforeSecond = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: secondId } });
+    const beforeException = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: exceptionId } });
+
+    await saveDefaultDisclosure('coupang', '바뀐 기본 문구');
+
+    const list = await request(app).get('/api/admin/affiliate-banners?provider=coupang&page=1&limit=10');
+    expect(list.status).toBe(200);
+    expect(list.body.data.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: firstId,
+        disclosureText: '바뀐 기본 문구',
+        disclosureSource: 'provider',
+        updatedAt: beforeFirst.updatedAt.toISOString(),
+      }),
+      expect.objectContaining({
+        id: secondId,
+        disclosureText: '바뀐 기본 문구',
+        disclosureSource: 'provider',
+        updatedAt: beforeSecond.updatedAt.toISOString(),
+      }),
+      expect.objectContaining({
+        id: exceptionId,
+        disclosureText: '개별 예외 문구',
+        disclosureSource: 'banner',
+        updatedAt: beforeException.updatedAt.toISOString(),
+      }),
+    ]));
   });
 });
 
