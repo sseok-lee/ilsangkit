@@ -254,6 +254,7 @@
         </dl>
       </SectionBlock>
 
+      <AffiliateBanner class="order-12" />
 
       <!-- T6: 데이터 출처 (멀티루트 컴포넌트 → wrapper div에 order 부여) -->
       <div class="order-12 md:order-12">

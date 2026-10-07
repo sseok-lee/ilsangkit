@@ -6,11 +6,11 @@ import { describe, expect, it } from 'vitest'
 
 // These are the approved revenue slots, including conditionally rendered slots.
 // Adding affiliate inventory must never remove existing AdSense inventory.
-const pages: [string, number][] = [
+const pages: [string, number, number?][] = [
   ['pages/[category]/[id].vue', 4],
   ['pages/subway/[slug].vue', 2],
-  ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', 4],
-  ['pages/real-estate/land/[city]/[district]/[dong].vue', 3],
+  ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', 4, 2],
+  ['pages/real-estate/land/[city]/[district]/[dong].vue', 3, 2],
   ['pages/subscription/[id].vue', 4],
   ['pages/auction/item/[cltrMngNo].vue', 4],
   ['pages/index.vue', 2],
@@ -61,10 +61,10 @@ function attribute(node: ElementNode, name: string) {
 }
 
 describe('approved mobile affiliate placement inventory', () => {
-  it.each(pages)('%s adds one affiliate slot and preserves %i AdSense slots', (file, adsenseCount) => {
+  it.each(pages)('%s keeps approved affiliate slots and preserves %i AdSense slots', (file, adsenseCount, affiliateCount = 1) => {
     const nodes = elements(file)
     expect(nodes.filter(node => node.tag === 'AdBanner')).toHaveLength(adsenseCount)
-    expect(nodes.filter(node => node.tag === 'AffiliateBanner')).toHaveLength(1)
+    expect(nodes.filter(node => node.tag === 'AffiliateBanner')).toHaveLength(affiliateCount)
   })
 
   it.each([
@@ -91,11 +91,14 @@ describe('approved mobile affiliate placement inventory', () => {
   })
 
   it.each([
-    ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', 'order-10'],
-    ['pages/real-estate/land/[city]/[district]/[dong].vue', 'order-6'],
-    ['pages/subscription/[id].vue', 'order-8'],
-  ])('%s places the additional slot in the approved mobile flex order', (file, order) => {
-    const affiliate = elements(file).find(node => node.tag === 'AffiliateBanner')
-    expect(affiliate && attribute(affiliate, 'class')?.split(/\s+/)).toContain(order)
+    ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', ['order-10', 'order-12']],
+    ['pages/real-estate/land/[city]/[district]/[dong].vue', ['order-6', 'order-12']],
+    ['pages/subscription/[id].vue', ['order-8']],
+  ] as const)('%s places affiliate slots in the approved mobile flex order', (file, orders) => {
+    const affiliates = elements(file).filter(node => node.tag === 'AffiliateBanner')
+    expect(affiliates).toHaveLength(orders.length)
+    orders.forEach((order, index) => {
+      expect(attribute(affiliates[index], 'class')?.split(/\s+/)).toContain(order)
+    })
   })
 })
