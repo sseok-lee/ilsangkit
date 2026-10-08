@@ -14,6 +14,11 @@ const banner = {
 }
 const fixtureImage = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240"><rect width="640" height="240" fill="#e0f2fe"/><text x="320" y="130" text-anchor="middle" font-size="30" fill="#075985">AFFILIATE TEST BANNER</text></svg>'
 
+interface BannerTiming {
+  expiresAt: string | null
+  serverTime: string
+}
+
 async function hydrated(page: Page) {
   await page.waitForFunction(() => {
     const root = document.querySelector('#__nuxt') as Element & { __vue_app__?: { config: { globalProperties: { $nuxt?: { isHydrating: boolean } } } } }
@@ -21,7 +26,12 @@ async function hydrated(page: Page) {
   })
 }
 
-async function installBanner(page: Page, mode: 'ready' | 'empty' | 'error' | 'broken-image' = 'ready', imageUrl = banner.imageUrl) {
+async function installBanner(
+  page: Page,
+  mode: 'ready' | 'empty' | 'error' | 'broken-image' = 'ready',
+  imageUrl = banner.imageUrl,
+  timing: BannerTiming = { expiresAt: null, serverTime: '2026-10-15T14:59:59.000Z' },
+) {
   let requests = 0
   await page.route('**/api/affiliate-banners/random', async route => {
     requests += 1
@@ -29,8 +39,8 @@ async function installBanner(page: Page, mode: 'ready' | 'empty' | 'error' | 'br
       status: mode === 'error' ? 503 : 200,
       json: {
         success: mode !== 'error',
-        data: mode === 'empty' ? null : { ...banner, imageUrl },
-        serverTime: '2026-10-15T14:59:59.000Z',
+        data: mode === 'empty' ? null : { ...banner, imageUrl, expiresAt: timing.expiresAt },
+        serverTime: timing.serverTime,
       },
       headers: { 'cache-control': 'no-store' },
     })
@@ -41,6 +51,13 @@ async function installBanner(page: Page, mode: 'ready' | 'empty' | 'error' | 'br
     body: mode === 'broken-image' ? '' : fixtureImage,
   }))
   return () => requests
+}
+
+async function setDocumentVisibility(page: Page, visibilityState: 'hidden' | 'visible') {
+  await page.evaluate((state) => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }, visibilityState)
 }
 
 async function expectBanner(page: Page, expectedCount = 1) {
@@ -231,4 +248,85 @@ test('excluded and failed pages make no affiliate request', async ({ page }) => 
     await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
     expect(requests(), path).toBe(0)
   }
+})
+
+test('expires an open mobile banner without a new random request', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.install({ time: new Date('2026-10-15T14:59:00.000Z') })
+  const countRequests = await installBanner(page, 'ready', banner.imageUrl, {
+    expiresAt: '2026-10-15T15:00:00.000Z',
+    serverTime: '2026-10-15T14:59:00.000Z',
+  })
+  await page.goto(hospital)
+  await hydrated(page)
+  await expectBanner(page)
+  const requestsBeforeExpiry = countRequests()
+  await page.clock.fastForward(61_000)
+  await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-link')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-disclosure')).toHaveCount(0)
+  expect(countRequests()).toBe(requestsBeforeExpiry)
+})
+
+test('hides an initially expired mobile banner response', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const countRequests = await installBanner(page, 'ready', banner.imageUrl, {
+    expiresAt: '2026-10-15T15:00:00.000Z',
+    serverTime: '2026-10-15T15:00:00.000Z',
+  })
+  await page.goto(hospital)
+  await hydrated(page)
+  await expect.poll(countRequests).toBeGreaterThan(0)
+  await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-link')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-disclosure')).toHaveCount(0)
+})
+
+test('expires both detail page mobile affiliate slots together without re-querying', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.install({ time: new Date('2026-10-15T14:59:00.000Z') })
+  const countRequests = await installBanner(page, 'ready', banner.imageUrl, {
+    expiresAt: '2026-10-15T15:00:00.000Z',
+    serverTime: '2026-10-15T14:59:00.000Z',
+  })
+  await page.goto('/real-estate/apt-sale/seoul/gangnam/회복아파트')
+  await hydrated(page)
+  await expectBanner(page, 2)
+  const requestsBeforeExpiry = countRequests()
+  await page.clock.fastForward(61_000)
+  await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-link')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-disclosure')).toHaveCount(0)
+  expect(countRequests()).toBe(requestsBeforeExpiry)
+})
+
+test('keeps the banner hidden when the resume reload fails', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  let requests = 0
+  await page.route('**/api/affiliate-banners/random', async route => {
+    requests += 1
+    await route.fulfill({
+      status: requests === 1 ? 200 : 503,
+      json: requests === 1
+        ? { success: true, data: { ...banner, expiresAt: null }, serverTime: '2026-10-15T14:59:59.000Z' }
+        : { success: false, data: null, serverTime: '2026-10-15T15:00:10.000Z' },
+      headers: { 'cache-control': 'no-store' },
+    })
+  })
+  await page.route(`**${banner.imageUrl}`, route => route.fulfill({
+    status: 200,
+    contentType: 'image/svg+xml',
+    body: fixtureImage,
+  }))
+
+  await page.goto(hospital)
+  await hydrated(page)
+  await expectBanner(page)
+  await setDocumentVisibility(page, 'hidden')
+  await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+  await setDocumentVisibility(page, 'visible')
+  await expect.poll(() => requests).toBe(2)
+  await expect(page.getByTestId('affiliate-banner')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-link')).toHaveCount(0)
+  await expect(page.getByTestId('affiliate-disclosure')).toHaveCount(0)
 })

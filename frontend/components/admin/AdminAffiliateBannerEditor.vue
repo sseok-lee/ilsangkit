@@ -346,6 +346,7 @@ const providers: Record<AffiliateProvider, string> = {
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const maxUploadBytes = 2 * 1024 * 1024
+const expiredEnabledWarningMessage = '종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다.'
 const api = useAdminAffiliateBanners()
 
 const draft = reactive<AffiliateBannerDraft>(emptyDraft())
@@ -439,7 +440,7 @@ watch(
     assignDraft(banner ? fromBanner(banner) : emptyDraft())
     snapshot.value = canonicalDraft.value
     altTextEdited.value = Boolean(banner?.altText)
-    message.value = ''
+    message.value = banner?.isEnabled && banner.isExpired ? expiredEnabledWarningMessage : ''
     setPreviewFromImage(banner?.imageUrl ?? null)
     emit('dirty-change', false)
   },
@@ -814,7 +815,7 @@ async function changeStatus(isEnabled: boolean) {
     assignDraft(fromBanner(dto))
     snapshot.value = canonicalDraft.value
     if (isEnabled && dto.isExpired) {
-      message.value = '종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다.'
+      message.value = expiredEnabledWarningMessage
     }
     emit('saved', dto)
     emit('dirty-change', false)

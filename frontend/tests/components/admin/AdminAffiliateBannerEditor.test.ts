@@ -170,8 +170,9 @@ describe('AdminAffiliateBannerEditor', () => {
     expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2020-01-01')
   })
 
-  it('warns when enabling a saved expired banner without changing the stored expired state', async () => {
-    api.setStatus.mockResolvedValueOnce(banner({ endDate: '2020-01-01', isExpired: true, isEnabled: true }))
+  it('keeps the expired enable warning after the parent refreshes the saved banner prop', async () => {
+    const refreshed = banner({ endDate: '2020-01-01', isExpired: true, isEnabled: true })
+    api.setStatus.mockResolvedValueOnce(refreshed)
     const wrapper = mount(AdminAffiliateBannerEditor, {
       props: {
         banner: banner({ endDate: '2020-01-01', isExpired: true, isEnabled: false }),
@@ -183,9 +184,11 @@ describe('AdminAffiliateBannerEditor', () => {
     await wrapper.get('[data-testid="preview-image"]').trigger('load')
     await wrapper.get('[data-testid="status-enable"]').trigger('click')
     await flush()
+    await wrapper.setProps({ banner: refreshed })
+    await flush()
 
     expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
-    expect(wrapper.text()).toContain('종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다')
+    expect(wrapper.get('[data-testid="editor-message"]').text()).toBe('종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다.')
   })
   it('clears an old provider override in the draft and restores it on cancel', async () => {
     const wrapper = mount(AdminAffiliateBannerEditor, {
