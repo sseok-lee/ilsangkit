@@ -137,7 +137,6 @@ export async function createBackup({ context, runtime = {}, tables = [], kind })
       files,
       checksums,
       tables: requestedTables,
-      context: { ...context, envPath: undefined, expectedDb: context?.expectedDb },
     }
   } catch (error) {
     throw sanitizeError(error)

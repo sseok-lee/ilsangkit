@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { createMysqlFixture } from './fixtures/db-mysql.mjs'
-import { buildEvidence, createDbRuntime, readDbSnapshot, verifySchema } from './db-schema.mjs'
+import { buildEvidence, compareStructure, createDbRuntime, readDbSnapshot, verifySchema } from './db-schema.mjs'
 
 test('readDbSnapshot captures ngram parsers, checks, and unknown inventory', async (t) => {
   const db = await createMysqlFixture(t, 'schema-snapshot')
@@ -36,6 +37,41 @@ test('readDbSnapshot captures ngram parsers, checks, and unknown inventory', asy
   assert.deepEqual(snapshot.structure.inventory.views, [{ name: 'ChildThingNames' }])
 })
 
+
+test('dump and restore equivalent show create charset formatting does not drift but real collation changes do', async (t) => {
+  const source = await createMysqlFixture(t, 'charset-source')
+  const restored = await createMysqlFixture(t, 'charset-restore')
+  await source.exec(`
+    CREATE TABLE CharsetThing (
+      id INT NOT NULL,
+      name VARCHAR(191) COLLATE utf8mb4_unicode_ci NULL,
+      PRIMARY KEY (id)
+    ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  `)
+  const dump = runMysqlTool('mysqldump', source.url, ['--skip-comments', '--no-tablespaces', databaseName(source.url), 'CharsetThing'])
+  assert.equal(dump.status, 0, dump.stderr)
+  const restore = runMysqlTool('mysql', restored.url, [databaseName(restored.url)], { input: dump.stdout })
+  assert.equal(restore.status, 0, restore.stderr)
+
+  const sourceRuntime = createDbRuntime({ backendDir: source.backendDir, databaseUrl: source.url })
+  const restoredRuntime = createDbRuntime({ backendDir: restored.backendDir, databaseUrl: restored.url })
+  const sourceSnapshot = await readDbSnapshot(sourceRuntime)
+  const restoredSnapshot = await readDbSnapshot(restoredRuntime)
+
+  assert.equal(compareStructure(sourceSnapshot.structure, restoredSnapshot.structure).equal, true)
+  assert.deepEqual(
+    sourceSnapshot.structure.columns.map((column) => ({ name: column.name, characterSet: column.characterSet, collation: column.collation })),
+    restoredSnapshot.structure.columns.map((column) => ({ name: column.name, characterSet: column.characterSet, collation: column.collation })),
+  )
+
+  await restored.exec('ALTER TABLE CharsetThing MODIFY name VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL')
+  const driftSnapshot = await readDbSnapshot(restoredRuntime)
+  assert.equal(compareStructure(sourceSnapshot.structure, driftSnapshot.structure).equal, false)
+
+  await sourceRuntime.close()
+  await restoredRuntime.close()
+})
+
 test('verifySchema compares actual structure against generated evidence and fails on drift', async (t) => {
   const db = await createMysqlFixture(t, 'schema-verify')
   await db.prisma(['migrate', 'deploy'])
@@ -55,7 +91,6 @@ test('verifySchema compares actual structure against generated evidence and fail
   )
   await runtime.close()
 })
-
 
 
 test('verifySchema rejects datamodel drift even when supplied structure matches the live database', async (t) => {
@@ -125,3 +160,26 @@ test('buildEvidence writes prefix artifacts and rejects product schema drift wit
     /PRISMA_DIFF/,
   )
 })
+
+function databaseName(url) {
+  return decodeURIComponent(new URL(url).pathname.slice(1))
+}
+
+function runMysqlTool(command, url, args, options = {}) {
+  const parsed = new URL(url)
+  return spawnSync(command, [
+    '--protocol=TCP',
+    `--host=${parsed.hostname}`,
+    `--port=${parsed.port || '3306'}`,
+    `--user=${decodeURIComponent(parsed.username)}`,
+    '--default-character-set=utf8mb4',
+    ...args,
+  ], {
+    input: options.input,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      MYSQL_PWD: decodeURIComponent(parsed.password),
+    },
+  })
+}

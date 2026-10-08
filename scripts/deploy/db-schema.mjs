@@ -738,7 +738,24 @@ async function readMysqlMetadata(runtime, structure) {
 }
 
 function normalizeStructure(value) {
-  return normalizeOrdered(stripDynamic(value), null)
+  return normalizeOrdered(normalizeCreateTableEntries(stripDynamic(value)), null)
+}
+
+function normalizeCreateTableEntries(value) {
+  if (Array.isArray(value)) return value.map(normalizeCreateTableEntries)
+  if (!value || typeof value !== 'object') return value
+  const result = {}
+  for (const [key, child] of Object.entries(value)) {
+    if (key === 'createTables' && Array.isArray(child)) {
+      result[key] = child.map((entry) => ({
+        ...entry,
+        sql: typeof entry?.sql === 'string' ? normalizeCreateTableSql(entry.sql) : entry?.sql,
+      }))
+    } else {
+      result[key] = normalizeCreateTableEntries(child)
+    }
+  }
+  return result
 }
 
 function stripDynamic(value) {
@@ -965,7 +982,19 @@ function normalizeRepoPath(filePath) {
 }
 
 function normalizeCreateTableSql(sql) {
-  return sql.replace(/\s+AUTO_INCREMENT=\d+/ig, '')
+  return sql
+    .replace(/\s+AUTO_INCREMENT=\d+/ig, '')
+    .replace(/\s+CHARACTER\s+SET\s+([A-Za-z0-9_]+)(\s+COLLATE\s+([A-Za-z0-9_]+))/ig, (match, charset, collateClause, collation) => {
+      return charset.toLowerCase() === charsetFromCollation(collation)
+        ? collateClause
+        : match
+    })
+}
+
+function charsetFromCollation(collation) {
+  const value = String(collation).toLowerCase()
+  const firstUnderscore = value.indexOf('_')
+  return firstUnderscore === -1 ? value : value.slice(0, firstUnderscore)
 }
 
 function showCreateSql(row) {

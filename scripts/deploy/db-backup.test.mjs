@@ -97,7 +97,7 @@ test('createBackup can read DATABASE_URL from a dotenv file without putting secr
 test('createBackup returned backup object does not serialize source credentials', async () => {
   const stateRoot = await mkdtemp(join(tmpdir(), 'db-backup-secret-return-'))
   const backup = await createBackup({
-    context: { stateRoot, sha: 'abc123', runId: '7', runAttempt: '1' },
+    context: { stateRoot, sha: 'abc123', runId: '7', runAttempt: '1', databaseUrl: 'mysql://root:secret-canary@127.0.0.1:13317/example' },
     runtime: fakeRuntime({ databaseUrl: 'mysql://root:secret-canary@127.0.0.1:13317/example' }),
     tables: [],
     kind: 'migration',

@@ -45,6 +45,34 @@ test('structural equality ignores dynamic table counters but keeps meaningful co
   assert.doesNotMatch(comparison.differences.join('\n'), /autoIncrement/)
 })
 
+
+test('create table normalization treats redundant charset before equivalent collation as formatting', () => {
+  const expected = {
+    createTables: [{
+      table: 'CharsetThing',
+      sql: 'CREATE TABLE `CharsetThing` (\n  `name` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    }],
+    columns: [{ table: 'CharsetThing', name: 'name', characterSet: 'utf8mb4', collation: 'utf8mb4_unicode_ci' }],
+  }
+  const actualEquivalent = {
+    createTables: [{
+      table: 'CharsetThing',
+      sql: 'CREATE TABLE `CharsetThing` (\n  `name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    }],
+    columns: [{ table: 'CharsetThing', name: 'name', characterSet: 'utf8mb4', collation: 'utf8mb4_unicode_ci' }],
+  }
+  const actualDrift = {
+    createTables: [{
+      table: 'CharsetThing',
+      sql: 'CREATE TABLE `CharsetThing` (\n  `name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    }],
+    columns: [{ table: 'CharsetThing', name: 'name', characterSet: 'utf8mb4', collation: 'utf8mb4_bin' }],
+  }
+
+  assert.equal(compareStructure(expected, actualEquivalent).equal, true)
+  assert.equal(compareStructure(expected, actualDrift).equal, false)
+})
+
 test('unknown inventory objects are structural differences unless explicitly equal', () => {
   const comparison = compareStructure(
     { inventory: { views: [], triggers: [], routines: [], events: [] } },
@@ -113,7 +141,6 @@ test('evidence manifest validation rejects mismatched run identity and checksum 
     /EVIDENCE_SCHEMA_CHECKSUM/,
   )
 })
-
 
 
 
@@ -305,7 +332,6 @@ process.stdout.write(JSON.stringify({
   })
   assert.doesNotMatch(readFileSync(logPath, 'utf8'), /secret/)
 })
-
 
 
 test('runPrisma hard-kills process group after timeout when child ignores SIGTERM', async () => {
@@ -538,7 +564,6 @@ CREATE TABLE Two (id INT NULL);
 })
 
 
-
 test('manifest compatibility requirements can be rebound to actual prisma migration files', () => {
   const root = mkdtempSync(join(tmpdir(), 'db-evidence-prisma-bind-'))
   const prismaDir = join(root, 'prisma')
@@ -594,7 +619,6 @@ test('manifest compatibility requirements can be rebound to actual prisma migrat
     /EVIDENCE_COMPATIBILITY/,
   )
 })
-
 
 
 test('manifest verification derives frozen prefix from actual migration contract and rejects inflation', () => {
@@ -772,7 +796,6 @@ test('introspection output fails closed on unsupported fields and warnings', () 
     /PRISMA_PULL_WARNING/,
   )
 })
-
 
 test('future migration evidence does not require frozen-release preparation records', () => {
   const prismaDir = mkdtempSync(join(tmpdir(), 'db-evidence-future-prep-'))
