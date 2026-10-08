@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import { assertTestRun, evidenceArtifactName } from './db-workflow.mjs'
@@ -64,4 +66,29 @@ test('initial active app checkpoint follows successful reconcile and binds local
   assert.match(source, /127\.0\.0\.1:8000\/api\/internal\/release-readiness/)
   assert.match(source, /https:\/\/ilsangkit\.co\.kr\/api\/health/)
   assert.match(source, /init-active "\$DB_STATE_ROOT" "\$TESTED_SHA"/)
+})
+
+
+test('migration job initializes runner paths at step runtime and exports them to later steps', () => {
+  const parsed = spawnSync('python3', ['-c', 'import json,yaml; print(json.dumps(yaml.safe_load(open(".github/workflows/test.yml"))["jobs"]["test-migrations"]))'], { encoding: 'utf8' })
+  assert.equal(parsed.status, 0, parsed.stderr)
+  const job = JSON.parse(parsed.stdout)
+  assert.doesNotMatch(JSON.stringify(job.env), /\$\{\{\s*runner\./, 'runner context is unavailable in job-level env')
+  const initialize = job.steps.find(step => step.name === 'Initialize migration evidence paths')
+  assert.ok(initialize?.run)
+  const dir = mkdtempSync(join(tmpdir(), 'migration-runner-env-'))
+  try {
+    const envFile = join(dir, 'github-env')
+    const result = spawnSync('bash', ['-euo', 'pipefail', '-c', initialize.run], {
+      encoding: 'utf8', env: { PATH: process.env.PATH, RUNNER_TEMP: dir, GITHUB_ENV: envFile },
+    })
+    assert.equal(result.status, 0, result.stderr)
+    const exported = Object.fromEntries(readFileSync(envFile, 'utf8').trim().split('\n').map(line => line.split('=')))
+    assert.deepEqual(exported, {
+      MIGRATION_EVIDENCE_DIR: join(dir, 'db-evidence'),
+      MIGRATION_COMPAT_WORK_DIR: join(dir, 'db-compatibility'),
+      COMPATIBILITY_EVIDENCE_FILE: join(dir, 'db-compatibility/compatibility-evidence.json'),
+      PREPARATION_COMPATIBILITY_FILE: join(dir, 'db-compatibility/preparation-compatibility.json'),
+    })
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })
