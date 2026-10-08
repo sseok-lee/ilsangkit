@@ -995,9 +995,9 @@ model WasteStagedSchedule {
 
 model WastePublication {
   id                 Int              @id @default(1)
-  activeGenerationId String?
+  activeGenerationId String?          @db.VarChar(36)
   updatedAt          DateTime         @default(now()) @updatedAt
-  activeGeneration   WasteGeneration? @relation(fields: [activeGenerationId], references: [id])
+  activeGeneration   WasteGeneration? @relation(fields: [activeGenerationId], references: [id], onDelete: SetNull)
 }
 
 model WasteGeneration {
@@ -1116,8 +1116,8 @@ model WasteScheduleCoverage {
   state         WasteMatchState
   reason        String                @db.VarChar(255)
   evidence      Json
-  revision      WasteScheduleRevision @relation(fields: [generationId, scheduleId], references: [generationId, scheduleId], onDelete: Cascade)
-  areaEntry     WasteAreaEntry?       @relation(fields: [generationId, areaId], references: [generationId, areaId], onDelete: NoAction, onUpdate: NoAction)
+  revision      WasteScheduleRevision @relation(fields: [generationId, scheduleId], references: [generationId, scheduleId], onDelete: Cascade, map: "WasteScheduleCoverage_revision_fkey")
+  areaEntry     WasteAreaEntry?       @relation(fields: [generationId, areaId], references: [generationId, areaId], onDelete: NoAction, onUpdate: NoAction, map: "WasteScheduleCoverage_areaEntry_fkey")
 
   @@id([generationId, scheduleId, coverageKey])
   @@index([generationId, areaId, state])
@@ -1806,7 +1806,7 @@ model RealEstatePublicUrl {
   sourceFingerprint  String   @db.Char(64)
   baselineProvenance String?  @db.VarChar(255)
   createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime @default(now()) @updatedAt
 
   @@unique([type, buildingKey])
   @@index([pathHash])
@@ -1823,7 +1823,7 @@ model RealEstatePublicUrlState {
   baselineProvenance String?   @db.VarChar(255)
   report             Json
   validatedAt        DateTime?
-  updatedAt          DateTime  @updatedAt
+  updatedAt          DateTime  @default(now()) @updatedAt
 }
 
 
