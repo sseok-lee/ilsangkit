@@ -6,10 +6,12 @@ ROOT=/home/project2
 NGINX_MAIN=/etc/nginx/nginx.conf
 NGINX_SITE=/etc/nginx/sites-available/ilsangkit
 NGINX_FIXED=/etc/nginx/conf.d/10-ilsangkit-fixed.conf
+DB_STATE_ROOT=/home/project2/run/db-migrations
 DEPLOY_SHA="${DEPLOY_SHA:-}"
 [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo '[fixed-deploy] tested commit SHA required' >&2; exit 2; }
 STAGE="$ROOT/run/fixed-deploy/${DEPLOY_SHA:0:12}"
 HELPER="$STAGE/scripts/deploy/fixed-runtime.mjs"
+DB_HELPER="$STAGE/scripts/deploy/fixed-db.mjs"
 ATTEMPT=
 BACKUP=
 FAILED=
@@ -17,6 +19,12 @@ NEW=
 INSTALL_STARTED=0
 NGINX_TOUCHED=0
 MODE=
+ACTIVE_PORT=
+FIXED_ID="fixed-${DEPLOY_SHA:0:12}"
+SUMMARY_RUN_ID=
+ACTIVE_SHA=
+DEPLOY_TOKEN_MEMORY="${FIXED_GITHUB_TOKEN:-}"
+unset FIXED_GITHUB_TOKEN GITHUB_TOKEN GH_TOKEN ACTIONS_TOKEN || true
 TOUCHED_PATHS=()
 
 fail() { echo "[fixed-deploy] $*" >&2; return 2; }
@@ -59,8 +67,157 @@ rollback() {
 }
 trap 'rollback $?' ERR
 
+assert_candidate_fresh() {
+  local phase="$1"
+  test -n "$DEPLOY_TOKEN_MEMORY" || fail 'GitHub token required for main freshness check'
+  GITHUB_TOKEN="$DEPLOY_TOKEN_MEMORY" GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}" DEPLOY_SHA="$DEPLOY_SHA" ACTIVE_SHA="${ACTIVE_SHA:-}" \
+    node "$DB_HELPER" freshness > "$ATTEMPT/freshness-$phase.json"
+}
+
+install_candidate_dependencies() {
+  (
+    cd "$NEW/backend"
+    npm ci --omit=dev --no-audit --no-fund
+    npx prisma generate
+  )
+}
+
+is_same_sha_active() {
+  [ "${ACTIVE_SHA:-}" = "$DEPLOY_SHA" ]
+}
+
+copy_active_readiness_to_state_root() {
+  node "$DB_HELPER" copy-readiness "$DB_STATE_ROOT" "$ATTEMPT/active-readiness.json" > "$ATTEMPT/active-readiness-copy.json"
+}
+
+run_database_gate() {
+  local phase="$1" output="$2"
+  DB_GATE_BACKEND_DIR="$NEW/backend" \
+  DB_GATE_STATE_ROOT="$DB_STATE_ROOT" \
+  DB_GATE_EVIDENCE_DIR="$STAGE/db-evidence" \
+  DB_GATE_SHA="$DEPLOY_SHA" \
+  DB_GATE_RUN_ID="${TEST_RUN_ID:-}" \
+  DB_GATE_RUN_ATTEMPT="${TEST_RUN_ATTEMPT:-}" \
+  GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}" \
+  FIXED_GITHUB_TOKEN="$DEPLOY_TOKEN_MEMORY" \
+    node "$DB_HELPER" gate "$phase" > "$output"
+}
+
+run_database_verify() {
+  run_database_gate verify "$ATTEMPT/db-verify.json"
+}
+
+run_database_deploy() {
+  run_database_gate deploy "$ATTEMPT/db-deploy.json"
+}
+
+
+move_into_place() {
+  local path="$1"
+  if [ -e "$ROOT/$path" ] || [ -L "$ROOT/$path" ]; then mv "$ROOT/$path" "$BACKUP/$path"; fi
+  TOUCHED_PATHS+=("$path")
+  mv "$NEW/$path" "$ROOT/$path"
+}
+
+switch_application_paths() {
+  cp -p "$NGINX_MAIN" "$BACKUP/nginx.conf"
+  cp -p "$NGINX_SITE" "$BACKUP/ilsangkit-site"
+  if [ -f "$NGINX_FIXED" ]; then cp -p "$NGINX_FIXED" "$BACKUP/ilsangkit-fixed.conf"; fi
+
+  INSTALL_STARTED=1
+  pm2 delete ilsangkit-backend >/dev/null 2>&1 || true
+  pm2 delete ilsangkit-frontend >/dev/null 2>&1 || true
+  for path in backend/dist backend/prisma backend/node_modules backend/package.json backend/package-lock.json backend/.env frontend/.output frontend/.env; do
+    move_into_place "$path"
+  done
+  move_into_place ecosystem.config.js
+  if [ "$MODE" = migration ]; then move_into_place sitemaps; fi
+
+  pm2 start "$ROOT/ecosystem.config.js" --env production
+  for attempt in $(seq 1 12); do
+    if curl -fsS -m 15 "http://127.0.0.1:8000/api/internal/release-readiness" > "$ATTEMPT/fixed-readiness.json"; then break; fi
+    sleep 5
+  done
+  node - "$ATTEMPT/fixed-readiness.json" "$FIXED_ID" "$SUMMARY_RUN_ID" <<'NODE'
+const fs = require('fs')
+const r = JSON.parse(fs.readFileSync(process.argv[2]))
+if (!r.ready || r.releaseId !== process.argv[3] || r.summary?.mode !== 'address' ||
+    r.summary?.runId !== process.argv[4] || r.realEstateUrls?.mode !== 'preserved' || !r.db?.ok) {
+  throw new Error('fixed backend readiness differs from the live source')
+}
+NODE
+  curl -fsS -m 30 -D "$ATTEMPT/fixed-frontend.headers" 'http://127.0.0.1:3000/real-estate/apt-sale/gyeongnam' -o "$ATTEMPT/fixed-frontend.html"
+  grep -q '<h1' "$ATTEMPT/fixed-frontend.html"
+  grep -q '경남' "$ATTEMPT/fixed-frontend.html"
+  grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$ATTEMPT/fixed-frontend.headers"
+  curl -fsS -m 30 -D "$ATTEMPT/fixed-sitemap.headers" 'http://127.0.0.1:3000/sitemap.xml' -o "$ATTEMPT/fixed-sitemap.xml"
+  grep -q '<loc>' "$ATTEMPT/fixed-sitemap.xml"
+  grep -iq '^x-sitemap-source: static' "$ATTEMPT/fixed-sitemap.headers"
+
+  NGINX_TOUCHED=1
+  node "$HELPER" render-nginx "$FIXED_ID" "$NGINX_FIXED"
+  if [ "$MODE" = migration ]; then
+    sed -i '\|^[[:space:]]*include /home/project2/deploy/nginx/release-active.conf;[[:space:]]*$|d' "$NGINX_MAIN"
+    grep -Fq 'alias /home/project2/deploy/shared/assets/_nuxt/;' "$NGINX_SITE" || fail 'expected release asset alias missing'
+    sed -i 's|alias /home/project2/deploy/shared/assets/_nuxt/;|alias /home/project2/frontend/.output/public/_nuxt/;|' "$NGINX_SITE"
+  fi
+  nginx -t
+  systemctl reload nginx
+}
+
+wait_for_public_release() {
+  local label="$1" url="$2" headers="$3" body="$4" attempt observed
+  for attempt in $(seq 1 30); do
+    if curl -fsS -m 15 -D "$headers" "$url" -o "$body" &&
+       grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$headers"; then
+      echo "[fixed-deploy] public $label serves $FIXED_ID after $attempt probe(s)"
+      return 0
+    fi
+    sleep 2
+  done
+  observed="$(grep -i '^x-ilsangkit-release-id:' "$headers" | tr -d '\r' | tail -n 1 || true)"
+  fail "public $label did not serve $FIXED_ID after nginx reload; last $observed"
+}
+
+run_public_probes() {
+  wait_for_public_release health 'https://ilsangkit.co.kr/api/health' "$ATTEMPT/public-health.headers" "$ATTEMPT/public-health.json"
+  wait_for_public_release page 'https://ilsangkit.co.kr/real-estate/apt-sale/gyeongnam' "$ATTEMPT/public-page.headers" "$ATTEMPT/public-page.html"
+  grep -q '경남' "$ATTEMPT/public-page.html"
+  asset_path="$(node "$HELPER" asset-path "$ATTEMPT/public-page.html")"
+  curl -fsS -m 30 "https://ilsangkit.co.kr$asset_path" -o /dev/null
+  curl -fsS -m 30 -D "$ATTEMPT/public-sitemap.headers" 'https://ilsangkit.co.kr/sitemap.xml' -o "$ATTEMPT/public-sitemap.xml"
+  grep -q '<loc>' "$ATTEMPT/public-sitemap.xml"
+  grep -iq '^x-sitemap-source: static' "$ATTEMPT/public-sitemap.headers"
+  curl -fsS -m 30 'https://ilsangkit.co.kr/api/affiliate-banners/random' -o "$ATTEMPT/public-affiliate.json"
+  node - "$ATTEMPT/public-affiliate.json" <<'NODE'
+const fs = require('fs')
+const body = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+if (!Object.hasOwn(body, 'data')) throw new Error('affiliate public response is not an envelope')
+if (body.data !== null && typeof body.data !== 'object') throw new Error('affiliate public data must be object or null')
+NODE
+}
+
+publish_active_app() {
+  node "$DB_HELPER" publish-active "$DB_STATE_ROOT" "$DEPLOY_SHA" "$ATTEMPT/fixed-readiness.json" > "$ATTEMPT/active-app.json"
+}
+
+run_fixed_activation_order() {
+  install_candidate_dependencies
+  assert_candidate_fresh locked
+  if is_same_sha_active; then
+    run_database_verify
+    run_public_probes
+    return 0
+  fi
+  run_database_deploy
+  switch_application_paths
+  run_public_probes
+  publish_active_app
+}
+
 test -f "$STAGE/SHA256SUMS" || fail "missing artifact checksums in $STAGE"
 test -f "$HELPER" || fail 'missing fixed runtime helper'
+test -f "$DB_HELPER" || fail 'missing fixed DB helper'
 test -f "$STAGE/ecosystem.config.js" || fail 'missing fixed PM2 config'
 chmod 700 "$STAGE"
 exec 9>"$ROOT/run/fixed-deploy.lock"
@@ -85,22 +242,6 @@ else
   ACTIVE_PORT=8000
 fi
 echo "[fixed-deploy] mode=$MODE active-port=$ACTIVE_PORT"
-
-FIXED_ID="fixed-${DEPLOY_SHA:0:12}"
-if [ "$MODE" = fixed ] && curl -fsS -m 15 'http://127.0.0.1:8000/api/internal/release-readiness' | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const r=JSON.parse(s);if(!r.ready||r.releaseId!==process.argv[1]||!r.db?.ok)process.exit(2)})' "$FIXED_ID"; then
-  echo "[fixed-deploy] $FIXED_ID is already active; verify the public service"
-  curl -fsS -m 30 -D "$STAGE/retry-health.headers" 'https://ilsangkit.co.kr/api/health' -o "$STAGE/retry-health.json"
-  grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$STAGE/retry-health.headers"
-  curl -fsS -m 30 -D "$STAGE/retry-page.headers" 'https://ilsangkit.co.kr/real-estate/apt-sale/gyeongnam' -o "$STAGE/retry-page.html"
-  grep -q '경남' "$STAGE/retry-page.html"
-  grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$STAGE/retry-page.headers"
-  asset_path="$(node "$HELPER" asset-path "$STAGE/retry-page.html")"
-  curl -fsS -m 30 "https://ilsangkit.co.kr$asset_path" -o /dev/null
-  curl -fsS -m 30 -D "$STAGE/retry-sitemap.headers" 'https://ilsangkit.co.kr/sitemap.xml' -o "$STAGE/retry-sitemap.xml"
-  grep -q '<loc>' "$STAGE/retry-sitemap.xml"
-  grep -iq '^x-sitemap-source: static' "$STAGE/retry-sitemap.headers"
-  exit 0
-fi
 
 ATTEMPT="$(mktemp -d "$STAGE/attempt.XXXXXXXX")"
 BACKUP="$ATTEMPT/previous"
@@ -138,91 +279,15 @@ if [ "$MODE" = migration ] && [ -d "$ROOT/frontend/.output/public/_nuxt" ]; then
 fi
 
 curl -fsS -m 30 "http://127.0.0.1:$ACTIVE_PORT/api/internal/release-readiness" > "$ATTEMPT/active-readiness.json"
+copy_active_readiness_to_state_root
+node "$DB_HELPER" read-active "$DB_STATE_ROOT" "$DB_STATE_ROOT/active-readiness.json" > "$ATTEMPT/active-app.json" || fail 'active app state does not match readiness'
+ACTIVE_SHA="$(node -e 'const s=require(process.argv[1]);process.stdout.write(s?.fullSha||"")' "$ATTEMPT/active-app.json")"
 node "$HELPER" prepare "$DEPLOY_SHA" "$ATTEMPT/active-readiness.json" "$NEW/backend/.env" "$NEW/frontend/.env" > "$ATTEMPT/runtime.json"
 FIXED_ID="$(node -e 'process.stdout.write(require(process.argv[1]).id)' "$ATTEMPT/runtime.json")"
 SUMMARY_RUN_ID="$(node -e 'process.stdout.write(require(process.argv[1]).summaryRunId)' "$ATTEMPT/runtime.json")"
 echo "[fixed-deploy] candidate=$FIXED_ID summary-run=$SUMMARY_RUN_ID"
 
-(
-  cd "$NEW/backend"
-  npm ci --omit=dev --no-audit --no-fund
-  npx prisma generate
-)
-
-cp -p "$NGINX_MAIN" "$BACKUP/nginx.conf"
-cp -p "$NGINX_SITE" "$BACKUP/ilsangkit-site"
-if [ -f "$NGINX_FIXED" ]; then cp -p "$NGINX_FIXED" "$BACKUP/ilsangkit-fixed.conf"; fi
-
-move_into_place() {
-  local path="$1"
-  if [ -e "$ROOT/$path" ] || [ -L "$ROOT/$path" ]; then mv "$ROOT/$path" "$BACKUP/$path"; fi
-  TOUCHED_PATHS+=("$path")
-  mv "$NEW/$path" "$ROOT/$path"
-}
-
-INSTALL_STARTED=1
-pm2 delete ilsangkit-backend >/dev/null 2>&1 || true
-pm2 delete ilsangkit-frontend >/dev/null 2>&1 || true
-for path in backend/dist backend/prisma backend/node_modules backend/package.json backend/package-lock.json backend/.env frontend/.output frontend/.env; do
-  move_into_place "$path"
-done
-move_into_place ecosystem.config.js
-if [ "$MODE" = migration ]; then move_into_place sitemaps; fi
-
-pm2 start "$ROOT/ecosystem.config.js" --env production
-for attempt in $(seq 1 12); do
-  if curl -fsS -m 15 "http://127.0.0.1:8000/api/internal/release-readiness" > "$ATTEMPT/fixed-readiness.json"; then break; fi
-  sleep 5
-done
-node - "$ATTEMPT/fixed-readiness.json" "$FIXED_ID" "$SUMMARY_RUN_ID" <<'NODE'
-const fs = require('fs')
-const r = JSON.parse(fs.readFileSync(process.argv[2]))
-if (!r.ready || r.releaseId !== process.argv[3] || r.summary?.mode !== 'address' ||
-    r.summary?.runId !== process.argv[4] || r.realEstateUrls?.mode !== 'preserved' || !r.db?.ok) {
-  throw new Error('fixed backend readiness differs from the live source')
-}
-NODE
-curl -fsS -m 30 -D "$ATTEMPT/fixed-frontend.headers" 'http://127.0.0.1:3000/real-estate/apt-sale/gyeongnam' -o "$ATTEMPT/fixed-frontend.html"
-grep -q '<h1' "$ATTEMPT/fixed-frontend.html"
-grep -q '경남' "$ATTEMPT/fixed-frontend.html"
-grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$ATTEMPT/fixed-frontend.headers"
-curl -fsS -m 30 -D "$ATTEMPT/fixed-sitemap.headers" 'http://127.0.0.1:3000/sitemap.xml' -o "$ATTEMPT/fixed-sitemap.xml"
-grep -q '<loc>' "$ATTEMPT/fixed-sitemap.xml"
-grep -iq '^x-sitemap-source: static' "$ATTEMPT/fixed-sitemap.headers"
-
-NGINX_TOUCHED=1
-node "$HELPER" render-nginx "$FIXED_ID" "$NGINX_FIXED"
-if [ "$MODE" = migration ]; then
-  sed -i '\|^[[:space:]]*include /home/project2/deploy/nginx/release-active.conf;[[:space:]]*$|d' "$NGINX_MAIN"
-  grep -Fq 'alias /home/project2/deploy/shared/assets/_nuxt/;' "$NGINX_SITE" || fail 'expected release asset alias missing'
-  sed -i 's|alias /home/project2/deploy/shared/assets/_nuxt/;|alias /home/project2/frontend/.output/public/_nuxt/;|' "$NGINX_SITE"
-fi
-nginx -t
-systemctl reload nginx
-
-wait_for_public_release() {
-  local label="$1" url="$2" headers="$3" body="$4" attempt observed
-  for attempt in $(seq 1 30); do
-    if curl -fsS -m 15 -D "$headers" "$url" -o "$body" &&
-       grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$headers"; then
-      echo "[fixed-deploy] public $label serves $FIXED_ID after $attempt probe(s)"
-      return 0
-    fi
-    sleep 2
-  done
-  observed="$(grep -i '^x-ilsangkit-release-id:' "$headers" | tr -d '\r' | tail -n 1 || true)"
-  fail "public $label did not serve $FIXED_ID after nginx reload; last $observed"
-}
-
-wait_for_public_release health 'https://ilsangkit.co.kr/api/health' "$ATTEMPT/public-health.headers" "$ATTEMPT/public-health.json"
-wait_for_public_release page 'https://ilsangkit.co.kr/real-estate/apt-sale/gyeongnam' "$ATTEMPT/public-page.headers" "$ATTEMPT/public-page.html"
-grep -q '경남' "$ATTEMPT/public-page.html"
-asset_path="$(node "$HELPER" asset-path "$ATTEMPT/public-page.html")"
-curl -fsS -m 30 "https://ilsangkit.co.kr$asset_path" -o /dev/null
-curl -fsS -m 30 -D "$ATTEMPT/public-sitemap.headers" 'https://ilsangkit.co.kr/sitemap.xml' -o "$ATTEMPT/public-sitemap.xml"
-grep -q '<loc>' "$ATTEMPT/public-sitemap.xml"
-grep -iq '^x-sitemap-source: static' "$ATTEMPT/public-sitemap.headers"
-
+run_fixed_activation_order
 pm2 save
 printf '%s\n' "$(basename "$ATTEMPT")" > "$STAGE/successful-attempt"
 trap - ERR
