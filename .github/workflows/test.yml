@@ -41,6 +41,7 @@ jobs:
           docker exec -i -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test < backend/prisma/migrations/202610060001_affiliate_banners/migration.sql
           docker exec -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test -e "INSERT INTO AffiliateBanner (id,provider,name,imageSourceType,targetUrl,externalImageUrl,altText,isEnabled,updatedAt) VALUES ('00000000-0000-4000-8000-000000000007','coupang','migration-fixture','url','https://example.test/go?a=1','https://example.test/banner.png','fixture',true,'2026-10-07 00:00:00.000')"
           docker exec -i -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test < backend/prisma/migrations/202610070001_affiliate_disclosures/migration.sql
+          docker exec -i -e MYSQL_PWD "$AFFILIATE_TEST_MYSQL_CONTAINER" mysql -uroot ilsangkit_affiliate_test < backend/prisma/migrations/202610080001_affiliate_banner_expiration/migration.sql
           cd backend
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -55,6 +56,7 @@ jobs:
             assert.equal(row.targetUrl, 'https://example.test/go?a=1');
             assert.equal(row.externalImageUrl, 'https://example.test/banner.png');
             assert.equal(row.disclosureOverride, null);
+            assert.equal(row.expiresAt, null);
             assert.equal(row.updatedAt.toISOString(), '2026-10-07T00:00:00.000Z');
             assert.equal(await db.affiliateProviderDisclosure.count(), 0);
           } finally {

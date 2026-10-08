@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PAGINATION } from '../constants/index.js';
+import { isValidAffiliateEndDate } from '../utils/affiliateBannerExpiration.js';
 import { affiliateDisclosureTextSchema } from './affiliateDisclosure.js';
 
 export const affiliateBannerProviderSchema = z.enum(['coupang', 'ali', 'toss']);
@@ -37,6 +38,10 @@ const httpsUrl = z.string().trim().min(1).max(4096).refine((value) => {
   }
 }, '인증 정보가 없는 HTTPS URL을 입력하세요');
 
+const endDateSchema = z.string()
+  .refine(isValidAffiliateEndDate, '유효한 종료일을 입력하세요')
+  .nullable();
+
 const affiliateBannerDraftShape = {
   provider: affiliateBannerProviderSchema,
   name: z.string().trim().min(1).max(100),
@@ -46,11 +51,13 @@ const affiliateBannerDraftShape = {
   targetUrl: httpsUrl,
   altText: z.string().trim().min(1).max(200),
   disclosureOverride: affiliateDisclosureTextSchema.nullable(),
+  endDate: endDateSchema,
 };
 
 const affiliateBannerCreateObject = z.object({
   ...affiliateBannerDraftShape,
   disclosureOverride: affiliateDisclosureTextSchema.nullable().default(null),
+  endDate: endDateSchema.default(null),
 }).strict();
 
 export const affiliateBannerCreateSchema = affiliateBannerCreateObject.refine((value) => {

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page, type Route } from '@playwright/test'
@@ -16,6 +16,7 @@ interface BannerDraft {
   targetUrl: string
   altText: string
   disclosureOverride: string | null
+  endDate: string | null
 }
 
 interface StoredBanner extends BannerDraft {
@@ -24,6 +25,7 @@ interface StoredBanner extends BannerDraft {
   isEnabled: boolean
   createdAt: string
   updatedAt: string
+  isExpired: boolean
 }
 
 interface BannerDto extends StoredBanner {
@@ -65,9 +67,11 @@ interface ApiState {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixtureDir = path.resolve(__dirname, '../../../backend/__tests__/fixtures')
 const uploadFixture = path.join(fixtureDir, 'affiliate-banner.png')
+const finalVisualDir = path.resolve(__dirname, '../../../docs/superpowers/reviews/affiliate-expiration-assets/final')
 const imageBytes = readFileSync(uploadFixture)
 const now = '2026-10-06T00:00:00.000Z'
 const later = '2026-10-06T00:01:00.000Z'
+const fixedKstDate = '2026-10-06'
 const externalImageUrl = 'https://cdn.example.test/affiliate/external.png'
 const badExternalImageUrl = 'https://cdn.example.test/affiliate/missing.png'
 const affiliateTargetUrl = 'https://vendor.example.test/click?sig=a%2Bb&sig=a+b&z=2&z=1'
@@ -92,6 +96,7 @@ const draftKeys = [
   'targetUrl',
   'altText',
   'disclosureOverride',
+  'endDate',
 ].sort()
 
 function newState(): ApiState {
@@ -131,6 +136,10 @@ function normalizeDisclosureText(value: string | null): string | null {
   return normalized.length > 0 ? normalized : null
 }
 
+function isEndDateExpired(endDate: string | null): boolean {
+  return endDate !== null && endDate < fixedKstDate
+}
+
 function resolveDisclosure(state: ApiState, draft: BannerDraft): Pick<BannerDto, 'disclosureText' | 'disclosureSource'> {
   const override = normalizeDisclosureText(draft.disclosureOverride)
   if (override !== null) return { disclosureText: override, disclosureSource: 'banner' }
@@ -157,6 +166,7 @@ function makeStoredBanner(state: ApiState, draft: BannerDraft, isEnabled = false
     isEnabled,
     createdAt: now,
     updatedAt: now,
+    isExpired: isEndDateExpired(draft.endDate),
   }
 }
 
@@ -164,6 +174,7 @@ function toBannerDto(state: ApiState, banner: StoredBanner): BannerDto {
   return {
     ...banner,
     ...resolveDisclosure(state, banner),
+    isExpired: isEndDateExpired(banner.endDate),
   }
 }
 
@@ -185,6 +196,7 @@ function assertDraftContract(draft: BannerDraft) {
   expect(['upload', 'url']).toContain(draft.imageSourceType)
   expect(draft.targetUrl).toBe(affiliateTargetUrl)
   expect(draft.disclosureOverride === null || typeof draft.disclosureOverride === 'string').toBe(true)
+  expect(draft.endDate === null || /^\d{4}-\d{2}-\d{2}$/.test(draft.endDate)).toBe(true)
 
   if (draft.imageSourceType === 'upload') {
     assertValidUuid(draft.imageAssetId)
@@ -342,7 +354,7 @@ async function installFixtureRoutes(page: Page, state: ApiState) {
         await fulfillJson(route, 422, { success: false, error: { code: 'VALIDATION_ERROR', message: '수익 고지 문구를 등록한 뒤 사용으로 설정하세요' } })
         return
       }
-      Object.assign(stored, { isEnabled: body.isEnabled, updatedAt: now })
+      Object.assign(stored, { isEnabled: body.isEnabled, updatedAt: now, isExpired: isEndDateExpired(stored.endDate) })
       await fulfillJson(route, 200, envelope(toBannerDto(state, stored)))
       return
     }
@@ -390,6 +402,7 @@ async function installFixtureRoutes(page: Page, state: ApiState) {
           ? `/api/images/affiliate-banners/${patch.imageAssetId}.png`
           : patch.externalImageUrl || '',
         updatedAt: now,
+        isExpired: isEndDateExpired(patch.endDate),
       })
       await fulfillJson(route, 200, envelope(toBannerDto(state, stored)))
       return
@@ -476,6 +489,11 @@ async function attachScreenshot(page: Page, testInfo: { outputPath: (name: strin
   await testInfo.attach(name, { path: pathName, contentType: 'image/png' })
 }
 
+async function captureFinalVisual(page: Page, projectName: string, name: string) {
+  mkdirSync(finalVisualDir, { recursive: true })
+  await page.screenshot({ path: path.join(finalVisualDir, `${name}-${projectName}.png`), fullPage: true })
+}
+
 function adminCspImageSources(value: string): string[] {
   return value.match(/img-src[^;]*/)?.[0].split(/\s+/) ?? []
 }
@@ -516,6 +534,8 @@ test.describe('admin affiliate banner integration harness', () => {
     await page.getByTestId('upload-file').setInputFiles(uploadFixture)
     await waitForPreviewLoaded(page)
     await expect(page.getByTestId('preview-image')).toHaveAttribute('alt', '업로드 배너 대체 텍스트')
+    await expect(page.getByTestId('affiliate-end-date-hint')).toContainText('한국 시간')
+    await page.getByTestId('affiliate-end-date').fill('2026-10-15')
     await page.getByTestId('save-button').click()
 
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('업로드 배너')
@@ -524,6 +544,8 @@ test.describe('admin affiliate banner integration harness', () => {
     expect(state.banners[0]).toMatchObject({ id: bannerId, isEnabled: false, imageSourceType: 'upload', imageAssetId: assetIds[0], disclosureOverride: null })
     expect(state.createBodies).toHaveLength(1)
     expect(state.createBodies[0].disclosureOverride).toBeNull()
+    expect(state.createBodies[0].endDate).toBe('2026-10-15')
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 2026-10-15')
 
     await reloadAffiliateTab(page)
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('업로드 배너')
@@ -549,10 +571,12 @@ test.describe('admin affiliate banner integration harness', () => {
     await page.getByTestId('preview-button').click()
     await waitForPreviewLoaded(page)
     expect(state.externalPreviewRequests - beforeUrlPreviewRequests).toBe(1)
+    await page.getByTestId('affiliate-end-date-clear').click()
     await page.getByTestId('save-button').click()
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('URL')
     expect(state.banners[0]).toMatchObject({ imageSourceType: 'url', externalImageUrl })
-    expect(state.updateBodies.at(-1)).toMatchObject({ imageSourceType: 'url', imageAssetId: null, externalImageUrl, disclosureOverride: null })
+    expect(state.updateBodies.at(-1)).toMatchObject({ imageSourceType: 'url', imageAssetId: null, externalImageUrl, disclosureOverride: null, endDate: null })
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 없음')
 
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await attachScreenshot(page, testInfo, `admin-affiliate-editor-${testInfo.project.name}`)
@@ -655,6 +679,71 @@ test.describe('admin affiliate banner integration harness', () => {
     await page.getByTestId(`affiliate-row-${id}`).click()
     await expect(page.getByTestId('disclosure-mode-banner')).toBeChecked()
     await expect(page.getByTestId('disclosure-override')).toHaveValue('<strong>광고</strong>\n별도 문구')
+  })
+
+  test('end date saves, dirty cancel, clearing, and past-date expired warnings are preserved', async ({ page }, testInfo) => {
+    const state = newState()
+    state.disclosures.coupang = '쿠팡 기본 문구'
+    await installFixtureRoutes(page, state)
+
+    await openAffiliateTab(page)
+    await page.getByTestId('affiliate-new').click()
+    await fillBaseDraft(page, '기간 배너')
+    await page.getByTestId('source-url').check()
+    await page.getByTestId('external-image-url').fill(externalImageUrl)
+    await page.getByTestId('preview-button').click()
+    await waitForPreviewLoaded(page)
+
+    const endDateInput = page.getByLabel('종료일 (선택)')
+    await expect(endDateInput).toHaveAttribute('type', 'date')
+    await expect(page.getByTestId('affiliate-end-date-hint')).toContainText('한국 시간')
+    await endDateInput.fill('2026-10-15')
+    await page.getByTestId('save-button').click()
+
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('기간 배너')
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 2026-10-15')
+    expect(state.createBodies.at(-1)?.endDate).toBe('2026-10-15')
+
+    await reloadAffiliateTab(page)
+    await page.getByTestId(`affiliate-row-${bannerId}`).click()
+    await expect(endDateInput).toHaveValue('2026-10-15')
+    await captureFinalVisual(page, testInfo.project.name, 'admin-populated-date')
+
+    await endDateInput.fill('2026-10-16')
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('저장하지 않은 제휴 배너 변경 내용')
+      await dialog.dismiss()
+    })
+    await page.getByTestId('tab-guide').click()
+    await expect(page.getByText('고지 문구가 등록된 사용 가능 배너는 모바일 광고 영역에 무작위로 노출됩니다.')).toBeVisible()
+    await expect(endDateInput).toHaveValue('2026-10-16')
+    await page.getByTestId('cancel-button').click()
+    await expect(endDateInput).toHaveValue('2026-10-15')
+    expect(state.updateBodies).toHaveLength(0)
+
+    await endDateInput.fill('2026-10-16')
+    await page.getByTestId('save-button').click()
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 2026-10-16')
+    expect(state.updateBodies.at(-1)?.endDate).toBe('2026-10-16')
+
+    await page.getByTestId('affiliate-end-date-clear').click()
+    await page.getByTestId('save-button').click()
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 없음')
+    expect(state.updateBodies.at(-1)?.endDate).toBeNull()
+
+    await endDateInput.fill('2026-10-05')
+    await expect(page.getByTestId('affiliate-end-date-warning')).toHaveText('이미 지난 종료일입니다. 저장하면 광고가 노출되지 않습니다.')
+    await captureFinalVisual(page, testInfo.project.name, 'admin-past-date-warning')
+    await page.getByTestId('save-button').click()
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 2026-10-05')
+    await expect(page.getByTestId(`affiliate-expired-${bannerId}`)).toHaveText('기간 종료')
+    expect(state.updateBodies.at(-1)?.endDate).toBe('2026-10-05')
+    expect(state.banners[0]).toMatchObject({ isEnabled: false, isExpired: true, endDate: '2026-10-05' })
+
+    await page.getByTestId('status-enable').click()
+    await expect(page.getByTestId('editor-message')).toHaveText('종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다.')
+    await captureFinalVisual(page, testInfo.project.name, 'admin-expired-enabled-warning')
+    expect(state.banners[0]).toMatchObject({ isEnabled: true, isExpired: true, endDate: '2026-10-05' })
   })
 
   test('provider settings handle read retry, PUT failure preservation, and dirty section guard', async ({ page }) => {

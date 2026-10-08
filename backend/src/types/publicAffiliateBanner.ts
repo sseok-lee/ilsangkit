@@ -7,4 +7,10 @@ export interface PublicAffiliateBanner {
   targetUrl: string;
   altText: string;
   disclosureText: string;
+  expiresAt: string | null;
+}
+
+export interface PublicAffiliateBannerSelection {
+  data: PublicAffiliateBanner | null;
+  serverTime: string;
 }

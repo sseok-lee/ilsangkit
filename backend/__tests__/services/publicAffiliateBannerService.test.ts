@@ -43,6 +43,7 @@ function bannerRow(overrides: Record<string, unknown> = {}) {
     targetUrl: 'https://example.com/go?a=%2B&a=2+b',
     altText: '여름 준비',
     disclosureOverride: null,
+    expiresAt: null,
     isEnabled: true,
     createdAt: baseDate,
     updatedAt: baseDate,
@@ -61,6 +62,7 @@ function uploadAsset(id = '11111111-1111-4111-8111-111111111111', overrides: Rec
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   vi.spyOn(Math, 'random').mockReturnValue(0);
   mockDisclosureFindMany.mockResolvedValue([
     { provider: 'coupang', defaultDisclosureText: '쿠팡 기본 문구' },
@@ -71,9 +73,12 @@ beforeEach(() => {
 
 describe('getRandomAffiliateBanner', () => {
   it('returns one enabled public DTO with a banner disclosure override and no admin fields', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T14:59:00.000Z'));
     mockBannerFindMany.mockResolvedValue([
       bannerRow({
         provider: 'ali',
+        expiresAt: new Date('2026-10-15T15:00:00.000Z'),
         disclosureOverride: '<b>개별 문구</b>\n둘째 줄',
         imageSourceType: 'upload',
         imageAssetId: '11111111-1111-4111-8111-111111111111',
@@ -85,21 +90,31 @@ describe('getRandomAffiliateBanner', () => {
     const result = await getRandomAffiliateBanner();
 
     expect(mockBannerFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { isEnabled: true },
+      where: {
+        isEnabled: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date('2026-10-15T14:59:00.000Z') } },
+        ],
+      },
       include: { imageAsset: true },
     }));
     expect(stat).toHaveBeenCalled();
     expect(result).toEqual({
-      id: '6ea02ad2-d1be-4d01-946d-d08005f01d4e',
-      provider: 'ali',
-      imageUrl: '/api/images/affiliate-banners/11111111-1111-4111-8111-111111111111.png',
-      targetUrl: 'https://example.com/go?a=%2B&a=2+b',
-      altText: '여름 준비',
-      disclosureText: '<b>개별 문구</b>\n둘째 줄',
+      data: {
+        id: '6ea02ad2-d1be-4d01-946d-d08005f01d4e',
+        provider: 'ali',
+        imageUrl: '/api/images/affiliate-banners/11111111-1111-4111-8111-111111111111.png',
+        targetUrl: 'https://example.com/go?a=%2B&a=2+b',
+        altText: '여름 준비',
+        disclosureText: '<b>개별 문구</b>\n둘째 줄',
+        expiresAt: '2026-10-15T15:00:00.000Z',
+      },
+      serverTime: '2026-10-15T14:59:00.000Z',
     });
-    expect(result).not.toHaveProperty('name');
-    expect(result).not.toHaveProperty('imageAssetId');
-    expect(result).not.toHaveProperty('isEnabled');
+    expect(result.data).not.toHaveProperty('name');
+    expect(result.data).not.toHaveProperty('imageAssetId');
+    expect(result.data).not.toHaveProperty('isEnabled');
   });
 
   it('uses the provider default disclosure when the banner has no override', async () => {
@@ -108,7 +123,11 @@ describe('getRandomAffiliateBanner', () => {
     ]);
 
     await expect(getRandomAffiliateBanner()).resolves.toMatchObject({
-      disclosureText: '쿠팡 기본 문구',
+      data: {
+        disclosureText: '쿠팡 기본 문구',
+        expiresAt: null,
+      },
+      serverTime: expect.any(String),
     });
   });
 
@@ -135,9 +154,9 @@ describe('getRandomAffiliateBanner', () => {
 
     const result = await getRandomAffiliateBanner();
 
-    expect(result?.id).toBe(valid.id);
-    expect(result?.imageUrl).toBe('https://cdn.example.com/valid.webp');
-    expect(result?.disclosureText).toBe('살아남은 문구');
+    expect(result.data?.id).toBe(valid.id);
+    expect(result.data?.imageUrl).toBe('https://cdn.example.com/valid.webp');
+    expect(result.data?.disclosureText).toBe('살아남은 문구');
   });
 
   it('returns null when every enabled banner is invalid or the upload file is missing', async () => {
@@ -152,7 +171,10 @@ describe('getRandomAffiliateBanner', () => {
     ]);
     mockStat.mockRejectedValue(new Error('ENOENT'));
 
-    await expect(getRandomAffiliateBanner()).resolves.toBeNull();
+    await expect(getRandomAffiliateBanner()).resolves.toMatchObject({
+      data: null,
+      serverTime: expect.any(String),
+    });
   });
 
   it('selects among valid candidates using Math.random', async () => {
@@ -164,6 +186,145 @@ describe('getRandomAffiliateBanner', () => {
 
     const result = await getRandomAffiliateBanner();
 
-    expect(result?.id).toBe('20000000-0000-4000-8000-000000000002');
+    expect(result.data?.id).toBe('20000000-0000-4000-8000-000000000002');
+  });
+
+  it('drops candidates expiring during async image validation', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-15T14:59:59.999Z'));
+      const expiresAt = new Date('2026-10-15T15:00:00.000Z');
+      const asset = uploadAsset();
+      let finishStat!: (value: { isFile: () => boolean }) => void;
+      let statStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        statStarted = resolve;
+      });
+      mockStat.mockImplementationOnce(() => {
+        statStarted();
+        return new Promise((resolve) => {
+          finishStat = resolve;
+        });
+      });
+      mockBannerFindMany.mockResolvedValue([
+        bannerRow({
+          expiresAt,
+          imageSourceType: 'upload',
+          imageAssetId: asset.id,
+          imageAsset: asset,
+          externalImageUrl: null,
+        }),
+      ]);
+
+      const pending = getRandomAffiliateBanner();
+      await started;
+      vi.setSystemTime(expiresAt);
+      finishStat({ isFile: () => true });
+
+      await expect(pending).resolves.toEqual({
+        data: null,
+        serverTime: expiresAt.toISOString(),
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('selects a later unexpired candidate when another candidate expires during validation', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-15T14:59:59.999Z'));
+      const expiresAt = new Date('2026-10-15T15:00:00.000Z');
+      const asset = uploadAsset();
+      const permanent = bannerRow({
+        id: '99999999-9999-4999-8999-999999999999',
+        expiresAt: null,
+        externalImageUrl: 'https://images.example.com/permanent.png',
+        disclosureOverride: '무기한 문구',
+      });
+      let finishStat!: (value: { isFile: () => boolean }) => void;
+      let statStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        statStarted = resolve;
+      });
+      mockStat.mockImplementationOnce(() => {
+        statStarted();
+        return new Promise((resolve) => {
+          finishStat = resolve;
+        });
+      });
+      mockBannerFindMany.mockResolvedValue([
+        bannerRow({
+          expiresAt,
+          imageSourceType: 'upload',
+          imageAssetId: asset.id,
+          imageAsset: asset,
+          externalImageUrl: null,
+        }),
+        permanent,
+      ]);
+
+      const pending = getRandomAffiliateBanner();
+      await started;
+      vi.setSystemTime(expiresAt);
+      finishStat({ isFile: () => true });
+
+      await expect(pending).resolves.toMatchObject({
+        data: {
+          id: permanent.id,
+          expiresAt: null,
+        },
+        serverTime: expiresAt.toISOString(),
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps candidates before expiry and removes them exactly at expiry or after', async () => {
+    vi.useFakeTimers();
+    try {
+      const expiresAt = new Date('2026-10-15T15:00:00.000Z');
+      const row = bannerRow({ expiresAt });
+
+      vi.setSystemTime(new Date('2026-10-15T14:59:59.999Z'));
+      mockBannerFindMany.mockResolvedValue([row]);
+      await expect(getRandomAffiliateBanner()).resolves.toMatchObject({
+        data: { id: row.id, expiresAt: expiresAt.toISOString() },
+      });
+
+      vi.setSystemTime(expiresAt);
+      mockBannerFindMany.mockClear();
+      mockBannerFindMany.mockResolvedValue([row]);
+      await expect(getRandomAffiliateBanner()).resolves.toEqual({
+        data: null,
+        serverTime: expiresAt.toISOString(),
+      });
+
+      vi.setSystemTime(new Date('2026-10-15T15:00:00.001Z'));
+      mockBannerFindMany.mockResolvedValue([row]);
+      await expect(getRandomAffiliateBanner()).resolves.toEqual({
+        data: null,
+        serverTime: '2026-10-15T15:00:00.001Z',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drops rows with invalid database expiry values before draft conversion', async () => {
+    const invalidExpiresAt = new Date(Number.NaN);
+    mockBannerFindMany.mockResolvedValue([
+      bannerRow({ expiresAt: invalidExpiresAt }),
+      bannerRow({
+        id: '88888888-8888-4888-8888-888888888888',
+        expiresAt: null,
+        disclosureOverride: '정상 문구',
+      }),
+    ]);
+
+    const result = await getRandomAffiliateBanner();
+
+    expect(result.data?.id).toBe('88888888-8888-4888-8888-888888888888');
   });
 });

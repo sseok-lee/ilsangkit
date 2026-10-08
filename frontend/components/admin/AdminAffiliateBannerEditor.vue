@@ -139,6 +139,38 @@
       >
     </div>
 
+    <div class="flex flex-col gap-2">
+      <label for="affiliate-end-date" class="block text-xs font-medium text-muted">종료일 (선택)</label>
+      <div class="flex flex-wrap gap-2">
+        <input
+          id="affiliate-end-date"
+          v-model="endDateInput"
+          type="date"
+          min="1000-01-01"
+          max="9999-12-31"
+          :disabled="inputLocked"
+          aria-describedby="affiliate-end-date-hint"
+          data-testid="affiliate-end-date"
+          class="min-w-0 flex-1 rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+        <button
+          type="button"
+          :disabled="inputLocked || draft.endDate === null"
+          data-testid="affiliate-end-date-clear"
+          class="rounded-md bg-background-light px-3 py-2 text-sm font-medium text-ink disabled:opacity-60"
+          @click="draft.endDate = null"
+        >
+          종료일 지우기
+        </button>
+      </div>
+      <p id="affiliate-end-date-hint" data-testid="affiliate-end-date-hint" class="text-xs text-muted">
+        선택한 날짜까지 한국 시간 기준으로 노출됩니다. 비워 두면 기간 제한 없이 노출됩니다.
+      </p>
+      <p v-if="endDateIsPast" data-testid="affiliate-end-date-warning" class="text-sm text-red-600">
+        이미 지난 종료일입니다. 저장하면 광고가 노출되지 않습니다.
+      </p>
+    </div>
+
     <section class="rounded-md border border-line p-3">
       <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
         <span class="text-xs font-semibold text-muted">수익 고지 문구</span>
@@ -314,6 +346,7 @@ const providers: Record<AffiliateProvider, string> = {
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const maxUploadBytes = 2 * 1024 * 1024
+const expiredEnabledWarningMessage = '종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다.'
 const api = useAdminAffiliateBanners()
 
 const draft = reactive<AffiliateBannerDraft>(emptyDraft())
@@ -338,6 +371,17 @@ const canonicalDraft = computed(() => canonicalize(draft))
 const isDirty = computed(() => canonicalDraft.value !== snapshot.value)
 const inputLocked = computed(() => submitting.value || statusChanging.value)
 const mutationBusy = computed(() => submitting.value || uploading.value || statusChanging.value)
+const endDateInput = computed({
+  get: () => draft.endDate ?? '',
+  set: (value: string) => {
+    draft.endDate = value === '' ? null : value
+  },
+})
+const endDateIsPast = computed(() => {
+  if (draft.endDate === null) return false
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  return draft.endDate < todayKst
+})
 const providerDisclosureText = computed(() => findProviderDisclosure(draft.provider))
 const previewDisclosure = computed<ResolvedAffiliateDisclosure>(() => {
   if (disclosureMode.value === 'banner') {
@@ -396,7 +440,7 @@ watch(
     assignDraft(banner ? fromBanner(banner) : emptyDraft())
     snapshot.value = canonicalDraft.value
     altTextEdited.value = Boolean(banner?.altText)
-    message.value = ''
+    message.value = banner?.isEnabled && banner.isExpired ? expiredEnabledWarningMessage : ''
     setPreviewFromImage(banner?.imageUrl ?? null)
     emit('dirty-change', false)
   },
@@ -464,6 +508,7 @@ function emptyDraft(): AffiliateBannerDraft {
     targetUrl: '',
     altText: '',
     disclosureOverride: null,
+    endDate: null,
   }
 }
 
@@ -477,6 +522,7 @@ function fromBanner(banner: AffiliateBannerDto): AffiliateBannerDraft {
     targetUrl: banner.targetUrl,
     altText: banner.altText,
     disclosureOverride: banner.disclosureOverride,
+    endDate: banner.endDate,
   }
 }
 
@@ -494,6 +540,7 @@ function assignDraft(next: AffiliateBannerDraft) {
   draft.targetUrl = next.targetUrl
   draft.altText = next.altText
   draft.disclosureOverride = next.disclosureOverride
+  draft.endDate = next.endDate
   disclosureMode.value = next.disclosureOverride === null ? 'provider' : 'banner'
   disclosureNotice.value = ''
   void nextTick(() => {
@@ -511,6 +558,7 @@ function canonicalize(value: AffiliateBannerDraft): string {
     targetUrl: value.targetUrl,
     altText: value.altText,
     disclosureOverride: value.disclosureOverride,
+    endDate: value.endDate,
   })
 }
 
@@ -527,6 +575,7 @@ function toRequestDraft(): AffiliateBannerDraft {
     targetUrl: draft.targetUrl,
     altText: draft.altText,
     disclosureOverride,
+    endDate: draft.endDate,
   }
 }
 
@@ -611,6 +660,16 @@ function disclosureServerValidationMessage(error: unknown): string | null {
   if (serverMessage.includes('수익 고지')) return serverMessage
   if (detailsMentionDisclosure(data.error.details)) return '수익 고지 문구는 1~1,000자로 입력하세요'
   return null
+}
+
+function endDateServerValidationMessage(error: unknown): string | null {
+  if (readErrorStatus(error) !== 422) return null
+  const data = readErrorData(error)
+  if (data?.error?.code !== 'VALIDATION_ERROR') return null
+  const fields = asRecord(asRecord(data.error.details)?.fieldErrors)
+  return Array.isArray(fields?.endDate) && fields.endDate.length > 0
+    ? '유효한 종료일을 입력하세요'
+    : null
 }
 
 function invalidatePreview() {
@@ -720,7 +779,9 @@ async function save() {
     emit('saved', dto)
     emit('dirty-change', false)
   } catch (error) {
-    message.value = disclosureServerValidationMessage(error) ?? '저장하지 못했습니다'
+    message.value = endDateServerValidationMessage(error)
+      ?? disclosureServerValidationMessage(error)
+      ?? '저장하지 못했습니다'
   } finally {
     submitting.value = false
   }
@@ -753,6 +814,9 @@ async function changeStatus(isEnabled: boolean) {
     savedBanner.value = cloneBanner(dto)
     assignDraft(fromBanner(dto))
     snapshot.value = canonicalDraft.value
+    if (isEnabled && dto.isExpired) {
+      message.value = expiredEnabledWarningMessage
+    }
     emit('saved', dto)
     emit('dirty-change', false)
   } catch (error) {

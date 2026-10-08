@@ -1,11 +1,12 @@
 import { stat } from 'node:fs/promises';
 import prisma from '../lib/prisma.js';
 import { affiliateBannerCreateSchema } from '../schemas/affiliateBanner.js';
+import { expiresAtToEndDate } from '../utils/affiliateBannerExpiration.js';
 import { resolveAffiliateDisclosure } from '../utils/affiliateDisclosure.js';
 import { getAffiliateAssetPaths } from './affiliateBannerAssetService.js';
 import { loadAffiliateDisclosureDefaults } from './adminAffiliateDisclosureService.js';
 import type { AffiliateBannerDraft, AffiliateProvider } from '../types/affiliateBanner.js';
-import type { PublicAffiliateBanner } from '../types/publicAffiliateBanner.js';
+import type { PublicAffiliateBanner, PublicAffiliateBannerSelection } from '../types/publicAffiliateBanner.js';
 
 type AffiliateBannerAssetRow = {
   id: string;
@@ -13,14 +14,20 @@ type AffiliateBannerAssetRow = {
   status: string;
 };
 
-type AffiliateBannerRow = AffiliateBannerDraft & {
+type AffiliateBannerRow = Omit<AffiliateBannerDraft, 'endDate'> & {
   id: string;
+  expiresAt: Date | null;
   isEnabled: boolean;
   imageAsset?: AffiliateBannerAssetRow | null;
 };
 
+function isValidExpiresAt(value: Date | null): boolean {
+  return value === null || Number.isFinite(value.getTime());
+}
+
 function parseEnabledDraft(row: AffiliateBannerRow): AffiliateBannerDraft | null {
   if (!row.isEnabled) return null;
+  if (!isValidExpiresAt(row.expiresAt)) return null;
 
   const parsed = affiliateBannerCreateSchema.safeParse({
     provider: row.provider,
@@ -31,6 +38,7 @@ function parseEnabledDraft(row: AffiliateBannerRow): AffiliateBannerDraft | null
     targetUrl: row.targetUrl,
     altText: row.altText,
     disclosureOverride: row.disclosureOverride ?? null,
+    endDate: expiresAtToEndDate(row.expiresAt),
   });
 
   return parsed.success ? parsed.data : null;
@@ -79,12 +87,24 @@ async function toPublicBanner(
     targetUrl: draft.targetUrl,
     altText: draft.altText,
     disclosureText: resolved.disclosureText,
+    expiresAt: row.expiresAt?.toISOString() ?? null,
   };
 }
 
-export async function getRandomAffiliateBanner(): Promise<PublicAffiliateBanner | null> {
+function isEligibleAtSelectionTime(banner: PublicAffiliateBanner, time: Date): boolean {
+  return banner.expiresAt === null || Date.parse(banner.expiresAt) > time.getTime();
+}
+
+export async function getRandomAffiliateBanner(): Promise<PublicAffiliateBannerSelection> {
+  const queryTime = new Date();
   const rows = await prisma.affiliateBanner.findMany({
-    where: { isEnabled: true },
+    where: {
+      isEnabled: true,
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: queryTime } },
+      ],
+    },
     orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
     include: { imageAsset: true },
   }) as unknown as AffiliateBannerRow[];
@@ -93,8 +113,15 @@ export async function getRandomAffiliateBanner(): Promise<PublicAffiliateBanner 
   const candidates = (await Promise.all(rows.map((row) => toPublicBanner(row, defaults))))
     .filter((banner): banner is PublicAffiliateBanner => banner !== null);
 
-  if (candidates.length === 0) return null;
+  const finalTime = new Date();
+  const eligible = candidates.filter((banner) => isEligibleAtSelectionTime(banner, finalTime));
+  if (eligible.length === 0) {
+    return { data: null, serverTime: finalTime.toISOString() };
+  }
 
-  const selectedIndex = Math.floor(Math.random() * candidates.length);
-  return candidates[selectedIndex] ?? null;
+  const selectedIndex = Math.floor(Math.random() * eligible.length);
+  return {
+    data: eligible[selectedIndex] ?? null,
+    serverTime: finalTime.toISOString(),
+  };
 }
