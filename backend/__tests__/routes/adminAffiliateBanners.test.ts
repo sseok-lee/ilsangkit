@@ -55,6 +55,8 @@ const bannerDto = {
   disclosureOverride: null,
   disclosureText: null,
   disclosureSource: 'missing',
+  endDate: null,
+  isExpired: false,
   isEnabled: false,
   createdAt: '2026-10-06T01:02:03.000Z',
   updatedAt: '2026-10-06T01:02:03.000Z',
@@ -132,6 +134,7 @@ describe('admin affiliate banner routes', () => {
     expect(mockCreateAffiliateBanner).toHaveBeenCalledWith({
       ...draft,
       disclosureOverride: null,
+      endDate: null,
     });
   });
 
@@ -164,6 +167,16 @@ describe('admin affiliate banner routes', () => {
       .set('Origin', ORIGIN)
       .send({ isEnabled: true });
     expect(massAssignment.status).toBe(422);
+    expect(mockUpdateAffiliateBanner).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid endDate patches before service work', async () => {
+    const res = await request(makeApp())
+      .patch('/api/admin/affiliate-banners/6ea02ad2-d1be-4d01-946d-d08005f01d4e')
+      .set('Origin', ORIGIN)
+      .send({ endDate: '2026-02-30' });
+
+    expect(res.status).toBe(422);
     expect(mockUpdateAffiliateBanner).not.toHaveBeenCalled();
   });
 

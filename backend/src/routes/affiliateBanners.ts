@@ -8,8 +8,8 @@ router.get(
   '/random',
   asyncHandler(async (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    const data = await getRandomAffiliateBanner();
-    res.json({ success: true, data });
+    const selection = await getRandomAffiliateBanner();
+    res.json({ success: true, ...selection });
   }),
 );
 

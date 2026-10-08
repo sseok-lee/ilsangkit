@@ -5,6 +5,7 @@ import prisma from '../lib/prisma.js';
 import { ConflictError, NotFoundError, ValidationError } from '../lib/errors.js';
 import { affiliateBannerCreateSchema, type AffiliateBannerCreateInput } from '../schemas/affiliateBanner.js';
 import { resolveAffiliateDisclosure } from '../utils/affiliateDisclosure.js';
+import { endDateToExpiresAt, expiresAtToEndDate, isAffiliateBannerExpired } from '../utils/affiliateBannerExpiration.js';
 import { loadAffiliateDisclosureDefaults } from './adminAffiliateDisclosureService.js';
 import { getAffiliateAssetPaths } from './affiliateBannerAssetService.js';
 import type {
@@ -24,8 +25,9 @@ const TRANSACTION_OPTIONS = {
 const RETRYABLE_TRANSACTION_CODE = 'P2034';
 const CONFLICT_PRISMA_CODES = new Set(['P2002', 'P2003']);
 
-type AffiliateBannerRow = AffiliateBannerDraft & {
+type AffiliateBannerRow = Omit<AffiliateBannerDraft, 'endDate'> & {
   id: string;
+  expiresAt: Date | null;
   isEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -76,6 +78,25 @@ function parseBannerDraft(value: unknown): AffiliateBannerDraft {
   }
 }
 
+function toBannerWriteData(draft: AffiliateBannerDraft): Omit<AffiliateBannerDraft, 'endDate'> & { expiresAt: Date | null } {
+  const { endDate, ...fields } = draft;
+  return { ...fields, expiresAt: endDateToExpiresAt(endDate) };
+}
+
+function toDraftFromRow(row: AffiliateBannerRow): AffiliateBannerDraft {
+  return {
+    provider: row.provider,
+    name: row.name,
+    imageSourceType: row.imageSourceType,
+    imageAssetId: row.imageAssetId,
+    externalImageUrl: row.externalImageUrl,
+    targetUrl: row.targetUrl,
+    altText: row.altText,
+    disclosureOverride: row.disclosureOverride ?? null,
+    endDate: expiresAtToEndDate(row.expiresAt),
+  };
+}
+
 async function withBannerTransaction<T>(work: (tx: BannerTransaction) => Promise<T>): Promise<T> {
   let conflicts = 0;
   for (;;) {
@@ -114,8 +135,10 @@ function toDto(row: AffiliateBannerRow, defaults: ReadonlyMap<AffiliateBannerDra
     targetUrl: row.targetUrl,
     altText: row.altText,
     disclosureOverride,
+    endDate: expiresAtToEndDate(row.expiresAt),
     ...resolved,
     imageUrl,
+    isExpired: isAffiliateBannerExpired(row.expiresAt, new Date()),
     isEnabled: row.isEnabled,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -133,16 +156,7 @@ function assertPatchSourceFields(patch: AffiliateBannerPatch): void {
 
 function mergeBannerPatch(existing: AffiliateBannerRow, patch: AffiliateBannerPatch): AffiliateBannerDraft {
   assertPatchSourceFields(patch);
-  const base: AffiliateBannerDraft = {
-    provider: existing.provider,
-    name: existing.name,
-    imageSourceType: existing.imageSourceType,
-    imageAssetId: existing.imageAssetId,
-    externalImageUrl: existing.externalImageUrl,
-    targetUrl: existing.targetUrl,
-    altText: existing.altText,
-    disclosureOverride: existing.disclosureOverride ?? null,
-  };
+  const base = toDraftFromRow(existing);
 
   if (patch.imageSourceType === 'url') {
     base.imageAssetId = null;
@@ -205,14 +219,7 @@ async function assertBannerCanBeEnabled(
   defaults: ReadonlyMap<AffiliateBannerDraft['provider'], string>,
 ): Promise<void> {
   const draft = parseBannerDraft({
-    provider: banner.provider,
-    name: banner.name,
-    imageSourceType: banner.imageSourceType,
-    imageAssetId: banner.imageAssetId,
-    externalImageUrl: banner.externalImageUrl,
-    targetUrl: banner.targetUrl,
-    altText: banner.altText,
-    disclosureOverride: banner.disclosureOverride ?? null,
+    ...toDraftFromRow(banner),
   });
   assertResolvedDisclosurePresent(draft, defaults);
   if (draft.imageSourceType === 'upload' && draft.imageAssetId) {
@@ -286,7 +293,7 @@ export async function createAffiliateBanner(input: AffiliateBannerCreateInput): 
     }
 
     const row = await tx.affiliateBanner.create({
-      data: { ...draft, isEnabled: false },
+      data: { ...toBannerWriteData(draft), isEnabled: false },
       include: { imageAsset: true },
     });
     if (asset) {
@@ -318,7 +325,7 @@ export async function updateAffiliateBanner(id: string, patch: AffiliateBannerPa
     const oldAssetId = existing.imageAssetId;
     const row = await tx.affiliateBanner.update({
       where: { id },
-      data: draft,
+      data: toBannerWriteData(draft),
       include: { imageAsset: true },
     });
     if (newAsset) {

@@ -64,6 +64,7 @@ const externalDraft = {
   externalImageUrl: 'https://images.example.com/banner.png',
   targetUrl: 'https://example.com/go?a=%2B&a=2+b',
   altText: '여름 준비',
+  endDate: null,
 };
 
 const uploadDraft = {
@@ -74,6 +75,7 @@ const uploadDraft = {
   externalImageUrl: null,
   targetUrl: 'https://example.com/go?x=%2B&x=2+b',
   altText: '겨울 준비',
+  endDate: null,
 };
 
 const baseDate = new Date('2026-10-06T01:02:03.000Z');
@@ -93,6 +95,7 @@ function bannerRow(overrides: Record<string, unknown> = {}) {
     updatedAt: baseDate,
     imageAsset: null,
     disclosureOverride: null,
+    expiresAt: null,
     ...overrides,
   };
 }
@@ -141,11 +144,14 @@ describe('admin affiliate banner service', () => {
     const result = await createAffiliateBanner(externalDraft);
 
     expect(mockBannerCreate).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ isEnabled: false, targetUrl: externalDraft.targetUrl }),
+      data: expect.objectContaining({ isEnabled: false, targetUrl: externalDraft.targetUrl, expiresAt: null }),
       include: { imageAsset: true },
     }));
+    expect(mockBannerCreate.mock.calls[0][0].data).not.toHaveProperty('endDate');
     expect(result.isEnabled).toBe(false);
     expect(result.targetUrl).toBe(externalDraft.targetUrl);
+    expect(result.endDate).toBeNull();
+    expect(result.isExpired).toBe(false);
     expect(result.disclosureOverride).toBeNull();
     expect(result.disclosureText).toBeNull();
     expect(result.disclosureSource).toBe('missing');
@@ -208,6 +214,23 @@ describe('admin affiliate banner service', () => {
     const result = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
 
     expect(result.targetUrl).toBe('https://example.com/go?a=%2B&a=2+b');
+  });
+
+  it('reports endDate and computed expiration on read', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T14:59:59.999Z'));
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ expiresAt: new Date('2026-10-15T15:00:00.000Z') }));
+
+    const before = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
+
+    expect(before.endDate).toBe('2026-10-15');
+    expect(before.isExpired).toBe(false);
+
+    vi.setSystemTime(new Date('2026-10-15T15:00:00.000Z'));
+    const atExpiry = await getAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e');
+
+    expect(atExpiry.endDate).toBe('2026-10-15');
+    expect(atExpiry.isExpired).toBe(true);
   });
 
   it('reflects provider default changes on reread without changing banner timestamps', async () => {
@@ -330,18 +353,24 @@ describe('admin affiliate banner service', () => {
   });
 
   it('disable succeeds without upload file stat or external fetch', async () => {
+    const expiresAt = new Date('2026-10-15T15:00:00.000Z');
     mockBannerFindUnique.mockResolvedValue(bannerRow({
       isEnabled: true,
       imageSourceType: 'upload',
       imageAssetId: '11111111-1111-4111-8111-111111111111',
       externalImageUrl: null,
+      expiresAt,
       imageAsset: readyAsset(),
     }));
-    mockBannerUpdate.mockResolvedValue(bannerRow({ isEnabled: false }));
+    mockBannerUpdate.mockResolvedValue(bannerRow({ isEnabled: false, expiresAt }));
 
     const result = await setAffiliateBannerStatus('6ea02ad2-d1be-4d01-946d-d08005f01d4e', false);
 
     expect(result.isEnabled).toBe(false);
+    expect(result.endDate).toBe('2026-10-15');
+    expect(mockBannerUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: { isEnabled: false },
+    }));
     expect(mockStat).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -402,7 +431,8 @@ describe('admin affiliate banner service', () => {
   });
 
   it('keeps existing override when provider is unchanged and patch omits disclosure', async () => {
-    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: '기존 개별 문구' }));
+    const expiresAt = new Date('2026-10-15T15:00:00.000Z');
+    mockBannerFindUnique.mockResolvedValue(bannerRow({ disclosureOverride: '기존 개별 문구', expiresAt }));
     mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
 
     const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
@@ -413,12 +443,49 @@ describe('admin affiliate banner service', () => {
       provider: 'coupang',
       name: '새 이름',
       disclosureOverride: '기존 개별 문구',
+      expiresAt,
     });
+    expect(mockBannerUpdate.mock.calls[0][0].data).not.toHaveProperty('endDate');
     expect(result).toMatchObject({
       disclosureOverride: '기존 개별 문구',
       disclosureText: '기존 개별 문구',
       disclosureSource: 'banner',
+      endDate: '2026-10-15',
     });
+  });
+
+  it('stores explicit endDate changes and allows clearing them', async () => {
+    const existing = bannerRow({ expiresAt: new Date('2026-10-15T15:00:00.000Z') });
+    mockBannerFindUnique.mockResolvedValue(existing);
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const changed = await updateAffiliateBanner(existing.id, { endDate: '2026-10-16' });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({
+      expiresAt: new Date('2026-10-16T15:00:00.000Z'),
+    });
+    expect(mockBannerUpdate.mock.calls[0][0].data).not.toHaveProperty('endDate');
+    expect(changed.endDate).toBe('2026-10-16');
+
+    mockBannerUpdate.mockClear();
+    const cleared = await updateAffiliateBanner(existing.id, { endDate: null });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({ expiresAt: null });
+    expect(cleared.endDate).toBeNull();
+  });
+
+  it('stores past endDate values without blocking inactive banners', async () => {
+    mockBannerFindUnique.mockResolvedValue(bannerRow());
+    mockBannerUpdate.mockImplementation(async (args) => bannerRow(args.data));
+
+    const result = await updateAffiliateBanner('6ea02ad2-d1be-4d01-946d-d08005f01d4e', {
+      endDate: '2020-01-01',
+    });
+
+    expect(mockBannerUpdate.mock.calls[0][0].data).toMatchObject({
+      expiresAt: new Date('2020-01-01T15:00:00.000Z'),
+    });
+    expect(result.endDate).toBe('2020-01-01');
   });
 
   it('clears an omitted override when provider changes', async () => {

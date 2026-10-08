@@ -18,11 +18,13 @@ const publicBanner = {
   targetUrl: 'https://example.com/go?a=%2B&a=2+b',
   altText: '여름 준비',
   disclosureText: '쿠팡 기본 문구',
+  expiresAt: null,
 };
+const serverTime = '2026-10-15T14:59:00.000Z';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetRandomAffiliateBanner.mockResolvedValue(publicBanner);
+  mockGetRandomAffiliateBanner.mockResolvedValue({ data: publicBanner, serverTime });
 });
 
 describe('GET /api/affiliate-banners/random', () => {
@@ -31,16 +33,16 @@ describe('GET /api/affiliate-banners/random', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers['cache-control']).toBe('no-store');
-    expect(res.body).toEqual({ success: true, data: publicBanner });
+    expect(res.body).toEqual({ success: true, data: publicBanner, serverTime });
     expect(mockGetRandomAffiliateBanner).toHaveBeenCalledTimes(1);
   });
 
   it('returns null when there is no valid public banner candidate', async () => {
-    mockGetRandomAffiliateBanner.mockResolvedValue(null);
+    mockGetRandomAffiliateBanner.mockResolvedValue({ data: null, serverTime });
 
     const res = await request(app).get('/api/affiliate-banners/random');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, data: null });
+    expect(res.body).toEqual({ success: true, data: null, serverTime });
   });
 });

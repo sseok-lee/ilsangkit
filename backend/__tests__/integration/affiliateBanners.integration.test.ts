@@ -591,21 +591,30 @@ describe('affiliate banner real API and storage integration', () => {
         externalImageUrl: null,
         targetUrl: 'https://example.com/go?a=%2B&a=2+b',
         altText: 'integration upload banner',
+        endDate: '2026-10-16',
       });
     expect(createRes.status).toBe(201);
     const bannerId = String(createRes.body.data.id);
     trackBanner(bannerId);
     expect(createRes.body.data.isEnabled).toBe(false);
+    expect(createRes.body.data.endDate).toBe('2026-10-16');
+    expect(createRes.body.data.isExpired).toBe(false);
     expect(createRes.body.data.imageUrl).toBe(first.imageUrl);
 
     const readRes = await request(app).get(`/api/admin/affiliate-banners/${bannerId}`);
     expect(readRes.status).toBe(200);
     expect(readRes.body.data.targetUrl).toBe('https://example.com/go?a=%2B&a=2+b');
+    expect(readRes.body.data.endDate).toBe('2026-10-16');
     expect(readRes.body.data).toMatchObject({
       disclosureOverride: null,
       disclosureText: null,
       disclosureSource: 'missing',
     });
+
+    const createdRow = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } });
+    expect(createdRow.expiresAt?.toISOString()).toBe('2026-10-16T15:00:00.000Z');
+    expect(createdRow.isEnabled).toBe(false);
+    expect(createdRow.imageAssetId).toBe(first.imageAssetId);
 
     await saveDefaultDisclosure('coupang', '통합 테스트 기본 문구');
 
@@ -615,11 +624,15 @@ describe('affiliate banner real API and storage integration', () => {
       .send({ isEnabled: true });
     expect(enableRes.status).toBe(200);
     expect(enableRes.body.data.isEnabled).toBe(true);
+    expect(enableRes.body.data.endDate).toBe('2026-10-16');
     expect(enableRes.body.data).toMatchObject({
       disclosureOverride: null,
       disclosureText: '통합 테스트 기본 문구',
       disclosureSource: 'provider',
     });
+
+    const afterEnableRow = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } });
+    expect(afterEnableRow.expiresAt?.toISOString()).toBe('2026-10-16T15:00:00.000Z');
 
     const second = await postUpload(webpBytes);
     const replaceRes = await request(app)
@@ -632,6 +645,7 @@ describe('affiliate banner real API and storage integration', () => {
       });
     expect(replaceRes.status).toBe(200);
     expect(replaceRes.body.data.imageAssetId).toBe(second.imageAssetId);
+    expect(replaceRes.body.data.endDate).toBe('2026-10-16');
 
     const previous = await prisma.affiliateBannerAsset.findUnique({ where: { id: first.imageAssetId } });
     const replacement = await prisma.affiliateBannerAsset.findUnique({ where: { id: second.imageAssetId } });
@@ -654,6 +668,24 @@ describe('affiliate banner real API and storage integration', () => {
     expect(afterRollback.status).toBe(200);
     expect(afterRollback.body.data.imageAssetId).toBe(second.imageAssetId);
     expect(afterRollback.body.data.imageUrl).toBe(second.imageUrl);
+    expect(afterRollback.body.data.endDate).toBe('2026-10-16');
+
+    const renameRes = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({ name: 'integration renamed banner' });
+    expect(renameRes.status).toBe(200);
+    expect(renameRes.body.data.endDate).toBe('2026-10-16');
+    expect((await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } })).expiresAt?.toISOString())
+      .toBe('2026-10-16T15:00:00.000Z');
+
+    const clearEndDateRes = await request(app)
+      .patch(`/api/admin/affiliate-banners/${bannerId}`)
+      .set('Origin', ORIGIN)
+      .send({ endDate: null });
+    expect(clearEndDateRes.status).toBe(200);
+    expect(clearEndDateRes.body.data.endDate).toBeNull();
+    expect((await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } })).expiresAt).toBeNull();
 
     const transactionalFault = await postUpload(pngBytes);
     await installAssetUpdateFailureTrigger(transactionalFault.imageAssetId);
@@ -686,6 +718,7 @@ describe('affiliate banner real API and storage integration', () => {
     const restartedRead = await request(restartedApp).get(`/api/admin/affiliate-banners/${bannerId}`);
     expect(restartedRead.status).toBe(200);
     expect(restartedRead.body.data.imageAssetId).toBe(second.imageAssetId);
+    expect(restartedRead.body.data.endDate).toBeNull();
     expect(restartedRead.body.data).toMatchObject({
       disclosureText: '통합 테스트 기본 문구',
       disclosureSource: 'provider',
@@ -729,6 +762,86 @@ describe('affiliate banner real API and storage integration', () => {
       disclosureSource: 'provider',
     });
     expect(reread.body.data.updatedAt).toBe(before.updatedAt.toISOString());
+  });
+
+  it('serves only unexpired public banners and includes extended banners on the next request', async () => {
+    await saveDefaultDisclosure('coupang', '공개 기본 문구');
+    const expiredId = uuid();
+    const permanentId = uuid();
+    trackBanner(expiredId);
+    trackBanner(permanentId);
+    await prisma.affiliateBanner.createMany({
+      data: [
+        {
+          id: expiredId,
+          provider: 'coupang',
+          name: 'expired public candidate',
+          imageSourceType: 'url',
+          imageAssetId: null,
+          externalImageUrl: 'https://images.example.com/expired-public.png',
+          targetUrl: 'https://example.com/expired-public',
+          altText: 'expired public candidate',
+          expiresAt: new Date(Date.now() - 60_000),
+          isEnabled: true,
+        },
+        {
+          id: permanentId,
+          provider: 'coupang',
+          name: 'permanent public candidate',
+          imageSourceType: 'url',
+          imageAssetId: null,
+          externalImageUrl: 'https://images.example.com/permanent-public.png',
+          targetUrl: 'https://example.com/permanent-public',
+          altText: 'permanent public candidate',
+          expiresAt: null,
+          isEnabled: true,
+        },
+      ],
+    });
+
+    const first = await request(app).get('/api/affiliate-banners/random');
+    expect(first.status).toBe(200);
+    expect(first.headers['cache-control']).toBe('no-store');
+    expect(first.body).toEqual({
+      success: true,
+      data: {
+        id: permanentId,
+        provider: 'coupang',
+        imageUrl: 'https://images.example.com/permanent-public.png',
+        targetUrl: 'https://example.com/permanent-public',
+        altText: 'permanent public candidate',
+        disclosureText: '공개 기본 문구',
+        expiresAt: null,
+      },
+      serverTime: expect.any(String),
+    });
+    expect(first.body.data.id).not.toBe(expiredId);
+
+    const futureExpiry = new Date(Date.now() + ONE_DAY_MS);
+    await prisma.affiliateBanner.update({
+      where: { id: expiredId },
+      data: { expiresAt: futureExpiry },
+    });
+    await prisma.affiliateBanner.update({
+      where: { id: permanentId },
+      data: { isEnabled: false },
+    });
+
+    const afterExtension = await request(app).get('/api/affiliate-banners/random');
+    expect(afterExtension.status).toBe(200);
+    expect(afterExtension.body).toEqual({
+      success: true,
+      data: {
+        id: expiredId,
+        provider: 'coupang',
+        imageUrl: 'https://images.example.com/expired-public.png',
+        targetUrl: 'https://example.com/expired-public',
+        altText: 'expired public candidate',
+        disclosureText: '공개 기본 문구',
+        expiresAt: futureExpiry.toISOString(),
+      },
+      serverTime: expect.any(String),
+    });
   });
 
   it('rejects enabled image replacement that removes its only disclosure without mutating banner or asset state', async () => {
