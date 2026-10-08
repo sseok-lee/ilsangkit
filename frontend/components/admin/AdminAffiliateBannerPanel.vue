@@ -42,7 +42,7 @@
           </select>
         </div>
         <div class="min-w-32 flex-1">
-          <label for="affiliate-status-filter" class="mb-1 block text-xs font-medium text-muted">상태</label>
+          <label for="affiliate-status-filter" class="mb-1 block text-xs font-medium text-muted">사용 설정</label>
           <select
             id="affiliate-status-filter"
             data-testid="affiliate-status-filter"
@@ -51,8 +51,8 @@
             @change="onStatusFilterChange"
           >
             <option value="">전체</option>
-            <option value="true">사용 중</option>
-            <option value="false">사용 안 함</option>
+            <option value="true">켜짐</option>
+            <option value="false">꺼짐</option>
           </select>
         </div>
         <button
@@ -106,6 +106,16 @@
           <span class="min-w-0">
             <span class="block truncate text-sm font-semibold text-ink">{{ item.name }}</span>
             <span class="mt-1 block text-xs text-muted">{{ providerLabels[item.provider] }} / {{ item.imageSourceType === 'upload' ? '업로드' : 'URL' }} / {{ item.isEnabled ? '사용 중' : '사용 안 함' }} / {{ disclosureRowLabel(item) }}</span>
+            <span class="mt-1 block text-xs text-muted">
+              {{ item.endDate === null ? '종료일 없음' : `종료일 ${item.endDate}` }}
+              <span
+                v-if="item.isExpired"
+                :data-testid="`affiliate-expired-${item.id}`"
+                class="ml-1 font-medium text-red-600"
+              >
+                기간 종료
+              </span>
+            </span>
             <span class="mt-1 block truncate text-xs text-muted">수정일 {{ formatDate(item.updatedAt) }}</span>
           </span>
         </button>

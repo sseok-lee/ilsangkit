@@ -40,6 +40,8 @@ const banner = (overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto
   disclosureText: '쿠팡 테스트 기본',
   disclosureSource: 'provider',
   isEnabled: false,
+  endDate: null,
+  isExpired: false,
   createdAt: '2026-10-06T00:00:00.000Z',
   updatedAt: '2026-10-06T00:00:00.000Z',
   ...overrides,
@@ -87,6 +89,104 @@ beforeEach(() => {
 })
 
 describe('AdminAffiliateBannerEditor', () => {
+
+  it('clears an end date explicitly and includes the edit in dirty state', async () => {
+    api.update.mockResolvedValueOnce(banner({ endDate: null, isExpired: false }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({ endDate: '2026-10-15' }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('')
+    await flush()
+
+    expect(wrapper.emitted('dirty-change')?.at(-1)).toEqual([true])
+    await wrapper.get('form').trigger('submit')
+    await flush()
+
+    expect(api.update).toHaveBeenCalledWith('banner-1', expect.objectContaining({ endDate: null }))
+  })
+
+  it('keeps date-only edits through dirty, cancel, save failure, status, provider, and image changes', async () => {
+    api.update.mockRejectedValueOnce(new Error('save failed'))
+    api.setStatus.mockResolvedValueOnce(banner({ endDate: '2026-10-15', isEnabled: true }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({ endDate: '2026-10-15', isEnabled: false }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('2026-10-16')
+    expect(wrapper.emitted('dirty-change')?.at(-1)).toEqual([true])
+
+    await wrapper.get('[data-testid="cancel-button"]').trigger('click')
+    await flush()
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2026-10-15')
+
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('2026-10-16')
+    await wrapper.get('form').trigger('submit')
+    await flush()
+    expect(wrapper.text()).toContain('저장하지 못했습니다')
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2026-10-16')
+
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('2026-10-15')
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    await flush()
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2026-10-15')
+
+    await wrapper.get('[data-testid="provider"]').setValue('ali')
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2026-10-15')
+
+    await wrapper.get('[data-testid="source-upload"]').setValue(true)
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2026-10-15')
+  })
+
+  it('shows past end date guidance and maps backend end date validation while keeping the draft', async () => {
+    api.update.mockRejectedValueOnce(backendValidationError({
+      fieldErrors: { endDate: ['Invalid date'] },
+      formErrors: [],
+    }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({ endDate: '2026-10-15' }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('2020-01-01')
+    expect(wrapper.get('[data-testid="affiliate-end-date-warning"]').text()).toContain('이미 지난 종료일입니다')
+    await wrapper.get('form').trigger('submit')
+    await flush()
+
+    expect(wrapper.text()).toContain('유효한 종료일을 입력하세요')
+    expect((wrapper.get('[data-testid="affiliate-end-date"]').element as HTMLInputElement).value).toBe('2020-01-01')
+  })
+
+  it('warns when enabling a saved expired banner without changing the stored expired state', async () => {
+    api.setStatus.mockResolvedValueOnce(banner({ endDate: '2020-01-01', isExpired: true, isEnabled: true }))
+    const wrapper = mount(AdminAffiliateBannerEditor, {
+      props: {
+        banner: banner({ endDate: '2020-01-01', isExpired: true, isEnabled: false }),
+        providerDisclosures,
+        disclosureLoadState: 'ready',
+      },
+    })
+
+    await wrapper.get('[data-testid="preview-image"]').trigger('load')
+    await wrapper.get('[data-testid="status-enable"]').trigger('click')
+    await flush()
+
+    expect(api.setStatus).toHaveBeenCalledWith('banner-1', true)
+    expect(wrapper.text()).toContain('종료일이 지나 사용 설정을 켜도 광고가 노출되지 않습니다')
+  })
   it('clears an old provider override in the draft and restores it on cancel', async () => {
     const wrapper = mount(AdminAffiliateBannerEditor, {
       props: {

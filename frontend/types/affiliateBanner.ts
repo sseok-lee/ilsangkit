@@ -12,6 +12,7 @@ export interface AffiliateBannerDraft {
   targetUrl: string
   altText: string
   disclosureOverride: string | null
+  endDate: string | null
 }
 
 export type AffiliateBannerPatch = Partial<AffiliateBannerDraft>
@@ -22,6 +23,7 @@ export interface AffiliateBannerDto extends AffiliateBannerDraft {
   disclosureText: string | null
   disclosureSource: AffiliateDisclosureSource
   isEnabled: boolean
+  isExpired: boolean
   createdAt: string
   updatedAt: string
 }

@@ -16,6 +16,7 @@ interface BannerDraft {
   targetUrl: string
   altText: string
   disclosureOverride: string | null
+  endDate: string | null
 }
 
 interface StoredBanner extends BannerDraft {
@@ -24,6 +25,7 @@ interface StoredBanner extends BannerDraft {
   isEnabled: boolean
   createdAt: string
   updatedAt: string
+  isExpired: boolean
 }
 
 interface BannerDto extends StoredBanner {
@@ -68,6 +70,7 @@ const uploadFixture = path.join(fixtureDir, 'affiliate-banner.png')
 const imageBytes = readFileSync(uploadFixture)
 const now = '2026-10-06T00:00:00.000Z'
 const later = '2026-10-06T00:01:00.000Z'
+const fixedKstDate = '2026-10-06'
 const externalImageUrl = 'https://cdn.example.test/affiliate/external.png'
 const badExternalImageUrl = 'https://cdn.example.test/affiliate/missing.png'
 const affiliateTargetUrl = 'https://vendor.example.test/click?sig=a%2Bb&sig=a+b&z=2&z=1'
@@ -92,6 +95,7 @@ const draftKeys = [
   'targetUrl',
   'altText',
   'disclosureOverride',
+  'endDate',
 ].sort()
 
 function newState(): ApiState {
@@ -131,6 +135,10 @@ function normalizeDisclosureText(value: string | null): string | null {
   return normalized.length > 0 ? normalized : null
 }
 
+function isEndDateExpired(endDate: string | null): boolean {
+  return endDate !== null && endDate < fixedKstDate
+}
+
 function resolveDisclosure(state: ApiState, draft: BannerDraft): Pick<BannerDto, 'disclosureText' | 'disclosureSource'> {
   const override = normalizeDisclosureText(draft.disclosureOverride)
   if (override !== null) return { disclosureText: override, disclosureSource: 'banner' }
@@ -157,6 +165,7 @@ function makeStoredBanner(state: ApiState, draft: BannerDraft, isEnabled = false
     isEnabled,
     createdAt: now,
     updatedAt: now,
+    isExpired: isEndDateExpired(draft.endDate),
   }
 }
 
@@ -164,6 +173,7 @@ function toBannerDto(state: ApiState, banner: StoredBanner): BannerDto {
   return {
     ...banner,
     ...resolveDisclosure(state, banner),
+    isExpired: isEndDateExpired(banner.endDate),
   }
 }
 
@@ -185,6 +195,7 @@ function assertDraftContract(draft: BannerDraft) {
   expect(['upload', 'url']).toContain(draft.imageSourceType)
   expect(draft.targetUrl).toBe(affiliateTargetUrl)
   expect(draft.disclosureOverride === null || typeof draft.disclosureOverride === 'string').toBe(true)
+  expect(draft.endDate === null || /^\d{4}-\d{2}-\d{2}$/.test(draft.endDate)).toBe(true)
 
   if (draft.imageSourceType === 'upload') {
     assertValidUuid(draft.imageAssetId)
@@ -342,7 +353,7 @@ async function installFixtureRoutes(page: Page, state: ApiState) {
         await fulfillJson(route, 422, { success: false, error: { code: 'VALIDATION_ERROR', message: '수익 고지 문구를 등록한 뒤 사용으로 설정하세요' } })
         return
       }
-      Object.assign(stored, { isEnabled: body.isEnabled, updatedAt: now })
+      Object.assign(stored, { isEnabled: body.isEnabled, updatedAt: now, isExpired: isEndDateExpired(stored.endDate) })
       await fulfillJson(route, 200, envelope(toBannerDto(state, stored)))
       return
     }
@@ -390,6 +401,7 @@ async function installFixtureRoutes(page: Page, state: ApiState) {
           ? `/api/images/affiliate-banners/${patch.imageAssetId}.png`
           : patch.externalImageUrl || '',
         updatedAt: now,
+        isExpired: isEndDateExpired(patch.endDate),
       })
       await fulfillJson(route, 200, envelope(toBannerDto(state, stored)))
       return
@@ -516,6 +528,8 @@ test.describe('admin affiliate banner integration harness', () => {
     await page.getByTestId('upload-file').setInputFiles(uploadFixture)
     await waitForPreviewLoaded(page)
     await expect(page.getByTestId('preview-image')).toHaveAttribute('alt', '업로드 배너 대체 텍스트')
+    await expect(page.getByTestId('affiliate-end-date-hint')).toContainText('한국 시간')
+    await page.getByTestId('affiliate-end-date').fill('2026-10-15')
     await page.getByTestId('save-button').click()
 
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('업로드 배너')
@@ -524,6 +538,8 @@ test.describe('admin affiliate banner integration harness', () => {
     expect(state.banners[0]).toMatchObject({ id: bannerId, isEnabled: false, imageSourceType: 'upload', imageAssetId: assetIds[0], disclosureOverride: null })
     expect(state.createBodies).toHaveLength(1)
     expect(state.createBodies[0].disclosureOverride).toBeNull()
+    expect(state.createBodies[0].endDate).toBe('2026-10-15')
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 2026-10-15')
 
     await reloadAffiliateTab(page)
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('업로드 배너')
@@ -549,10 +565,12 @@ test.describe('admin affiliate banner integration harness', () => {
     await page.getByTestId('preview-button').click()
     await waitForPreviewLoaded(page)
     expect(state.externalPreviewRequests - beforeUrlPreviewRequests).toBe(1)
+    await page.getByTestId('affiliate-end-date-clear').click()
     await page.getByTestId('save-button').click()
     await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('URL')
     expect(state.banners[0]).toMatchObject({ imageSourceType: 'url', externalImageUrl })
-    expect(state.updateBodies.at(-1)).toMatchObject({ imageSourceType: 'url', imageAssetId: null, externalImageUrl, disclosureOverride: null })
+    expect(state.updateBodies.at(-1)).toMatchObject({ imageSourceType: 'url', imageAssetId: null, externalImageUrl, disclosureOverride: null, endDate: null })
+    await expect(page.getByTestId(`affiliate-row-${bannerId}`)).toContainText('종료일 없음')
 
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await attachScreenshot(page, testInfo, `admin-affiliate-editor-${testInfo.project.name}`)
