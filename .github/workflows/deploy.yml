@@ -7,6 +7,10 @@ on:
     types:
       - completed
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: cafe24-db
   cancel-in-progress: false
@@ -14,13 +18,43 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.repository.full_name == github.repository &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
 
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify Test run provenance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          TEST_RUN_ID: ${{ github.event.workflow_run.id }}
+          TEST_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: node scripts/deploy/fixed-db.mjs verify-run
+
+      - name: Download DB evidence from exact Test attempt
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: db-evidence-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.run_attempt }}
+          path: deploy-bundle/db-evidence
+
+      - name: Verify DB evidence provenance
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          TEST_RUN_ID: ${{ github.event.workflow_run.id }}
+          TEST_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: node scripts/deploy/fixed-db.mjs verify-evidence deploy-bundle/db-evidence/manifest.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,12 +90,14 @@ jobs:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           mkdir -p deploy-bundle/scripts/deploy
           tar -czf deploy-bundle/backend.tgz -C backend dist package.json package-lock.json prisma
           tar -czf deploy-bundle/frontend.tgz -C frontend .output
-          cp scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh deploy-bundle/scripts/deploy/
+          cp scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/fixed-db.mjs scripts/deploy/retire-release-processes.sh deploy-bundle/scripts/deploy/
+          for helper in scripts/deploy/db-*.mjs; do cp "$helper" deploy-bundle/scripts/deploy/; done
           cp ecosystem.config.js deploy-bundle/
-          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh > SHA256SUMS)
+          (cd deploy-bundle && find backend.tgz frontend.tgz ecosystem.config.js db-evidence scripts/deploy -type f -print | sort | xargs sha256sum > SHA256SUMS)
           echo "DEPLOY_ID=${TESTED_SHA:0:12}" >> "$GITHUB_ENV"
 
       - name: Upload staged build
@@ -76,18 +112,27 @@ jobs:
 
       - name: Verify and activate fixed paths
         uses: appleboy/ssh-action@master
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TEST_RUN_ID: ${{ github.event.workflow_run.id }}
+          TEST_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          FIXED_GITHUB_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           command_timeout: 30m
+          envs: DEPLOY_SHA,GITHUB_REPOSITORY,TEST_RUN_ID,TEST_RUN_ATTEMPT,FIXED_GITHUB_TOKEN
           script: |
             set -euo pipefail
-            DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
-            export DEPLOY_SHA
-            bash "/home/project2/run/fixed-deploy/${DEPLOY_SHA:0:12}/scripts/deploy/fixed-deploy.sh"
+            fixed_github_token="$FIXED_GITHUB_TOKEN"
+            unset FIXED_GITHUB_TOKEN GITHUB_TOKEN GH_TOKEN
+            FIXED_GITHUB_TOKEN="$fixed_github_token"
+            . "/home/project2/run/fixed-deploy/${DEPLOY_SHA:0:12}/scripts/deploy/fixed-deploy.sh"
 
       - name: Retire release PM2 processes after public verification
+        if: ${{ success() }}
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -96,7 +141,7 @@ jobs:
           command_timeout: 20m
           script: |
             set -euo pipefail
-            DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
+            DEPLOY_SHA='${{ github.event.workflow_run.head_sha }}'
             export DEPLOY_SHA
             bash "/home/project2/run/fixed-deploy/${DEPLOY_SHA:0:12}/scripts/deploy/retire-release-processes.sh"
 

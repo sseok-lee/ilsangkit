@@ -18,6 +18,29 @@ test('tested main SHA is packaged and deployed into the canonical backend/fronte
   assert.doesNotMatch(deploy, /db push --accept-data-loss|KILL\s+/)
 })
 
+
+test('deploy workflow binds activation to exact successful same-repo main push Test evidence', () => {
+  assert.match(deploy, /workflow_run:/)
+  assert.match(deploy, /github\.event\.workflow_run\.event == 'push'/)
+  assert.match(deploy, /github\.event\.workflow_run\.head_branch == 'main'/)
+  assert.match(deploy, /github\.event\.workflow_run\.repository\.full_name == github\.repository/)
+  assert.match(deploy, /github\.event\.workflow_run\.head_repository\.full_name == github\.repository/)
+  assert.match(deploy, /fixed-db\.mjs verify-run/)
+  assert.match(deploy, /actions\/download-artifact@v4/)
+  assert.match(deploy, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/)
+  assert.match(deploy, /name: db-evidence-\$\{\{ github\.event\.workflow_run\.head_sha \}\}-\$\{\{ github\.event\.workflow_run\.run_attempt \}\}/)
+  assert.match(deploy, /fixed-db\.mjs verify-evidence deploy-bundle\/db-evidence\/manifest\.json/)
+  assert.match(deploy, /find backend\.tgz frontend\.tgz ecosystem\.config\.js db-evidence scripts\/deploy -type f -print \| sort \| xargs sha256sum > SHA256SUMS/)
+  assert.match(deploy, /FIXED_GITHUB_TOKEN: \${{ github\.token }}/)
+  assert.match(deploy, /envs: DEPLOY_SHA,GITHUB_REPOSITORY,TEST_RUN_ID,TEST_RUN_ATTEMPT,FIXED_GITHUB_TOKEN/)
+  assert.match(deploy, /fixed_github_token="\$FIXED_GITHUB_TOKEN"/)
+  assert.match(deploy, /unset FIXED_GITHUB_TOKEN GITHUB_TOKEN GH_TOKEN/)
+  assert.doesNotMatch(deploy, /FIXED_GITHUB_TOKEN='\$\{\{ github\.token \}\}'/)
+  assert.match(deploy, /\. "\/home\/project2\/run\/fixed-deploy\/\$\{DEPLOY_SHA:0:12\}\/scripts\/deploy\/fixed-deploy\.sh"/)
+  assert.match(deploy, /if: \$\{\{ success\(\) \}\}/)
+  assert.doesNotMatch(deploy, /continue-on-error:\s*true|always\(\)/)
+})
+
 test('scheduled jobs run from the canonical backend even while rollback symlinks exist', () => {
   for (const workflow of [sync, regen]) {
     assert.match(workflow, /ACTIVE_BACKEND_DIR="\/home\/project2\/backend"/)
@@ -34,6 +57,8 @@ test('fixed deploy stages verified artifacts and preserves the active release un
   assert.match(script, /nginx -t/)
   assert.match(script, /cache_key_count/)
   assert.match(script, /asset-path/)
+  assert.match(script, /api\/affiliate-banners\/random/)
+  assert.doesNotMatch(script, /db-context\.json|write_db_context/)
   assert.match(script, /rollback/)
   assert.match(script, /pm2 start/)
   assert.match(script, /TOUCHED_PATHS/)
