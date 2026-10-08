@@ -7,9 +7,11 @@ export interface PublicAffiliateBanner {
   targetUrl: string
   altText: string
   disclosureText: string
+  expiresAt: string | null
 }
 
 export interface PublicAffiliateBannerResponse {
   success: true
   data: PublicAffiliateBanner | null
+  serverTime: string
 }

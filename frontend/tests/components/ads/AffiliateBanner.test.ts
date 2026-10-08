@@ -14,6 +14,7 @@ type PublicBanner = {
   targetUrl: string
   altText: string
   disclosureText: string
+  expiresAt: string | null
 }
 
 const route = reactive({ path: '/hospital/example' })
@@ -38,12 +39,13 @@ function banner(overrides: Partial<PublicBanner> = {}): PublicBanner {
     targetUrl: 'https://link.example.com/product',
     altText: '추천 상품',
     disclosureText: '쿠팡 파트너스 활동의 일환으로\n일정액의 수수료를 제공받습니다.',
+    expiresAt: null,
     ...overrides,
   }
 }
 
 function envelope(data: PublicBanner | null) {
-  return { success: true, data }
+  return { success: true, data, serverTime: '2026-10-15T14:59:00.000Z' }
 }
 
 function deferred<T>() {
@@ -100,6 +102,7 @@ describe('AffiliateBanner', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.stubGlobal('useRoute', () => route)
     testGlobal.__resetUseState?.()
@@ -254,5 +257,234 @@ describe('AffiliateBanner', () => {
     await flushAsync()
 
     expect(media.removeEventListener).toHaveBeenCalled()
+  })
+
+  it('hides at expiry without rotating even when the device wall clock is wrong', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let monotonicNow = 0
+    const clockSpy = vi.spyOn(performance, 'now').mockImplementation(() => monotonicNow)
+    const wallSpy = vi.spyOn(Date, 'now').mockReturnValue(0)
+    stubViewport(true)
+    fetchMock().mockResolvedValueOnce({
+      success: true,
+      data: banner({ expiresAt: '2026-10-15T15:00:00.000Z' }),
+      serverTime: '2026-10-15T14:59:59.000Z',
+    })
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(true)
+      monotonicNow = 1000
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="affiliate-disclosure"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="affiliate-link"]').exists()).toBe(false)
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+    } finally {
+      wrapper.unmount()
+      clockSpy.mockRestore()
+      wallSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('hides a response that is already expired when it arrives late', async () => {
+    let monotonicNow = 0
+    const clockSpy = vi.spyOn(performance, 'now').mockImplementation(() => monotonicNow)
+    stubViewport(true)
+    const request = deferred<{ success: true, data: PublicBanner, serverTime: string }>()
+    fetchMock().mockReturnValueOnce(request.promise)
+
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      monotonicNow = 1000
+      request.resolve({
+        success: true,
+        data: banner({ expiresAt: '2026-10-15T15:00:00.000Z' }),
+        serverTime: '2026-10-15T14:59:59.000Z',
+      })
+      await flushAsync()
+
+      expect(wrapper.html()).toBe('<!--v-if-->')
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+    } finally {
+      wrapper.unmount()
+      clockSpy.mockRestore()
+    }
+  })
+
+  it('keeps very long expiries visible through timer chunks and hides at the final boundary', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let monotonicNow = 0
+    const clockSpy = vi.spyOn(performance, 'now').mockImplementation(() => monotonicNow)
+    stubViewport(true)
+    fetchMock().mockResolvedValueOnce({
+      success: true,
+      data: banner({ expiresAt: '2026-11-15T14:59:59.648Z' }),
+      serverTime: '2026-10-15T14:59:59.000Z',
+    })
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(true)
+
+      monotonicNow = 2_147_483_647
+      await vi.advanceTimersByTimeAsync(2_147_483_647)
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(true)
+
+      monotonicNow = 2_678_400_648
+      await vi.advanceTimersByTimeAsync(530_917_001)
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(false)
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+    } finally {
+      wrapper.unmount()
+      clockSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('ignores old expiry timers after a route change replaces the banner', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let monotonicNow = 0
+    const clockSpy = vi.spyOn(performance, 'now').mockImplementation(() => monotonicNow)
+    stubViewport(true)
+    fetchMock()
+      .mockResolvedValueOnce({
+        success: true,
+        data: banner({ id: 'old', altText: '오래된 배너', expiresAt: '2026-10-15T15:00:00.000Z' }),
+        serverTime: '2026-10-15T14:59:59.000Z',
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: banner({ id: 'new', altText: '새 배너', expiresAt: '2026-10-15T15:00:10.000Z' }),
+        serverTime: '2026-10-15T14:59:59.500Z',
+      })
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      route.path = '/pharmacy/example'
+      await flushAsync()
+      expect(wrapper.get('[data-testid="affiliate-image"]').attributes('alt')).toBe('새 배너')
+
+      monotonicNow = 1000
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAsync()
+
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(true)
+      expect(wrapper.get('[data-testid="affiliate-image"]').attributes('alt')).toBe('새 배너')
+    } finally {
+      wrapper.unmount()
+      clockSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('invalidates while hidden and coalesces visibility and BFCache resume reloads', async () => {
+    let visibilityState = 'visible'
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibilityState as DocumentVisibilityState)
+    stubViewport(true)
+    const resume = deferred<{ success: true, data: PublicBanner, serverTime: string }>()
+    fetchMock()
+      .mockResolvedValueOnce(envelope(banner({ id: 'initial' })))
+      .mockReturnValueOnce(resume.promise)
+
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      expect(wrapper.find('[data-testid="affiliate-banner"]').exists()).toBe(true)
+
+      visibilityState = 'hidden'
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushAsync()
+      expect(wrapper.html()).toBe('<!--v-if-->')
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+
+      visibilityState = 'visible'
+      document.dispatchEvent(new Event('visibilitychange'))
+      const pageShow = new Event('pageshow') as PageTransitionEvent
+      Object.defineProperty(pageShow, 'persisted', { value: true })
+      window.dispatchEvent(pageShow)
+      await flushAsync()
+      expect(fetchMock()).toHaveBeenCalledTimes(2)
+
+      resume.resolve(envelope(banner({ id: 'resumed', altText: '복귀 배너' })))
+      await flushAsync()
+      expect(wrapper.get('[data-testid="affiliate-image"]').attributes('alt')).toBe('복귀 배너')
+    } finally {
+      wrapper.unmount()
+      visibilitySpy.mockRestore()
+    }
+  })
+
+  it('does not request again on initial pageshow or after unmount listeners are removed', async () => {
+    let visibilityState = 'visible'
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibilityState as DocumentVisibilityState)
+    const documentAddSpy = vi.spyOn(document, 'addEventListener')
+    const documentRemoveSpy = vi.spyOn(document, 'removeEventListener')
+    const windowAddSpy = vi.spyOn(window, 'addEventListener')
+    const windowRemoveSpy = vi.spyOn(window, 'removeEventListener')
+    stubViewport(true)
+    fetchMock().mockResolvedValueOnce(envelope(banner()))
+
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      const pageShow = new Event('pageshow') as PageTransitionEvent
+      Object.defineProperty(pageShow, 'persisted', { value: false })
+      window.dispatchEvent(pageShow)
+      await flushAsync()
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+
+      wrapper.unmount()
+      visibilityState = 'hidden'
+      document.dispatchEvent(new Event('visibilitychange'))
+      visibilityState = 'visible'
+      document.dispatchEvent(new Event('visibilitychange'))
+      const persistedPageShow = new Event('pageshow') as PageTransitionEvent
+      Object.defineProperty(persistedPageShow, 'persisted', { value: true })
+      window.dispatchEvent(persistedPageShow)
+      await flushAsync()
+
+      expect(fetchMock()).toHaveBeenCalledTimes(1)
+      expect(documentAddSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+      expect(documentRemoveSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+      expect(windowAddSpy).toHaveBeenCalledWith('pageshow', expect.any(Function))
+      expect(windowRemoveSpy).toHaveBeenCalledWith('pageshow', expect.any(Function))
+    } finally {
+      visibilitySpy.mockRestore()
+      documentAddSpy.mockRestore()
+      documentRemoveSpy.mockRestore()
+      windowAddSpy.mockRestore()
+      windowRemoveSpy.mockRestore()
+    }
+  })
+
+  it('stays hidden when resume fetch fails', async () => {
+    let visibilityState = 'visible'
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibilityState as DocumentVisibilityState)
+    stubViewport(true)
+    fetchMock()
+      .mockResolvedValueOnce(envelope(banner()))
+      .mockRejectedValueOnce(new Error('resume failed'))
+
+    const wrapper = mount(AffiliateBanner)
+    try {
+      await flushAsync()
+      visibilityState = 'hidden'
+      document.dispatchEvent(new Event('visibilitychange'))
+      visibilityState = 'visible'
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushAsync()
+
+      expect(wrapper.html()).toBe('<!--v-if-->')
+      expect(fetchMock()).toHaveBeenCalledTimes(2)
+    } finally {
+      wrapper.unmount()
+      visibilitySpy.mockRestore()
+    }
   })
 })

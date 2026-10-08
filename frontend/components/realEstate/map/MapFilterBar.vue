@@ -16,9 +16,8 @@
       button 으로 만들면 SSR HTML 에 href 가 사라진다. v-show 는 닫힌 상태에서도 DOM 에 링크를
       남긴다 — AppHeader 드롭다운이 같은 이유로 같은 선택을 하고 있다.
 
-      다만 2축은 구조상 현재 상태와 조합된 URL 만 만들 수 있다(기본값 apt-sale 이면 villa-rent·
-      offitel-rent 는 어느 메뉴에도 안 나온다). 그래서 6개 허브 링크의 정식 소유자는 푸터로
-      옮겼다 — 전 페이지에 있으므로 지도 한 페이지에 의존하던 종전보다 크롤 경로가 넓어진다.
+      푸터는 대표 매매 3종과 지도로 찾기를 제공한다.
+      전월세는 기존 지도 필터와 해당 허브 경로로 접근한다.
     -->
     <div v-for="menu in MENUS" :key="menu.key" class="relative shrink-0">
       <button

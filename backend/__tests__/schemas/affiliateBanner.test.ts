@@ -39,6 +39,13 @@ describe('affiliate banner input', () => {
     expect(affiliateBannerPatchSchema.safeParse({ disclosureOverride: '  ' }).success).toBe(false);
   });
 
+  it('defaults omitted create endDate to null and leaves omitted patch endDate absent', () => {
+    expect(affiliateBannerCreateSchema.parse(draft).endDate).toBeNull();
+    expect(affiliateBannerPatchSchema.parse({ name: '새 이름' })).not.toHaveProperty('endDate');
+    expect(affiliateBannerPatchSchema.parse({ endDate: null })).toEqual({ endDate: null });
+    expect(affiliateBannerPatchSchema.parse({ endDate: '2026-10-16' })).toEqual({ endDate: '2026-10-16' });
+  });
+
   it('parses the literal false filter as false', () => {
     expect(affiliateBannerQuerySchema.parse({ isEnabled: 'false' }).isEnabled).toBe(
       false,
@@ -74,6 +81,11 @@ describe('affiliate banner input', () => {
     ['target URL without scheme', { targetUrl: '//example.com/go' }],
     ['target URL with a control character', { targetUrl: 'https://example.com/go\u0007' }],
     ['target URL with a backslash', { targetUrl: 'https://example.com\\go' }],
+    ['numeric endDate', { endDate: 20261016 }],
+    ['array endDate', { endDate: ['2026-10-16'] }],
+    ['blank endDate', { endDate: '' }],
+    ['readonly expiresAt', { expiresAt: '2026-10-16T15:00:00.000Z' }],
+    ['readonly isExpired', { isExpired: false }],
     ['unknown provider', { provider: 'naver' }],
     [
       'both upload asset and external URL',
@@ -110,6 +122,16 @@ describe('affiliate banner input', () => {
     expect(affiliateBannerPatchSchema.safeParse({ isEnabled: false }).success).toBe(
       false,
     );
+  });
+
+  it.each([
+    ['numeric endDate', { endDate: 20261016 }],
+    ['array endDate', { endDate: ['2026-10-16'] }],
+    ['blank endDate', { endDate: '' }],
+    ['readonly expiresAt', { expiresAt: '2026-10-16T15:00:00.000Z' }],
+    ['readonly isExpired', { isExpired: false }],
+  ])('rejects %s through the patch contract', (_name, patch) => {
+    expect(affiliateBannerPatchSchema.safeParse(patch).success).toBe(false);
   });
 
   it('rejects an empty patch body', () => {

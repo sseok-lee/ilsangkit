@@ -54,6 +54,8 @@ function banner(overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto
     disclosureText: '쿠팡 테스트 기본',
     disclosureSource: 'provider',
     isEnabled: false,
+    endDate: null,
+    isExpired: false,
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt: '2026-10-02T00:00:00.000Z',
     ...overrides,
@@ -79,6 +81,56 @@ function page(items: AffiliateBannerDto[], overrides: Partial<AffiliateBannerPag
 }
 
 describe('AdminAffiliateBannerPanel', () => {
+
+  it('shows enabled and expiration states independently and keeps isEnabled filter contract', async () => {
+    listMock.mockResolvedValue(page([
+      banner({ id: 'enabled-live', name: '켜짐 기간중', isEnabled: true, endDate: '2026-10-15', isExpired: false }),
+      banner({ id: 'enabled-expired', name: '켜짐 종료', isEnabled: true, endDate: '2020-01-01', isExpired: true }),
+      banner({ id: 'disabled-live', name: '꺼짐 기간중', isEnabled: false, endDate: '2026-10-15', isExpired: false }),
+      banner({ id: 'disabled-expired', name: '꺼짐 종료', isEnabled: false, endDate: null, isExpired: true }),
+    ]))
+
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('사용 설정')
+    expect(wrapper.get('[data-testid="affiliate-row-enabled-live"]').text()).toContain('종료일 2026-10-15')
+    expect(wrapper.get('[data-testid="affiliate-row-enabled-live"]').text()).toContain('사용 중')
+    expect(wrapper.find('[data-testid="affiliate-expired-enabled-live"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="affiliate-row-enabled-expired"]').text()).toContain('사용 중')
+    expect(wrapper.get('[data-testid="affiliate-expired-enabled-expired"]').text()).toBe('기간 종료')
+    expect(wrapper.get('[data-testid="affiliate-row-disabled-live"]').text()).toContain('사용 안 함')
+    expect(wrapper.find('[data-testid="affiliate-expired-disabled-live"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="affiliate-row-disabled-expired"]').text()).toContain('종료일 없음')
+    expect(wrapper.get('[data-testid="affiliate-expired-disabled-expired"]').text()).toBe('기간 종료')
+
+    await wrapper.get('[data-testid="affiliate-status-filter"]').setValue('false')
+    await flushPromises()
+    expect(listMock).toHaveBeenLastCalledWith({ page: 1, limit: 10, isEnabled: false })
+  })
+
+  it('prevents row selection when only the end date is dirty', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    listMock.mockResolvedValue(page([
+      banner({ id: 'banner-a', endDate: '2026-10-15' }),
+      banner({ id: 'banner-b', name: '둘째 배너' }),
+    ]))
+    getMock
+      .mockResolvedValueOnce(banner({ id: 'banner-a', endDate: '2026-10-15' }))
+      .mockResolvedValueOnce(banner({ id: 'banner-b', name: '둘째 배너' }))
+    const wrapper = mount(AdminAffiliateBannerPanel)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="affiliate-row-banner-a"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="affiliate-end-date"]').setValue('2026-10-16')
+    await wrapper.get('[data-testid="affiliate-row-banner-b"]').trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(wrapper.findComponent({ name: 'AdminAffiliateBannerEditor' }).props('banner')).toMatchObject({ id: 'banner-a' })
+    expect(getMock).toHaveBeenCalledTimes(1)
+  })
   let listMock: ReturnType<typeof vi.fn>
   let getMock: ReturnType<typeof vi.fn>
 

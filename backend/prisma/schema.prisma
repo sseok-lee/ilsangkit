@@ -896,6 +896,7 @@ model AffiliateBanner {
   targetUrl        String                   @db.Text
   altText          String                   @db.VarChar(200)
   disclosureOverride String?                 @db.Text
+  expiresAt        DateTime?                @db.DateTime(3)
   isEnabled        Boolean                  @default(false)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt

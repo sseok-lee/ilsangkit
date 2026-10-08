@@ -16,6 +16,8 @@ const dto = (overrides: Partial<AffiliateBannerDto> = {}): AffiliateBannerDto =>
   disclosureText: '쿠팡 테스트 기본',
   disclosureSource: 'provider',
   isEnabled: false,
+  endDate: null,
+  isExpired: false,
   createdAt: '2026-10-06T00:00:00.000Z',
   updatedAt: '2026-10-06T00:00:00.000Z',
   ...overrides,
@@ -30,6 +32,7 @@ const draft = (overrides: Partial<AffiliateBannerDraft> = {}): AffiliateBannerDr
   targetUrl: 'https://coupa.ng/a?x=%2B&x=1',
   altText: '쿠팡 배너',
   disclosureOverride: null,
+  endDate: null,
   ...overrides,
 })
 
@@ -140,6 +143,29 @@ describe('useAdminAffiliateBanners', () => {
     })
     expect(vi.mocked($fetch).mock.calls[1][1]?.body).not.toHaveProperty('disclosureText')
     expect(vi.mocked($fetch).mock.calls[1][1]?.body).not.toHaveProperty('disclosureSource')
+  })
+
+  it('omits absent end dates, preserves explicit null clears, and ignores readonly expiration fields', async () => {
+    vi.mocked($fetch)
+      .mockResolvedValueOnce({ success: true, data: dto({ name: '새 이름' }) })
+      .mockResolvedValueOnce({ success: true, data: dto({ endDate: null, isExpired: false }) })
+      .mockResolvedValueOnce({ success: true, data: dto({ endDate: '2026-10-15', isExpired: false }) })
+
+    const api = useAdminAffiliateBanners()
+    await api.update('banner-1', { name: '새 이름' })
+    await api.update('banner-1', { endDate: null })
+    await api.update('banner-1', {
+      endDate: '2026-10-15',
+      isExpired: true,
+      expiresAt: '2026-10-15T15:00:00.000Z',
+    } as Partial<AffiliateBannerDraft> & Record<string, unknown>)
+
+    expect(vi.mocked($fetch).mock.calls[0][1]?.body).toEqual({ name: '새 이름' })
+    expect(vi.mocked($fetch).mock.calls[0][1]?.body).not.toHaveProperty('endDate')
+    expect(vi.mocked($fetch).mock.calls[1][1]?.body).toEqual({ endDate: null })
+    expect(vi.mocked($fetch).mock.calls[2][1]?.body).toEqual({ endDate: '2026-10-15' })
+    expect(vi.mocked($fetch).mock.calls[2][1]?.body).not.toHaveProperty('isExpired')
+    expect(vi.mocked($fetch).mock.calls[2][1]?.body).not.toHaveProperty('expiresAt')
   })
 
   it('passes server errors through to the caller', async () => {
