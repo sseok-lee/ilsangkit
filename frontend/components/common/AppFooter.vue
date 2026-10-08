@@ -5,9 +5,8 @@
   >
     <div :class="props.compact ? 'px-4' : 'page-container'">
       <div :class="['mb-6 flex gap-x-4 gap-y-2', props.compact ? 'flex-col' : 'flex-col md:flex-row md:items-start']">
-        <HardLink to="/" class="footer-link shrink-0 gap-2 font-semibold text-strong">
-          <span aria-hidden="true" class="h-2 w-2 rounded-full bg-primary" />
-          <span class="text-base">일상킷</span>
+        <HardLink to="/" class="footer-link shrink-0 font-bold tracking-tight text-strong">
+          <span class="text-2xl">일상킷<span aria-hidden="true" class="text-primary">.</span></span>
         </HardLink>
         <div class="min-w-0 pt-1.5 text-xs leading-relaxed text-muted">
           <p>{{ SITE_BRAND_LINE }}</p>
@@ -20,6 +19,7 @@
         ref="wideNavigation"
         data-testid="footer-wide-navigation"
         :class="['gap-6 pb-6', props.compact ? 'grid grid-cols-1' : 'hidden md:grid md:grid-cols-4']"
+        @focusout="repairHiddenFocus"
       >
         <section v-for="group in FOOTER_GROUPS" :key="group.id" :data-footer-group="group.id" class="min-w-0">
           <h2 class="mb-2 text-sm font-semibold text-strong">
@@ -31,7 +31,7 @@
           </nav>
         </section>
       </div>
-      <div v-if="!props.compact" ref="mobileNavigation" data-testid="footer-mobile-navigation" class="md:hidden">
+      <div v-if="!props.compact" ref="mobileNavigation" data-testid="footer-mobile-navigation" class="md:hidden" @focusout="repairHiddenFocus">
         <details v-for="(group, index) in FOOTER_GROUPS" :key="group.id" :data-footer-group="group.id" :open="index === 0" class="footer-disclosure border-b border-line first:border-t">
           <summary class="flex min-h-[52px] items-center justify-between gap-3 text-sm font-semibold text-strong">
             {{ group.label }}<span class="footer-disclosure-symbol" aria-hidden="true" />
@@ -52,7 +52,9 @@
         </div>
         <p class="flex flex-wrap items-center gap-x-2">
           <span>데이터 출처</span>
+          <span aria-hidden="true">·</span>
           <a href="https://www.data.go.kr" target="_blank" rel="noopener noreferrer" aria-label="새 창에서 공공데이터포털 열기" class="footer-link underline underline-offset-4">공공데이터포털</a>
+          <span aria-hidden="true">·</span>
           <a href="https://rt.molit.go.kr" target="_blank" rel="noopener noreferrer" aria-label="새 창에서 국토교통부 실거래가 공개시스템 열기" class="footer-link underline underline-offset-4">국토교통부 실거래가</a>
         </p>
         <p class="mt-1 leading-relaxed">공공데이터를 가공한 참고용 정보입니다. 데이터셋별 출처와 이용 조건은 각 상세페이지를 확인해 주세요.</p>
@@ -119,11 +121,11 @@ const wideNavigation = ref<HTMLElement | null>(null)
 const mobileNavigation = ref<HTMLElement | null>(null)
 let widthQuery: MediaQueryList | null = null
 
-function repairNavigationFocus(event: MediaQueryListEvent) {
+function repairNavigationFocus(event: Pick<MediaQueryListEvent, 'matches'>, previous?: HTMLElement) {
   if (!import.meta.client || props.compact) return
   const from = event.matches ? mobileNavigation.value : wideNavigation.value
   const to = event.matches ? wideNavigation.value : mobileNavigation.value
-  const active = document.activeElement
+  const active = previous ?? document.activeElement
   if (!(active instanceof HTMLElement) || !from?.contains(active) || !to) return
   const groupId = active.closest('[data-footer-group]')?.getAttribute('data-footer-group')
   const group = Array.from(to.querySelectorAll<HTMLElement>('[data-footer-group]'))
@@ -138,6 +140,16 @@ function repairNavigationFocus(event: MediaQueryListEvent) {
       ? sameLink
       : group.querySelector<HTMLElement>('summary')
   target?.focus()
+}
+
+function repairHiddenFocus(event: FocusEvent) {
+  if (!import.meta.client || props.compact || !widthQuery) return
+  const previous = event.target
+  // CSS can hide a focused link before matchMedia's change callback runs.
+  // Only repair that blur; ordinary clicks/Tab navigation keep their destination.
+  if (!(previous instanceof HTMLElement) || !previous.isConnected
+    || event.relatedTarget || previous.getClientRects().length > 0) return
+  repairNavigationFocus({ matches: widthQuery.matches }, previous)
 }
 onMounted(() => {
   if (!import.meta.client || props.compact) return
