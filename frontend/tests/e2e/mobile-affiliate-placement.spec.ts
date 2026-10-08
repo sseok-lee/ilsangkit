@@ -10,6 +10,7 @@ const banner = {
   targetUrl: 'https://example.com/affiliate',
   altText: '제휴 배너 테스트 이미지',
   disclosureText: '이 포스팅은 테스트 제휴 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.\n업체별 전체 고지문구가 이미지 위에 표시됩니다.',
+  expiresAt: null,
 }
 const fixtureImage = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240"><rect width="640" height="240" fill="#e0f2fe"/><text x="320" y="130" text-anchor="middle" font-size="30" fill="#075985">AFFILIATE TEST BANNER</text></svg>'
 
@@ -26,7 +27,11 @@ async function installBanner(page: Page, mode: 'ready' | 'empty' | 'error' | 'br
     requests += 1
     await route.fulfill({
       status: mode === 'error' ? 503 : 200,
-      json: { success: mode !== 'error', data: mode === 'empty' ? null : { ...banner, imageUrl } },
+      json: {
+        success: mode !== 'error',
+        data: mode === 'empty' ? null : { ...banner, imageUrl },
+        serverTime: '2026-10-15T14:59:59.000Z',
+      },
       headers: { 'cache-control': 'no-store' },
     })
   })
