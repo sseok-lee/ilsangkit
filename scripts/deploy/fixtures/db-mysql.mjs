@@ -1,9 +1,12 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { readMigrationFiles } from '../db-contract.mjs'
+import { createDbRuntime, readDbSnapshot } from '../db-schema.mjs'
 
 const DB_PREFIX = 'ilsangkit_migration_test_'
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
@@ -64,7 +67,103 @@ export async function createMysqlFixture(t, label) {
         },
       })
     },
+    async seedLegacyShape() {
+      const deploy = await prisma(fixtureBackend, url, ['migrate', 'deploy'], schemaPath)
+      if (deploy.code !== 0) throw new Error(`fixture migrate deploy failed: ${sanitizeMysqlOutput(deploy.stderr || deploy.stdout)}`)
+
+      await checkedMysql(adminUrl, `
+        INSERT INTO AffiliateBanner (id, provider, name, imageSourceType, targetUrl, altText, isEnabled, createdAt, updatedAt)
+        VALUES ('11111111-1111-1111-1111-111111111111', 'coupang', 'fixture banner', 'url', 'https://example.com/banner', 'fixture alt', true, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3));
+        INSERT INTO WasteSchedule (city, district, targetRegion, emissionPlace, details, sourceId, updatedAt)
+        VALUES ('서울', '중구', 'fixture region', 'fixture place', JSON_OBJECT('day', 'mon'), 'fixture-waste', CURRENT_TIMESTAMP(3));
+        INSERT INTO Subscription (houseManageNo, pblancNo, sourceType, houseName, houseType, regionName, status, createdAt, updatedAt)
+        VALUES ('HM-FIXTURE', 'PB-FIXTURE', 'APT', 'fixture house', 'APT', '서울', 'ongoing', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3));
+      `, dbName)
+
+      const files = readMigrationFiles(prismaDir)
+      const runtime = createDbRuntime({ backendDir: fixtureBackend, databaseUrl: url })
+      const snapshot = await readDbSnapshot(runtime)
+      await runtime.close()
+
+      const evidenceDir = join(root, 'evidence')
+      const prefixDir = join(evidenceDir, 'prefixes', String(files.length).padStart(4, '0'))
+      mkdirSync(prefixDir, { recursive: true })
+      writeFileSync(join(prefixDir, 'structure.json'), `${JSON.stringify(snapshot.structure, null, 2)}\n`)
+      writeFileSync(join(prefixDir, 'schema.prisma'), readFileSync(schemaPath, 'utf8'))
+
+      const originalRows = await readRepresentativeRows()
+      await checkedMysql(adminUrl, `
+        DELETE FROM _prisma_migrations
+         WHERE migration_name NOT IN (
+           '202610060001_affiliate_banners',
+           '202610070001_affiliate_disclosures',
+           '202610080001_affiliate_banner_expiration'
+         )
+      `, dbName)
+      const originalLedgerRows = await readLedgerRows()
+      const stateRoot = join(root, 'state')
+      mkdirSync(stateRoot, { recursive: true })
+      const sha = 'a'.repeat(40)
+      const runId = '1001'
+      const runAttempt = '1'
+      const expectedMissing = files.slice(0, 3).map((file) => file.name)
+
+      return {
+        context: {
+          backendDir: fixtureBackend,
+          prismaDir,
+          stateRoot,
+          evidenceDir,
+          sha,
+          runId,
+          runAttempt,
+          expectedDb: snapshot.identity,
+          databaseUrl: url,
+        },
+        auditContext: {
+          backendDir: fixtureBackend,
+          prismaDir,
+          stateRoot,
+          evidenceDir,
+          sha,
+          runId,
+          runAttempt,
+          expectedDatabase: dbName,
+          expectedServerUuid: null,
+          databaseUrl: url,
+        },
+        originalRows,
+        originalLedgerRows,
+        expectedMissing,
+      }
+    },
+    async readOriginalRows() {
+      return readRepresentativeRows()
+    },
+    async readOriginalLedgerRows() {
+      return readLedgerRows()
+    },
     close,
+  }
+
+  async function readRepresentativeRows() {
+    const [affiliate, waste, subscription] = await Promise.all([
+      query(adminUrl, dbName, 'SELECT id, provider, name, imageSourceType, targetUrl, altText, isEnabled FROM AffiliateBanner ORDER BY id'),
+      query(adminUrl, dbName, 'SELECT city, district, targetRegion, emissionPlace, sourceId FROM WasteSchedule ORDER BY id'),
+      query(adminUrl, dbName, 'SELECT houseManageNo, pblancNo, sourceType, houseName, houseType, regionName, status FROM Subscription ORDER BY id'),
+    ])
+    return { affiliate, waste, subscription }
+  }
+
+  async function readLedgerRows() {
+    return query(adminUrl, dbName, `SELECT migration_name AS migrationName, checksum, finished_at AS finishedAt, rolled_back_at AS rolledBackAt
+      FROM _prisma_migrations
+      WHERE migration_name IN (
+        '202610060001_affiliate_banners',
+        '202610070001_affiliate_disclosures',
+        '202610080001_affiliate_banner_expiration'
+      )
+      ORDER BY migration_name`)
   }
 }
 
