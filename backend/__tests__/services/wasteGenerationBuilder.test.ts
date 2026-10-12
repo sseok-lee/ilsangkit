@@ -71,6 +71,35 @@ function metadataFingerprintFor(reference = refs.areas[0], relationKeys: string[
 }
 
 describe('buildWasteGenerationPlan', () => {
+  it('keeps unresolved source revisions without changing verified public area content', () => {
+    const input = {
+      baseGenerationId: null,
+      references: refs,
+      rows: [row()],
+      provenance: 'legacy' as const,
+      sourceComplete: true,
+      previousRevisions: [],
+      observedAt: new Date('2026-09-28T00:00:00.000Z'),
+    };
+    const verifiedOnly = buildWasteGenerationPlan(input);
+    const mixed = buildWasteGenerationPlan({
+      ...input,
+      rows: [...input.rows, ...Array.from({ length: 100 }, (_, index) => row({
+        scheduleId: index + 2,
+        sourceId: `unresolved-${index}`,
+        targetRegion: '적용 범위 미확인',
+        details: { livingWaste: { dayOfWeek: '화' } },
+      }))],
+    });
+
+    expect(mixed.areaEntries).toEqual(verifiedOnly.areaEntries);
+    expect(mixed.revisions).toHaveLength(101);
+    expect(mixed.report.unresolvedCoverageCount).toBe(100);
+    expect(mixed.revisions.slice(1).every((revision) => (
+      revision.state === 'active' && revision.coverageCandidates[0].state === 'unresolved'
+    ))).toBe(true);
+  });
+
   it('fails complete publication input with duplicate source identity', () => {
     expect(() => buildWasteGenerationPlan({
       baseGenerationId: null,
