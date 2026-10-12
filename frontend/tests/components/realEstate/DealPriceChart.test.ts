@@ -112,10 +112,10 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('점 없이 평균선만 그리고 빈 달을 건너 연결하지 않는다', async () => {
+  it('점 없이 거래가 있는 월평균을 빈 달 너머로 연결한다', async () => {
     const wrapper = await mountFlow()
     const path = averagePaths.at(-1)!
-    expect(path.map(command => command[0])).toEqual(['M', 'L', 'M'])
+    expect(path.map(command => command[0])).toEqual(['M', 'L', 'L'])
     expect(canvasContext.arc).not.toHaveBeenCalled()
     expect(canvasContext.fill).not.toHaveBeenCalled()
     await wrapper.get('select[name="deal-month"]').setValue('2026-08')
@@ -124,16 +124,32 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
+  it('여러 빈 달을 건너 연결해도 빈 달의 평균과 거래를 만들지 않는다', async () => {
+    const wrapper = await mountFlow([flowPoints[0], flowPoints[4]])
+    expect(averagePaths.at(-1)!.map(command => command[0])).toEqual(['M', 'L'])
+    await wrapper.get('select[name="deal-month"]').setValue('2026-09')
+    expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('이 달에는 거래가 없습니다')
+    expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(0)
+    await wrapper.get('select[name="deal-month"]').setValue('2026-10')
+    expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('이 달에는 거래가 없습니다')
+    expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(0)
+    expect(canvasContext.arc).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('단독 거래월에 점이나 임의의 선분을 만들지 않는다', async () => {
     const wrapper = await mountFlow([flowPoints[4]])
     expect(averagePaths.at(-1)!.map(command => command[0])).toEqual(['M'])
     expect(canvasContext.arc).not.toHaveBeenCalled()
+    const [month] = averagePaths.at(-1)!
+    await wrapper.get('canvas').trigger('click', { clientX: month[1], clientY: month[2] })
+    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('')
     await wrapper.get('select[name="deal-month"]').setValue('2026-11')
     expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('5억')
     wrapper.unmount()
   })
 
-  it('선분만 월 선택으로 처리하고 거래점과 빈 달 클릭은 무시한다', async () => {
+  it('빈 달을 잇는 선분에서는 가까운 거래월을 선택하고 선 밖 거래점은 무시한다', async () => {
     const wrapper = await mountFlow()
     const [aug, sep, nov] = averagePaths.at(-1)!
     const canvas = wrapper.get('canvas')
@@ -149,10 +165,20 @@ describe('DealPriceChart', () => {
     expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-08')
     expect(wrapper.get<HTMLSelectElement>('select[name="deal-date"]').element.value).toBe('')
 
-    await canvas.trigger('click', { clientX: (sep[1] + nov[1]) / 2, clientY: (sep[2] + nov[2]) / 2 })
-    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-08')
+    await canvas.trigger('click', {
+      clientX: sep[1] + (nov[1] - sep[1]) * 0.25,
+      clientY: sep[2] + (nov[2] - sep[2]) * 0.25,
+    })
+    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-09')
+    expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('3억')
+    await canvas.trigger('click', {
+      clientX: sep[1] + (nov[1] - sep[1]) * 0.75,
+      clientY: sep[2] + (nov[2] - sep[2]) * 0.75,
+    })
+    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-11')
+    expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('5억')
     await canvas.trigger('click', { clientX: nov[1], clientY: nov[2] })
-    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-08')
+    expect(wrapper.get<HTMLSelectElement>('select[name="deal-month"]').element.value).toBe('2026-11')
     wrapper.unmount()
   })
 

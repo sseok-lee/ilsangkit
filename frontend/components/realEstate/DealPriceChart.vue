@@ -70,7 +70,7 @@
             <span class="absolute translate-x-1/2" :style="{ right: `${plotPadding.right}px` }">{{ dateTicks[1].label }}</span>
           </div>
         </div>
-        <p class="mt-3 text-xs text-muted">조회기간 내 월별 평균 · 거래가 없는 달은 선을 연결하지 않습니다.</p>
+        <p class="mt-3 text-xs text-muted">조회기간 내 월별 평균 · 거래 없는 달은 앞뒤 거래월을 이어 표시합니다.</p>
       </div>
 
       <aside class="border-line lg:border-l lg:pl-5">
@@ -267,10 +267,11 @@ function selectNearest(event: MouseEvent | PointerEvent): void {
   const y = event.clientY - rect.top
   let closestMonth: MonthlyDealTrend | null = null
   let distanceToTrend = Number.POSITIVE_INFINITY
+  const monthsWithDeals = projectedMonths.value.filter(month => month.y !== null)
 
-  for (let index = 1; index < projectedMonths.value.length; index++) {
-    const previous = projectedMonths.value[index - 1]
-    const month = projectedMonths.value[index]
+  for (let index = 1; index < monthsWithDeals.length; index++) {
+    const previous = monthsWithDeals[index - 1]
+    const month = monthsWithDeals[index]
     if (previous.y === null || month.y === null) continue
     const dx = month.x - previous.x
     const dy = month.y - previous.y
@@ -330,7 +331,7 @@ function drawChart(): void {
   ctx.beginPath()
   let connected = false
   for (const month of projectedMonths.value) {
-    if (month.y === null) { connected = false; continue }
+    if (month.y === null) continue
     if (connected) ctx.lineTo(month.x, month.y)
     else ctx.moveTo(month.x, month.y)
     connected = true
