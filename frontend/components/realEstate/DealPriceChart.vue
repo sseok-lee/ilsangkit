@@ -31,11 +31,7 @@
         <div class="mb-3 flex flex-wrap items-center gap-4 text-sm text-muted">
           <span class="inline-flex items-center gap-2 font-medium text-strong">
             <span class="h-0.5 w-5 bg-primary" />
-            월별 중앙값
-          </span>
-          <span class="inline-flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full border border-primary/40 bg-white" />
-            개별 거래
+            월별 평균
           </span>
           <span>{{ window.from }}–{{ window.to }}</span>
           <span>{{ modeUnitLabel }}</span>
@@ -74,7 +70,7 @@
             <span class="absolute translate-x-1/2" :style="{ right: `${plotPadding.right}px` }">{{ dateTicks[1].label }}</span>
           </div>
         </div>
-        <p class="mt-3 text-xs text-muted">조회기간 내 월별 중앙값 · 거래가 없는 달은 선을 연결하지 않습니다.</p>
+        <p class="mt-3 text-xs text-muted">조회기간 내 월별 평균 · 거래가 없는 달은 선을 연결하지 않습니다.</p>
       </div>
 
       <aside class="border-line lg:border-l lg:pl-5">
@@ -88,7 +84,7 @@
           </select>
         </label>
         <p v-if="activeMonth" data-testid="monthly-price-summary" class="mb-4 text-sm text-muted">
-          {{ formatDate(activeMonth.month) }} 중앙값
+          {{ formatDate(activeMonth.month) }} 평균
           <strong v-if="activeMonth.amount !== null" class="mt-1 block text-xl font-semibold tabular-nums text-strong">{{ formatAmount(activeMonth.amount) }}</strong>
           <span v-else class="mt-1 block">이 달에는 거래가 없습니다</span>
         </p>
@@ -150,8 +146,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { DateWindow, DealMode, DealPoint } from '~/types/housingRedesign'
 import { formatKoreanPrice } from '~/utils/formatters'
-import { DEAL_PLOT_PADDING, projectDealPoints, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
-import type { MonthlyDealTrend, ProjectedDealPoint } from '~/utils/realEstateDealPlot'
+import { DEAL_PLOT_PADDING, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
+import type { MonthlyDealTrend } from '~/utils/realEstateDealPlot'
 
 const props = withDefaults(defineProps<{
   points: DealPoint[]
@@ -171,9 +167,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const canvasWrapRef = ref<HTMLElement | null>(null)
 const selectedDate = ref('')
 const selectedMonth = ref('')
-const selectedGroup = ref<ProjectedDealPoint | null>(null)
 const visibleLimit = ref(20)
-const projected = ref<ProjectedDealPoint[]>([])
 const projectedMonths = ref<MonthlyDealTrend[]>([])
 const monthlyTrend = computed(() => projectMonthlyDealTrend(props.points, props.window, 320, 288))
 const activeMonth = computed(() => monthlyTrend.value.find(month => month.month === selectedMonth.value))
@@ -223,7 +217,6 @@ const dateTicks = computed(() => [
 
 const selectedPoints = computed(() => {
   if (activeMonth.value) return [...activeMonth.value.points].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
-  if (selectedGroup.value) return selectedGroup.value.points
   return props.points.filter(point => point.date === selectedDate.value)
 })
 
@@ -259,52 +252,42 @@ function floorLabel(floor: number | null): string {
 
 function clearPointSelection(): void {
   selectedMonth.value = ''
-  selectedGroup.value = null
   visibleLimit.value = 20
 }
 
 function selectMonth(): void {
   selectedDate.value = selectedMonth.value ? '' : (availableDates.value[0] ?? '')
-  selectedGroup.value = null
   visibleLimit.value = 20
 }
 
 function selectNearest(event: MouseEvent | PointerEvent): void {
-  if (!canvasRef.value || projected.value.length === 0) return
+  if (!canvasRef.value || props.loading || props.error || props.points.length === 0) return
   const rect = canvasRef.value.getBoundingClientRect()
   const x = event.clientX - rect.left
   const y = event.clientY - rect.top
-  const nearest = projected.value.reduce((best, point) => {
-    const distance = Math.hypot(point.x - x, point.y - y)
-    return distance < best.distance ? { point, distance } : best
-  }, { point: projected.value[0], distance: Number.POSITIVE_INFINITY })
-  // Exact trade taps retain priority; line taps select the closest month on that segment.
   let closestMonth: MonthlyDealTrend | null = null
   let distanceToTrend = Number.POSITIVE_INFINITY
-  projectedMonths.value.forEach((month, index) => {
-    if (month.y === null) return
-    const distance = Math.hypot(month.x - x, month.y - y)
-    if (distance < distanceToTrend) { distanceToTrend = distance; closestMonth = month }
+
+  for (let index = 1; index < projectedMonths.value.length; index++) {
     const previous = projectedMonths.value[index - 1]
-    if (!previous || previous.y === null || x < previous.x || x > month.x) return
+    const month = projectedMonths.value[index]
+    if (previous.y === null || month.y === null) continue
     const dx = month.x - previous.x
     const dy = month.y - previous.y
-    const fraction = Math.max(0, Math.min(1, ((x - previous.x) * dx + (y - previous.y) * dy) / (dx * dx + dy * dy || 1)))
-    const segmentDistance = Math.hypot(x - previous.x - fraction * dx, y - previous.y - fraction * dy)
-    if (segmentDistance < distanceToTrend) {
-      distanceToTrend = segmentDistance
-      closestMonth = x - previous.x < month.x - x ? previous : month
+    const fraction = Math.max(0, Math.min(1,
+      ((x - previous.x) * dx + (y - previous.y) * dy) / (dx * dx + dy * dy || 1)
+    ))
+    const distance = Math.hypot(x - previous.x - fraction * dx, y - previous.y - fraction * dy)
+    if (distance < distanceToTrend) {
+      distanceToTrend = distance
+      closestMonth = Math.abs(x - previous.x) < Math.abs(month.x - x) ? previous : month
     }
-  })
-  if (closestMonth && distanceToTrend <= 16 && nearest.distance > 8) {
-    selectedMonth.value = (closestMonth as MonthlyDealTrend).month
-    selectMonth()
-    return
   }
-  selectedMonth.value = ''
-  selectedGroup.value = nearest.point
-  selectedDate.value = nearest.point.date
-  visibleLimit.value = 20
+
+  if (closestMonth && distanceToTrend <= 16) {
+    selectedMonth.value = closestMonth.month
+    selectMonth()
+  }
 }
 
 function hasBrowserApis(): boolean {
@@ -329,7 +312,6 @@ function drawChart(): void {
 
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
   ctx.clearRect(0, 0, width, height)
-  projected.value = projectDealPoints(props.points, props.window, width, height)
 
   ctx.strokeStyle = '#E6E9F0'
   ctx.fillStyle = '#56627A'
@@ -339,17 +321,6 @@ function drawChart(): void {
     ctx.beginPath()
     ctx.moveTo(plotPadding.left, tick.y)
     ctx.lineTo(width - plotPadding.right, tick.y)
-    ctx.stroke()
-  }
-
-  for (const point of projected.value) {
-    const active = selectedGroup.value?.date === point.date && selectedGroup.value.amount === point.amount
-    ctx.beginPath()
-    ctx.arc(point.x, point.y, active ? 5 : 3, 0, Math.PI * 2)
-    ctx.fillStyle = active ? '#2450DC' : '#FFFFFF'
-    ctx.strokeStyle = active ? '#2450DC' : 'rgba(36, 80, 220, 0.35)'
-    ctx.lineWidth = active ? 2 : 1
-    ctx.fill()
     ctx.stroke()
   }
 
@@ -365,14 +336,6 @@ function drawChart(): void {
     connected = true
   }
   ctx.stroke()
-  for (const month of projectedMonths.value) {
-    if (month.y === null) continue
-    ctx.beginPath()
-    ctx.arc(month.x, month.y, selectedMonth.value === month.month ? 5 : 3.5, 0, Math.PI * 2)
-    ctx.fillStyle = '#2450DC'
-    ctx.fill()
-  }
-
 }
 
 function requestDraw(): void {
@@ -413,14 +376,13 @@ watch(
   () => {
     selectedDate.value = availableDates.value[0] ?? ''
     selectedMonth.value = ''
-    selectedGroup.value = null
     visibleLimit.value = 20
     nextTick(requestDraw)
   },
   { immediate: true }
 )
 
-watch([() => props.window, () => props.mode, selectedGroup, selectedMonth], () => nextTick(requestDraw), { deep: true })
+watch([() => props.window, () => props.mode, selectedMonth], () => nextTick(requestDraw), { deep: true })
 
 watch(
   [canvasWrapRef, () => props.loading, () => props.error, () => props.points.length],
