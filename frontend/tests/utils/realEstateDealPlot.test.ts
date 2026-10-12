@@ -11,7 +11,25 @@ const base = {
 }
 
 describe('realEstateDealPlot', () => {
-  it('중복 좌표의 거래도 개별 집계하여 홀수·짝수 월 중앙값을 계산한다', () => {
+  it('월평균의 소수를 유지하고 유효한 0과 빈 달을 구분한다', () => {
+    const points: DealPoint[] = [
+      { ...base, id: 1, date: '2026-08-01', amount: 100 },
+      { ...base, id: 2, date: '2026-08-02', amount: 101 },
+      { ...base, id: 3, date: '2026-08-03', amount: 101 },
+      { ...base, id: 4, date: '2026-10-01', amount: 0 },
+    ]
+    const trend = projectMonthlyDealTrend(
+      points, { from: '2026-08-01', to: '2026-10-31' }, 400, 288
+    )
+    expect(trend[0].amount).toBeCloseTo(302 / 3)
+    expect(trend[1].amount).toBeNull()
+    expect(trend[1].y).toBeNull()
+    expect(trend[2].amount).toBe(0)
+    expect(Number.isFinite(trend[2].y)).toBe(true)
+    expect(points.map(point => point.amount)).toEqual([100, 101, 101, 0])
+  })
+
+  it('중복 좌표의 거래도 개별 집계하여 월평균을 계산한다', () => {
     const points = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-08-01', amount: 100 },
@@ -21,7 +39,7 @@ describe('realEstateDealPlot', () => {
     ]
     const trend = projectMonthlyDealTrend(points, { from: '2026-08-01', to: '2026-09-30' }, 400, 288)
     expect(trend.map(p => [p.month, p.amount, p.points.length])).toEqual([
-      ['2026-08', 100, 3], ['2026-09', 300, 2],
+      ['2026-08', 200, 3], ['2026-09', 300, 2],
     ])
     expect(points[0].id).toBe(1)
   })
@@ -41,7 +59,7 @@ describe('realEstateDealPlot', () => {
     }
   })
 
-  it('한 날짜만 조회해도 거래 점과 중앙값의 좌표가 일치한다', () => {
+  it('한 날짜만 조회해도 거래 점과 월평균의 좌표가 일치한다', () => {
     const points = [{ ...base, id: 1 }]
     const window = { from: base.date, to: base.date }
     const [trend] = projectMonthlyDealTrend(points, window, 320, 288)

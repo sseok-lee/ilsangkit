@@ -59,7 +59,7 @@ describe('사이트 전체 원시 회색 가드', () => {
 const NEUTRAL_HEX = /#(?:15213b|0c1424|56627a|677087|e6e9f0|d7dce7|2450dc|f7f8fa|fbfcfe|eef1f5|aeb7c8|eef0f4|eef2ff)(?:[0-9a-f]{2})?\b/gi
 
 const HEX_ALLOW: Array<{ file: string; count: number; reason: string }> = [
-  { file: 'components/realEstate/DealPriceChart.vue', count: 6, reason: 'canvas strokeStyle/fillStyle 은 CSS 변수를 읽지 못한다' },
+  { file: 'components/realEstate/DealPriceChart.vue', count: 3, reason: 'canvas strokeStyle/fillStyle 은 CSS 변수를 읽지 못한다' },
 ]
 
 describe('사이트 전체 중립 hex 가드', () => {
