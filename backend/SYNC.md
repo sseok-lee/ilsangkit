@@ -89,6 +89,63 @@ npm run waste:publish -- \
 `--only trash --dry-run` 조합만 허용한다. 기존 `sync:trash --approval-report-hash`와
 `--expected-base`는 더 이상 수집 명령에서 받지 않는다.
 
+#### 운영 서버의 최초 전환과 정기 실행
+
+운영 배포에는 `src/`가 없으므로 `npm run sync:*` 대신 빌드된 `dist/scripts/*.js`를
+실행한다. Node 20의 `--env-file=.env`로 설정을 읽는다. 참조자료는 배포 시 교체되는
+`dist/`, `prisma/` 밖에 보관하고, reference/manifest/checksums 세 파일을 같은 버전으로
+설치한다. manifest 파일명은 checksums에 기록된 이름을 유지한다.
+
+```dotenv
+WASTE_REFERENCE_PATH=/home/project2/data/waste/references/<version>/validated-reference.json
+WASTE_REFERENCE_MANIFEST_PATH=/home/project2/data/waste/references/<version>/validated-reference-version-manifest.json
+WASTE_REFERENCE_CHECKSUMS_PATH=/home/project2/data/waste/references/<version>/validated-reference-checksums.json
+WASTE_REPORT_OUT=/home/project2/data/waste/reports/latest.json
+WASTE_AREA_DISCOVERY_ENABLED=true
+```
+
+공개 generation이 없는 기존 DB는 **원본 backfill → 리포트 검토 → 최초 발행**을 먼저
+완료한다. 빈 테이블 상태에서 API 수집만 발행하면 API에 더 이상 없는 기존 원본은 비교할
+기준이 없어 공개 뷰에서 빠질 수 있다. 기존 `WasteSchedule` 및 추가 테이블을 삭제하지 않는다.
+backfill은 최초 전환용이며 정기 수집 때 반복하지 않는다.
+
+```bash
+cd /home/project2/backend
+# 아래 경로는 설치한 동일 버전 참조자료로 지정한다.
+WASTE_AREA_DISCOVERY_ENABLED=true node --env-file=.env dist/scripts/backfillWasteAreas.js \
+  --write \
+  --reference-path=/home/project2/data/waste/references/<version>/validated-reference.json \
+  --reference-manifest-path=/home/project2/data/waste/references/<version>/validated-reference-version-manifest.json \
+  --reference-checksums-path=/home/project2/data/waste/references/<version>/validated-reference-checksums.json \
+  --report-out=/home/project2/data/waste/reports/initial-backfill.json
+
+# 리포트의 canPublish, counts, sourceChanges와 기존 ID/필드 보존을 확인한 뒤 실행한다.
+WASTE_AREA_DISCOVERY_ENABLED=true node --env-file=.env dist/scripts/publishWasteGeneration.js \
+  --generation-id=<initial-generation-id> \
+  --approval-report-hash=<initial-report-hash> \
+  --expected-base=none
+
+# 이후 정기 수집: 전체 시설 또는 trash 단독
+node --env-file=.env dist/scripts/syncAll.js
+node --env-file=.env dist/scripts/syncAll.js --only trash
+
+# 수집은 prepared까지만 수행한다. latest.json을 실행별 파일로 보관하고 검토한 뒤 발행한다.
+node --env-file=.env dist/scripts/publishWasteGeneration.js \
+  --generation-id=<report.generationId> \
+  --approval-report-hash=<report.reportHash> \
+  --expected-base=<report.baseGenerationId>
+```
+
+검토 시 `sourceComplete=true`, 원본 총수와 수집 건수 일치, 중복/충돌 없음, 신규·누락 원본 및
+비활성 전환을 확인한다. API는 요청한 1,000건을 100건으로 제한할 수 있으므로 응답 페이지
+크기를 기준으로 끝까지 수집한다. 두 번 연속 완전 수집에서 사라진 원본은 비활성 후보가
+되며, 반복 수집 리포트도 검토 없이 자동 발행하지 않는다.
+
+최초 공개 데이터 검증 후 backend의 `WASTE_AREA_DISCOVERY_ENABLED=true`와 frontend의
+`NUXT_PUBLIC_WASTE_AREA_DISCOVERY_ENABLED=true`를 함께 적용하고 두 PM2 프로세스를 재시작한다.
+참조 근거가 없는 원본은 미확인 목록으로 제공하고, 동별 적용 범위나 검색엔진 색인을 임의로
+확정하지 않는다. 참조자료 버전과 원본 데이터 수집 시점은 별도로 기록한다.
+
 ### 병원/약국
 ```bash
 npm run seed:hospital-detail  # 병원 상세정보 (건강보험심사평가원 API)
