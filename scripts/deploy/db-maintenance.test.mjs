@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { auditDatabase, recoverAttempt, reconcileDatabase } from './db-maintenance.mjs'
+import { auditDatabase, buildAuditPublicSummary, recoverAttempt, reconcileDatabase } from './db-maintenance.mjs'
 
 test('audit context allows only reviewed production DB or explicit fixture prefix for unknown UUID', async () => {
   const context = {
@@ -57,6 +57,82 @@ test('CLI parses dotenv env files with export/comments and reports fixed error c
   assert.equal(result.status, 1)
   assert.match(result.stderr, /^CLI_DATABASE\n$/)
   assert.doesNotMatch(result.stderr, /secret|mysql:\/\//)
+})
+
+test('public audit summary exposes review fields without private SQL, URLs, logs, or extra nested data', () => {
+  const summary = buildAuditPublicSummary({
+    format: 1,
+    auditId: 'audit-public-review',
+    sha: 'b'.repeat(40),
+    runId: '123',
+    runAttempt: '2',
+    identity: {
+      database: 'ilsangkit',
+      serverUuid: 'server-uuid',
+      unexpectedNested: { DATABASE_URL: 'mysql://user:secret@127.0.0.1:3306/ilsangkit' },
+    },
+    equal: false,
+    fingerprint: 'f'.repeat(64),
+    structureSha256: 's'.repeat(64),
+    differences: [
+      'columns: expected [{"default":"secret raw sql"}] actual [{"default":"different"}]',
+      'indexes: expected [{"parser":"ngram"}] actual []',
+      'mysql://user:secret@example.test/private: expected raw actual data',
+    ],
+    files: [
+      { name: '202601010000_init', checksum: 'a'.repeat(64), sqlPath: '/tmp/private/migration.sql' },
+      { name: '202602020000_next', checksum: 'c'.repeat(64), sqlPath: '/tmp/private/next.sql' },
+    ],
+    history: {
+      applied: ['202601010000_init'],
+      pending: ['202602020000_next'],
+      unknown: ['unexpected'],
+      logs: 'raw private log',
+    },
+    ledger: [
+      {
+        migrationName: '202601010000_init',
+        checksum: 'a'.repeat(64),
+        finishedAt: '2026-01-01T00:00:00.000Z',
+        rolledBackAt: null,
+        logs: 'contains secret log',
+      },
+    ],
+    missing: [
+      {
+        name: '202602020000_next',
+        checksum: 'c'.repeat(64),
+        sqlPath: '/tmp/private/next.sql',
+        rawSql: 'ALTER TABLE Private ADD COLUMN secret TEXT',
+      },
+    ],
+    prerequisites: {
+      mysqlVersion: 'mysql  Ver 8.0.44',
+      mysqldumpVersion: 'mysqldump  Ver 8.0.44',
+      processPrivilege: true,
+      disk: {
+        availableBytes: 1024,
+        databaseBytes: 256,
+        minimumFreeBytes: 512,
+        mountUrl: 'mysql://user:secret@127.0.0.1:3306/ilsangkit',
+      },
+      rawGrants: ['GRANT ALL PRIVILEGES ON *.* TO user'],
+    },
+  })
+
+  assert.deepEqual(summary.tested, { sha: 'b'.repeat(40), runId: '123', runAttempt: '2' })
+  assert.deepEqual(summary.identity, { database: 'ilsangkit', serverUuid: 'server-uuid' })
+  assert.deepEqual(summary.schema.differences, { count: 3, categories: { columns: 1, indexes: 1, unknown: 1 } })
+  assert.deepEqual(summary.migrations.files.map((file) => [file.name, file.state]), [
+    ['202601010000_init', 'applied'],
+    ['202602020000_next', 'missing'],
+  ])
+  assert.deepEqual(summary.migrations.missing, [{ name: '202602020000_next', checksum: 'c'.repeat(64) }])
+  assert.equal(summary.prerequisites.processPrivilege, true)
+
+  const json = JSON.stringify(summary)
+  assert.doesNotMatch(json, /sqlPath|rawSql|logs|rawGrants|unsafeRawSql|unexpectedNested|mountUrl|rawDefinition/)
+  assert.doesNotMatch(json, /mysql:\/\/|secret|CREATE TABLE|ALTER TABLE|default/)
 })
 
 test('recover requires reviewed recovery metadata and proof that the DB operation ended', async () => {
