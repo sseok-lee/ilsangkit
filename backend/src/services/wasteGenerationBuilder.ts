@@ -271,9 +271,14 @@ function buildAreaEntries(
   const areaPayloadsByKey = new Map<string, Array<{ revision: BuiltWasteRevision; scope: string; conditionText: string }>>();
   const metadataFingerprintByKey = new Map<string, string>();
   const previousSnapshotByKey = new Map(previousAreaSnapshots.map((snapshot) => [snapshot.areaKey, snapshot]));
+  // Unresolved sources remain in revisions, but cannot contribute public area content.
+  // Filter once instead of scanning them again for every official area.
+  const publicRevisions = revisions.filter((revision) => (
+    revision.coverageCandidates.some((candidate) => candidate.state === 'verified')
+  ));
 
   for (const reference of references) {
-    const rows = collectAreaPublicRows(reference, revisions);
+    const rows = collectAreaPublicRows(reference, publicRevisions);
     areaPayloadsByKey.set(reference.key, rows);
     publicContentByKey.set(reference.key, hashJson(toPublicScheduleTuples(rows)));
     metadataFingerprintByKey.set(reference.key, areaMetadataFingerprint(reference, relations));

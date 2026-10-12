@@ -302,12 +302,13 @@ export async function fetchCompleteTrashPages(
   const pages: PageEvidence<TrashApiResponse>[] = [];
   const seenPageNumbers = new Set<number>();
   let expectedTotalCount: number | null = null;
+  let effectivePageSize = pageSize;
   let totalPages = 1;
 
   for (let pageNo = 1; pageNo <= totalPages; pageNo += 1) {
     const response = await client.fetchData<TrashApiResponse>({
       pageNo,
-      numOfRows: pageSize,
+      numOfRows: effectivePageSize,
     });
     const body = response.response.body;
     const items = normalizeApiItems(body.items);
@@ -319,14 +320,31 @@ export async function fetchCompleteTrashPages(
       throw new Error(`Trash duplicate page index: ${body.pageNo}`);
     }
     seenPageNumbers.add(body.pageNo);
-    if (body.numOfRows !== pageSize && pageNo !== Math.ceil(body.totalCount / pageSize || 1)) {
-      throw new Error(`Trash page size mismatch on page ${pageNo}`);
+    if (!Number.isInteger(body.totalCount) || body.totalCount < 0) {
+      throw new Error(`Trash invalid total count on page ${pageNo}`);
+    }
+    if (!Number.isInteger(body.numOfRows) || body.numOfRows <= 0) {
+      throw new Error(`Trash invalid page size on page ${pageNo}`);
     }
     if (expectedTotalCount === null) {
+      // This provider caps requests at 100 rows even when 1,000 are requested.
+      // Use its reported capacity for both subsequent requests and page count.
+      effectivePageSize = body.numOfRows;
       expectedTotalCount = body.totalCount;
-      totalPages = Math.max(1, Math.ceil(body.totalCount / pageSize));
+      totalPages = Math.max(1, Math.ceil(body.totalCount / effectivePageSize));
     } else if (expectedTotalCount !== body.totalCount) {
       throw new Error('Trash totalCount changed across pages');
+    }
+    const expectedItemCount = Math.min(
+      effectivePageSize,
+      expectedTotalCount - (pageNo - 1) * effectivePageSize
+    );
+    if (body.numOfRows !== effectivePageSize
+      && !(pageNo === totalPages && body.numOfRows === expectedItemCount)) {
+      throw new Error(`Trash page size mismatch on page ${pageNo}`);
+    }
+    if (items.length !== expectedItemCount) {
+      throw new Error(`Trash page item count mismatch on page ${pageNo}: expected ${expectedItemCount}, got ${items.length}`);
     }
 
     pages.push({
