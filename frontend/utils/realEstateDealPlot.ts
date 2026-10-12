@@ -101,10 +101,9 @@ export function projectMonthlyDealTrend(
     const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1))
     const month = start.toISOString().slice(0, 7)
     const group = byMonth.get(month) ?? []
-    const amounts = group.map(point => point.amount).sort((a, b) => a - b)
-    const middle = Math.floor(amounts.length / 2)
-    const amount = amounts.length === 0 ? null : amounts.length % 2
-      ? amounts[middle] : (amounts[middle - 1] + amounts[middle]) / 2
+    const amount = group.length === 0
+      ? null
+      : group.reduce((sum, point) => sum + point.amount, 0) / group.length
     // Monthly aggregates sit at the midpoint of the visible part of that month.
     const center = (Math.max(from, start.getTime()) + Math.min(to, next.getTime() - 86400000)) / 2
     const position = project(center, amount ?? 0)
