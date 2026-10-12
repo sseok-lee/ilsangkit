@@ -1,0 +1,146 @@
+name: Database maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [audit, reconcile, recover]
+        required: true
+      tested_sha:
+        description: Full main SHA from a successful Test run
+        required: true
+      test_run_id:
+        description: Successful Test workflow run ID
+        required: true
+      audit_id:
+        description: Reviewed server audit ID (reconcile only)
+        required: false
+      recovery_id:
+        description: Reviewed recovery JSON ID in the tested commit (recover only)
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cafe24-db
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify Test run provenance and bounded inputs
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ inputs.tested_sha }}
+          TEST_RUN_ID: ${{ inputs.test_run_id }}
+          DB_OPERATION: ${{ inputs.operation }}
+          DB_AUDIT_ID: ${{ inputs.audit_id }}
+          DB_RECOVERY_ID: ${{ inputs.recovery_id }}
+        run: |
+          set -euo pipefail
+          [[ "$DB_OPERATION" =~ ^(audit|reconcile|recover)$ ]]
+          [[ -z "$DB_AUDIT_ID" || "$DB_AUDIT_ID" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$ ]]
+          [[ -z "$DB_RECOVERY_ID" || "$DB_RECOVERY_ID" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$ ]]
+          if [[ "$DB_OPERATION" == reconcile ]]; then test -n "$DB_AUDIT_ID"; fi
+          if [[ "$DB_OPERATION" == recover ]]; then test -n "$DB_RECOVERY_ID"; fi
+          node scripts/deploy/db-workflow.mjs verify-run
+      - name: Checkout exact tested candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+      - name: Download exact Test attempt evidence
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          name: ${{ steps.source.outputs.artifact_name }}
+          path: db-evidence
+      - name: Validate and package maintenance candidate
+        env:
+          TESTED_SHA: ${{ steps.source.outputs.sha }}
+          TEST_RUN_ID: ${{ steps.source.outputs.run_id }}
+          TEST_RUN_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
+          MIGRATION_EVIDENCE_DIR: ${{ github.workspace }}/db-evidence
+          PRISMA_DIR: ${{ github.workspace }}/backend/prisma
+        run: |
+          set -euo pipefail
+          node scripts/deploy/db-evidence.mjs verify
+          mkdir -p maintenance-bundle/scripts/deploy
+          tar -czf maintenance-bundle/backend.tgz -C backend package.json package-lock.json prisma
+          cp -R scripts/deploy/. maintenance-bundle/scripts/deploy/
+          cp -R db-evidence maintenance-bundle/db-evidence
+          (cd maintenance-bundle && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Stage tested maintenance tools
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: maintenance-bundle/*
+          target: /home/project2/run/db-maintenance/${{ steps.source.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          strip_components: 1
+      - name: Run locked database maintenance
+        uses: appleboy/ssh-action@master
+        env:
+          TESTED_SHA: ${{ steps.source.outputs.sha }}
+          TEST_RUN_ID: ${{ steps.source.outputs.run_id }}
+          TEST_RUN_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
+          MAINTENANCE_RUN_ID: ${{ github.run_id }}
+          MAINTENANCE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          DB_OPERATION: ${{ inputs.operation }}
+          DB_AUDIT_ID: ${{ inputs.audit_id }}
+          DB_RECOVERY_ID: ${{ inputs.recovery_id }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          envs: TESTED_SHA,TEST_RUN_ID,TEST_RUN_ATTEMPT,MAINTENANCE_RUN_ID,MAINTENANCE_RUN_ATTEMPT,DB_OPERATION,DB_AUDIT_ID,DB_RECOVERY_ID
+          command_timeout: 25m
+          script: |
+            set -euo pipefail
+            umask 077
+            [[ "$TESTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+            [[ "$TEST_RUN_ID" =~ ^[1-9][0-9]*$ && "$TEST_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+            [[ "$MAINTENANCE_RUN_ID" =~ ^[1-9][0-9]*$ && "$MAINTENANCE_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+            ROOT=/home/project2
+            STAGE="$ROOT/run/db-maintenance/$TESTED_SHA-$MAINTENANCE_RUN_ID-$MAINTENANCE_RUN_ATTEMPT"
+            test -d "$STAGE"
+            exec 9>"$ROOT/run/fixed-deploy.lock"
+            flock -n 9 || { echo DB_LOCK_BUSY; exit 1; }
+            cd "$STAGE"
+            sha256sum -c SHA256SUMS >/dev/null
+            test "$(node -p 'process.versions.node.split(".")[0]')" = 20
+            command -v mysql >/dev/null
+            command -v mysqldump >/dev/null
+            mkdir -p backend
+            tar -xzf backend.tgz -C backend
+            (cd backend && npm ci --omit=dev --no-audit --no-fund && npx --no-install prisma generate)
+            export DB_BACKEND_DIR="$STAGE/backend"
+            export DB_ENV_FILE="$ROOT/backend/.env"
+            export DB_STATE_ROOT="$ROOT/run/db-migrations"
+            export MIGRATION_EVIDENCE_DIR="$STAGE/db-evidence"
+            node scripts/deploy/db-evidence.mjs verify
+            node scripts/deploy/db-maintenance.mjs "$DB_OPERATION"
+            if [ "$DB_OPERATION" = reconcile ]; then
+              INIT_DIR="$(mktemp -d "$DB_STATE_ROOT/init.XXXXXXXX")"
+              curl -fsS -m 30 'http://127.0.0.1:8000/api/internal/release-readiness' > "$INIT_DIR/readiness.json"
+              curl -fsS -m 30 -D "$INIT_DIR/public-health.headers" 'https://ilsangkit.co.kr/api/health' -o "$INIT_DIR/public-health.json"
+              node scripts/deploy/db-active-app.mjs init-active "$DB_STATE_ROOT" "$TESTED_SHA" "$INIT_DIR/readiness.json" "$INIT_DIR/public-health.headers"
+              rm -f "$INIT_DIR/readiness.json" "$INIT_DIR/public-health.headers" "$INIT_DIR/public-health.json"
+              rmdir "$INIT_DIR"
+            fi

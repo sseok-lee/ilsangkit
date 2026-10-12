@@ -1,0 +1,186 @@
+{
+  "format": 1,
+  "migrations": [
+    {
+      "name": "0_legacy_baseline",
+      "checksum": "b038be2447a9fcea458672c86bf28ba3d28b689eb8684b8eb124ee477435e9fc",
+      "sqlPath": "backend/prisma/migrations/0_legacy_baseline/migration.sql"
+    },
+    {
+      "name": "202609280001_waste_area_discovery",
+      "checksum": "c8a8814183fa044e2d1e44b1722106a61a5e966da303aa3d29ea1b8f266df70c",
+      "sqlPath": "backend/prisma/migrations/202609280001_waste_area_discovery/migration.sql"
+    },
+    {
+      "name": "202609290001_real_estate_public_url_registry",
+      "checksum": "257783a19b2a4a029c4de62fd501027fdb3a12377ba2eb9374e982d7aa1af312",
+      "sqlPath": "backend/prisma/migrations/202609290001_real_estate_public_url_registry/migration.sql"
+    },
+    {
+      "name": "202610060001_affiliate_banners",
+      "checksum": "e2f42f1b718366b426382ffffb74799ea54d818555bd45842fb4598b9a0ad5dc",
+      "sqlPath": "backend/prisma/migrations/202610060001_affiliate_banners/migration.sql"
+    },
+    {
+      "name": "202610070001_affiliate_disclosures",
+      "checksum": "ca4606fadcfdcf3b2c53625945fa2d6ac7b9ce701742398b8661670d9b3aa33d",
+      "sqlPath": "backend/prisma/migrations/202610070001_affiliate_disclosures/migration.sql"
+    },
+    {
+      "name": "202610080001_affiliate_banner_expiration",
+      "checksum": "d1f127bd13485902b53d04b5e4e1dd9b6ad288e4703875c69d76b622add64b35",
+      "sqlPath": "backend/prisma/migrations/202610080001_affiliate_banner_expiration/migration.sql"
+    }
+  ],
+  "ngram": [
+    {
+      "table": "Toilet",
+      "index": "Toilet_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Wifi",
+      "index": "Wifi_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Clothes",
+      "index": "Clothes_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Park",
+      "index": "Park_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "School",
+      "index": "School_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Childcare",
+      "index": "Childcare_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Market",
+      "index": "Market_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Parking",
+      "index": "Parking_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Aed",
+      "index": "Aed_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Library",
+      "index": "Library_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "EvCharger",
+      "index": "EvCharger_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Sports",
+      "index": "Sports_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Hospital",
+      "index": "Hospital_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "Pharmacy",
+      "index": "Pharmacy_name_address_roadAddress_idx",
+      "columns": [
+        "name",
+        "address",
+        "roadAddress"
+      ],
+      "parser": "ngram"
+    },
+    {
+      "table": "WasteSchedule",
+      "index": "WasteSchedule_targetRegion_emissionPlace_idx",
+      "columns": [
+        "targetRegion",
+        "emissionPlace"
+      ],
+      "parser": "ngram"
+    }
+  ]
+}
