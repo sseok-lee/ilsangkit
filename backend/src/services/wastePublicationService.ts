@@ -447,18 +447,15 @@ async function persistAreaEntries(
     });
   }
 
-  const areas = await prisma.wasteArea.findMany({
-    where: {
-      OR: entries.map((entry) => ({ kind: entry.reference.kind, code: entry.reference.code })),
-    },
-  });
-  const keyByIdentity = new Map(entries.map((entry) => [
-    `${entry.reference.kind}\u0000${entry.reference.code}`,
-    entry.reference.key,
-  ]));
-  for (const area of areas) {
-    const key = keyByIdentity.get(`${area.kind}\u0000${area.code}`);
-    if (key) areaIdByKey.set(key, area.id);
+  for (const batch of chunks(entries, 500)) {
+    const areas = await prisma.wasteArea.findMany({
+      where: {
+        OR: batch.map((entry) => ({ kind: entry.reference.kind, code: entry.reference.code })),
+      },
+    });
+    for (const area of areas) {
+      areaIdByKey.set(`${area.kind}:${area.code}`, area.id);
+    }
   }
 
   for (const batch of chunks(entries, 500)) {

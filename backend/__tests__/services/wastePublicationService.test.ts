@@ -130,6 +130,42 @@ describe('wastePublicationService', () => {
     expect(prismaMock.prisma.wasteGeneration.create).not.toHaveBeenCalled();
   });
 
+  it('preserves all area identities while keeping database lookups within the batch budget', async () => {
+    const { prepareWasteGeneration } = await import('../../src/services/wastePublicationService.js');
+    const areas: ReferenceBundle['areas'] = Array.from({ length: 1001 }, (_, index) => ({
+      key: `administrative:${index + 1}`,
+      kind: 'administrative',
+      code: String(index + 1),
+      level: 'dong',
+      city: '서울특별시',
+      district: '강남구',
+      districtCode: '11680',
+      name: `테스트${index + 1}동`,
+      evidence: { url: 'https://example.test/ref', version: 'fixture', effectiveFrom: '2020-01-01', effectiveTo: null },
+    }));
+    prismaMock.prisma.syncHistory.create.mockResolvedValue({ id: 'history' });
+    prismaMock.prisma.wasteArea.findMany.mockImplementation(async ({ where }) => {
+      if (where.OR.length > 500) throw new Error('Area identity lookup exceeded bounded query budget');
+      return where.OR.map((identity: { kind: string; code: string }) => ({
+        ...identity, id: Number(identity.code),
+      }));
+    });
+
+    await prepareWasteGeneration({
+      baseGenerationId: null,
+      references: { ...emptyRefs, version: 'fixture-bounded', areas },
+      rows: [],
+      provenance: 'legacy',
+      sourceComplete: true,
+      dryRun: false,
+    });
+
+    const saved = prismaMock.prisma.wasteAreaEntry.createMany.mock.calls.flatMap(([input]) => input.data);
+    expect(saved.map((entry: { areaId: number }) => entry.areaId))
+      .toEqual(expect.arrayContaining(areas.map((area) => Number(area.code))));
+    expect(saved).toHaveLength(areas.length);
+  });
+
   it('blocks persisted prepare writes unless discovery is explicitly enabled', async () => {
     delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
     const { prepareWasteGeneration } = await import('../../src/services/wastePublicationService.js');
