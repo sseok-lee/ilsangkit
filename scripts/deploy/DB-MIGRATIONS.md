@@ -5,7 +5,7 @@ Node 20, Prisma 6.19.2, MySQL 8을 사용한다. SQL과 검사 도구는 같은 
 ## 도입 순서
 
 1. **준비 릴리스:** 기준선, 검사/백업/복구 도구와 필수 Test job을 배포한다. 이 단계의 일반 앱 배포는 DB gate를 호출하지 않는다.
-2. **운영 정합화:** 동일한 main SHA의 Test와 기존 앱 배포 성공을 확인하고 Database maintenance Actions의 `audit`를 실행한다. 관측 database/server UUID, 구조 차이, 기존 ledger, MySQL CLI/권한/디스크 조건을 검토한다. 차이가 0인 audit ID로 `reconcile`을 실행한다.
+2. **운영 정합화:** 동일한 main SHA의 Test와 기존 앱 배포 성공을 확인하고 Database maintenance Actions의 `audit`를 실행한다. Actions 출력의 공개 요약에서 관측 database/server UUID, 구조 차이 count/category, migration 적용·누락 상태, MySQL CLI/권한/디스크 조건을 검토한다. SQL 경로·접속 URL·원본 로그는 출력하지 않으며 private audit 파일에만 보존한다. 차이가 0인 audit ID로 `reconcile`을 실행한다.
 3. **활성 앱 기록:** reconcile 성공 뒤 같은 Actions가 준비 릴리스의 full SHA와 로컬 readiness·공개 health 응답의 release ID를 확인하고 `active-app.json`을 초기화한다. 불일치하면 이 단계는 실패하며 앱 배포 상태를 확인한 후 같은 검증 자료로 재시도한다. 기존 다른 SHA 기록은 덮어쓰지 않는다. 서버 UUID는 검토한 audit 값으로 `baseline.json`에 고정한다. 파일을 추측해서 작성하지 않는다.
 4. **활성화 릴리스:** 정합화 증거를 갖춘 뒤 별도 활성화 변경을 main에 승격한다. 첫 실행은 pending 0을 확인한다. 이후 확장 migration은 CI→백업→DB 적용/검증→앱 교체 순서로 자동 실행한다.
 

@@ -24,6 +24,25 @@ test('reconcile preserves original user and ledger rows', async (t) => {
   assert.ok(auditDoc.prerequisites.disk.availableBytes >= auditDoc.prerequisites.disk.minimumFreeBytes)
   assert.ok(auditDoc.prerequisites.disk.minimumFreeBytes >= 128 * 1024 * 1024)
   assert.deepEqual(audit.missing.map((migration) => migration.name), seeded.expectedMissing)
+  assert.deepEqual(audit.summary.tested, {
+    sha: seeded.auditContext.sha,
+    runId: seeded.auditContext.runId,
+    runAttempt: seeded.auditContext.runAttempt,
+  })
+  assert.deepEqual(audit.summary.identity, auditDoc.identity)
+  assert.equal(audit.summary.schema.equal, auditDoc.equal)
+  assert.equal(audit.summary.schema.fingerprint, auditDoc.fingerprint)
+  assert.equal(audit.summary.schema.structureSha256, auditDoc.structureSha256)
+  assert.deepEqual(audit.summary.schema.differences, { count: 0, categories: {} })
+  assert.deepEqual(audit.summary.migrations.missing, auditDoc.missing.map((migration) => ({
+    name: migration.name,
+    checksum: migration.checksum,
+  })))
+  assert.equal(audit.summary.prerequisites.mysqlVersion, auditDoc.prerequisites.mysqlVersion)
+  assert.equal(audit.summary.prerequisites.mysqldumpVersion, auditDoc.prerequisites.mysqldumpVersion)
+  assert.equal(audit.summary.prerequisites.processPrivilege, true)
+  assert.deepEqual(audit.summary.prerequisites.disk, auditDoc.prerequisites.disk)
+  assert.equal(JSON.stringify(audit).includes('sqlPath'), false)
 
   await reconcileDatabase(seeded.context, audit.auditId)
 

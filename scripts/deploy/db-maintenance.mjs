@@ -68,11 +68,57 @@ export async function auditDatabase(context) {
     return {
       auditId,
       equal: comparison.equal,
-      missing: audit.missing,
+      missing: audit.missing.map(publicMissingRow),
       fingerprint: snapshot.fingerprint,
+      summary: buildAuditPublicSummary(audit),
     }
   } finally {
     await runtime.close()
+  }
+}
+
+export function buildAuditPublicSummary(audit) {
+  return {
+    format: FORMAT,
+    auditId: audit.auditId,
+    tested: {
+      sha: audit.sha,
+      runId: audit.runId,
+      runAttempt: audit.runAttempt,
+    },
+    identity: {
+      database: audit.identity?.database ?? '',
+      serverUuid: audit.identity?.serverUuid ?? '',
+    },
+    schema: {
+      equal: audit.equal === true,
+      fingerprint: audit.fingerprint,
+      structureSha256: audit.structureSha256,
+      differences: summarizeDifferences(audit.differences),
+    },
+    migrations: {
+      files: (audit.files ?? []).map((file) => ({
+        name: file.name,
+        checksum: file.checksum,
+        state: migrationState(file.name, audit),
+      })),
+      ledger: (audit.ledger ?? []).map((row) => ({
+        migrationName: row.migrationName,
+        checksum: row.checksum,
+        state: ledgerState(row),
+      })),
+      missing: (audit.missing ?? []).map(publicMissingRow),
+    },
+    prerequisites: {
+      mysqlVersion: audit.prerequisites?.mysqlVersion ?? '',
+      mysqldumpVersion: audit.prerequisites?.mysqldumpVersion ?? '',
+      processPrivilege: audit.prerequisites?.processPrivilege === true,
+      disk: {
+        availableBytes: Number(audit.prerequisites?.disk?.availableBytes ?? 0),
+        databaseBytes: Number(audit.prerequisites?.disk?.databaseBytes ?? 0),
+        minimumFreeBytes: Number(audit.prerequisites?.disk?.minimumFreeBytes ?? 0),
+      },
+    },
   }
 }
 
@@ -549,6 +595,41 @@ function assertRecoveryLedger(before, after, recovery) {
   if (target.checksum !== recovery.checksum) throw new Error('RECOVERY_LEDGER_CHECKSUM')
   if (recovery.outcome === 'applied' && target.finishedAt == null) throw new Error('RECOVERY_LEDGER_TARGET')
   if (recovery.outcome === 'reverted' && target.rolledBackAt == null) throw new Error('RECOVERY_LEDGER_TARGET')
+}
+
+function summarizeDifferences(differences) {
+  const allowed = new Set(['tables', 'columns', 'indexes', 'foreignKeys', 'checks', 'createTables', 'views', 'triggers', 'routines', 'events'])
+  const categories = {}
+  for (const difference of differences ?? []) {
+    const prefix = String(difference).split(':', 1)[0] || 'unknown'
+    const category = allowed.has(prefix) ? prefix : 'unknown'
+    categories[category] = (categories[category] ?? 0) + 1
+  }
+  return {
+    count: Array.isArray(differences) ? differences.length : 0,
+    categories: Object.fromEntries(Object.entries(categories).sort(([a], [b]) => a.localeCompare(b))),
+  }
+}
+
+function migrationState(name, audit) {
+  const ledger = (audit.ledger ?? []).find((row) => row.migrationName === name)
+  if (ledger) return ledgerState(ledger)
+  if ((audit.missing ?? []).some((row) => row.name === name)) return 'missing'
+  if ((audit.history?.pending ?? []).includes(name)) return 'pending'
+  return 'unknown'
+}
+
+function ledgerState(row) {
+  if (row.rolledBackAt != null) return 'rolled-back'
+  if (row.finishedAt != null) return 'applied'
+  return 'started'
+}
+
+function publicMissingRow(row) {
+  return {
+    name: row.name,
+    checksum: row.checksum,
+  }
 }
 
 async function assertRecoveryPostconditions(runtime, postconditions) {
