@@ -55,7 +55,13 @@ describe('구·군 trash 집계 페이지 SSR', () => {
   })
 
   it('area mode에서는 legacy source 목록 SSR을 호출하지 않고 unresolved mode만 source로 남긴다', () => {
-    expect(regionCategory).toContain('if (showWasteAreaList.value) return null')
+    // wasteSsr 핸들러 범위로 고정 (wasteSourceScheduleKey 의 같은 문장과 구분)
+    expect(regionCategory).toMatch(
+      /category\.value !== 'trash'\) return null\s*\n(?:\s*\/\/.*\n)*\s*if \(showWasteAreaList\.value\) return null/
+    )
+    expect(regionCategory).not.toContain(
+      "if (wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved') return null"
+    )
     expect(regionCategory).toContain('/api/waste-schedules')
   })
 
