@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/sitemap/waste-areas', () => {
-  it('returns only indexable waste areas from the W9 service contract', async () => {
+  it('keeps the compatibility endpoint but returns no area URLs', async () => {
     getWasteAreaIdsForSitemapMock.mockResolvedValue([
       { areaId: 101, contentUpdatedAt: '2026-09-20T00:00:00.000Z' },
     ]);
@@ -65,7 +65,7 @@ describe('GET /api/sitemap/waste-areas', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      data: { areas: [{ areaId: 101, contentUpdatedAt: '2026-09-20T00:00:00.000Z' }] },
+      data: { areas: [] },
     });
     expect(getWasteAreaIdsForSitemapMock).toHaveBeenCalledTimes(1);
   });

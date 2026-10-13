@@ -236,7 +236,7 @@ describe('사이트맵 라우트 — 게이트 통합', () => {
       return Promise.resolve({ success: true, data: { regions: wasteRegions } })
     }
     if (path.includes('/api/sitemap/waste-areas')) {
-      return Promise.resolve({ success: true, data: { areas: [] } })
+      return Promise.reject(new Error('waste-areas must not be read for regional trash sitemap'))
     }
     if (path.includes('/api/auction/sitemap') || path.includes('/api/auction')) {
       return Promise.resolve({
@@ -534,7 +534,7 @@ describe('인덱스가 광고하는 청크는 전부 핸들러가 200 으로 서
       })
     }
     if (path.includes('/api/sitemap/waste-areas')) {
-      return Promise.resolve({ success: true, data: { areas: [] } })
+      return Promise.reject(new Error('waste-areas must not be read for regional trash sitemap'))
     }
     if (path.includes('/api/sitemap/page-counts')) {
       return Promise.reject(new Error('mock: page-counts unavailable'))

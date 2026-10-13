@@ -357,7 +357,7 @@ export default defineEventHandler(async (event) => {
     return generateSitemapXml(urls)
   }
 
-  // 쓰레기 배출(trash) — 구·군 집계 URL + W9 색인 적격 동별 URL.
+  // 쓰레기 배출(trash) — 구·군 집계 URL만 방출한다. 원본 상세·동 필터 URL은 제외한다.
   if (category === 'trash') {
     let inputs
     try {

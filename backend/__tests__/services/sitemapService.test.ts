@@ -139,7 +139,7 @@ describe('getSitemapPageCounts facility policy', () => {
     expect(listIndexableWasteAreasMock).not.toHaveBeenCalled();
   });
 
-  it('adds W9 eligible area URLs to the waste sitemap count when discovery is enabled', async () => {
+  it('ignores formerly indexable area URLs in the waste sitemap count when discovery is enabled', async () => {
     process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
     getActiveWasteGenerationMock.mockResolvedValue('generation-1');
     getWasteScheduleRegionsMock.mockResolvedValue([
@@ -152,8 +152,9 @@ describe('getSitemapPageCounts facility policy', () => {
 
     const result = await getSitemapPageCounts();
 
-    expect(result.waste).toEqual({ count: 3, maxUpdatedAt: '2026-09-22' });
-    expect(listIndexableWasteAreasMock).toHaveBeenCalledWith('generation-1');
+    expect(result.waste).toEqual({ count: 1, maxUpdatedAt: '2026-09-20' });
+    expect(getActiveWasteGenerationMock).not.toHaveBeenCalled();
+    expect(listIndexableWasteAreasMock).not.toHaveBeenCalled();
   });
 });
 
