@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page, type Route } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -141,9 +141,19 @@ test('filters source lists exactly and keeps source identity, detail fields, and
 })
 
 test('keeps hydration stable without duplicate source calls and ignores delayed stale navigation', async ({ page, request }) => {
+  let blockedPostSsrSourceCalls = 0
+  const postSsrSourceBlocker = async (route: Route) => {
+    blockedPostSsrSourceCalls += 1
+    await route.abort('blockedbyclient')
+  }
+  await page.route('**/api/waste-schedules**', postSsrSourceBlocker)
   await page.goto('/gyeonggi/gapyeong/trash')
   await hydrated(page)
-  let state = await fixtureState(request)
+  await page.waitForTimeout(300)
+  await expect(page.locator('main a[href="/trash/4001"]').first()).toBeVisible()
+  expect(blockedPostSsrSourceCalls).toBe(0)
+  await page.unroute('**/api/waste-schedules**', postSsrSourceBlocker)
+  const state = await fixtureState(request)
   expect(state.requests.filter(item => item.startsWith('/api/waste-schedules?') && item.includes('district=%EA%B0%80%ED%8F%89%EA%B5%B0'))).toHaveLength(1)
 
   await control(request, { sourceDelayMs: 700 })
