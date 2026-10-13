@@ -1,6 +1,7 @@
 import { ref, readonly } from 'vue'
 import type { WasteSourceScheduleQuery } from '~/utils/wasteAreaQuery'
 import type { ApplicableWasteArea } from '~/types/wasteArea'
+import type { SelectedWasteArea, WasteListQuery } from '~/types/wasteList'
 
 export interface WasteTypeInfo {
   dayOfWeek?: string
@@ -30,13 +31,15 @@ export interface RegionSchedule {
   id: number
   city: string
   district: string
-  targetRegion: string
+  targetRegion: string | null
   emissionPlace?: string
   emissionPlaceType?: string
   managementZone?: string
   uncollectedDay?: string
   /** 원본 공공데이터의 자료 기준일. DB syncedAt(동기화 시각)과 다르다. */
   dataCreatedDate?: string
+  lastModified?: string
+  applicableAreas: ApplicableWasteArea[]
   wasteTypes: WasteTypeBadge[]
 }
 
@@ -51,6 +54,8 @@ export interface RegionScheduleResponse {
   total: number
   page: number
   totalPages: number
+  selectedArea?: SelectedWasteArea
+  generationId?: string
 }
 
 // Backend response types
@@ -93,6 +98,8 @@ export interface BackendScheduleData {
   total: number
   page: number
   totalPages: number
+  selectedArea?: SelectedWasteArea | (Omit<SelectedWasteArea, 'areaId'> & { id: number })
+  generationId?: string
 }
 
 // 원본은 요일을 '월+수+금' 처럼 '+' 로 잇는다. '+' 를 나누지 않으면
@@ -134,12 +141,14 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
       id: item.id,
       city: item.city,
       district: item.district,
-      targetRegion: item.targetRegion || '지역 미상',
+      targetRegion: item.targetRegion,
       emissionPlace: item.emissionPlace || undefined,
       emissionPlaceType: details?.emissionPlaceType || undefined,
       managementZone: details?.managementZone || undefined,
       uncollectedDay: details?.uncollectedDay || undefined,
       dataCreatedDate: details?.dataCreatedDate || undefined,
+      lastModified: details?.lastModified || undefined,
+      applicableAreas: item.applicableAreas ?? [],
       wasteTypes,
     }
   })
@@ -149,7 +158,46 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
     ? { name: contactItem.details.manageDepartment, phone: contactItem.details.managePhone }
     : undefined
 
-  return { schedules, contact, total: data.total, page: data.page, totalPages: data.totalPages }
+  const selectedArea = normalizeSelectedArea(data.selectedArea)
+
+  return {
+    schedules,
+    contact,
+    total: data.total,
+    page: data.page,
+    totalPages: data.totalPages,
+    ...(selectedArea ? { selectedArea } : {}),
+    ...(data.generationId ? { generationId: data.generationId } : {}),
+  }
+}
+
+function isFiniteInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value)
+}
+
+function normalizeSelectedArea(area: BackendScheduleData['selectedArea']): SelectedWasteArea | undefined {
+  if (!area) return undefined
+  const rawAreaId = 'areaId' in area ? area.areaId : area.id
+  if (!isFiniteInteger(rawAreaId)) return undefined
+  return {
+    areaId: rawAreaId,
+    name: area.name,
+    city: area.city,
+    district: area.district,
+  }
+}
+
+function validateScheduleData(data: BackendScheduleData, requestedAreaId?: number): void {
+  if (!data || !Array.isArray(data.items)) throw new Error('waste-schedules response missing items')
+  if (!isFiniteInteger(data.total)) throw new Error('waste-schedules response has invalid total')
+  if (!isFiniteInteger(data.page)) throw new Error('waste-schedules response has invalid page')
+  if (!isFiniteInteger(data.totalPages)) throw new Error('waste-schedules response has invalid totalPages')
+  if (requestedAreaId === undefined) return
+
+  const selectedArea = normalizeSelectedArea(data.selectedArea)
+  if (!selectedArea) throw new Error('waste-schedules area filter response missing selectedArea')
+  if (selectedArea.areaId !== requestedAreaId) throw new Error('waste-schedules selectedArea does not match requested areaId')
+  if (!data.generationId) throw new Error('waste-schedules area filter response missing generationId')
 }
 
 export function useWasteSchedule() {
@@ -182,7 +230,7 @@ export function useWasteSchedule() {
     }
   }
 
-  async function getSchedules(options?: WasteSourceScheduleQuery): Promise<RegionScheduleResponse> {
+  async function getSchedules(options?: Partial<WasteListQuery> | WasteSourceScheduleQuery, signal?: AbortSignal): Promise<RegionScheduleResponse> {
     isLoading.value = true
     error.value = null
 
@@ -190,14 +238,17 @@ export function useWasteSchedule() {
       const params: Record<string, string | number> = {}
       if (options?.city) params.city = options.city
       if (options?.district) params.district = options.district
+      if (options?.areaId) params.areaId = options.areaId
       if (options?.keyword) params.keyword = options.keyword
       if (options?.coverage) params.coverage = options.coverage
       if (options?.page) params.page = options.page
       if (options?.limit) params.limit = options.limit
       const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(
         `${apiBase}/api/waste-schedules`,
-        { params }
+        { params, signal }
       )
+      if (!response?.success) throw new Error('waste-schedules responded success:false')
+      validateScheduleData(response.data, options?.areaId)
       return transformToRegionSchedules(response.data)
     } catch (e) {
       // 예전 구현은 여기서 '서울특별시', '{구} 1동~3동', '02-1234-5678' 과 임의 요일

@@ -4,6 +4,7 @@
 
 export * from './facility'
 export * from './wasteArea'
+export * from './wasteList'
 export * from './affiliateBanner'
 
 // Legacy aliases for backward compatibility

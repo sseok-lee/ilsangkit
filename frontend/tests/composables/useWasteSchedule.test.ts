@@ -51,6 +51,22 @@ describe('transformToRegionSchedules', () => {
     expect(result.schedules[0].managementZone).toBe('달서구 2권역')
     expect(result.schedules[0].dataCreatedDate).toBe('2025-10-31')
   })
+
+  it('원본 적용 동과 최종 수정일을 목록 카드까지 전달하고 targetRegion null을 임의 대체하지 않는다', () => {
+    const result = transformToRegionSchedules(backendData({
+      targetRegion: null,
+      applicableAreas: [{ areaId: 101, name: '본리동', href: '/trash?areaId=101', scope: 'whole', conditionText: '' }],
+      details: {
+        lastModified: '2026-10-01T00:00:00.000Z',
+      },
+    }))
+
+    expect(result.schedules[0]).toMatchObject({
+      targetRegion: null,
+      lastModified: '2026-10-01T00:00:00.000Z',
+      applicableAreas: [{ areaId: 101, name: '본리동' }],
+    })
+  })
 })
 
 describe('useWasteSchedule().getSchedules', () => {
@@ -88,6 +104,56 @@ describe('useWasteSchedule().getSchedules', () => {
     )
   })
 
+  it('forwards areaId and AbortSignal to the source API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        ...backendData(),
+        selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' },
+        generationId: 'g1',
+      },
+    })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+    const signal = new AbortController().signal
+
+    const { getSchedules } = useWasteSchedule()
+
+    await getSchedules({ areaId: 101, page: 1, limit: 20 }, signal)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/waste-schedules'),
+      expect.objectContaining({
+        params: { areaId: 101, page: 1, limit: 20 },
+        signal,
+      })
+    )
+  })
+
+  it('rejects failed or malformed source envelopes instead of transforming them', async () => {
+    const { getSchedules } = useWasteSchedule()
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: false, data: backendData() })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/waste-schedules/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: { total: 0, page: 1, totalPages: 1 } })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/items/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: { ...backendData(), total: Number.NaN } })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/total/)
+  })
+
+  it('requires selectedArea and generationId for area-filtered source results', async () => {
+    const { getSchedules } = useWasteSchedule()
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: backendData() })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/selectedArea/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: { ...backendData(), selectedArea: { areaId: 102, name: '본리동', city: '대구광역시', district: '달서구' }, generationId: 'g1' },
+    })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/selectedArea/)
+  })
 
 
   it('normalizes old detail responses without applicableAreas to an empty array', async () => {
