@@ -400,7 +400,8 @@ const { getSchedules, isLoading: wasteLoading } = useWasteSchedule()
 const wasteSchedules = ref<RegionSchedule[]>([])
 const wasteContact = ref<{ name: string; phone?: string } | null>(null)
 const wasteCurrentPage = ref(initialPage)
-const wasteTotalPages = ref(1)
+// 0 = 클라이언트 미조회. 1 로 시작하면 resolveRegionDisplay 가 SSR totalPages 를 덮어 페이지네이션이 사라진다.
+const wasteTotalPages = ref(0)
 const wasteTotal = ref(0)
 // SSR 목록 우선, 클라이언트가 페이지네이션 등으로 재조회하면 그때부터 client 우선.
 // 규칙은 시설 목록과 동일한 순수 함수(resolveRegionDisplay)에 위임한다.
