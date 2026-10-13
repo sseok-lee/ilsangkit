@@ -58,7 +58,8 @@ if ! command -v curl >/dev/null 2>&1; then
 fi
 
 # 헬스체크: BASE_URL 홈에 도달 가능한지 확인. 실패 시 명확한 에러로 종료 (나머지 검사를 전부 FAIL 로 오해하지 않도록).
-if ! curl -fsS --max-time 10 -o /dev/null "$BASE_URL/"; then
+# 배포 직후(PM2 재시작) 콜드 응답이 10초를 넘겨 exit 3 이 나던 일시 실패 방지(run 37589694045·38203697076).
+if ! curl -fsS --retry 3 --retry-delay 10 --retry-all-errors --max-time 10 -o /dev/null "$BASE_URL/"; then
   echo -e "${RED}서버에 접근할 수 없습니다: $BASE_URL${NC}" >&2
   echo "dev 서버(npm run dev) 또는 preview 를 먼저 실행하거나 BASE_URL 을 다른 값으로 지정하세요." >&2
   exit 3
@@ -323,15 +324,28 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "9️⃣  지역 페이지 fail-closed 회귀 검사"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 SAMPLE_REGION_FACILITY_PATH="${SAMPLE_REGION_FACILITY_PATH:-/seoul/gangnam/childcare}"
+# trash 는 표시 모드가 둘이다: 확인된 동이 없는 곳은 원본 일정(source), 있는 곳은 동 목록(areas).
 SAMPLE_REGION_TRASH_PATH="${SAMPLE_REGION_TRASH_PATH:-/gyeonggi/uiwang/trash}"
+SAMPLE_REGION_TRASH_AREAS_PATH="${SAMPLE_REGION_TRASH_AREAS_PATH:-/seoul/gangnam/trash}"
 
-for path in "$SAMPLE_REGION_FACILITY_PATH" "$SAMPLE_REGION_TRASH_PATH"; do
+for path in "$SAMPLE_REGION_FACILITY_PATH" "$SAMPLE_REGION_TRASH_PATH" "$SAMPLE_REGION_TRASH_AREAS_PATH"; do
   region_body=$(fetch_body "$BASE_URL$path") || { fail "$path 응답 실패"; continue; }
   if not_contains "$region_body" 'content="noindex'; then
     pass "$path — noindex 아님 (데이터 있는 지역)"
   else
     fail "$path — noindex 감지. 일시 장애가 noindex 로 굳었을 수 있음 (fail-closed 회귀)"
   fi
+  case "$path" in
+    */trash)
+      # 원본 일정 카드·동 목록 행 모두 /trash/ 로 링크한다. 0 이면 본문이 빈 채로 나간 것.
+      trash_links=$(printf '%s' "$region_body" | grep -o 'href="/trash/' | wc -l | tr -d ' ')
+      if [ "$trash_links" -ge 1 ]; then
+        pass "$path — 목록 링크 ${trash_links}개"
+      else
+        fail "$path — 목록 링크 0개 (빈 목록이 렌더됨)"
+      fi
+      ;;
+  esac
 done
 echo ""
 

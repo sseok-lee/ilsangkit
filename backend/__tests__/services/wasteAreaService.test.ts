@@ -4,7 +4,7 @@ const prismaMock = vi.hoisted(() => ({
   wastePublication: { findUnique: vi.fn() },
   wasteAreaEntry: { count: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
   wasteScheduleCoverage: { findMany: vi.fn() },
-  wasteScheduleRevision: { findMany: vi.fn() },
+  wasteScheduleRevision: { findMany: vi.fn(), count: vi.fn() },
   wasteAreaRelation: { findMany: vi.fn() },
 }));
 
@@ -14,6 +14,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
 }));
 
 import {
+  decideWasteDistrictMode,
   getWasteArea,
   hasPublishedWasteAreaDetailHistory,
   listIndexableWasteAreas,
@@ -29,6 +30,7 @@ beforeEach(() => {
   prismaMock.wastePublication.findUnique.mockResolvedValue({ activeGenerationId: generationId });
   prismaMock.wasteAreaRelation.findMany.mockResolvedValue([]);
   prismaMock.wasteScheduleRevision.findMany.mockResolvedValue([]);
+  prismaMock.wasteScheduleRevision.count.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -252,6 +254,81 @@ describe('listWasteAreas', () => {
 
     expect(expiredEntry.items.map((item) => item.areaId)).toEqual([101]);
     expect(expiredAlias.items).toEqual([]);
+  });
+});
+
+describe('decideWasteDistrictMode', () => {
+  it('확인된 동이 하나라도 있으면 areas', () => {
+    expect(decideWasteDistrictMode(1, 0)).toBe('areas');
+    expect(decideWasteDistrictMode(3, 348)).toBe('areas');
+  });
+  it('확인된 동이 없고 원본 일정이 있으면 source', () => {
+    expect(decideWasteDistrictMode(0, 348)).toBe('source');
+  });
+  it('둘 다 없으면 empty', () => {
+    expect(decideWasteDistrictMode(0, 0)).toBe('empty');
+  });
+});
+
+describe('listWasteAreas mode', () => {
+  it('시·군·구 지정 + 확인된 동 0 + 원본 348건이면 source', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleRevision.count.mockResolvedValue(348);
+
+    const result = await listWasteAreas({ city: '경기도', district: '의왕시', page: 1, limit: 20 });
+
+    expect(result.total).toBe(0);
+    expect(result.mode).toBe('source');
+    expect(prismaMock.wasteScheduleRevision.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        generationId,
+        state: 'active',
+        sourceId: { not: { startsWith: 'seed-' } },
+        city: { in: expect.arrayContaining(['경기도']) },
+        district: { in: expect.arrayContaining(['의왕시']) },
+      }),
+    });
+  });
+
+  it('확인된 동이 있으면 areas', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([areaEntry(101, '역삼1동')]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([coverage(1, { areaId: 101 })]);
+    prismaMock.wasteScheduleRevision.count.mockResolvedValue(5);
+
+    const result = await listWasteAreas({ city: '서울', district: '강남구', page: 1, limit: 20 });
+
+    expect(result.mode).toBe('areas');
+  });
+
+  it('키워드가 아무 동과도 맞지 않아도 모드는 시·군·구 기준 areas', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([areaEntry(101, '역삼1동')]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([coverage(1, { areaId: 101 })]);
+    prismaMock.wasteScheduleRevision.count.mockResolvedValue(5);
+
+    const result = await listWasteAreas({ city: '서울', district: '강남구', keyword: '없는동', page: 1, limit: 20 });
+
+    expect(result.total).toBe(0);
+    expect(result.mode).toBe('areas');
+  });
+
+  it('동도 원본도 없으면 empty', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([]);
+
+    const result = await listWasteAreas({ city: '경상남도', district: '함안군', page: 1, limit: 20 });
+
+    expect(result.mode).toBe('empty');
+  });
+
+  it('시·군·구가 지정되지 않으면 mode 를 내보내지 않고 원본 수도 세지 않는다', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([]);
+
+    const result = await listWasteAreas({ city: '서울', page: 1, limit: 20 });
+
+    expect(result).not.toHaveProperty('mode');
+    expect(prismaMock.wasteScheduleRevision.count).not.toHaveBeenCalled();
   });
 });
 

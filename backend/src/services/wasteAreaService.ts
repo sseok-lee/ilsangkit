@@ -9,6 +9,7 @@ import type {
   AreaSummary,
   CoverageScope,
   Evidence,
+  WasteDistrictMode,
 } from '../types/wasteArea.js';
 import type { WasteScheduleItem } from './wasteScheduleService.js';
 
@@ -85,6 +86,16 @@ export async function listWasteAreas(query: AreaQuery): Promise<AreaList> {
     const total = summaries.length;
     const start = (query.page - 1) * query.limit;
 
+    // 표시 모드는 키워드와 무관하게 시·군·구 단위로 정한다. readDongEntries 는 키워드를
+    // 보지 않으므로 같은 entries 로 키워드 없는 동 수를 다시 셀 수 있다.
+    let mode: WasteDistrictMode | undefined;
+    if (query.city && query.district) {
+      const areaCount = query.keyword
+        ? (await buildSummaries(generationId, entries, requestDate)).length
+        : total;
+      mode = decideWasteDistrictMode(areaCount, await countActiveSourceRevisions(generationId, query));
+    }
+
     return {
       generationId,
       items: summaries.slice(start, start + query.limit),
@@ -92,8 +103,19 @@ export async function listWasteAreas(query: AreaQuery): Promise<AreaList> {
       page: query.page,
       totalPages: Math.ceil(total / query.limit),
       unresolved: await readUnresolved(generationId, query),
+      ...(mode ? { mode } : {}),
     };
   });
+}
+
+/**
+ * 확인된 동이 0개인 시·군·구는 원본 일정 목록(source)으로 보여준다.
+ * 도로명·건물명 원본은 검토가 끝나도 동 목록으로 갈 수 없으므로 source 는 영구 경로다.
+ */
+export function decideWasteDistrictMode(areaCount: number, sourceCount: number): WasteDistrictMode {
+  if (areaCount > 0) return 'areas';
+  if (sourceCount > 0) return 'source';
+  return 'empty';
 }
 
 export async function getWasteArea(id: number): Promise<AreaDetail | null> {
@@ -417,6 +439,18 @@ async function readRelationMatches(
     }
   }
   return matches;
+}
+
+async function countActiveSourceRevisions(generationId: string, query: Partial<AreaQuery>): Promise<number> {
+  return prisma.wasteScheduleRevision.count({
+    where: {
+      generationId,
+      state: 'active',
+      sourceId: EXCLUDE_SEED_SOURCE_ID,
+      ...(query.city ? { city: { in: cityVariantList(query.city) } } : {}),
+      ...(query.district ? { district: { in: districtVariantList(query.district) } } : {}),
+    },
+  });
 }
 
 async function readUnresolved(generationId: string, query: Partial<AreaQuery>): Promise<AreaList['unresolved']> {
