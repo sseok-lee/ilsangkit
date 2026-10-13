@@ -84,6 +84,8 @@ export interface AreaSummary {
   dataDate: string | null
 }
 
+export type WasteDistrictMode = 'areas' | 'source' | 'empty'
+
 export interface AreaList {
   generationId: string
   items: AreaSummary[]
@@ -91,6 +93,8 @@ export interface AreaList {
   page: number
   totalPages: number
   unresolved: { count: number; href: string | null }
+  /** city+district 지정 조회에서만 존재. source = 확인된 동 0개, 원본 일정만 있음 */
+  mode?: WasteDistrictMode
 }
 
 export interface WasteAreaSchedule {
