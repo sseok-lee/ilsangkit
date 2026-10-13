@@ -16,7 +16,7 @@ export interface BulkWasteInfo {
   place?: string
 }
 
-export type WasteType = '일반쓰레기' | '음식물쓰레기' | '재활용' | '대형폐기물'
+export type WasteType = '일반쓰레기' | '음식물쓰레기' | '재활용' | '일시적 다량폐기물'
 
 export interface WasteTypeBadge {
   type: WasteType
@@ -128,7 +128,7 @@ export function transformToRegionSchedules(data: BackendScheduleData): RegionSch
     if (details?.recyclable) wasteTypes.push(toBadge('재활용', details.recyclable))
     if (details?.bulkWaste) {
       wasteTypes.push({
-        type: '대형폐기물',
+        type: '일시적 다량폐기물',
         dayOfWeek: [],
         beginTime: details.bulkWaste.beginTime || undefined,
         endTime: details.bulkWaste.endTime || undefined,

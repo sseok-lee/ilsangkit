@@ -26,6 +26,28 @@ describe('useStructuredData', () => {
     mockUseHead.mockClear()
   })
 
+  describe('setWasteScheduleSchema', () => {
+    it('uses the visible target-led source title and applicable area links in JSON-LD', () => {
+      const { setWasteScheduleSchema } = useStructuredData()
+      setWasteScheduleSchema({
+        id: 3001,
+        city: '전라남도',
+        district: '강진군',
+        targetRegion: '요양원,칠량면소재지,초등학교.칠량시장,덕동',
+        emissionPlace: '',
+        applicableAreas: [
+          { areaId: 101, name: '군동면', href: '/trash?areaId=101', scope: 'conditional', conditionText: '요양원 포함' },
+        ],
+      })
+
+      const parsed = JSON.parse(mockUseHead.mock.calls.at(-1)![0].script[0].innerHTML)
+      expect(parsed.name).toBe('전라남도 강진군 요양원·칠량면소재지 등 쓰레기 배출 안내')
+      expect(parsed.areaServed).toEqual([
+        { '@type': 'AdministrativeArea', name: '전라남도 강진군 군동면', url: 'https://ilsangkit.co.kr/trash?areaId=101' },
+      ])
+    })
+  })
+
   // ─── FAQPage/HowTo 스키마 제거됨 (2023.08 상업사이트 제한 / 2023.09 폐기) ──
 
 

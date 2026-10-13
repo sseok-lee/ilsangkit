@@ -684,8 +684,8 @@ describe('useFacilityMeta', () => {
 
     it('trash 제목 포맷', () => {
       const { setWasteScheduleDetailMeta } = useFacilityMeta()
-      setWasteScheduleDetailMeta({ id: 1, city: '전북특별자치도', district: '고창군', targetRegion: '흥덕면' })
-      expect(titleOf()).toMatchInlineSnapshot(`"전북특별자치도 고창군 흥덕면 쓰레기 배출일 | 재활용·음식물·대형폐기물 | 일상킷"`)
+      setWasteScheduleDetailMeta({ id: 1, city: '강원특별자치도', district: '정선군', targetRegion: '신동읍', emissionPlace: '예미2길 26-49' })
+      expect(titleOf()).toMatchInlineSnapshot(`"강원특별자치도 정선군 예미2길 26-49 쓰레기 배출일 | 재활용·음식물·일시적 다량폐기물 | 일상킷"`)
     })
 
     it('trash source detail meta omits canonical because the page is noindex', () => {
@@ -697,6 +697,23 @@ describe('useFacilityMeta', () => {
         return arg?.link?.some((l) => l.rel === 'canonical')
       })
       expect(headCallsWithCanonical).toHaveLength(0)
+    })
+
+    it('trash source detail meta uses target-led title and does not label bulk data as generic oversized waste', () => {
+      const { setWasteScheduleDetailMeta } = useFacilityMeta()
+      setWasteScheduleDetailMeta({
+        id: 2,
+        city: '전라남도',
+        district: '강진군',
+        targetRegion: '요양원,칠량면소재지,초등학교.칠량시장,덕동',
+        emissionPlace: '',
+      })
+
+      const call = mockUseSeoMeta.mock.calls.at(-1)![0] as { title: string; description: string }
+      expect(call.title).toContain('요양원·칠량면소재지 등')
+      expect(call.title).toContain('일시적 다량폐기물')
+      expect(call.title).not.toContain('대형폐기물')
+      expect(call.description).toContain('요양원·칠량면소재지 등')
     })
   })
 
