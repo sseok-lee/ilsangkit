@@ -2,8 +2,12 @@ import { prisma } from '../lib/prisma.js';
 import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/realEstateSummaryStore.js';
 import * as facilityService from './facilityService.js';
 import * as wasteScheduleService from './wasteScheduleService.js';
+import {
+  getActiveWasteGeneration,
+  isWasteAreaDiscoveryEnabled,
+  listIndexableWasteAreas,
+} from './wasteAreaService.js';
 import type { FacilityCategory } from './facilityService.js';
-import type { IndexableWasteArea } from './wasteAreaService.js';
 import { ALL_CATEGORIES } from './categoryRegistry.js';
 import { toKstDateString } from '../lib/dateUtils.js';
 import { attachRealEstateCanonicalPaths, isPreservedRealEstateUrlMode } from './realEstateUrlRegistry.js';
@@ -117,7 +121,7 @@ async function getRealEstateMaxDealDate(): Promise<string | null> {
 }
 
 export async function getSitemapPageCounts() {
-  const [facilities, wasteRegions, subCount, subLatest, realEstateCount, realEstateMaxDealDate] =
+  const [facilities, wasteRegions, wasteAreaRows, subCount, subLatest, realEstateCount, realEstateMaxDealDate] =
     await Promise.all([
       Promise.all(
         SITEMAP_FACILITY_CATS.map((cat) =>
@@ -131,17 +135,18 @@ export async function getSitemapPageCounts() {
         )
       ),
       wasteScheduleService.getWasteScheduleRegions(),
+      getIndexableWasteAreasForSitemap(),
       prisma.subscription.count(),
       prisma.subscription.findFirst({ select: { updatedAt: true }, orderBy: { updatedAt: 'desc' } }),
       getRealEstateBuildingCount(),
       getRealEstateMaxDealDate(),
     ]);
-  const wasteLatest = latestWasteSitemapDate(wasteRegions);
+  const wasteLatest = latestWasteSitemapDate(wasteRegions, wasteAreaRows);
 
   return {
     facilities,
     waste: {
-      count: wasteRegions.length,
+      count: wasteRegions.length + wasteAreaRows.length,
       maxUpdatedAt: wasteLatest,
     },
     subscriptions: {
@@ -156,9 +161,20 @@ export async function getSitemapPageCounts() {
   };
 }
 
-function latestWasteSitemapDate(regions: Array<{ updatedAt: string | Date }>): string | null {
+export async function getIndexableWasteAreasForSitemap() {
+  if (!isWasteAreaDiscoveryEnabled()) return [];
+  const generationId = await getActiveWasteGeneration();
+  if (!generationId) return [];
+  return listIndexableWasteAreas(generationId);
+}
+
+function latestWasteSitemapDate(
+  regions: Array<{ updatedAt: string | Date }>,
+  areas: Array<{ contentUpdatedAt: string }>
+): string | null {
   const dates = [
     ...regions.map((region) => toKstDateString(toDate(region.updatedAt))),
+    ...areas.map((area) => toKstDateString(toDate(area.contentUpdatedAt))),
   ].filter((date): date is string => Boolean(date));
   return dates.sort().at(-1) ?? null;
 }
@@ -183,8 +199,8 @@ export async function getWasteScheduleRegions() {
   return wasteScheduleService.getWasteScheduleRegions();
 }
 
-export async function getWasteAreaIdsForSitemap(): Promise<IndexableWasteArea[]> {
-  return [];
+export async function getWasteAreaIdsForSitemap() {
+  return getIndexableWasteAreasForSitemap();
 }
 
 export async function getRegionCategoryCombinations() {

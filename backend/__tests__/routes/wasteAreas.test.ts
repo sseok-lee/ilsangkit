@@ -5,7 +5,6 @@ import { AppError } from '../../src/lib/errors.js';
 const areaServiceMock = vi.hoisted(() => ({
   getWasteArea: vi.fn(),
   hasPublishedWasteAreaDetailHistory: vi.fn(),
-  requireWasteAreaDetail: vi.fn(),
   listWasteAreas: vi.fn(),
 }));
 
@@ -67,7 +66,7 @@ describe('GET /api/waste-areas', () => {
 
 describe('GET /api/waste-areas/:areaId', () => {
   it('sets no-store on detail success responses', async () => {
-    areaServiceMock.requireWasteAreaDetail.mockResolvedValue({
+    areaServiceMock.getWasteArea.mockResolvedValue({
       generationId: 'g1',
       area: { areaId: 123, name: '역삼1동', city: '서울특별시', district: '강남구', href: '/trash/areas/123' },
       schedules: [],
@@ -95,7 +94,8 @@ describe('GET /api/waste-areas/:areaId', () => {
   });
 
   it('returns 404 for areas without published public detail history', async () => {
-    areaServiceMock.requireWasteAreaDetail.mockRejectedValue(new AppError(404, 'not found', 'NOT_FOUND'));
+    areaServiceMock.getWasteArea.mockResolvedValue(null);
+    areaServiceMock.hasPublishedWasteAreaDetailHistory.mockResolvedValue(false);
 
     const res = await request(app).get('/api/waste-areas/123');
 
@@ -103,30 +103,11 @@ describe('GET /api/waste-areas/:areaId', () => {
   });
 
   it('returns 410 for historical public detail areas that are no longer active', async () => {
-    areaServiceMock.requireWasteAreaDetail.mockRejectedValue(new AppError(410, 'gone', 'GONE'));
+    areaServiceMock.getWasteArea.mockResolvedValue(null);
+    areaServiceMock.hasPublishedWasteAreaDetailHistory.mockResolvedValue(true);
 
     const res = await request(app).get('/api/waste-areas/123');
 
     expect(res.status).toBe(410);
-  });
-
-  it('delegates active, expired, and unknown detail status decisions to the shared detail reader', async () => {
-    areaServiceMock.requireWasteAreaDetail.mockResolvedValue({
-      generationId: 'g1',
-      area: { areaId: 123, name: '역삼1동', city: '서울특별시', district: '강남구', href: '/trash/areas/123' },
-      schedules: [],
-      unresolved: { count: 0, href: null },
-      indexEligible: false,
-      indexReason: 'no-practical-content',
-      contentUpdatedAt: '2026-09-28T00:00:00.000Z',
-      predecessorOrSuccessorLinks: [],
-    });
-
-    const res = await request(app).get('/api/waste-areas/123');
-
-    expect(res.status).toBe(200);
-    expect(areaServiceMock.requireWasteAreaDetail).toHaveBeenCalledWith(123);
-    expect(areaServiceMock.getWasteArea).not.toHaveBeenCalled();
-    expect(areaServiceMock.hasPublishedWasteAreaDetailHistory).not.toHaveBeenCalled();
   });
 });

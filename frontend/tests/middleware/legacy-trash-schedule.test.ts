@@ -70,16 +70,6 @@ describe('legacy-trash-schedule middleware', () => {
     expect(decodeURIComponent(target)).not.toContain('bad=')
   })
 
-  it('carries a legacy area query as source-list return context', async () => {
-    fetchMock.mockResolvedValue({ success: true, data: { id: 1001 } })
-
-    await run({ schedule: '1001', areaId: '1' }, { fullPath: '/trash?areaId=1&schedule=1001' })
-
-    const target = navigateToMock.mock.calls[0][0] as string
-    expect(target.split('#')[0]).toBe('/trash/1001')
-    expect(decodeURIComponent(target.split('#from=')[1])).toBe('/trash?areaId=1')
-  })
-
   it('maps invalid source ids to 400 before fetch', async () => {
     await expect(run({ schedule: 'abc' })).rejects.toMatchObject({ statusCode: 400 })
     expect(fetchMock).not.toHaveBeenCalled()

@@ -11,21 +11,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Facility } from '~/types/facility'
-import { wasteAreaFilterHref } from '~/utils/wasteListQuery'
 
 const props = defineProps<{ facility: Facility }>()
 
-function wasteAreaDestinationHref(destination: Facility['destination']): string | null {
-  if (destination?.kind !== 'waste-area') return null
-  const match = destination.href.match(/^\/trash\/areas\/([1-9]\d*)$/)
-  if (!match) return '/trash'
-  const areaId = Number.parseInt(match[1], 10)
-  return Number.isSafeInteger(areaId) ? wasteAreaFilterHref(areaId) : '/trash'
+function isValidWasteAreaDestination(destination: Facility['destination']): destination is { kind: 'waste-area'; href: string } {
+  return destination?.kind === 'waste-area' && /^\/trash\/areas\/\d+$/.test(destination.href)
 }
 
 const href = computed(() => {
-  if (props.facility.category === 'trash' && props.facility.destination?.kind === 'waste-area') {
-    return wasteAreaDestinationHref(props.facility.destination) || '/trash'
+  if (props.facility.category === 'trash' && isValidWasteAreaDestination(props.facility.destination)) {
+    return props.facility.destination.href
   }
   return `/${props.facility.category}/${props.facility.id}`
 })

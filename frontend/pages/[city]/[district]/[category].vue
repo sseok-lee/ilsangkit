@@ -42,30 +42,31 @@
     />
 
     <!-- Trash: 배출 일정 -->
-    <template v-if="isTrash">
-      <WasteListSearch
-        :query="wasteListQuery"
-        :areas="wasteAreaOptionItems"
-        :selected-area="wasteList.result.value?.selectedArea"
-        :areas-pending="wasteAreaOptions.state.pending.value"
-        :areas-error="wasteAreaOptions.state.error.value"
-        :area-filter-enabled="wasteAreaFilterEnabled"
-        @search="searchWasteList"
-        @retry-areas="refreshWasteAreaOptions"
-      />
-      <WasteListPanel
-        :result="wasteList.result.value"
-        :query="wasteListQuery"
-        :pending="wasteList.state.pending.value"
-        :error="wasteList.state.error.value"
-        :href-for="wasteListPageHref"
-        :clear-keyword-href="clearWasteKeywordHref"
-        :clear-area-href="clearWasteAreaHref"
-        :first-page-href="firstWasteListPageHref"
-        @retry="refreshWasteList"
-        @page-change="goToWastePage"
-      />
-    </template>
+    <WasteAreaList
+      v-if="showWasteAreaList"
+      :list="displayWasteAreaList"
+      :query="wasteAreaQuery"
+      :pending="wasteAreaPending"
+      :error="wasteAreaError"
+      :href-for="wasteAreaPageHref"
+      @search="searchWasteAreas"
+      @page-change="goToWasteAreaPage"
+      @retry="refreshWasteAreas"
+    />
+
+    <RegionTrashSchedule
+      v-else-if="isTrash"
+      :total="displayWasteTotal"
+      :loading="displayWasteLoading"
+      :contact="displayWasteContact"
+      :schedules="displayWasteSchedules"
+      :current-page="wasteCurrentPage"
+      :total-pages="displayWasteTotalPages"
+      :href-for="pageHref"
+      :error="wasteLoadError ? '배출 일정을 불러오지 못했습니다' : null"
+      @page-change="goToWastePage"
+      @retry="loadWasteSchedules"
+    />
 
     <!-- 일반 시설 그리드 -->
     <RegionFacilitiesGrid
@@ -109,8 +110,8 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
 import { useRegionFacilities } from '~/composables/useRegionFacilities'
-import { useWasteList } from '~/composables/useWasteList'
-import { useWasteAreaOptions } from '~/composables/useWasteAreaOptions'
+import { useWasteSchedule, transformToRegionSchedules } from '~/composables/useWasteSchedule'
+import type { RegionSchedule, BackendScheduleData } from '~/composables/useWasteSchedule'
 import { useRegions, CITY_SLUG_MAP } from '~/composables/useRegions'
 import { CITY_FULL_NAME_TO_SLUG } from '~/shared/regionSlugs'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
@@ -128,14 +129,13 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHead from '~/components/common/PageHead.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import RegionRelatedCategories from '~/components/region/RegionRelatedCategories.vue'
-import WasteListSearch from '~/components/trash/WasteListSearch.vue'
-import WasteListPanel from '~/components/trash/WasteListPanel.vue'
+import RegionTrashSchedule from '~/components/region/RegionTrashSchedule.vue'
+import WasteAreaList from '~/components/trash/WasteAreaList.vue'
 import RegionFacilitiesGrid from '~/components/region/RegionFacilitiesGrid.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
-import { normalizeWasteAreaCity, WasteAreaQueryError } from '~/utils/wasteAreaQuery'
-import { parseWasteListQuery, wasteListPathForQuery } from '~/utils/wasteListQuery'
-import { wasteListSeo } from '~/utils/wasteListSeo'
-import type { WasteListQuery } from '~/types/wasteList'
+import { parseWasteAreaQuery, wasteAreaPathForQuery, wasteAreaRequestKey, wasteSourceScheduleQuery, normalizeWasteAreaCity, type WasteAreaQueryError } from '~/utils/wasteAreaQuery'
+import { useWasteAreas } from '~/composables/useWasteAreas'
+import type { AreaList, AreaQuery } from '~/types/wasteArea'
 
 // Route params
 const route = useRoute()
@@ -194,13 +194,10 @@ const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
   {} as Record<string, string>,
 )
 const fullCityName = computed(() => SLUG_TO_FULL_CITY[city.value] || cityName.value)
-function inactiveWasteListQuery(): WasteListQuery {
-  return { page: parsePositivePageQuery(route.query.page), limit: 20 }
-}
+const runtimeConfig = useRuntimeConfig()
+const wasteAreaDiscoveryEnabled = runtimeConfig.public.wasteAreaDiscoveryEnabled === true
 
-function parseCurrentWasteListQuery(): WasteListQuery {
-  if (!isTrash.value) return inactiveWasteListQuery()
-
+function parseCurrentWasteAreaQuery(): AreaQuery {
   try {
     if (Array.isArray(route.query.city) || Array.isArray(route.query.district)) {
       throw createError({ statusCode: 400, statusMessage: '중복 지역 query는 사용할 수 없습니다' })
@@ -213,11 +210,15 @@ function parseCurrentWasteListQuery(): WasteListQuery {
     if (typeof queryDistrict === 'string' && queryDistrict.trim() && queryDistrict.trim() !== districtName.value) {
       throw createError({ statusCode: 400, statusMessage: '경로 지역과 district query가 충돌합니다' })
     }
-    return parseWasteListQuery({
+    return {
+      ...parseWasteAreaQuery({
         ...route.query,
         city: fullCityName.value,
         district: districtName.value,
-      }, { city: fullCityName.value, district: districtName.value })
+      }),
+      city: fullCityName.value,
+      district: districtName.value,
+    }
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode) throw error
     const typed = error as WasteAreaQueryError
@@ -225,7 +226,18 @@ function parseCurrentWasteListQuery(): WasteListQuery {
   }
 }
 
-const wasteListQuery = computed(() => parseCurrentWasteListQuery())
+const wasteAreaQuery = computed(() => parseCurrentWasteAreaQuery())
+const showWasteAreaList = computed(() =>
+  isTrash.value &&
+  wasteAreaDiscoveryEnabled &&
+  wasteAreaQuery.value.coverage !== 'unresolved'
+)
+
+const wasteSourceScheduleKey = computed(() => {
+  if (!isTrash.value) return null
+  if (showWasteAreaList.value) return null
+  return JSON.stringify(wasteSourceScheduleQuery(wasteAreaQuery.value))
+})
 
 // 지역 요약 (/api/area/:city/:district/:category/summary) SSR 주입
 interface AreaSummary {
@@ -267,21 +279,51 @@ const initialPage = parsePositivePageQuery(route.query.page)
 //
 // 목록까지 SSR 하면 지역별 실제 배출 요일·구역이 렌더되어 본문이 차별화되고,
 // meta 용 건수도 같은 응답에서 얻으므로 요청 수는 늘지 않는다(limit=1 → limit=20 로 대체).
-const wasteList = useWasteList({ active: () => isTrash.value, query: () => wasteListQuery.value })
-await wasteList.state
-if (import.meta.server && wasteList.state.error.value) markDegradedResponse()
+const { data: wasteSsr, error: wasteSsrError } = await useAsyncData(
+  `waste-region-${city.value}-${district.value}-${category.value}-p${initialPage}`,
+  async () => {
+    if (category.value !== 'trash') return null
+    if (wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved') return null
+    const res = await $fetch<{ success: boolean; data: BackendScheduleData }>(
+      `${apiBase}/api/waste-schedules`,
+      {
+        query: wasteSourceScheduleQuery(wasteAreaQuery.value),
+        signal: AbortSignal.timeout(8000),
+      },
+    )
+    // `success:false` 를 null 로 돌려주면 error 가 안 잡혀 아래 degraded 가드를 통과한다
+    // — 200 이라고 성공은 아니다. trash 지역 본문 전체가 이 응답에서 나오므로,
+    // 조용히 빈 목록을 렌더하면 전국 구·군 페이지가 서로 같은 얇은 본문이 된다.
+    if (!res?.success) throw new Error('waste-schedules responded success:false')
+    return transformToRegionSchedules(res.data)
+  },
+)
+// fail-open: SSR 페치 실패 시 503+no-store. 시설 경로와 동일 정책(#467) —
+// 조용한 noindex 도, 빈 본문 200 색인도 만들지 않는다.
+if (import.meta.server && wasteSsrError.value) markDegradedResponse()
 
-const wasteOptionCity = computed(() => wasteList.result.value?.selectedArea?.city ?? wasteListQuery.value.city)
-const wasteOptionDistrict = computed(() => wasteList.result.value?.selectedArea?.district ?? wasteListQuery.value.district)
-const wasteAreaOptions = useWasteAreaOptions({
-  city: () => wasteOptionCity.value,
-  district: () => wasteOptionDistrict.value,
-  enabled: () => isTrash.value && !!wasteOptionCity.value && !!wasteOptionDistrict.value,
-})
-await wasteAreaOptions.state
-const wasteAreaOptionItems = computed(() => wasteAreaOptions.result.value?.items ?? [])
-const wasteAreaFilterEnabled = computed(() => !!wasteOptionCity.value && !!wasteOptionDistrict.value)
-const wasteCount = computed<number | null>(() => wasteList.result.value?.total ?? null)
+const wasteCount = computed<number | null>(() => wasteSsr.value?.total ?? null)
+const wasteAreas = useWasteAreas()
+const emptyWasteAreaList: AreaList = {
+  generationId: 'empty',
+  items: [],
+  total: 0,
+  page: initialPage,
+  totalPages: 1,
+  unresolved: { count: 0, href: null },
+}
+const {
+  data: wasteAreaData,
+  error: wasteAreaError,
+  pending: wasteAreaPending,
+  refresh: refreshWasteAreas,
+} = await useAsyncData(
+  () => isTrash.value ? wasteAreaRequestKey(wasteAreaQuery.value) : `waste-areas:inactive:${category.value}`,
+  () => showWasteAreaList.value ? wasteAreas.list(wasteAreaQuery.value) : Promise.resolve(null),
+  { watch: [wasteAreaQuery], dedupe: 'cancel' },
+)
+if (import.meta.server && wasteAreaError.value) markDegradedResponse()
+const displayWasteAreaList = computed(() => wasteAreaData.value || { ...emptyWasteAreaList, page: isTrash.value ? wasteAreaQuery.value.page : 1 })
 
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링).
 // canonical 은 아래 useHead(computed...) 에서 noindex 상태와 함께 reactive 하게 관리한다 (정책: .omc/notes/noindex-canonical-policy.md).
@@ -344,23 +386,84 @@ const otherCategories = computed(() => {
   return all
 })
 
+// ========== Waste Schedule (trash) ==========
+const { getSchedules, isLoading: wasteLoading } = useWasteSchedule()
+const wasteSchedules = ref<RegionSchedule[]>([])
+const wasteContact = ref<{ name: string; phone?: string } | null>(null)
+const wasteCurrentPage = ref(initialPage)
+const wasteTotalPages = ref(1)
+const wasteTotal = ref(0)
+// SSR 목록 우선, 클라이언트가 페이지네이션 등으로 재조회하면 그때부터 client 우선.
+// 규칙은 시설 목록과 동일한 순수 함수(resolveRegionDisplay)에 위임한다.
+const wasteSsrConsumed = ref(false)
+// 클라이언트 재조회 실패. getSchedules 가 더는 가짜 일정을 만들지 않으므로
+// 여기서 잡지 않으면 unhandled rejection 이 되고 목록이 조용히 이전 상태로 남는다.
+const wasteLoadError = ref(false)
+const wasteDisplay = computed(() =>
+  resolveRegionDisplay<RegionSchedule>({
+    ssrConsumed: wasteSsrConsumed.value,
+    ssr: wasteSsr.value
+      ? { items: wasteSsr.value.schedules, total: wasteSsr.value.total, totalPages: wasteSsr.value.totalPages }
+      : null,
+    client: {
+      items: wasteSchedules.value,
+      total: wasteTotal.value,
+      totalPages: wasteTotalPages.value,
+      loading: wasteLoading.value,
+    },
+  })
+)
+const displayWasteSchedules = computed(() => wasteDisplay.value.facilities)
+const displayWasteTotal = computed(() => wasteDisplay.value.total)
+const displayWasteTotalPages = computed(() => wasteDisplay.value.totalPages)
+const displayWasteLoading = computed(() => wasteDisplay.value.loading)
+const displayWasteContact = computed(() =>
+  wasteSsrConsumed.value ? wasteContact.value : (wasteSsr.value?.contact ?? wasteContact.value)
+)
 const showRegionAd = computed(() => shouldShowTrashRegionAd({
   isTrash: isTrash.value,
   hasQuery: Object.keys(route.query).length > 0,
-  coverage: wasteListQuery.value.coverage,
-  showWasteAreaList: false,
-  wasteAreaItemCount: 0,
-  wasteAreaError: wasteAreaOptions.state.error.value,
-  wasteScheduleCount: wasteList.result.value?.schedules.length ?? 0,
-  wasteScheduleError: !!wasteList.state.error.value,
+  coverage: wasteAreaQuery.value.coverage,
+  showWasteAreaList: showWasteAreaList.value,
+  wasteAreaItemCount: displayWasteAreaList.value.items.length,
+  wasteAreaError: wasteAreaError.value,
+  wasteScheduleCount: displayWasteSchedules.value.length,
+  wasteScheduleError: wasteLoadError.value,
 }))
 
-function refreshWasteList() {
-  return wasteList.state.refresh()
-}
+let wasteScheduleRequestId = 0
 
-function refreshWasteAreaOptions() {
-  return wasteAreaOptions.state.refresh()
+async function loadWasteSchedules() {
+  const requestKey = wasteSourceScheduleKey.value
+  if (!requestKey) {
+    wasteScheduleRequestId += 1
+    wasteLoadError.value = false
+    return
+  }
+
+  wasteSsrConsumed.value = true
+  wasteLoadError.value = false
+  const requestId = ++wasteScheduleRequestId
+  const query = wasteAreaQuery.value
+  wasteCurrentPage.value = query.page
+
+  try {
+    const result = await getSchedules(wasteSourceScheduleQuery(query))
+    if (requestId !== wasteScheduleRequestId || requestKey !== wasteSourceScheduleKey.value) return
+    wasteSchedules.value = result.schedules
+    wasteContact.value = result.contact || null
+    wasteTotal.value = result.total
+    wasteTotalPages.value = result.totalPages
+  } catch {
+    if (requestId !== wasteScheduleRequestId || requestKey !== wasteSourceScheduleKey.value) return
+    // 실패한 조회를 다른 지역·페이지의 마지막 결과로 대체하지 않는다.
+    // 비우고 오류 배너 + 재시도로 넘긴다.
+    wasteSchedules.value = []
+    wasteContact.value = null
+    wasteTotal.value = 0
+    wasteTotalPages.value = 1
+    wasteLoadError.value = true
+  }
 }
 
 // URL query 를 함께 갱신해야 reactive noindex 가 정확히 동작한다.
@@ -379,28 +482,31 @@ function pageHref(page: number): string {
   return buildPageHref(route.path, route.query, page)
 }
 
-function wasteListPageHref(page: number): string {
-  return wasteListPathForQuery(route.path, { ...wasteListQuery.value, page })
+function wasteAreaPageHref(page: number): string {
+  return wasteAreaPathForQuery(route.path, { ...wasteAreaQuery.value, page })
 }
 
-const clearWasteKeywordHref = computed(() => wasteListPathForQuery(route.path, { ...wasteListQuery.value, keyword: undefined, page: 1 }))
-const clearWasteAreaHref = computed(() => wasteListPathForQuery(route.path, { ...wasteListQuery.value, areaId: undefined, page: 1 }))
-const firstWasteListPageHref = computed(() => wasteListPathForQuery(route.path, { ...wasteListQuery.value, page: 1 }))
-
-async function searchWasteList(query: Pick<WasteListQuery, 'city' | 'district' | 'areaId' | 'keyword' | 'coverage'>) {
-  await navigateTo(wasteListPathForQuery(route.path, {
+async function searchWasteAreas(query: Pick<AreaQuery, 'city' | 'district' | 'keyword'>) {
+  await navigateTo(wasteAreaPathForQuery(route.path, {
     city: fullCityName.value,
     district: districtName.value,
-    areaId: query.areaId,
     keyword: query.keyword,
-    coverage: query.coverage,
     page: 1,
     limit: 20,
   }))
 }
 
+async function goToWasteAreaPage(page: number) {
+  await navigateTo(wasteAreaPathForQuery(route.path, { ...wasteAreaQuery.value, page }))
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 async function goToWastePage(page: number) {
-  await navigateTo(wasteListPathForQuery(route.path, { ...wasteListQuery.value, page }))
+  wasteCurrentPage.value = page
+  // schedule 제거는 syncPageQuery(stripUiStateQuery) 가 담당한다 — 여기서 또 지우면
+  // href 와 SPA URL 의 단일 소스가 둘로 갈라진다.
+  const nextQuery = syncPageQuery(page)
+  await navigateTo({ query: nextQuery })
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -479,7 +585,7 @@ async function goToPage(pageNum: number) {
 // SSR 페치가 실패(degraded)했을 때만 클라이언트에서 1회 보충 로드 — 실사용자 정상 표시.
 onMounted(() => {
   if (isTrash.value) {
-    if (!wasteList.result.value) refreshWasteList()
+    if (!wasteSsr.value && !showWasteAreaList.value) loadWasteSchedules()
   } else if (!ssrFacilityData.value) {
     loadFacilities()
   }
@@ -491,6 +597,7 @@ onMounted(() => {
 watch(() => route.query.page, (next) => {
   const nextPage = parsePositivePageQuery(next)
   if (isTrash.value) {
+    wasteCurrentPage.value = nextPage
     return
   }
   if (currentPage.value === nextPage) return
@@ -498,7 +605,16 @@ watch(() => route.query.page, (next) => {
   loadFacilities()
 })
 
-watch(() => wasteList.key.value, () => refreshWasteList())
+watch(wasteSourceScheduleKey, (next, prev) => {
+  if (next === prev) return
+  if (!next) {
+    wasteScheduleRequestId += 1
+    wasteLoadError.value = false
+    wasteCurrentPage.value = wasteAreaQuery.value.page
+    return
+  }
+  loadWasteSchedules()
+})
 
 // noindex 조건: SSR summary.count 기반(비-trash) 또는 일정 없음(trash) 또는 페이지 2 이상.
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
@@ -513,23 +629,11 @@ const isPageNoindex = computed(() =>
     // ⚠️ SSR 반영 값(display*)을 읽어야 한다. 클라이언트 전용 ref(wasteSchedules/wasteLoading)를
     // 읽으면 SSR 시점엔 항상 비어 있어(로드는 useAsyncData 가 wasteSsr 로 한다) 모든 trash
     // 지역 페이지가 noindex 로 나간다 — #677 배포 직후 실제로 발생한 회귀.
-    wasteEmpty: !wasteList.state.pending.value && (wasteList.result.value?.schedules.length ?? 0) === 0,
+    wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0,
     page: pageQueryParam.value,
   })
 )
-const trashListSeo = computed(() => wasteListSeo({
-  query: wasteListQuery.value,
-  result: wasteList.result.value,
-  regionalCanonical: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`,
-  failed: !!wasteList.state.error.value,
-}))
-
 useHead(computed(() => {
-  if (isTrash.value) {
-    const seo = trashListSeo.value
-    if (seo.noindex) return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
-    return { link: [{ rel: 'canonical', href: seo.canonical, key: 'canonical' }] }
-  }
   if (isPageNoindex.value) {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
   }
@@ -576,30 +680,30 @@ watch([displayFacilities, currentPage, displayTotalPages], () => {
 }, { immediate: true })
 
 // ItemList 구조화 데이터 (trash)
-watch([() => wasteList.result.value, () => wasteListQuery.value.page, () => trashListSeo.value.noindex], () => {
+watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
   if (!isTrash.value) return
-  if (wasteList.result.value?.schedules.length) {
+  if (wasteSchedules.value.length > 0) {
     setItemListSchema(
-      wasteList.result.value.schedules.map((s, index) => ({
+      wasteSchedules.value.map((s, index) => ({
         name: s.targetRegion,
-        position: (wasteListQuery.value.page - 1) * 20 + index + 1,
+        position: (wasteCurrentPage.value - 1) * 20 + index + 1,
       }))
     )
   }
 
   // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
-  if (trashListSeo.value.noindex) return
+  if (isPageNoindex.value) return
 
   // 비-trash 블록과 동일하게 key 를 붙인다. unkeyed 로 두면 client 네비게이션마다
   // rel=prev/next 태그가 head 에 누적돼 한 문서가 여러 페이지를 동시에 가리킨다.
   const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
 
-  if (wasteListQuery.value.page > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteListQuery.value.page - 1}`, key: 'seo-rel-prev' })
+  if (wasteCurrentPage.value > 1) {
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteCurrentPage.value - 1}`, key: 'seo-rel-prev' })
   }
-  if (wasteList.result.value && wasteListQuery.value.page < wasteList.result.value.totalPages) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteListQuery.value.page + 1}`, key: 'seo-rel-next' })
+  if (wasteCurrentPage.value < wasteTotalPages.value) {
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteCurrentPage.value + 1}`, key: 'seo-rel-next' })
   }
 
   useHead({ link: paginationLinks })

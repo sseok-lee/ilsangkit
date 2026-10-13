@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h, ref, Suspense } from 'vue'
+import { defineComponent, h, Suspense } from 'vue'
 import { parse as parseSfc } from '@vue/compiler-sfc'
 import { parse as parseTemplate, type ElementNode, type TemplateChildNode } from '@vue/compiler-dom'
 
@@ -81,12 +81,9 @@ describe('trash region 광고 슬롯 생명주기', () => {
     expect(src).toContain("import { shouldShowTrashRegionAd } from '~/utils/trashRegionAds'")
     expect(src).toContain('const showRegionAd = computed(() => shouldShowTrashRegionAd({')
     expect(src).toContain('hasQuery: Object.keys(route.query).length > 0')
-    expect(src).toContain('coverage: wasteListQuery.value.coverage')
-    expect(src).toContain('showWasteAreaList: false')
-    expect(src).toContain('wasteAreaItemCount: 0')
-    expect(src).toContain('wasteAreaError: wasteAreaOptions.state.error.value')
-    expect(src).toContain('wasteScheduleCount: wasteList.result.value?.schedules.length ?? 0')
-    expect(src).toContain('wasteScheduleError: !!wasteList.state.error.value')
+    expect(src).toContain('coverage: wasteAreaQuery.value.coverage')
+    expect(src).toContain('wasteAreaItemCount: displayWasteAreaList.value.items.length')
+    expect(src).toContain('wasteScheduleError: wasteLoadError.value')
   })
 })
 
@@ -118,7 +115,6 @@ const regionAdHarness = vi.hoisted(() => ({
     },
   ],
   wasteAreaReject: false,
-  wasteScheduleReject: false,
   wasteScheduleItems: [
     {
       id: 6567,
@@ -177,20 +173,17 @@ vi.mock('~/composables/useWasteSchedule', async (importOriginal) => {
   return {
     ...actual,
     useWasteSchedule: () => ({
-      getSchedules: vi.fn(async () => {
-        if (regionAdHarness.wasteScheduleReject) throw new Error('waste schedules unavailable')
-        return {
-          schedules: actual.transformToRegionSchedules({
-            items: regionAdHarness.wasteScheduleItems,
-            total: regionAdHarness.wasteScheduleItems.length,
-            page: 1,
-            totalPages: 1,
-          }).schedules,
+      getSchedules: vi.fn(async () => ({
+        schedules: actual.transformToRegionSchedules({
+          items: regionAdHarness.wasteScheduleItems,
           total: regionAdHarness.wasteScheduleItems.length,
+          page: 1,
           totalPages: 1,
-          contact: null,
-        }
-      }),
+        }).schedules,
+        total: regionAdHarness.wasteScheduleItems.length,
+        totalPages: 1,
+        contact: null,
+      })),
       isLoading: { value: false },
     }),
   }
@@ -238,7 +231,6 @@ function resetRegionAdHarness() {
     },
   ]
   regionAdHarness.wasteAreaReject = false
-  regionAdHarness.wasteScheduleReject = false
   regionAdHarness.wasteScheduleItems = [
     {
       id: 6567,
@@ -262,7 +254,6 @@ async function mountRegionAdPage() {
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('$fetch', vi.fn(async (request: string) => {
     if (request.includes('/api/waste-schedules')) {
-      if (regionAdHarness.wasteScheduleReject) throw new Error('waste schedules unavailable')
       return {
         success: true,
         data: {
@@ -284,29 +275,19 @@ async function mountRegionAdPage() {
       },
     }
   }))
-  vi.stubGlobal('useAsyncData', (_key: unknown, handler: (app?: unknown, ctx?: { signal: AbortSignal }) => Promise<unknown> | unknown) => {
-    const signal = new AbortController().signal
+  vi.stubGlobal('useAsyncData', async (_key: unknown, handler: () => Promise<unknown> | unknown) => {
     const result = {
-      data: ref(null as unknown),
-      error: ref(null as unknown),
-      pending: ref(false),
-      status: ref('idle'),
-      refresh: vi.fn(async () => {
-        result.pending.value = true
-        try {
-          result.data.value = await handler(undefined, { signal })
-          result.error.value = null
-          result.status.value = 'success'
-        } catch (error) {
-          result.error.value = error
-          result.status.value = 'error'
-        } finally {
-          result.pending.value = false
-        }
-      }),
+      data: { value: null as unknown },
+      error: { value: null as unknown },
+      pending: { value: false },
+      refresh: vi.fn(async () => undefined),
     }
-    const promise = result.refresh().then(() => result)
-    return Object.assign(promise, result)
+    try {
+      result.data.value = await handler()
+    } catch (error) {
+      result.error.value = error
+    }
+    return result
   })
 
   const Page = (await import('~/pages/[city]/[district]/[category].vue')).default
@@ -349,9 +330,9 @@ afterEach(() => {
 describe('trash region mounted ad slot behavior', () => {
   it.each([
     ['query page state', () => { regionAdHarness.route.query = { page: '2' } }],
-    ['schedule API error state', () => { regionAdHarness.wasteScheduleReject = true }],
+    ['area API error state', () => { regionAdHarness.wasteAreaReject = true }],
     ['unresolved source mode', () => { regionAdHarness.route.query = { coverage: 'unresolved' } }],
-    ['empty schedule result', () => { regionAdHarness.wasteScheduleItems = [] }],
+    ['empty area result', () => { regionAdHarness.wasteAreaItems = [] }],
   ] as const)('suppresses the actual AdBanner slot for %s with ads enabled', async (_label, arrange) => {
     arrange()
 
@@ -360,7 +341,7 @@ describe('trash region mounted ad slot behavior', () => {
     expect(wrapper.find('[data-test="region-ad-slot"]').exists()).toBe(false)
   })
 
-  it('renders the actual AdBanner slot for a non-empty eligible trash source-list page with ads enabled', async () => {
+  it('renders the actual AdBanner slot for a non-empty eligible trash area page with ads enabled', async () => {
     const wrapper = await mountRegionAdPage()
 
     expect(wrapper.find('[data-test="region-ad-slot"]').exists()).toBe(true)

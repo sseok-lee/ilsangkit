@@ -22,7 +22,7 @@
     <template v-else-if="data">
       <PageHead
         eyebrow="쓰레기 배출 정보"
-        :title="sourceTitle"
+        :title="`${data.city} ${data.district}`"
         :description="heroDescription"
       >
         <template #breadcrumb>
@@ -33,9 +33,7 @@
             v-for="tag in heroTags"
             :key="tag"
             class="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-muted"
-          >
-            {{ tag }}
-          </li>
+          >{{ tag }}</li>
         </ul>
       </PageHead>
 
@@ -48,16 +46,12 @@
           variant="secondary"
           :href="returnContext.href"
           @click="returnToContext"
-        >
-          {{ returnContext.label }}
-        </UiButton>
+        >{{ returnContext.label }}</UiButton>
         <UiButton
           v-else-if="trashRegionLink"
           variant="secondary"
           :to="trashRegionLink.searchHref"
-        >
-          {{ data.city }} {{ data.district }} 목록으로
-        </UiButton>
+        >{{ data.city }} {{ data.district }} 목록으로</UiButton>
       </div>
 
       <SectionBlock
@@ -156,7 +150,7 @@
               <NuxtLink
                 v-for="area in data.applicableAreas"
                 :key="area.href"
-                :to="wasteAreaFilterHref(area.areaId)"
+                :to="area.href"
                 class="text-primary hover:underline text-sm font-medium"
               >
                 {{ applicableAreaLabel(area) }}
@@ -225,8 +219,6 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import { CATEGORY_TIPS } from '~/utils/categoryDescriptions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { formatDotDate } from '~/utils/syncFreshness'
-import { wasteSourceTitle } from '~/utils/wasteSchedule'
-import { wasteAreaFilterHref } from '~/utils/wasteListQuery'
 import {
   consumeLegacyTrashFromFragment,
   readTrashReturnContext,
@@ -349,16 +341,7 @@ const errorMsg = computed(() => {
 
 // Hero description & tags
 const heroDescription = computed(
-  () => '일반쓰레기, 음식물쓰레기, 재활용, 일시적 다량폐기물 배출 정보를 확인하세요.'
-)
-const sourceTitle = computed(() => data.value
-  ? wasteSourceTitle({
-      targetRegion: data.value.targetRegion,
-      emissionPlace: data.value.emissionPlace,
-      city: data.value.city,
-      district: data.value.district,
-    })
-  : '쓰레기 배출 정보'
+  () => '일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 정보를 확인하세요.'
 )
 const heroTags = computed(() => {
   if (!data.value) return [] as string[]
@@ -384,7 +367,7 @@ const breadcrumbItems = computed(() => {
     { label: '홈', href: '/', current: false },
     { label: '쓰레기 배출', href: '/search?category=trash', current: false },
     {
-      label: sourceTitle.value,
+      label: `${data.value.city} ${data.value.district}`,
       href: `/trash/${data.value.id}`,
       current: true,
     },
@@ -584,14 +567,14 @@ watchEffect(() => {
     setBreadcrumbSchema([
       { name: '홈', url: '/' },
       { name: '쓰레기 배출', url: '/search?category=trash' },
-      { name: sourceTitle.value, url: `/trash/${data.value.id}` },
+      { name: `${data.value.city} ${data.value.district}`, url: `/trash/${data.value.id}` },
     ])
     setDetailProvenance({
       domain: 'facility',
       category: 'trash',
       path: `/trash/${data.value.id}`,
       description:
-        `${data.value.city ?? ''} ${data.value.district ?? ''} ${sourceTitle.value} 생활폐기물 배출일정 데이터입니다. 환경부 공공데이터 기반으로 일반·음식물·재활용·일시적 다량폐기물의 배출 요일·시간·방법을 제공합니다.`.trim(),
+        `${data.value.city ?? ''} ${data.value.district ?? ''} 지역의 생활폐기물 배출일정 데이터입니다. 환경부 공공데이터 기반으로 일반·음식물·재활용·대형폐기물의 배출 요일·시간·방법을 제공합니다.`.trim(),
       updatedAt: data.value.details?.lastModified ?? data.value.details?.dataCreatedDate ?? null,
     })
   }

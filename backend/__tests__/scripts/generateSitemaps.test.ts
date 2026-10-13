@@ -17,14 +17,8 @@ const INDEX = `<?xml version="1.0"?><sitemapindex>
   <sitemap><loc>https://ilsangkit.co.kr/sitemap/static.xml</loc></sitemap>
   <sitemap><loc>https://ilsangkit.co.kr/sitemap/toilet.xml</loc></sitemap>
 </sitemapindex>`
-const INDEX_WITH_TRASH = `<?xml version="1.0"?><sitemapindex>
-  <sitemap><loc>https://ilsangkit.co.kr/sitemap/trash.xml</loc></sitemap>
-</sitemapindex>`
 const STATIC = '<?xml version="1.0"?><urlset><url><loc>https://ilsangkit.co.kr/about</loc></url></urlset>'
 const TOILET = '<?xml version="1.0"?><urlset><url><loc>https://ilsangkit.co.kr/toilet/1</loc></url><url><loc>https://ilsangkit.co.kr/toilet/2</loc></url></urlset>'
-const TRASH_WITH_AREAS = '<?xml version="1.0"?><urlset><url><loc>https://ilsangkit.co.kr/gyeonggi/uiwang/trash</loc></url><url><loc>https://ilsangkit.co.kr/trash/areas/101</loc></url></urlset>'
-const TRASH_REGIONS_ONLY = '<?xml version="1.0"?><urlset><url><loc>https://ilsangkit.co.kr/gyeonggi/uiwang/trash</loc></url><url><loc>https://ilsangkit.co.kr/gyeonggi/gapyeong/trash</loc></url></urlset>'
-const TRASH_REGRESSION = '<?xml version="1.0"?><urlset><url><loc>https://ilsangkit.co.kr/gyeonggi/uiwang/trash</loc></url></urlset>'
 
 describe('parseChildLocs', () => {
   it('sitemapindex에서 모든 <loc> 추출', () => {
@@ -338,45 +332,6 @@ describe('runGeneration', () => {
       } finally {
         delete process.env.SITEMAP_FORCE_SWAP
       }
-    })
-  })
-
-  describe('trash area URL migration fixtures', () => {
-    it('fresh corrected trash XML replaces previous area entries when the count guard is not triggered', async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
-      await mkdir(join(dir, 'sitemap'), { recursive: true })
-      await writeFile(join(dir, 'sitemap.xml'), INDEX_WITH_TRASH)
-      await writeFile(join(dir, 'sitemap', 'trash.xml'), TRASH_WITH_AREAS)
-      await writeFile(join(dir, '.counts.json'), JSON.stringify({ 'sitemap.xml': 1, 'sitemap/trash.xml': 2 }))
-
-      const result = await runGeneration({
-        dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
-        fetcher: mockFetcher({ '/sitemap.xml': INDEX_WITH_TRASH, '/sitemap/trash.xml': TRASH_REGIONS_ONLY }),
-      })
-
-      expect(result.ok).toBe(true)
-      expect(result.carriedForward).toEqual([])
-      const trashXml = await readFile(join(dir, 'sitemap', 'trash.xml'), 'utf-8')
-      expect(trashXml).toBe(TRASH_REGIONS_ONLY)
-      expect(trashXml).not.toContain('/trash/areas/')
-    })
-
-    it('carries forward the previous trash XML when an intentional region-only count drop exceeds the guard', async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'smap-'))
-      await mkdir(join(dir, 'sitemap'), { recursive: true })
-      await writeFile(join(dir, 'sitemap.xml'), INDEX_WITH_TRASH)
-      await writeFile(join(dir, 'sitemap', 'trash.xml'), TRASH_WITH_AREAS)
-      await writeFile(join(dir, '.counts.json'), JSON.stringify({ 'sitemap.xml': 1, 'sitemap/trash.xml': 2 }))
-
-      const result = await runGeneration({
-        dir, base: 'http://127.0.0.1:3000', token: 'tok', threshold: 0.2, sleep: () => Promise.resolve(),
-        fetcher: mockFetcher({ '/sitemap.xml': INDEX_WITH_TRASH, '/sitemap/trash.xml': TRASH_REGRESSION }),
-      })
-
-      expect(result.ok).toBe(true)
-      expect(result.carriedForward).toEqual(['sitemap/trash.xml'])
-      const trashXml = await readFile(join(dir, 'sitemap', 'trash.xml'), 'utf-8')
-      expect(trashXml).toBe(TRASH_WITH_AREAS)
     })
   })
 })

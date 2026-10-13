@@ -1089,61 +1089,6 @@ describe('waste area public API live MySQL integration', () => {
     expect(sources.body.data.items[0].appliesTo[0].state).toBe('unresolved');
   });
 
-  it('filters source list by exact areaId, keeps identity total, and paginates after dedupe', async () => {
-    const page1 = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), page: 1, limit: 1 });
-    const page2 = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), page: 2, limit: 1 });
-
-    expect(page1.status).toBe(200);
-    expect(page2.status).toBe(200);
-    expect(page1.body.data.total).toBe(2);
-    expect(page1.body.data.selectedArea).toEqual({
-      areaId: w5AreaB,
-      name: `${W5_PREFIX}2동`,
-      city: '서울특별시',
-      district: `${W5_PREFIX}구`,
-    });
-    expect(new Set([
-      ...page1.body.data.items,
-      ...page2.body.data.items,
-    ].map((item: { id: number }) => item.id)).size).toBe(2);
-    expect(page1.body.data.generationId).toBe(W5_GENERATION_ID);
-    expect(page1.body.data.generationId).toBe(page2.body.data.generationId);
-  });
-
-  it('matches areaId source keywords against verified area names before pagination', async () => {
-    const res = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), keyword: `${W5_PREFIX}2동`, limit: 1 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.total).toBe(2);
-    expect(res.body.data.items[0].applicableAreas).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ areaId: w5AreaB, name: `${W5_PREFIX}2동` }),
-      ])
-    );
-  });
-
-  it('rejects areaId with unresolved coverage and conflicting normalized region filters', async () => {
-    const unresolved = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), coverage: 'unresolved' });
-    const matchingRegion = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), city: '서울', district: `${W5_PREFIX}구`, limit: 1 });
-    const conflicting = await request(app)
-      .get('/api/waste-schedules')
-      .query({ areaId: String(w5AreaB), city: '부산광역시' });
-
-    expect(unresolved.status).toBe(400);
-    expect(matchingRegion.status).toBe(200);
-    expect(conflicting.status).toBe(400);
-  });
-
   it('returns known empty area detail as 200 noindex data and unknown area as 404', async () => {
     const empty = await request(app).get(`/api/waste-areas/${w5AreaEmpty}`);
     const unknown = await request(app).get('/api/waste-areas/2147483647');
@@ -1689,41 +1634,20 @@ function w5Coverage(
 function normalizeWasteAreaApiContract(contract: Record<string, unknown>) {
   const text = JSON.stringify(contract)
     .replaceAll(W5_GENERATION_ID, 'fixture-generation-id')
-    .replaceAll(W5_PREFIX, '계약');
+    .replaceAll(W5_PREFIX, '계약')
+    .replaceAll(String(w5AreaA), '101')
+    .replaceAll(String(w5AreaB), '102')
+    .replaceAll(String(w5AreaEmpty), '103')
+    .replaceAll(String(w5AreaExpired), '104')
+    .replaceAll(String(w5AreaLegal), '105')
+    .replaceAll(String(w5DirectDistrictOverlapScheduleId), '201')
+    .replaceAll(String(w5PrimaryScheduleId), '202')
+    .replaceAll(String(w5MultiConditionScheduleId), '203')
+    .replaceAll(String(w5LegalOnlyScheduleId), '204')
+    .replaceAll(String(w5ExpiredConflictScheduleId), '205');
   const parsed = JSON.parse(text);
-  normalizeContractAreaIds(parsed);
   normalizeContractScheduleIds(parsed);
   return parsed;
-}
-
-function normalizeContractAreaIds(value: unknown): void {
-  if (Array.isArray(value)) {
-    for (const item of value) normalizeContractAreaIds(item);
-    return;
-  }
-  if (!value || typeof value !== 'object') return;
-  const record = value as Record<string, unknown>;
-  const areaIdMap = new Map<number, number>([
-    [w5AreaA, 101],
-    [w5AreaB, 102],
-    [w5AreaEmpty, 103],
-    [w5AreaExpired, 104],
-    [w5AreaLegal, 105],
-  ]);
-  if (typeof record.areaId === 'number' && areaIdMap.has(record.areaId)) {
-    record.areaId = areaIdMap.get(record.areaId);
-  }
-  for (const [key, child] of Object.entries(record)) {
-    if (typeof child === 'string') {
-      let normalized = child;
-      for (const [actual, stable] of areaIdMap) {
-        normalized = normalized.replaceAll(`/trash/areas/${actual}`, `/trash/areas/${stable}`);
-      }
-      record[key] = normalized;
-      continue;
-    }
-    normalizeContractAreaIds(child);
-  }
 }
 
 function normalizeContractScheduleIds(value: unknown): void {
@@ -1736,11 +1660,6 @@ function normalizeContractScheduleIds(value: unknown): void {
   if (typeof record.sourceUrl === 'string' && typeof record.id === 'number') {
     const extra = record.sourceUrl.match(/area-a-(\d+)$/);
     if (extra) record.id = 300 + Number(extra[1]);
-    if (record.sourceUrl.endsWith('/direct-district-overlap')) record.id = 201;
-    if (record.sourceUrl.endsWith('/shared')) record.id = 202;
-    if (record.sourceUrl.endsWith('/multi-condition')) record.id = 203;
-    if (record.sourceUrl.endsWith('/legal-only')) record.id = 204;
-    if (record.sourceUrl.endsWith('/expired-conflict')) record.id = 205;
     if (record.sourceUrl.endsWith('/unresolved')) record.id = 401;
   }
   for (const child of Object.values(record)) normalizeContractScheduleIds(child);

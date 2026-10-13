@@ -5,18 +5,12 @@ function statusFromError(error: unknown): number {
   return status.statusCode || status.status || status.response?.status || 503
 }
 
-function setNoStore() {
-  if (!import.meta.server) return
-  if (useRequestEvent()) useResponseHeader('cache-control').value = 'no-store'
-}
-
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!Object.prototype.hasOwnProperty.call(to.query, 'schedule')) return
   if (to.params.category !== 'trash') return
 
   const scheduleId = parseLegacySchedule(to.query.schedule)
   if (!scheduleId) {
-    setNoStore()
     throw createError({ statusCode: 400, statusMessage: '잘못된 배출 일정 주소입니다' })
   }
 
@@ -24,7 +18,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await $fetch<{ success: boolean; data: unknown }>(`${useApiBase()}/api/waste-schedules/${scheduleId}`)
   } catch (error) {
     const status = statusFromError(error)
-    setNoStore()
     if (status === 410) throw createError({ statusCode: 410, statusMessage: '종료된 배출 일정입니다' })
     if (status === 404 || status === 422) throw createError({ statusCode: 404, statusMessage: '배출 정보를 찾을 수 없습니다' })
     throw createError({ statusCode: 503, statusMessage: '배출 정보를 확인하지 못했습니다' })
@@ -32,7 +25,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const from = sanitizeLegacyTrashFrom(cleanScheduleFromRoute(to))
   const hash = from ? `#from=${encodeURIComponent(from)}` : ''
-  setNoStore()
   return navigateTo(`/trash/${scheduleId}${hash}`, {
     redirectCode: import.meta.server ? 302 : undefined,
     replace: import.meta.client,

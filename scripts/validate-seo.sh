@@ -21,7 +21,6 @@ set -u
 
 BASE_URL="${1:-${BASE_URL:-http://localhost:3000}}"
 BASE_URL="${BASE_URL%/}" # trailing slash 제거
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 대표 URL — 환경마다 존재하는 ID/경로가 다르므로 반드시 환경변수로 오버라이드할 것.
 #   SAMPLE_CATEGORY_HUB (default: /toilet)
@@ -89,9 +88,6 @@ not_contains() {
   local needle="$2"
   ! printf '%s' "$haystack" | grep -q -- "$needle"
 }
-
-# shellcheck source=lib/trash-region-canary.sh
-. "$SCRIPT_DIR/lib/trash-region-canary.sh"
 
 # ────────────────────────────────────────────────────────────
 # 1. 홈
@@ -328,36 +324,13 @@ echo "9️⃣  지역 페이지 fail-closed 회귀 검사"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 SAMPLE_REGION_FACILITY_PATH="${SAMPLE_REGION_FACILITY_PATH:-/seoul/gangnam/childcare}"
 SAMPLE_REGION_TRASH_PATH="${SAMPLE_REGION_TRASH_PATH:-/gyeonggi/uiwang/trash}"
-SAMPLE_REGION_TRASH_SECONDARY_PATH="${SAMPLE_REGION_TRASH_SECONDARY_PATH:-/gyeonggi/gapyeong/trash}"
 
-region_body=$(fetch_body "$BASE_URL$SAMPLE_REGION_FACILITY_PATH") || { fail "$SAMPLE_REGION_FACILITY_PATH 응답 실패"; region_body=""; }
-if [ -n "$region_body" ]; then
+for path in "$SAMPLE_REGION_FACILITY_PATH" "$SAMPLE_REGION_TRASH_PATH"; do
+  region_body=$(fetch_body "$BASE_URL$path") || { fail "$path 응답 실패"; continue; }
   if not_contains "$region_body" 'content="noindex'; then
-    pass "$SAMPLE_REGION_FACILITY_PATH — noindex 아님 (데이터 있는 지역)"
+    pass "$path — noindex 아님 (데이터 있는 지역)"
   else
-    fail "$SAMPLE_REGION_FACILITY_PATH — noindex 감지. 일시 장애가 noindex 로 굳었을 수 있음 (fail-closed 회귀)"
-  fi
-fi
-
-for path in "$SAMPLE_REGION_TRASH_PATH" "$SAMPLE_REGION_TRASH_SECONDARY_PATH"; do
-  trash_body_file="$(mktemp)"
-  trash_status=$(curl -sS --max-time 15 -A 'ilsangkit-validate-seo/1.0' \
-    -o "$trash_body_file" -w '%{http_code}' "$BASE_URL$path" 2>/dev/null)
-  trash_curl_exit=$?
-  trash_body=""
-  if [ -s "$trash_body_file" ]; then
-    trash_body=$(cat "$trash_body_file")
-  fi
-  rm -f "$trash_body_file"
-
-  validate_trash_region_response "$path" "${trash_status:-000}" "$trash_curl_exit" "$trash_body"
-
-  if [ "$trash_curl_exit" -eq 0 ] && [ "${trash_status:-000}" = "200" ] && [ -n "$trash_body" ]; then
-    if not_contains "$trash_body" 'content="noindex'; then
-      pass "$path — noindex 아님 (데이터 있는 지역)"
-    else
-      fail "$path — noindex 감지. 일시 장애가 noindex 로 굳었을 수 있음 (fail-closed 회귀)"
-    fi
+    fail "$path — noindex 감지. 일시 장애가 noindex 로 굳었을 수 있음 (fail-closed 회귀)"
   fi
 done
 echo ""

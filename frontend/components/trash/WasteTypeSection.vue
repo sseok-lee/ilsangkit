@@ -40,11 +40,11 @@
           <span class="ml-1">{{ timeRange }}</span>
         </p>
       </div>
-      <div v-if="method" class="flex items-start gap-2">
+      <div v-if="info.method" class="flex items-start gap-2">
         <span aria-hidden="true" class="material-symbols-outlined text-[18px] text-muted shrink-0 mt-0.5">info</span>
         <p>
           <span class="font-medium text-ink">배출 방법:</span>
-          <span class="ml-1">{{ method }}</span>
+          <span class="ml-1">{{ info.method }}</span>
         </p>
       </div>
     </div>
@@ -53,7 +53,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatTimeRange, normalizeProvidedText } from '~/utils/wasteSchedule'
 
 interface WasteTypeInfo {
   dayOfWeek?: string
@@ -83,8 +82,7 @@ const ALL_DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const
 
 function parseDays(raw: string): string[] {
   const days = raw.split(/[+,\s·]+/).map(d => d.trim()).filter(Boolean)
-  const ordered = ALL_DAYS.filter(d => days.includes(d))
-  return ordered.length > 0 ? ordered : days
+  return ALL_DAYS.filter(d => days.includes(d))
 }
 
 function dayChipClass(day: string): string {
@@ -94,10 +92,10 @@ function dayChipClass(day: string): string {
 }
 
 const timeRange = computed(() => {
-  return formatTimeRange(props.info.beginTime, props.info.endTime) || null
+  if (!props.info.beginTime && !props.info.endTime) return null
+  if (props.info.beginTime && props.info.endTime) return `${props.info.beginTime} ~ ${props.info.endTime}`
+  return props.info.beginTime || props.info.endTime
 })
-
-const method = computed(() => normalizeProvidedText(props.info.method))
 
 // 다음 배출일 계산 (dayOfWeek: "월, 수, 금" 등에서 파싱)
 const DAY_MAP: Record<string, number> = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }

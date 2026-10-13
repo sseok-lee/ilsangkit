@@ -65,10 +65,13 @@ test('category repeated keyword stays safe and retains nonblank keyword noindex'
   expect(await response.text()).toContain('<meta name="robots" content="noindex, follow">')
 })
 
-test('legacy schedule query redirects to the validated source detail', async ({ page }) => {
+test('schedule is indexable unless an independent query rule applies', async ({ page }) => {
   const path = '/chungnam/buyeo/trash'
   await page.goto(path + '?schedule=13343')
   await page.waitForFunction(() => !!(document.querySelector('#__nuxt') as unknown as { __vue_app__?: unknown })?.__vue_app__)
-  await expect(page).toHaveURL(/\/trash\/13343$/)
-  await expectHead(page, '/trash/13343', true)
+  await expectHead(page, path, false)
+  await navigate(page, path + '?schedule=13343&q=test')
+  await expectHead(page, path, true)
+  await navigate(page, path + '?schedule=13343')
+  await expectHead(page, path, false)
 })

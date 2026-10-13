@@ -1,7 +1,6 @@
 import type { LocationQuery } from 'vue-router'
 import { CITY_FULL_NAME_TO_SLUG, CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import type { AreaQuery } from '~/types/wasteArea'
-import type { WasteListQuery } from '~/types/wasteList'
 
 const DEFAULT_LIMIT = 20
 const MAX_KEYWORD_LENGTH = 100
@@ -113,7 +112,16 @@ export function wasteAreaPathForQuery(basePath: string, query: AreaQuery): strin
   return search ? `${basePath}?${search}` : basePath
 }
 
-export function wasteSourceScheduleQuery(query: AreaQuery): Partial<WasteListQuery> {
+export interface WasteSourceScheduleQuery {
+  page?: number
+  limit?: number
+  city?: string
+  district?: string
+  keyword?: string
+  coverage?: 'unresolved'
+}
+
+export function wasteSourceScheduleQuery(query: AreaQuery): WasteSourceScheduleQuery {
   return {
     page: query.page,
     limit: query.limit,

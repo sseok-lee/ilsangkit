@@ -36,21 +36,7 @@ describe('FacilitySearchRow', () => {
       },
     })
 
-    expect(w.get('a').attributes('href')).toBe('/trash?areaId=7')
-  })
-
-  it('invalid waste-area destinations do not fall back to an unsafe source id', () => {
-    const w = mount(FacilitySearchRow, {
-      props: {
-        facility: facility({
-          id: '7',
-          category: 'trash',
-          destination: { kind: 'waste-area', href: '/trash/areas/not-safe' },
-        } as never),
-      },
-    })
-
-    expect(w.get('a').attributes('href')).toBe('/trash')
+    expect(w.get('a').attributes('href')).toBe('/trash/areas/7')
   })
 
 

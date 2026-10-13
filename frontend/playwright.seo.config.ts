@@ -18,7 +18,6 @@ export default defineConfig({
     'remaining-property-redesign.spec.ts',
     'remaining-lifestyle-redesign.spec.ts',
     'waste-area-discovery.spec.ts',
-    'trash-source-guide.spec.ts',
   ],
   workers: 1,
   retries: 0,

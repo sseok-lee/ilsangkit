@@ -50,22 +50,6 @@ export const explorationRegions = [
     lat: 37.2636,
     lng: 127.0286,
   },
-  {
-    city: '경기도',
-    district: '의왕시',
-    slug: 'uiwang',
-    bjdCode: '4143010000',
-    lat: 37.3449,
-    lng: 126.9683,
-  },
-  {
-    city: '경기도',
-    district: '가평군',
-    slug: 'gapyeong',
-    bjdCode: '4182010000',
-    lat: 37.8315,
-    lng: 127.5099,
-  },
 ]
 
 function json(res, status, payload) {
