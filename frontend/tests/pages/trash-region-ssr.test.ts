@@ -150,3 +150,13 @@ describe('클라이언트 재조회 실패 처리', () => {
     expect(regionCategory).toContain('@retry="loadWasteSchedules"')
   })
 })
+
+describe('trash 지역 페이지네이션', () => {
+  it('클라이언트 totalPages 초기값이 SSR totalPages 를 덮지 않는다 (0 으로 시작)', () => {
+    // 회귀: ref(1) 로 시작하면 resolveRegionDisplay 의 `client.totalPages > 0` 분기가 참이 되어
+    // SSR 의 totalPages(예: 의왕 18)를 1 로 덮고 Pagination(v-if="totalPages > 1")이 사라졌다.
+    // 운영 실측(2026-10-13): /gyeonggi/uiwang/trash 348건 중 20건만 노출, page=2 링크 0개.
+    expect(regionCategory).toContain('const wasteTotalPages = ref(0)')
+    expect(regionCategory).not.toContain('const wasteTotalPages = ref(1)')
+  })
+})
