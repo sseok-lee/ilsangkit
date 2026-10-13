@@ -53,6 +53,12 @@ GOOD_HTML='<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeon
 
 run_helper_case pass "$GOOD_PATH" "$GOOD_HTML"
 run_helper_case pass "$GOOD_PATH" '<html><head><link href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash" rel="canonical"><meta content="follow, index" name="robots"></head><body><a href="/trash/1001#from">원본</a></body></html>'
+run_helper_case pass "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="index, follow"></head><body><a class="source-link" href="/trash/1001">원본</a></body></html>'
+run_helper_case pass "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="index, follow"></head><body><a class="source-link" href="/trash/1001#from-guide">원본</a></body></html>'
+run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="index, follow"></head><body><a data-href="/trash/1001">원본</a></body></html>'
+run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="index, noindex"></head><body><a href="/trash/1001">원본</a></body></html>'
+run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="follow,noindex"></head><body><a href="/trash/1001">원본</a></body></html>'
+run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta content="index,noindex" name="robots"></head><body><a href="/trash/1001">원본</a></body></html>'
 run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"></head><body><a href="/trash/areas/1">동</a></body></html>'
 run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"></head><body><script>{"url":"/trash/1001"}</script></body></html>'
 run_helper_case fail "$GOOD_PATH" '<html><head><link rel="canonical" href="https://ilsangkit.co.kr/gyeonggi/uiwang/trash"><meta name="robots" content="noindex, follow"></head><body><a href="/trash/1001">원본</a></body></html>'

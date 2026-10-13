@@ -147,9 +147,10 @@ Output:
 ## Release and migration instructions
 
 - Deploy the backend/frontend changes together so sitemap count data and frontend sitemap rendering agree on region-only trash URLs.
-- After deployment, allow the normal sitemap artifact generation path to fetch the corrected `/sitemap/trash*.xml` files. The existing count guard can replace stale area-containing trash XML when the URL count does not drop beyond the configured threshold.
-- If the intentional region-only migration causes a child trash sitemap URL count drop beyond the guard threshold in production artifacts, review the generated XML and update the sitemap count baseline or release artifact deliberately rather than disabling the guard globally.
-- Do not purge production caches as part of this task. Let normal deployment and artifact generation paths refresh the affected sitemap artifacts.
+- After the deployed release is live, perform the prescribed one-run sitemap migration with `SITEMAP_FORCE_SWAP=1` only for the trash sitemap artifact that otherwise carries forward. Exit 4/carry-forward is not migration success.
+- Before accepting that one forced swap, compare old vs new trash sitemap URLs: every removed URL must be a deprecated `/trash/areas/{id}` area URL, every intended regional trash URL must be retained, and there must be no unrelated sitemap regression.
+- Verify the migration result has no carried-forward trash chunk, then restore the normal environment immediately by removing `SITEMAP_FORCE_SWAP=1` after that single run.
+- Do not purge production caches as part of this task. Let the controlled post-release sitemap artifact migration refresh the affected sitemap artifacts.
 - Keep Uiwang (`/gyeonggi/uiwang/trash`) as the primary trash region canary and Gapyeong (`/gyeonggi/gapyeong/trash`) as the secondary canary sample.
 - When the canary is run after release, failures to watch are HTTP redirects/non-200 statuses, empty SSR bodies, missing canonical, accidental `noindex`, and missing real numeric `/trash/{id}` anchors.
 
@@ -158,3 +159,66 @@ Output:
 - Production canary and GitHub workflow were not run by instruction.
 - Lint still reports existing warning volume in both packages; no lint errors were introduced.
 - Frontend build still emits existing Browserslist and PostCSS warnings; build succeeds.
+
+## Fix round 1 evidence — helper anchor and noindex matching
+
+Base for this fix round: `ed13694268d2416362498720fc0435175c994c63`.
+
+### Reviewer issues addressed
+
+- Tightened source-anchor detection so only a genuine `href` attribute on an `<a>` tag is accepted. The helper now accepts `href` as the first attribute or after another whitespace-delimited attribute, and it accepts either a plain numeric `/trash/{id}` URL or a safe fragment suffix. It rejects `data-href="/trash/1001"`.
+- Replaced hardcoded noindex token sequences with shared helper logic that checks robots meta tags in either `name="robots" ... content="..."` or `content="..." ... name="robots"` attribute order and rejects `noindex` wherever it appears in the content value, including `index, noindex`, compact `follow,noindex`, and reversed attribute order.
+- Kept the checks in the shared shell helper; `validate-seo.sh` continues to call the helper rather than duplicating the logic.
+
+### Focused RED
+
+```bash
+bash scripts/tests/trash-region-canary.test.sh
+```
+
+Output before helper fix:
+
+```text
+Expected fail but helper passed for /gyeonggi/uiwang/trash
+```
+
+This failure came from the new regression cases that expected `data-href="/trash/1001"` and the previously missed noindex forms to fail.
+
+### Focused GREEN and syntax
+
+```bash
+bash scripts/tests/trash-region-canary.test.sh && bash -n scripts/validate-seo.sh scripts/lib/trash-region-canary.sh scripts/tests/trash-region-canary.test.sh
+```
+
+Output:
+
+```text
+trash-region-canary helper tests passed: assertions=20 helper_pass_calls=34
+```
+
+### Required full package tests
+
+```bash
+source ~/.nvm/nvm.sh && nvm use 20 >/dev/null && source .superpowers/sdd/2026-10-13-trash-source-list-fallback/test-env.sh && (cd backend && npm run test) && (cd frontend && npm run test)
+```
+
+Output summary:
+
+- Combined command exited 0.
+- Backend full test phase completed successfully before frontend began; existing Prisma/pool warning output appeared.
+- Frontend summary: `Test Files 385 passed (385)`, `Tests 3970 passed | 1 skipped (3971)`.
+- Existing Vue/component warning output appeared; no failures.
+
+### Final syntax / diff checks
+
+```bash
+bash -n scripts/validate-seo.sh scripts/lib/trash-region-canary.sh scripts/tests/trash-region-canary.test.sh && bash scripts/tests/trash-region-canary.test.sh && git diff --check
+```
+
+Output:
+
+```text
+trash-region-canary helper tests passed: assertions=20 helper_pass_calls=34
+```
+
+`git diff --check` exited 0.

@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
 
+trash_region_has_noindex_robots() {
+  local html="$1"
+
+  contains "$html" '<meta[^>]*name="robots"[^>]*content="[^"]*noindex[^"]*"' ||
+    contains "$html" '<meta[^>]*content="[^"]*noindex[^"]*"[^>]*name="robots"'
+}
+
+trash_region_has_source_anchor() {
+  local html="$1"
+
+  contains "$html" '<a[[:space:]]href="/trash/[0-9][0-9]*"' ||
+    contains "$html" '<a[[:space:]]href="/trash/[0-9][0-9]*#[A-Za-z0-9_-][A-Za-z0-9_-]*"' ||
+    contains "$html" '<a[[:space:]][^>]*[[:space:]]href="/trash/[0-9][0-9]*"' ||
+    contains "$html" '<a[[:space:]][^>]*[[:space:]]href="/trash/[0-9][0-9]*#[A-Za-z0-9_-][A-Za-z0-9_-]*"'
+}
+
 validate_trash_region_html() {
   local path="$1"
   local html="$2"
@@ -17,17 +33,13 @@ validate_trash_region_html() {
     fail "$path — canonical 누락 또는 불일치"
   fi
 
-  if contains "$html" 'content="noindex, follow"' ||
-     contains "$html" 'content="follow, noindex"' ||
-     contains "$html" 'content="noindex"' ||
-     contains "$html" 'content="noindex,'; then
+  if trash_region_has_noindex_robots "$html"; then
     fail "$path — robots noindex 감지"
   else
     pass "$path — noindex 아님"
   fi
 
-  if contains "$html" '<a[^>]*href="/trash/[0-9][0-9]*"' ||
-     contains "$html" '<a[^>]*href="/trash/[0-9][0-9]*#from[^"]*"'; then
+  if trash_region_has_source_anchor "$html"; then
     pass "$path — 원본 배출안내 링크 SSR"
   else
     fail "$path — 원본 배출안내 링크 SSR 누락"
