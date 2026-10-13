@@ -76,6 +76,29 @@ test('renders Uiwang source cards before JavaScript', async ({ browser, request 
   await context.close()
 })
 
+test('renders nationwide and city-only source-first lists with source cards', async ({ page, request }) => {
+  const nationwide = await page.goto('/trash')
+  expect(nationwide?.status()).toBe(200)
+  await hydrated(page)
+  await expect(page.locator('main a[href="/trash/1001"]')).toHaveCount(1)
+  await expect(page.locator('main a[href="/trash/1004"]')).toHaveCount(1)
+  await expect(page.locator('main a[aria-label$="상세 정보 보기"]').first()).toBeVisible()
+  let state = await fixtureState(request)
+  expect(state.requests.some(item => item.startsWith('/api/waste-schedules?'))).toBe(true)
+  expect(state.requests.some(item => item.startsWith('/api/waste-areas'))).toBe(false)
+
+  await reset(request)
+  const cityOnly = await page.goto('/trash?city=서울특별시')
+  expect(cityOnly?.status()).toBe(200)
+  await hydrated(page)
+  await expect(page.locator('main a[href="/trash/1001"]')).toHaveCount(1)
+  await expect(page.locator('main a[href="/trash/1005"]')).toHaveCount(1)
+  await expect(page.locator('main a[aria-label$="상세 정보 보기"]').first()).toBeVisible()
+  state = await fixtureState(request)
+  expect(state.requests.some(item => item.startsWith('/api/waste-schedules?') && item.includes('city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C'))).toBe(true)
+  expect(state.requests.some(item => item.startsWith('/api/waste-areas'))).toBe(false)
+})
+
 test('redirects legacy area URLs with no-store for single, multiple, empty, and error lifecycles', async ({ request }) => {
   const multiple = await request.get('/trash/areas/210', { maxRedirects: 0 })
   expect(multiple.status()).toBe(302)
@@ -201,6 +224,35 @@ test('separates option failures from source failures and generation redirects', 
   expect(after.status()).toBe(302)
   expect(after.headers().location).toBe('/trash/1001#from=%2Ftrash%3FareaId%3D1')
   expect(after.headers()['cache-control']).toContain('no-store')
+})
+
+test('maps source timeout and discovery-disabled area requests to no-store SSR failures', async ({ page, request }) => {
+  await control(request, { sourceDelayMs: 9000 })
+  const timeout = await page.goto('/gyeonggi/uiwang/trash')
+  expect(timeout?.status()).toBe(503)
+  expect(timeout?.headers()['cache-control']).toContain('no-store')
+
+  await reset(request)
+  await control(request, { discoveryEnabled: false })
+  const unfiltered = await page.goto('/trash')
+  expect(unfiltered?.status()).toBe(200)
+  await hydrated(page)
+  await expect(page.locator('main a[href="/trash/1001"]').first()).toBeVisible()
+  let state = await fixtureState(request)
+  expect(state.requests.some(item => item.startsWith('/api/waste-schedules?'))).toBe(true)
+  expect(state.requests.some(item => item.startsWith('/api/waste-areas'))).toBe(false)
+
+  const explicitArea = await page.goto('/trash?areaId=1')
+  expect(explicitArea?.status()).toBe(503)
+  expect(explicitArea?.headers()['cache-control']).toContain('no-store')
+  state = await fixtureState(request)
+  expect(state.requests.some(item => item.startsWith('/api/waste-schedules?') && item.includes('areaId=1'))).toBe(true)
+
+  const legacy = await request.get('/trash/areas/1', { maxRedirects: 0 })
+  expect(legacy.status()).toBe(503)
+  expect(legacy.headers()['cache-control']).toContain('no-store')
+  state = await fixtureState(request)
+  expect(state.requests.some(item => item.startsWith('/api/waste-areas/1?'))).toBe(true)
 })
 
 test('captures required visual states at mobile and desktop widths', async ({ page, request }) => {

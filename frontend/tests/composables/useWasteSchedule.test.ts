@@ -104,14 +104,18 @@ describe('useWasteSchedule().getSchedules', () => {
     )
   })
 
-  it('forwards areaId and AbortSignal to the source API', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      success: true,
-      data: {
-        ...backendData(),
-        selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' },
-        generationId: 'g1',
-      },
+  it('forwards areaId with an owned source AbortSignal', async () => {
+    let forwardedSignal: AbortSignal | undefined
+    const fetchMock = vi.fn(async (_url, options) => {
+      forwardedSignal = options.signal
+      return {
+        success: true,
+        data: {
+          ...backendData(),
+          selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' },
+          generationId: 'g1',
+        },
+      }
     })
     ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
     const signal = new AbortController().signal
@@ -124,9 +128,66 @@ describe('useWasteSchedule().getSchedules', () => {
       expect.stringContaining('/api/waste-schedules'),
       expect.objectContaining({
         params: { areaId: 101, page: 1, limit: 20 },
-        signal,
+        signal: expect.any(AbortSignal),
       })
     )
+    expect(forwardedSignal).toBeInstanceOf(AbortSignal)
+    expect(forwardedSignal).not.toBe(signal)
+  })
+
+  it('aborts the owned source request when the caller cancels', async () => {
+    const controller = new AbortController()
+    let forwardedSignal: AbortSignal | undefined
+    const fetchMock = vi.fn((_url, options) => {
+      forwardedSignal = options.signal
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true })
+      })
+    })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+    const { getSchedules } = useWasteSchedule()
+    const promise = getSchedules({ areaId: 101, page: 1, limit: 20 }, controller.signal)
+    const reason = new Error('caller cancelled')
+
+    controller.abort(reason)
+
+    await expect(promise).rejects.toThrow('caller cancelled')
+    expect(forwardedSignal?.aborted).toBe(true)
+    expect(forwardedSignal?.reason).toBe(reason)
+  })
+
+  it('rejects unresolved source requests after the source timeout and aborts the owned request', async () => {
+    vi.useFakeTimers()
+    try {
+      const controller = new AbortController()
+      let forwardedSignal: AbortSignal | undefined
+      let abortEvents = 0
+      const fetchMock = vi.fn((_url, options) => {
+        forwardedSignal = options.signal
+        return new Promise((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            abortEvents += 1
+            reject(options.signal.reason)
+          }, { once: true })
+        })
+      })
+      ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+      const { getSchedules } = useWasteSchedule()
+      const promise = getSchedules({ page: 1, limit: 20 }, controller.signal)
+      const assertion = expect(promise).rejects.toThrow('waste-schedules request timed out')
+
+      await vi.advanceTimersByTimeAsync(8000)
+      await assertion
+      expect(forwardedSignal?.aborted).toBe(true)
+      expect(forwardedSignal?.reason).toBeInstanceOf(Error)
+      expect(abortEvents).toBe(1)
+      controller.abort(new Error('late caller abort'))
+      expect(abortEvents).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('rejects failed or malformed source envelopes instead of transforming them', async () => {

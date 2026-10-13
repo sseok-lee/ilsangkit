@@ -15,6 +15,7 @@ const control = {
   sourcePayload: 'valid',
   optionsStatus: null,
   areaVariant: 'multiple',
+  discoveryEnabled: true,
   requests: [],
 }
 
@@ -30,6 +31,7 @@ export function resetWasteAreaFixture() {
   control.sourcePayload = 'valid'
   control.optionsStatus = null
   control.areaVariant = 'multiple'
+  control.discoveryEnabled = true
   control.requests = []
 }
 
@@ -38,7 +40,7 @@ export function setWasteAreaFixtureControl(body = {}) {
   if (body.active != null) control.active = Boolean(body.active)
   if (body.failNext != null) control.failNext = Math.max(0, Number(body.failNext) || 0)
   if (body.delayMs != null) control.delayMs = Math.max(0, Math.min(5000, Number(body.delayMs) || 0))
-  if (body.sourceDelayMs != null) control.sourceDelayMs = Math.max(0, Math.min(5000, Number(body.sourceDelayMs) || 0))
+  if (body.sourceDelayMs != null) control.sourceDelayMs = Math.max(0, Math.min(12000, Number(body.sourceDelayMs) || 0))
   if (body.optionsDelayMs != null) control.optionsDelayMs = Math.max(0, Math.min(5000, Number(body.optionsDelayMs) || 0))
   if (['before', 'after'].includes(body.generation)) control.generation = body.generation
   if ([400, 404, 410, 503].includes(Number(body.status))) control.status = Number(body.status)
@@ -46,6 +48,7 @@ export function setWasteAreaFixtureControl(body = {}) {
   if ([400, 404, 410, 503, null].includes(body.optionsStatus ?? null)) control.optionsStatus = body.optionsStatus == null ? null : Number(body.optionsStatus)
   if (['valid', 'failure', 'malformed'].includes(body.sourcePayload)) control.sourcePayload = body.sourcePayload
   if (['single', 'multiple', 'empty'].includes(body.areaVariant)) control.areaVariant = body.areaVariant
+  if (body.discoveryEnabled != null) control.discoveryEnabled = Boolean(body.discoveryEnabled)
   return wasteAreaFixtureState()
 }
 
@@ -359,6 +362,10 @@ export function handleWasteAreaFixture(url) {
   const isSourceList = path === '/api/waste-schedules'
   const isSourceDetail = /^\/api\/waste-schedules\/\d+$/.test(path)
   if (isOptions || isAreaDetail || isSourceList || isSourceDetail) control.requests.push(`${path}?${q.toString()}`)
+
+  if (!control.discoveryEnabled && (isOptions || isAreaDetail || (isSourceList && q.has('areaId')))) {
+    return fail(503, 'waste area discovery disabled')
+  }
 
   if ((isOptions || isAreaDetail) && control.status) {
     const status = control.status

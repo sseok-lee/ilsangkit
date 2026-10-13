@@ -2,6 +2,54 @@ import { ref, readonly } from 'vue'
 import type { ApplicableWasteArea } from '~/types/wasteArea'
 import type { SelectedWasteArea, WasteListQuery } from '~/types/wasteList'
 
+const SOURCE_FETCH_TIMEOUT_MS = 8000
+
+function sourceTimeoutError() {
+  return new Error('waste-schedules request timed out')
+}
+
+function withSourceTimeout<T>(request: (signal: AbortSignal) => Promise<T>, callerSignal?: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController()
+    let settled = false
+
+    const cleanup = () => {
+      clearTimeout(timer)
+      callerSignal?.removeEventListener('abort', abortFromCaller)
+    }
+    const settleResolve = (value: T) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve(value)
+    }
+    const settleReject = (reason: unknown) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(reason)
+    }
+    const abortRequest = (reason: unknown) => {
+      if (!controller.signal.aborted) controller.abort(reason)
+      settleReject(reason)
+    }
+    const abortFromCaller = () => abortRequest(callerSignal?.reason ?? sourceTimeoutError())
+    const timer = setTimeout(() => abortRequest(sourceTimeoutError()), SOURCE_FETCH_TIMEOUT_MS)
+
+    if (callerSignal?.aborted) {
+      abortFromCaller()
+      return
+    }
+
+    callerSignal?.addEventListener('abort', abortFromCaller, { once: true })
+    try {
+      request(controller.signal).then(settleResolve, settleReject)
+    } catch (reason) {
+      settleReject(reason)
+    }
+  })
+}
+
 export interface WasteTypeInfo {
   dayOfWeek?: string
   beginTime?: string
@@ -242,9 +290,12 @@ export function useWasteSchedule() {
       if (options?.coverage) params.coverage = options.coverage
       if (options?.page) params.page = options.page
       if (options?.limit) params.limit = options.limit
-      const response = await $fetch<{ success: boolean; data: BackendScheduleData }>(
-        `${apiBase}/api/waste-schedules`,
-        { params, signal }
+      const response = await withSourceTimeout(
+        requestSignal => $fetch<{ success: boolean; data: BackendScheduleData }>(
+          `${apiBase}/api/waste-schedules`,
+          { params, signal: requestSignal }
+        ),
+        signal
       )
       if (!response?.success) throw new Error('waste-schedules responded success:false')
       validateScheduleData(response.data, options?.areaId)
