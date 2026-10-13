@@ -12,7 +12,6 @@ const {
   revisionFindFirstMock,
   revisionGroupByMock,
   applicableAreasMock,
-  requireWasteAreaDetailMock,
 } = vi.hoisted(() => ({
   groupByMock: vi.fn(),
   findManyMock: vi.fn(),
@@ -25,7 +24,6 @@ const {
   revisionFindFirstMock: vi.fn(),
   revisionGroupByMock: vi.fn(),
   applicableAreasMock: vi.fn(),
-  requireWasteAreaDetailMock: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
@@ -57,14 +55,6 @@ vi.mock('../../src/services/wasteAreaService.js', () => ({
     return publication?.activeGenerationId ?? null;
   },
   getApplicableAreasForSchedules: applicableAreasMock,
-  requireWasteAreaDetail: requireWasteAreaDetailMock,
-  requireActiveWasteGeneration: async () => {
-    const publication = await publicationFindUniqueMock({ where: { id: 1 }, select: { activeGenerationId: true } });
-    if (!publication?.activeGenerationId) {
-      throw new Error('missing active generation fixture');
-    }
-    return publication.activeGenerationId;
-  },
 }));
 
 import {
@@ -81,7 +71,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
   applicableAreasMock.mockResolvedValue(new Map());
-  requireWasteAreaDetailMock.mockReset();
 });
 
 describe('getWasteScheduleRegions', () => {
@@ -486,133 +475,18 @@ describe('waste area discovery source compatibility', () => {
 
     await expect(getById(7)).rejects.toMatchObject({ statusCode: 410 });
   });
-
-  it('filters published source list by exact areaId with direct and district-whole coverage before pagination', async () => {
-    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
-    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
-    requireWasteAreaDetailMock.mockResolvedValue(areaDetail(101, '역삼1동'));
-    revisionFindManyMock.mockResolvedValue([
-      revision(1001, 'active', [
-        coverage(1001, { areaId: 101, state: 'verified', scope: 'whole' }),
-      ]),
-      revision(1002, 'active', [
-        coverage(1002, { districtCode: '11680', state: 'verified', scope: 'whole' }),
-        coverage(1002, { areaId: 101, state: 'verified', scope: 'conditional', conditionText: '역삼1동만' }),
-      ]),
-    ]);
-    applicableAreasMock.mockResolvedValue(new Map([
-      [1001, [applicableArea(101, '역삼1동')]],
-      [1002, [applicableArea(101, '역삼1동')]],
-    ]));
-
-    const page1 = await getByRegion(undefined, undefined, undefined, { areaId: 101, page: 1, limit: 1 });
-    const page2 = await getByRegion(undefined, undefined, undefined, { areaId: 101, page: 2, limit: 1 });
-
-    expect(page1.total).toBe(2);
-    expect(page1.selectedArea).toEqual({
-      areaId: 101,
-      name: '역삼1동',
-      city: '서울특별시',
-      district: '강남구',
-    });
-    expect(new Set([...page1.items, ...page2.items].map((item) => item.id)).size).toBe(2);
-    expect(page1.generationId).toBe(page2.generationId);
-    expect(revisionFindManyMock.mock.calls[0][0].where).toMatchObject({
-      generationId: 'generation-1',
-      state: 'active',
-      coverages: {
-        some: {
-          state: 'verified',
-          OR: [
-            { areaId: 101 },
-            { areaId: null, scope: 'whole' },
-          ],
-        },
-      },
-    });
-    expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [1001, 1002], expect.any(Date));
-  });
-
-  it('rejects a contradictory city or district when areaId pins another normalized region', async () => {
-    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
-    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
-    requireWasteAreaDetailMock.mockResolvedValue(areaDetail(101, '역삼1동'));
-
-    await expect(getByRegion('부산광역시', '강남구', undefined, { areaId: 101 })).rejects.toMatchObject({
-      statusCode: 400,
-    });
-    await expect(getByRegion('서울', '서초구', undefined, { areaId: 101 })).rejects.toMatchObject({
-      statusCode: 400,
-    });
-  });
-
-  it('matches source keywords against details managementZone and verified applicable area names before pagination', async () => {
-    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
-    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
-    revisionFindManyMock.mockResolvedValue([
-      revision(2001, 'active', [], { details: { managementZone: '마지막토큰관리구역' } }),
-      revision(2002, 'active', []),
-    ]);
-    revisionCountMock.mockResolvedValue(2);
-    applicableAreasMock.mockResolvedValue(new Map([
-      [2001, []],
-      [2002, [applicableArea(102, '검증동이름')]],
-    ]));
-
-    const management = await getByRegion('서울', '강남구', '마지막토큰관리구역');
-    const areaName = await getByRegion('서울', '강남구', '검증동이름');
-
-    expect(management.items.map((item) => item.id)).toEqual([2001]);
-    expect(areaName.items.map((item) => item.id)).toEqual([2002]);
-    expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [2001, 2002]);
-  });
-
-  it('matches verified area names outside the first raw page before paginating keyword results', async () => {
-    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
-    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
-    const revisions = Array.from({ length: 21 }, (_, index) => revision(3001 + index, 'active'));
-    revisionFindManyMock.mockResolvedValue(revisions);
-    revisionCountMock.mockResolvedValue(revisions.length);
-    applicableAreasMock.mockResolvedValue(new Map([
-      [3021, [applicableArea(102, '원거리검증동')]],
-    ]));
-
-    const result = await getByRegion('서울', '강남구', '원거리검증동', { page: 1, limit: 1 });
-
-    expect(result.total).toBe(1);
-    expect(result.totalPages).toBe(1);
-    expect(result.items.map((item) => item.id)).toEqual([3021]);
-    expect(result.items[0].applicableAreas).toEqual([applicableArea(102, '원거리검증동')]);
-    expect(revisionFindManyMock.mock.calls[0][0]).toEqual(expect.objectContaining({
-      skip: 0,
-      take: undefined,
-    }));
-    expect(applicableAreasMock).toHaveBeenCalledWith(
-      'generation-1',
-      revisions.map((item) => item.scheduleId)
-    );
-  });
 });
 
-function revision(
-  scheduleId: number,
-  state: 'active' | 'inactive',
-  coverages = [coverage(scheduleId, { areaId: state === 'active' ? 101 : null, state: 'unresolved' })],
-  overrides: Partial<{
-    targetRegion: string | null;
-    emissionPlace: string | null;
-    details: Record<string, unknown> | null;
-  }> = {}
-) {
+function revision(scheduleId: number, state: 'active' | 'inactive') {
   return {
     generationId: 'generation-1',
     scheduleId,
     city: '서울특별시',
     district: '강남구',
     sourceId: `source-${scheduleId}`,
-    targetRegion: overrides.targetRegion ?? '역삼1동',
-    emissionPlace: overrides.emissionPlace ?? '집 앞',
-    details: overrides.details ?? { livingWaste: { dayOfWeek: '월' } },
+    targetRegion: '역삼1동',
+    emissionPlace: '집 앞',
+    details: { livingWaste: { dayOfWeek: '월' } },
     sourceUrl: 'https://example.test/source',
     govCode: '3220000',
     rawPayload: null,
@@ -624,64 +498,19 @@ function revision(
     state,
     missingCompleteRuns: state === 'inactive' ? 2 : 0,
     terminationEvidence: state === 'inactive' ? { reason: 'fixture' } : null,
-    coverages,
-  };
-}
-
-function coverage(
-  scheduleId: number,
-  overrides: Partial<{
-    areaId: number | null;
-    districtCode: string | null;
-    scope: string;
-    conditionText: string;
-    state: string;
-  }> = {}
-) {
-  return {
-    generationId: 'generation-1',
-    scheduleId,
-    coverageKey: `coverage-${scheduleId}-${overrides.areaId ?? overrides.districtCode ?? 'none'}-${overrides.conditionText ?? '전체'}`,
-    areaId: overrides.areaId ?? null,
-    districtCode: overrides.districtCode ?? null,
-    scope: overrides.scope ?? 'whole',
-    conditionText: overrides.conditionText ?? '전체',
-    state: overrides.state ?? 'verified',
-    reason: 'fixture',
-    evidence: [],
-  };
-}
-
-function areaDetail(areaId: number, name: string) {
-  return {
-    generationId: 'generation-1',
-    area: {
-      areaId,
-      name,
-      city: '서울특별시',
-      district: '강남구',
-      href: `/trash/areas/${areaId}`,
-      matchReason: 'exact',
-      scheduleCount: 0,
-      conditionalCount: 0,
-      summary: '',
-      dataDate: null,
-    },
-    schedules: [],
-    unresolved: { count: 0, href: null },
-    indexEligible: false,
-    indexReason: 'fixture',
-    contentUpdatedAt: '2026-09-28T00:00:00.000Z',
-    predecessorOrSuccessorLinks: [],
-  };
-}
-
-function applicableArea(areaId: number, name: string) {
-  return {
-    areaId,
-    name,
-    href: `/trash/areas/${areaId}`,
-    scope: 'whole',
-    conditionText: '전체',
+    coverages: [
+      {
+        generationId: 'generation-1',
+        scheduleId,
+        coverageKey: `coverage-${scheduleId}`,
+        areaId: state === 'active' ? 101 : null,
+        districtCode: null,
+        scope: 'whole',
+        conditionText: '전체',
+        state: 'unresolved',
+        reason: 'fixture',
+        evidence: [],
+      },
+    ],
   };
 }

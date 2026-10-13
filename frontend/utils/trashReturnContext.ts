@@ -1,5 +1,4 @@
-import type { LocationQuery, RouteLocationNormalizedLoaded } from 'vue-router'
-import { parseWasteListQuery, wasteAreaFilterHref } from '~/utils/wasteListQuery'
+import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 export interface TrashReturnContext {
   href: string
@@ -15,8 +14,8 @@ export interface TrashReturnState {
 const STATE_KEY = 'ilsangkitTrashReturn'
 const SESSION_PREFIX = 'ilsangkitTrashReturn:'
 const POSITIVE_INTEGER = /^[1-9]\d*$/
-const ALLOWED_TRASH_QUERY_KEYS = new Set(['city', 'district', 'keyword', 'coverage', 'page', 'areaId'])
-const TRUSTED_NORMAL_QUERY_KEYS = new Set(['city', 'district', 'keyword', 'coverage', 'page', 'areaId', 'category', 'q'])
+const ALLOWED_TRASH_QUERY_KEYS = new Set(['city', 'district', 'keyword', 'coverage', 'page'])
+const TRUSTED_NORMAL_QUERY_KEYS = new Set(['city', 'district', 'keyword', 'coverage', 'page', 'category', 'q'])
 
 function hasBrowserHistory(): boolean {
   return typeof window !== 'undefined' && typeof window.history !== 'undefined'
@@ -34,13 +33,6 @@ function isTrashListPath(pathname: string): boolean {
 
 function isTrashAreaPath(pathname: string): boolean {
   return /^\/trash\/areas\/[1-9]\d*$/.test(pathname)
-}
-
-function areaIdFromTrashAreaPath(pathname: string): number | null {
-  const match = pathname.match(/^\/trash\/areas\/([1-9]\d*)$/)
-  if (!match) return null
-  const areaId = Number.parseInt(match[1], 10)
-  return Number.isSafeInteger(areaId) ? areaId : null
 }
 
 function isTrashSourcePath(pathname: string): boolean {
@@ -125,25 +117,10 @@ function sanitizePathAndQuery(
     const url = new URL(rawHref, 'https://ilsangkit.co.kr')
     if (url.origin !== 'https://ilsangkit.co.kr') return null
     if (!allowedPath(url.pathname)) return null
-    const areaPathId = areaIdFromTrashAreaPath(url.pathname)
-    if (areaPathId) return wasteAreaFilterHref(areaPathId)
     const params = new URLSearchParams()
-    const trashListPath = isTrashListPath(url.pathname)
-    const trashQuery: LocationQuery = {}
     for (const [key, value] of url.searchParams.entries()) {
       if (key === 'schedule') continue
-      const trimmed = value.trim()
-      if (!allowedQueryKeys.has(key) || !trimmed) continue
-      params.append(key, trimmed)
-      if (trashListPath) {
-        const existing = trashQuery[key]
-        if (existing === undefined) trashQuery[key] = trimmed
-        else if (Array.isArray(existing)) existing.push(trimmed)
-        else trashQuery[key] = [existing, trimmed]
-      }
-    }
-    if (trashListPath) {
-      parseWasteListQuery(trashQuery)
+      if (allowedQueryKeys.has(key) && value.trim()) params.append(key, value)
     }
     const search = params.toString()
     return `${url.pathname}${search ? `?${search}` : ''}`
@@ -236,10 +213,9 @@ export function readTrashReturnContext(sourceId: number | null): TrashReturnCont
   if (typeof rawBack !== 'string') return null
   const href = sanitizeTrustedTrashReturn(rawBack)
   if (!href) return null
-  const fromArea = isTrashAreaPath(new URL(rawBack, 'https://ilsangkit.co.kr').pathname) || href.includes('areaId=')
   return {
     href,
-    label: fromArea ? '동별 안내로 돌아가기' : '목록으로 돌아가기',
+    label: href.startsWith('/trash/areas/') ? '동별 안내로 돌아가기' : '목록으로 돌아가기',
   }
 }
 

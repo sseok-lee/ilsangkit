@@ -295,10 +295,7 @@ createServer(async (req, res) => {
   const wasteFixtureState = wasteAreaFixtureState()
   const wasteResult = wasteFixtureState.active ? handleWasteAreaFixture(url) : null
   if (wasteResult) {
-    const wasteDelayMs = path.startsWith('/api/waste-schedules')
-      ? wasteFixtureState.sourceDelayMs || wasteFixtureState.delayMs
-      : wasteFixtureState.optionsDelayMs || wasteFixtureState.delayMs
-    if (wasteDelayMs) await new Promise(resolve => setTimeout(resolve, wasteDelayMs))
+    if (wasteFixtureState.delayMs) await new Promise(resolve => setTimeout(resolve, wasteFixtureState.delayMs))
     return json(res, wasteResult.status, wasteResult.body)
   }
   const remainingResult = remainingPages.domain === 'editorial' ? handleEditorialFixture(url) : remainingPages.domain === 'property' ? handlePropertyFixture(url) : remainingPages.domain === 'lifestyle' ? handleLifestyleFixture(url) : null
@@ -321,24 +318,6 @@ createServer(async (req, res) => {
     return ok(res, explorationRegions)
   }
   if (path === '/api/area/seoul/gangnam') return ok(res, fixtureArea())
-  const regionCategorySummary = path.match(/^\/api\/area\/([^/]+)\/([^/]+)\/([^/]+)\/summary$/)
-  if (regionCategorySummary) return ok(res, {
-    count: 2,
-    countDiff: 0,
-    highlights: [{ key: 'fixture', label: '검증동', count: 2, percent: 100 }],
-    nearbyDistricts: [{ slug: 'gangnam', district: '강남구', count: 2 }],
-    lastSyncedAt: '2026-09-28T00:00:00.000Z',
-  })
-  const regionCategoryList = path.match(/^\/api\/facilities\/region\/([^/]+)\/([^/]+)\/([^/]+)$/)
-  if (regionCategoryList) {
-    const [, citySlug, districtSlug, category] = regionCategoryList
-    return ok(res, {
-      items: [{ ...facility, id: `${category}-seo-fixture`, category, city: citySlug, district: districtSlug }],
-      total: 1,
-      page: 1,
-      totalPages: 1,
-    })
-  }
   if (path === '/api/meta/sync-status') {
     return ok(res, {
       aptSale: '2026-09-01T00:00:00.000Z',

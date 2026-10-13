@@ -116,13 +116,6 @@ const props = defineProps<{
 
 const statusCode = props.error?.statusCode ?? 500
 
-function markLegacyTrashAreaNoStore(path: string | undefined) {
-  if (!import.meta.server || statusCode < 300 || !path?.startsWith('/trash/areas/')) return
-  const event = useRequestEvent()
-  event?.node.res.setHeader('cache-control', 'no-store')
-  useResponseHeader('cache-control').value = 'no-store'
-}
-
 // 에러가 난 경로. error.url 이 1순위이고 useRoute() 는 fallback —
 // 근거는 errorPagePath 주석 참조. useRoute() 는 error.vue 가 라우터 밖에서
 // 렌더될 수 있어 try/catch 로 감싼다(에러 페이지가 스스로 던지면 안 된다).
@@ -133,7 +126,6 @@ try {
   routePath = undefined
 }
 const errorPath = errorPagePath(props.error, routePath)
-markLegacyTrashAreaNoStore(errorPath)
 
 // 410 문구를 위한 카테고리. 검색 목적지 스코프는 별도 규칙(subway 제외)이라 분리한다.
 const goneCategory = facilityCategoryFromPath(errorPath)

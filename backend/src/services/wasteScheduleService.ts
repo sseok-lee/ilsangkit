@@ -4,15 +4,13 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { PAGINATION } from '../constants/index.js';
-import { buildRegionFilter, cityVariantList, districtVariantList } from './cityMapping.js';
-import { AppError, GoneError, ServiceUnavailableError } from '../lib/errors.js';
+import { buildRegionFilter } from './cityMapping.js';
+import { GoneError, ServiceUnavailableError } from '../lib/errors.js';
 import type { ApplicableWasteArea } from '../types/wasteArea.js';
 import {
   getActiveWasteGeneration,
   getApplicableAreasForSchedules,
   isWasteAreaDiscoveryEnabled,
-  requireActiveWasteGeneration,
-  requireWasteAreaDetail,
 } from './wasteAreaService.js';
 
 // 검증되지 않은 seed 데이터(`prisma/seed.ts`)를 공개 조회에서 제외한다.
@@ -81,8 +79,6 @@ interface WasteScheduleResult {
   total: number;
   page: number;
   totalPages: number;
-  selectedArea?: { areaId: number; name: string; city: string; district: string };
-  generationId?: string;
 }
 
 // 지역 목록 타입
@@ -110,15 +106,9 @@ export async function getByRegion(
   city?: string,
   district?: string,
   keyword?: string,
-  options: { page?: number; limit?: number; coverage?: 'unresolved'; areaId?: number } = {}
+  options: { page?: number; limit?: number; coverage?: 'unresolved' } = {}
 ): Promise<WasteScheduleResult> {
   const { page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT } = options;
-  if (options.areaId !== undefined) {
-    if (options.coverage === 'unresolved') {
-      throw new AppError(400, 'areaId와 unresolved coverage는 함께 조회할 수 없습니다', 'INVALID_WASTE_AREA_QUERY');
-    }
-    return readByArea(options.areaId, city, district, keyword, { page, limit });
-  }
   if (isWasteAreaDiscoveryEnabled()) {
     const generationId = await readActiveGenerationForSourceReaders();
     if (generationId) {
@@ -225,14 +215,8 @@ async function getByPublishedRevision(
     }),
     prisma.wasteScheduleRevision.count({ where }),
   ]);
-  const candidateApplicableAreas = normalizedKeyword
-    ? await getApplicableAreasForSchedules(generationId, items.map((item) => item.scheduleId))
-    : new Map<number, ApplicableWasteArea[]>();
   const filteredItems = normalizedKeyword
-    ? items.filter((item) => sourceMatchesKeyword(
-      revisionToScheduleItem(item, candidateApplicableAreas.get(item.scheduleId) ?? []),
-      normalizedKeyword
-    ))
+    ? items.filter((item) => sourceMatchesKeyword(item, normalizedKeyword))
     : items;
   const pageItems = normalizedKeyword
     ? filteredItems.slice((options.page - 1) * options.limit, options.page * options.limit)
@@ -249,69 +233,6 @@ async function getByPublishedRevision(
     total: filteredTotal,
     page: options.page,
     totalPages: Math.ceil(filteredTotal / options.limit),
-  };
-}
-
-async function readByArea(
-  areaId: number,
-  city: string | undefined,
-  district: string | undefined,
-  keyword: string | undefined,
-  pagination: { page: number; limit: number }
-): Promise<WasteScheduleResult> {
-  const requestDate = new Date();
-  const generationId = await requireActiveWasteGeneration();
-  const detail = await requireWasteAreaDetail(areaId, { generationId, requestDate });
-  validateSelectedAreaRegion(detail.area.city, detail.area.district, city, district);
-
-  const revisions = await prisma.wasteScheduleRevision.findMany({
-    where: {
-      generationId,
-      state: 'active',
-      sourceId: EXCLUDE_SEED,
-      ...buildRegionFilter(detail.area.city, detail.area.district, { districtVariants: true }),
-      coverages: {
-        some: {
-          state: 'verified',
-          OR: [
-            { areaId },
-            { areaId: null, scope: 'whole' },
-          ],
-        },
-      },
-    },
-    orderBy: [{ district: 'asc' }, { targetRegion: 'asc' }, { scheduleId: 'asc' }],
-    include: { coverages: true },
-  });
-  const matchingRevisions = dedupeRevisions(revisions.filter((revision) =>
-    revision.coverages.some((coverage) =>
-      coverage.state === 'verified'
-      && (coverage.areaId === areaId || (coverage.areaId === null && coverage.scope === 'whole'))
-    )
-  ));
-  const applicableAreas = await getApplicableAreasForSchedules(
-    generationId,
-    matchingRevisions.map((item) => item.scheduleId),
-    requestDate
-  );
-  const normalizedKeyword = normalizeSourceKeyword(keyword);
-  const items = matchingRevisions
-    .map((revision) => revisionToScheduleItem(revision, applicableAreas.get(revision.scheduleId) ?? []))
-    .filter((item) => sourceMatchesKeyword(item, normalizedKeyword));
-  const start = (pagination.page - 1) * pagination.limit;
-
-  return {
-    items: items.slice(start, start + pagination.limit),
-    total: items.length,
-    page: pagination.page,
-    totalPages: Math.ceil(items.length / pagination.limit),
-    selectedArea: {
-      areaId: detail.area.areaId,
-      name: detail.area.name,
-      city: detail.area.city,
-      district: detail.area.district,
-    },
-    generationId,
   };
 }
 
@@ -572,29 +493,6 @@ function revisionToScheduleItem(
   };
 }
 
-function validateSelectedAreaRegion(
-  areaCity: string,
-  areaDistrict: string,
-  city?: string,
-  district?: string
-): void {
-  if (city && !cityVariantList(city).includes(areaCity)) {
-    throw new AppError(400, 'areaId와 city가 일치하지 않습니다', 'INVALID_WASTE_AREA_QUERY');
-  }
-  if (district && !districtVariantList(district).includes(areaDistrict)) {
-    throw new AppError(400, 'areaId와 district가 일치하지 않습니다', 'INVALID_WASTE_AREA_QUERY');
-  }
-}
-
-function dedupeRevisions<T extends { scheduleId: number }>(revisions: T[]): T[] {
-  const seen = new Set<number>();
-  return revisions.filter((revision) => {
-    if (seen.has(revision.scheduleId)) return false;
-    seen.add(revision.scheduleId);
-    return true;
-  });
-}
-
 function paginateRegions(items: RegionItem[], page: number, limit: number): RegionsResult {
   const total = items.length;
   const startIndex = (page - 1) * limit;
@@ -611,27 +509,10 @@ function normalizeSourceKeyword(keyword?: string): string {
 }
 
 function sourceMatchesKeyword(
-  item: Pick<WasteScheduleItem, 'targetRegion' | 'emissionPlace' | 'city' | 'district'> & {
-    details?: unknown;
-    applicableAreas?: ApplicableWasteArea[];
-  },
+  item: Pick<WasteScheduleItem, 'targetRegion' | 'emissionPlace' | 'city' | 'district'>,
   normalizedKeyword: string
 ): boolean {
   if (!normalizedKeyword) return true;
-  const searchable = [
-    item.targetRegion,
-    item.emissionPlace,
-    item.city,
-    item.district,
-    readManagementZone(item.details),
-    ...(item.applicableAreas ?? []).map((area) => area.name),
-  ];
-  return searchable
+  return [item.targetRegion, item.emissionPlace, item.city, item.district]
     .some((value) => (value ?? '').normalize('NFC').toLocaleLowerCase('ko-KR').includes(normalizedKeyword));
-}
-
-function readManagementZone(details: unknown): string | undefined {
-  if (!details || typeof details !== 'object' || Array.isArray(details)) return undefined;
-  const value = (details as { managementZone?: unknown }).managementZone;
-  return typeof value === 'string' ? value : undefined;
 }

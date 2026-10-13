@@ -116,10 +116,11 @@ describe('3. 종료된 카테고리는 410 을 유지한다', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('4. ?schedule= 는 UI 상태 — canonical 은 쿼리 없는 지역 허브를 가리킨다', () => {
   it('지역 허브 canonical 은 path 로만 조립되고 route.query 를 섞지 않는다', () => {
-    const start = trashRegionHub.indexOf("rel: 'canonical'")
-    const canonicalBlock = trashRegionHub.slice(start, start + 420)
-    expect(trashRegionHub).toContain('regionalCanonical: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`')
-    expect(canonicalBlock).toContain('href: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`')
+    const canonicalBlock = trashRegionHub.slice(
+      trashRegionHub.indexOf("rel: 'canonical'"),
+      trashRegionHub.indexOf("rel: 'canonical'") + 220,
+    )
+    expect(canonicalBlock).toContain('https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}')
     expect(canonicalBlock).not.toContain('schedule')
     expect(canonicalBlock).not.toContain('route.query')
   })

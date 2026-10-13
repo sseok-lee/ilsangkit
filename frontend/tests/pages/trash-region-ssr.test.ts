@@ -42,11 +42,11 @@ describe('/trash/{id} 원본 상세 문서', () => {
 })
 
 describe('구·군 trash 집계 페이지 SSR', () => {
-  it('trash 지역 목록은 source-list controls와 panel을 SSR async-data로 로드한다', () => {
-    expect(regionCategory).toContain('<WasteListSearch')
-    expect(regionCategory).toContain('<WasteListPanel')
-    expect(regionCategory).toContain('useWasteList({')
-    expect(regionCategory).toContain('await wasteList.state')
+  it('flag-on 동별 목록은 area API를 useAsyncData key/dedupe로 로드한다', () => {
+    expect(regionCategory).toContain('<WasteAreaList')
+    expect(regionCategory).toContain('wasteAreaRequestKey(wasteAreaQuery.value)')
+    expect(regionCategory).toContain("dedupe: 'cancel'")
+    expect(regionCategory).toContain('wasteAreas.list(wasteAreaQuery.value)')
   })
 
   it('경로 city/district와 query가 충돌하면 400으로 처리한다', () => {
@@ -54,39 +54,40 @@ describe('구·군 trash 집계 페이지 SSR', () => {
     expect(regionCategory).toContain('경로 지역과 district query가 충돌합니다')
   })
 
-  it('동 옵션은 보조 async-data로 분리해 장애가 source SSR 색인을 막지 않는다', () => {
-    expect(regionCategory).toContain('useWasteAreaOptions({')
-    expect(regionCategory).toContain('await wasteAreaOptions.state')
-    expect(regionCategory).toContain('wasteListSeo({')
+  it('area mode에서는 legacy source 목록 SSR을 호출하지 않고 unresolved mode만 source로 남긴다', () => {
+    expect(regionCategory).toContain("wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved'")
+    expect(regionCategory).toContain('/api/waste-schedules')
   })
 
   it('배출 일정 목록을 useAsyncData 로 SSR 로드한다', () => {
-    expect(regionCategory).toContain('useWasteList({')
-    expect(regionCategory).toContain('wasteList.result.value')
+    expect(regionCategory).toMatch(/useAsyncData\(\s*\n?\s*`waste-region-/)
+    expect(regionCategory).toContain('transformToRegionSchedules(res.data)')
   })
 
   it('건수만 받던 limit=1 경량 조회로 되돌아가지 않는다', () => {
     // meta description 용 건수는 목록 응답(total)에서 파생한다 — 별도 요청을 만들지 않는다.
     expect(regionCategory).not.toMatch(/`waste-count-/)
-    expect(regionCategory).toContain('wasteList.result.value?.total')
+    expect(regionCategory).toContain('wasteSsr.value?.total')
   })
 
   it('SSR 실패는 fail-open(503+no-store) 으로 처리한다 — 빈 본문 200 색인 금지', () => {
-    expect(regionCategory).toMatch(/wasteList\.state\.error\.value\)\s*markDegradedResponse\(\)/)
+    expect(regionCategory).toMatch(/wasteSsrError\.value\)\s*markDegradedResponse\(\)/)
   })
 
-  it('표시 상태를 source-list composable 결과에 위임한다', () => {
-    expect(regionCategory).toContain(':result="wasteList.result.value"')
-    expect(regionCategory).toContain(':pending="wasteList.state.pending.value"')
+  it('표시 상태를 시설 목록과 동일한 순수 함수에 위임한다', () => {
+    expect(regionCategory).toContain('resolveRegionDisplay<RegionSchedule>')
+    expect(regionCategory).toContain('wasteSsrConsumed')
   })
 
   it('템플릿이 SSR 반영 값을 바인딩한다 (클라이언트 전용 ref 직접 바인딩 금지)', () => {
-    expect(regionCategory).toContain(':result="wasteList.result.value"')
-    expect(regionCategory).toContain(':error="wasteList.state.error.value"')
+    expect(regionCategory).toContain(':schedules="displayWasteSchedules"')
+    expect(regionCategory).toContain(':total="displayWasteTotal"')
+    expect(regionCategory).toContain(':total-pages="displayWasteTotalPages"')
+    expect(regionCategory).toContain(':loading="displayWasteLoading"')
   })
 
-  it('클라이언트 재조회는 source-list refresh로 처리한다', () => {
-    expect(regionCategory).toMatch(/function refreshWasteList\(\)[\s\S]*?wasteList\.state\.refresh\(\)/)
+  it('클라이언트 재조회 시 SSR 데이터를 소비 처리한다', () => {
+    expect(regionCategory).toMatch(/async function loadWasteSchedules\(\)[\s\S]*?wasteSsrConsumed\.value = true/)
   })
 
   it('noindex 판정이 SSR 반영 값을 읽는다 — 클라이언트 전용 ref 금지 (전 trash 지역 noindex 회귀)', () => {
@@ -94,8 +95,12 @@ describe('구·군 trash 집계 페이지 SSR', () => {
     // SSR 시점에 wasteLoading=false + wasteSchedules=[] → wasteEmpty=true 로 판정됐다.
     // computeAreaNoindex 는 isTrash 면 wasteEmpty 를 그대로 반환하므로(utils/areaNoindex.ts:18)
     // 전국 trash 지역 페이지가 일제히 noindex 로 나갔다.
-    expect(regionCategory).toContain('wasteEmpty: !wasteList.state.pending.value')
-    expect(regionCategory).not.toContain('wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0')
+    expect(regionCategory).toContain(
+      'wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0'
+    )
+    expect(regionCategory).not.toContain(
+      'wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0'
+    )
   })
 })
 
@@ -107,16 +112,16 @@ describe('클라이언트 재조회 실패 처리', () => {
    * 잡지 않으면 unhandled rejection 이 되고 목록은 조용히 이전 상태로 남는다.
    */
   it('재조회 실패를 잡아 오류 상태로 남긴다', () => {
-    expect(regionCategory).toContain('wasteList.state.error.value')
+    expect(regionCategory).toMatch(/catch\s*\{[\s\S]*?wasteLoadError\.value = true/)
   })
 
   it('실패한 조회를 이전/다른 조건의 목록으로 대체하지 않는다', () => {
     // 빈 목록 + 오류 배너로 간다 — 다른 지역·페이지 결과를 현재 결과처럼 보여주지 않는다.
-    expect(regionCategory).not.toContain('wasteSchedules.value')
+    expect(regionCategory).toMatch(/catch\s*\{[\s\S]*?wasteSchedules\.value = \[\]/)
   })
 
   it('오류와 재시도를 배출 일정 섹션에 전달한다', () => {
-    expect(regionCategory).toContain(':error="wasteList.state.error.value"')
-    expect(regionCategory).toContain('@retry="refreshWasteList"')
+    expect(regionCategory).toContain(':error="wasteLoadError ? ')
+    expect(regionCategory).toContain('@retry="loadWasteSchedules"')
   })
 })

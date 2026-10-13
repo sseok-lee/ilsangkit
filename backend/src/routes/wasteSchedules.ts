@@ -32,19 +32,14 @@ router.get(
     const { query } = res.locals.validated as {
       query: { city?: string; district?: string; keyword?: string; page: number; limit: number };
     };
-    const areaId = parseAreaIdQuery(_req.query.areaId);
     const { city, district, keyword, page, limit, coverage } = query as typeof query & {
       coverage?: 'unresolved';
     };
-    if (areaId !== undefined && coverage === 'unresolved') {
-      throw new AppError(400, 'areaId와 unresolved coverage는 함께 조회할 수 없습니다', 'INVALID_WASTE_AREA_QUERY');
-    }
 
     const result = await translateWasteScheduleRouteRead(res, () => wasteScheduleService.getByRegion(city, district, keyword, {
       page,
       limit,
       coverage,
-      areaId,
     }));
     res.json({ success: true, data: result });
   })
@@ -119,21 +114,6 @@ async function translateWasteScheduleRouteRead<T>(res: Response, read: () => Pro
     res.setHeader('Cache-Control', 'no-store');
     throw new ServiceUnavailableError('쓰레기 배출 정보를 조회할 수 없습니다', 'WASTE_SOURCE_UNAVAILABLE');
   }
-}
-
-function parseAreaIdQuery(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  if (Array.isArray(value)) {
-    throw new AppError(400, 'areaId는 한 번만 지정할 수 있습니다', 'INVALID_WASTE_AREA_QUERY');
-  }
-  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
-    throw new AppError(400, 'areaId는 양의 정수여야 합니다', 'INVALID_WASTE_AREA_QUERY');
-  }
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) {
-    throw new AppError(400, 'areaId는 안전한 정수 범위여야 합니다', 'INVALID_WASTE_AREA_QUERY');
-  }
-  return parsed;
 }
 
 export default router;

@@ -96,7 +96,7 @@ describe('FacilityBrowseResults', () => {
       }],
     })
 
-    expect(wrapper.get('a[href="/trash?areaId=7"]').text()).toContain('역삼1동')
+    expect(wrapper.get('a[href="/trash/areas/7"]').text()).toContain('역삼1동')
     expect(wrapper.find('a[href="/trash/7"]').exists()).toBe(false)
   })
 

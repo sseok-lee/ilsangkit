@@ -3,8 +3,6 @@ import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE, CONTENT_AUTHOR } from '~/utils/seoConstants'
 import { resolveDataSource, ensureDatasetDescription, type DataSourceDomain, type DataSourceInfo } from '~/utils/dataSource'
 import { formatKstDate } from '~/utils/formatters'
-import { wasteSourceTitle } from '~/utils/wasteSchedule'
-import { wasteAreaFilterHref } from '~/utils/wasteListQuery'
 
 /**
  * BreadcrumbList 스키마
@@ -352,23 +350,17 @@ export function useStructuredData() {
     city: string
     district: string
     targetRegion?: string | null
-    emissionPlace?: string | null
-    applicableAreas?: Array<{ areaId?: number; name: string; href?: string }>
+    applicableAreas?: Array<{ name: string }>
     details?: { manageDepartment?: string; managePhone?: string } | null
   }) {
-    const sourceTitle = wasteSourceTitle(schedule)
     const schema = {
       '@context': 'https://schema.org',
       '@type': 'GovernmentService',
-      name: `${schedule.city} ${schedule.district} ${sourceTitle} 쓰레기 배출 안내`,
-      description: `${schedule.city} ${schedule.district} ${sourceTitle} 쓰레기 배출 일정 및 방법`,
+      name: `${schedule.city} ${schedule.district} 쓰레기 배출 안내`,
+      description: `${schedule.city} ${schedule.district} 지역 쓰레기 배출 일정 및 방법`,
       serviceType: '쓰레기 배출 안내',
       areaServed: (schedule.applicableAreas?.length
-        ? schedule.applicableAreas.map(area => ({
-            '@type': 'AdministrativeArea',
-            name: `${schedule.city} ${schedule.district} ${area.name}`,
-            ...(area.areaId || area.href ? { url: `${SITE_URL}${area.areaId ? wasteAreaFilterHref(area.areaId) : area.href}` } : {}),
-          }))
+        ? schedule.applicableAreas.map(area => ({ '@type': 'AdministrativeArea', name: `${schedule.city} ${schedule.district} ${area.name}` }))
         : {
             '@type': 'AdministrativeArea',
             name: `${schedule.city} ${schedule.district}`,

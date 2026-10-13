@@ -1,7 +1,7 @@
 <template>
   <a
     :href="sourceHref"
-    :aria-label="`${title} 쓰레기 배출 일정 상세 정보 보기`"
+    :aria-label="`${region.targetRegion?.replaceAll('+', ', ')} 쓰레기 배출 일정 상세 정보 보기`"
     class="group w-full bg-white rounded-[10px] p-4 text-left border border-line hover:border-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     @click="openSource"
   >
@@ -19,8 +19,8 @@
         </p>
 
         <!-- Title -->
-        <h3 class="text-ink text-base font-bold line-clamp-2">
-          {{ title }}
+        <h3 class="text-ink text-base font-bold truncate">
+          {{ region.targetRegion?.replaceAll('+', ', ') }}
         </h3>
 
         <!-- Subtitle: emission place + type + management zone -->
@@ -64,7 +64,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RegionSchedule, WasteType } from '~/composables/useWasteSchedule'
-import { formatDays, formatTimeRange, normalizeProvidedText, wasteSourceTitle } from '~/utils/wasteSchedule'
+import { formatDays, formatTimeRange, normalizeProvidedText } from '~/utils/wasteSchedule'
 import { buildTrashSourceHref, storeTrashReturnStateForTarget, trashReturnStateFromRoute } from '~/utils/trashReturnContext'
 
 const props = defineProps<{
@@ -73,12 +73,6 @@ const props = defineProps<{
 
 const route = useRoute()
 const sourceHref = computed(() => buildTrashSourceHref(props.region.id))
-const title = computed(() => wasteSourceTitle({
-  targetRegion: props.region.targetRegion,
-  emissionPlace: props.region.emissionPlace,
-  city: props.region.city,
-  district: props.region.district,
-}))
 
 const shortCity = computed(() =>
   props.region.city?.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '') || ''
@@ -97,7 +91,7 @@ const wasteRows = computed(() =>
     // 대형폐기물은 원본에 배출 요일이 없다(신청·장소 기준) — 없는 요일을 안내로 만들지 않는다.
     days: wt.dayOfWeek.length > 0
       ? formatDays(wt.dayOfWeek)
-      : (wt.type === '일시적 다량폐기물' ? '' : '요일 정보 없음'),
+      : (wt.type === '대형폐기물' ? '' : '요일 정보 없음'),
     time: formatTimeRange(wt.beginTime, wt.endTime),
     method: normalizeProvidedText(wt.method),
   }))
@@ -108,7 +102,7 @@ const badgeClass = (type: WasteType): string => {
     '일반쓰레기': 'bg-amber-100 text-amber-700',
     '음식물쓰레기': 'bg-green-100 text-green-700',
     '재활용': 'bg-teal-100 text-teal-700',
-    '일시적 다량폐기물': 'bg-purple-100 text-purple-700',
+    '대형폐기물': 'bg-purple-100 text-purple-700',
   }
   return map[type] || ''
 }

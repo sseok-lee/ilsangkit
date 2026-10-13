@@ -3,7 +3,6 @@ import { CATEGORY_META } from '~/types/facility'
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION, CATEGORY_SEO_INTENT, CATEGORY_SEO_TITLE, CATEGORY_SEO_DESCRIPTION, compactCityName } from '~/utils/seoConstants'
 import { OG_MAP_WIDTH, OG_MAP_HEIGHT } from '~/utils/ogMapSpec'
 import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
-import { wasteSourceTitle } from '~/utils/wasteSchedule'
 
 /** 받침 유무에 따라 조사 선택 (은/는, 이/가, 을/를 등) */
 function getJosa(word: string, josaWithBatchim: string, josaWithout: string): string {
@@ -598,12 +597,22 @@ export function useFacilityMeta() {
     city: string
     district: string
     targetRegion?: string | null
-    emissionPlace?: string | null
   }) {
     const location = `${schedule.city} ${schedule.district}`
-    const sourceTitle = wasteSourceTitle(schedule)
-    const title = `${location} ${sourceTitle} 쓰레기 배출일 | 재활용·음식물·일시적 다량폐기물`
-    const description = `${location} ${sourceTitle}의 일반쓰레기, 음식물쓰레기, 재활용, 일시적 다량폐기물 배출 요일·시간·방법을 확인하세요.`
+    // targetRegion이 수십 개 세부지역을 '+'로 연결하면 제목/설명이 과도하게 길어진다(네이버 SERP 잘림·키워드 스터핑).
+    // 4개 이상이면 '{첫지역} 외 N곳'으로 축약한다 (전체 목록은 본문에 그대로 노출).
+    const regionParts = schedule.targetRegion ? schedule.targetRegion.split('+').filter(Boolean) : []
+    const region = regionParts.length === 0
+      ? undefined
+      : regionParts.length <= 3
+        ? regionParts.join(', ')
+        : `${regionParts[0]} 외 ${regionParts.length - 1}곳`
+    const title = region
+      ? `${location} ${region} 쓰레기 배출일 | 재활용·음식물·대형폐기물`
+      : `${location} 쓰레기 배출일 | 재활용·음식물·대형폐기물`
+    const description = region
+      ? `${location} ${region}의 일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 요일·시간·방법을 확인하세요.`
+      : `${location}의 일반쓰레기, 음식물쓰레기, 재활용, 대형폐기물 배출 요일·시간·방법을 확인하세요.`
 
     setMeta({
       title,

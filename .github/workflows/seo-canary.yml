@@ -79,7 +79,6 @@ jobs:
           SAMPLE_PAGINATED_PATH: /toilet?page=2
           SAMPLE_REGION_FACILITY_PATH: /seoul/gangnam/childcare
           SAMPLE_REGION_TRASH_PATH: /gyeonggi/uiwang/trash
-          SAMPLE_REGION_TRASH_SECONDARY_PATH: /gyeonggi/gapyeong/trash
           SAMPLE_CHILD_SITEMAP: /sitemap/childcare-1.xml
           # 임계값은 여유를 둔다 — 데이터 증감으로 흔들려서 알람 피로를 만들면 안 된다.
           # childcare-1.xml 은 10,000 URL 고정(샤드 크기), 지역코드는 실측 19개.
