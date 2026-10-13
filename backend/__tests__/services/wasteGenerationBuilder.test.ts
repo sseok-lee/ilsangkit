@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildWasteGenerationPlan,
+  collapseContentDuplicates,
   hashWasteJson,
+  type PreviousWasteRevision,
   type WasteGenerationSourceRow,
 } from '../../src/services/wasteGenerationBuilder.js';
 import type { ReferenceBundle } from '../../src/types/wasteArea.js';
@@ -88,6 +90,8 @@ describe('buildWasteGenerationPlan', () => {
         scheduleId: index + 2,
         sourceId: `unresolved-${index}`,
         targetRegion: '적용 범위 미확인',
+        // 내용이 모두 같으면 중복으로 접히므로, 행마다 내용이 달라지도록 emissionPlace 를 구분한다.
+        emissionPlace: `미확인 배출장소 ${index}`,
         details: { livingWaste: { dayOfWeek: '화' } },
       }))],
     });
@@ -733,4 +737,135 @@ describe('buildWasteGenerationPlan', () => {
     expect(first.reportHash).toBe(second.reportHash);
   });
 
+});
+
+describe('collapseContentDuplicates / 내용 중복 접기', () => {
+  const base = { livingWaste: { dayOfWeek: '월' } };
+  const dup = (scheduleId: number, sourceId: string, dataCreatedDate: string, lastModified: string) => row({
+    scheduleId,
+    sourceId,
+    details: { ...base, dataCreatedDate, lastModified },
+  });
+  const plan = (rows: WasteGenerationSourceRow[], previousRevisions: PreviousWasteRevision[] = []) => buildWasteGenerationPlan({
+    baseGenerationId: previousRevisions.length ? 'base' : null,
+    references: refs,
+    rows,
+    provenance: 'raw',
+    sourceComplete: true,
+    previousRevisions,
+    observedAt: new Date('2026-10-13T00:00:00.000Z'),
+  });
+  const byId = (p: ReturnType<typeof plan>) => new Map(p.revisions.map((r) => [r.scheduleId, r]));
+
+  it('같은 연도판 3건 중복은 대표 1건만 active, 나머지는 대표를 가리키는 duplicate', () => {
+    const p = plan([
+      dup(1, '2025-A', '2025-01-01', '2025-02-01 00:00:00'),
+      dup(2, '2025-B', '2025-01-01', '2025-02-01 00:00:00'),
+      dup(3, '2025-C', '2025-01-01', '2025-02-01 00:00:00'),
+    ]);
+    const m = byId(p);
+    expect(m.get(3)).toMatchObject({ state: 'active', duplicateOfScheduleId: null });
+    expect(m.get(1)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 3 });
+    expect(m.get(2)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 3 });
+    expect(p.report.activeCount).toBe(1);
+    expect(p.report.duplicateCount).toBe(2);
+    expect(p.canPublish).toBe(true);
+  });
+
+  it('연도판만 다른 중복은 dataCreatedDate 가 최신인 행이 대표', () => {
+    const m = byId(plan([
+      dup(1, '2026-X', '2026-01-01', '2026-01-02 00:00:00'),
+      dup(2, '2024-Z', '2024-01-01', '2026-09-01 00:00:00'),
+    ]));
+    expect(m.get(1)?.state).toBe('active');
+    expect(m.get(2)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 1 });
+  });
+
+  it('dataCreatedDate 가 같으면 lastModified 최신, 그것도 같으면 sourceId 내림차순', () => {
+    const byModified = byId(plan([
+      dup(1, 'B', '2025-01-01', '2025-03-01 00:00:00'),
+      dup(2, 'A', '2025-01-01', '2025-04-01 00:00:00'),
+    ]));
+    expect(byModified.get(2)?.state).toBe('active');
+    const bySource = byId(plan([
+      dup(1, 'A', '2025-01-01', '2025-03-01 00:00:00'),
+      dup(2, 'B', '2025-01-01', '2025-03-01 00:00:00'),
+    ]));
+    expect(bySource.get(2)?.state).toBe('active');
+  });
+
+  it('dataCreatedDate 가 없는 행은 대표 우선순위가 가장 낮다', () => {
+    const m = byId(plan([
+      row({ scheduleId: 1, sourceId: 'Z', details: { ...base } }),
+      dup(2, 'A', '2020-01-01', '2020-01-01 00:00:00'),
+    ]));
+    expect(m.get(2)?.state).toBe('active');
+    expect(m.get(1)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 2 });
+  });
+
+  it('입력 순서를 바꿔도 대표가 같다', () => {
+    const rows = [
+      dup(1, '2025-A', '2025-01-01', '2025-02-01 00:00:00'),
+      dup(2, '2025-B', '2025-01-01', '2025-02-01 00:00:00'),
+      dup(3, '2025-C', '2025-01-01', '2025-02-01 00:00:00'),
+    ];
+    const forward = plan(rows).revisions.find((r) => r.state === 'active')?.scheduleId;
+    const reversed = plan([...rows].reverse()).revisions.find((r) => r.state === 'active')?.scheduleId;
+    expect(forward).toBe(3);
+    expect(reversed).toBe(3);
+  });
+
+  it('한 필드라도 다르면 접지 않는다', () => {
+    const p = plan([
+      dup(1, 'A', '2025-01-01', '2025-02-01 00:00:00'),
+      row({ scheduleId: 2, sourceId: 'B', emissionPlace: '다른 곳', details: { ...base, dataCreatedDate: '2025-01-01', lastModified: '2025-02-01 00:00:00' } }),
+    ]);
+    expect(p.revisions.every((r) => r.state === 'active' && r.duplicateOfScheduleId === null)).toBe(true);
+    expect(p.report.duplicateCount).toBe(0);
+  });
+
+  it('이전 대표가 이번 수집에서 빠지면 남은 행이 active 로 승격되고, 빠진 대표는 carried 규칙을 탄다', () => {
+    const prevRep = { ...dup(3, '2025-C', '2025-01-01', '2025-02-01 00:00:00'), contentHash: 'a'.repeat(64), provenance: 'raw' as const, sourceModifiedAt: null, observedAt: new Date('2026-10-12T00:00:00.000Z'), contentUpdatedAt: new Date('2026-10-12T00:00:00.000Z'), state: 'active' as const, missingCompleteRuns: 0, terminationEvidence: null, duplicateOfScheduleId: null };
+    const prevDup = { ...dup(1, '2025-A', '2025-01-01', '2025-02-01 00:00:00'), contentHash: 'b'.repeat(64), provenance: 'raw' as const, sourceModifiedAt: null, observedAt: new Date('2026-10-12T00:00:00.000Z'), contentUpdatedAt: new Date('2026-10-12T00:00:00.000Z'), state: 'duplicate' as const, missingCompleteRuns: 0, terminationEvidence: null, duplicateOfScheduleId: 3 };
+    const m = byId(plan([dup(1, '2025-A', '2025-01-01', '2025-02-01 00:00:00')], [prevRep, prevDup]));
+    expect(m.get(1)).toMatchObject({ state: 'active', duplicateOfScheduleId: null });
+    expect(m.get(3)).toMatchObject({ state: 'active', missingCompleteRuns: 1 });
+  });
+
+  it('이전 duplicate 행이 빠지면 1회째 duplicate 유지, 2회째 inactive', () => {
+    const prev = (runs: number) => ({ ...dup(1, '2025-A', '2025-01-01', '2025-02-01 00:00:00'), contentHash: 'b'.repeat(64), provenance: 'raw' as const, sourceModifiedAt: null, observedAt: new Date('2026-10-12T00:00:00.000Z'), contentUpdatedAt: new Date('2026-10-12T00:00:00.000Z'), state: 'duplicate' as const, missingCompleteRuns: runs, terminationEvidence: null, duplicateOfScheduleId: 3 });
+    const other = row({ scheduleId: 9, sourceId: 'other', emissionPlace: '다른 곳' });
+    const first = byId(plan([other], [prev(0)]));
+    expect(first.get(1)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 3, missingCompleteRuns: 1 });
+    const second = byId(plan([other], [prev(1)]));
+    expect(second.get(1)).toMatchObject({ state: 'inactive', missingCompleteRuns: 2 });
+  });
+
+  it('revisionHash 입력에 duplicateOfScheduleId 가 포함된다', () => {
+    // 대표를 바꾸려면 내용 필드를 바꿔야 해 contentHash 도 같이 변하므로, 해시 입력을 직접 재구성해 대조한다.
+    const p = plan([dup(1, 'A', '2025-01-01', '2025-02-01 00:00:00'), dup(2, 'B', '2025-01-01', '2025-02-01 00:00:00')]);
+    const expected = hashWasteJson(p.revisions.map((r) => ({
+      scheduleId: r.scheduleId,
+      sourceId: r.sourceId,
+      state: r.state,
+      contentHash: r.contentHash,
+      missingCompleteRuns: r.missingCompleteRuns,
+      sourceModifiedAt: r.sourceModifiedAt,
+      duplicateOfScheduleId: r.duplicateOfScheduleId ?? null,
+    })));
+    expect(p.report.revisionHash).toBe(expected);
+  });
+
+  it('collapseContentDuplicates 는 순수 함수로도 쓸 수 있다', () => {
+    const input = [
+      { ...dup(1, 'A', '2025-01-01', '2025-02-01 00:00:00'), state: 'active' as const, duplicateOfScheduleId: null },
+      { ...dup(2, 'B', '2025-01-01', '2025-02-01 00:00:00'), state: 'active' as const, duplicateOfScheduleId: null },
+    ];
+    const out = collapseContentDuplicates(input);
+    expect(out.map((r) => [r.scheduleId, r.state, r.duplicateOfScheduleId])).toEqual([
+      [1, 'duplicate', 2],
+      [2, 'active', null],
+    ]);
+    expect(input[0].state).toBe('active');
+  });
 });
