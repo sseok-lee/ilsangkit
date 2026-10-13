@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyReleaseSchema,
   classifyColumn,
+  expectedWasteTables,
   normalizeCheckClause,
   REAL_ESTATE_PUBLIC_URL_TABLES,
   rejectDangerousSql,
@@ -143,4 +144,13 @@ describe('applyReleaseSchema allowlist validation', () => {
     expect(events.some(event => event.includes('CREATE TABLE'))).toBe(false);
   });
 
+});
+
+describe('waste release schema create SQL', () => {
+  it('신규 생성되는 WasteScheduleRevision SQL 은 duplicate enum 과 duplicateOfScheduleId 를 포함한다', () => {
+    const revision = expectedWasteTables().find(table => table.name === 'WasteScheduleRevision');
+    expect(revision?.createSql).toContain("'duplicate'");
+    expect(revision?.createSql).toContain('`duplicateOfScheduleId` INTEGER NULL');
+    expect(revision?.createSql).toContain("ENUM('active', 'inactive', 'conflict', 'duplicate')");
+  });
 });
