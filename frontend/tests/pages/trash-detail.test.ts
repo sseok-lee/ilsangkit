@@ -54,11 +54,17 @@ describe('TrashDetailPage - HowTo 스키마 구조', () => {
 
 describe('TrashDetailPage - 원본 상세 직접 접근', () => {
   it('서버 직접 진입을 지역 301로 바꾸지 않고 원본 본문을 렌더한다', () => {
-    expect(source).not.toContain('redirectCode: 301')
     expect(source).not.toContain('await navigateTo(trashRegionPath.value')
     expect(source).toContain('<WasteScheduleContent')
     expect(source).toContain("content: 'noindex, follow'")
     expect(source).not.toContain("rel: 'canonical'")
+  })
+
+  it('원본 중복으로 접힌 상세는 대표 상세로만 301 한다', () => {
+    const redirects = source.match(/redirectCode: 301/g) ?? []
+    expect(redirects).toHaveLength(1)
+    expect(source).toMatch(/representativeId\s*!==\s*scheduleId\.value/)
+    expect(source).toMatch(/navigateTo\(`\/trash\/\$\{representativeId\}`,\s*\{\s*redirectCode: 301\s*\}\)/)
   })
 
   it('광고 A안: 제목 바로 아래와 원본 배출 일정 뒤, 두 자리에 광고를 싣는다', () => {
