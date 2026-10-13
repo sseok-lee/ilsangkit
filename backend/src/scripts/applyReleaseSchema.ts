@@ -510,9 +510,10 @@ const WASTE_TABLES: ExpectedTable[] = [
       { name: 'sourceModifiedAt', type: 'datetime(3)', nullable: true },
       { name: 'observedAt', type: 'datetime(3)', nullable: false },
       { name: 'contentUpdatedAt', type: 'datetime(3)', nullable: false },
-      { name: 'state', type: "enum('active','inactive','conflict')", nullable: false },
+      { name: 'state', type: "enum('active','inactive','conflict','duplicate')", nullable: false },
       { name: 'missingCompleteRuns', type: 'int', nullable: false },
       { name: 'terminationEvidence', type: 'json', nullable: true },
+      { name: 'duplicateOfScheduleId', type: 'int', nullable: true },
     ],
     indexes: [
       { name: 'PRIMARY', unique: true, columns: ['generationId', 'scheduleId'] },
@@ -961,12 +962,31 @@ async function countViolations(db: SchemaDatabase, checkName: string): Promise<n
   return Number(rows[0]?.count ?? 0);
 }
 
-function expectedWasteTables(): ExpectedTable[] {
+const REVISION_STATE_OLD = "`state` ENUM('active', 'inactive', 'conflict') NOT NULL";
+const REVISION_STATE_NEW = "`state` ENUM('active', 'inactive', 'conflict', 'duplicate') NOT NULL";
+const REVISION_EVIDENCE_COLUMN = '`terminationEvidence` JSON NULL';
+
+// 202609280001 마이그레이션의 CREATE TABLE 은 옛 모양(state enum 3값, duplicateOfScheduleId 없음)이다.
+// 202610130001 이 ALTER 로 보강한 현재 모양으로 맞춰야 빈 DB 신규 생성 후 검증이 drift 를 내지 않는다.
+// 기존 테이블은 자동 ALTER 하지 않고 drift 로 보고한다(여기는 신규 생성 SQL 만 패치).
+function patchWasteRevisionCreateSql(sql: string): string {
+  if (!sql.includes(REVISION_STATE_OLD) || !sql.includes(REVISION_EVIDENCE_COLUMN)) {
+    throw new Error('WasteScheduleRevision create SQL no longer matches expected shape; update patchWasteRevisionCreateSql');
+  }
+  return sql
+    .replace(REVISION_STATE_OLD, REVISION_STATE_NEW)
+    .replace(REVISION_EVIDENCE_COLUMN, `${REVISION_EVIDENCE_COLUMN},\n  \`duplicateOfScheduleId\` INTEGER NULL`);
+}
+
+export function expectedWasteTables(): ExpectedTable[] {
   const statements = migrationStatements();
-  return WASTE_TABLES.map(table => ({
-    ...table,
-    createSql: statements.get(table.name),
-  }));
+  return WASTE_TABLES.map(table => {
+    const createSql = statements.get(table.name);
+    return {
+      ...table,
+      createSql: table.name === 'WasteScheduleRevision' && createSql ? patchWasteRevisionCreateSql(createSql) : createSql,
+    };
+  });
 }
 
 async function planWaste(db: SchemaDatabase, plan: PlannedStep[]): Promise<void> {
