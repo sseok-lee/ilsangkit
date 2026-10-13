@@ -76,6 +76,40 @@ function mountCard(region: Record<string, unknown>) {
 }
 
 describe('WasteScheduleCard 배출 정보 본문', () => {
+  it('대상 중심 제목을 카드 제목으로 쓰고 동일 제목의 다른 원본 ID를 병합하지 않는다', () => {
+    const first = mountCard({
+      ...dalseo,
+      id: 3001,
+      city: '전라남도',
+      district: '강진군',
+      targetRegion: '요양원,칠량면소재지,초등학교.칠량시장,덕동',
+    })
+    const second = mountCard({
+      ...dalseo,
+      id: 3002,
+      city: '전라남도',
+      district: '강진군',
+      targetRegion: '요양원,칠량면소재지,초등학교.칠량시장,덕동',
+    })
+
+    expect(first.get('h3').text()).toBe('요양원·칠량면소재지 등')
+    expect(first.get('a').attributes('href')).toBe('/trash/3001')
+    expect(second.get('h3').text()).toBe('요양원·칠량면소재지 등')
+    expect(second.get('a').attributes('href')).toBe('/trash/3002')
+  })
+
+  it('광역 읍면동 대상과 도로명 배출장소가 함께 있으면 도로명 장소를 제목으로 쓴다', () => {
+    const wrapper = mountCard({
+      ...dalseo,
+      city: '강원특별자치도',
+      district: '정선군',
+      targetRegion: '신동읍',
+      emissionPlace: '예미2길 26-49',
+    })
+
+    expect(wrapper.get('h3').text()).toBe('예미2길 26-49')
+  })
+
   it('유형별 배출 요일을 렌더한다', () => {
     expect(mountCard(dalseo).text()).toContain('월 · 수 · 금')
   })
@@ -121,6 +155,20 @@ describe('WasteScheduleCard 배출 정보 본문', () => {
 
     expect(text).toContain('달서구 2권역')
     expect(text).toContain('자료 기준일 2025-10-31')
+  })
+
+  it('일시적 다량폐기물 라벨과 기타 요일 문구를 원본 의미대로 보여준다', () => {
+    const wrapper = mountCard({
+      ...dalseo,
+      wasteTypes: [
+        { type: '음식물쓰레기' as const, dayOfWeek: ['기타'], beginTime: '20:00', endTime: '05:00' },
+        { type: '일시적 다량폐기물' as const, dayOfWeek: [], beginTime: '09:00', endTime: '18:00', method: '매립장 반입' },
+      ],
+    })
+
+    expect(wrapper.text()).toContain('기타')
+    expect(wrapper.text()).toContain('일시적 다량폐기물')
+    expect(wrapper.text()).not.toContain('대형폐기물')
   })
 })
 

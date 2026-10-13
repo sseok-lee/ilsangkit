@@ -1,11 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { AppError, GoneError, NotFoundError, ServiceUnavailableError } from '../lib/errors.js';
+import { AppError, ServiceUnavailableError } from '../lib/errors.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { WasteAreaListQuerySchema, WasteAreaIdParamsSchema } from '../schemas/wasteArea.js';
 import {
-  getWasteArea,
-  hasPublishedWasteAreaDetailHistory,
   listWasteAreas,
+  requireWasteAreaDetail,
 } from '../services/wasteAreaService.js';
 
 const router = Router();
@@ -42,13 +41,7 @@ router.get('/:areaId', asyncHandler(async (req: Request, res: Response) => {
     throw new AppError(400, '잘못된 쓰레기 정보 ID입니다', 'INVALID_WASTE_ID');
   }
 
-  const detail = await translateAreaRouteRead(() => getWasteArea(parsed.data.areaId));
-  if (!detail) {
-    if (await translateAreaRouteRead(() => hasPublishedWasteAreaDetailHistory(parsed.data.areaId))) {
-      throw new GoneError('종료된 쓰레기 배출 지역입니다');
-    }
-    throw new NotFoundError('쓰레기 배출 지역을 찾을 수 없습니다');
-  }
+  const detail = await translateAreaRouteRead(() => requireWasteAreaDetail(parsed.data.areaId));
 
   res.json({ success: true, data: detail });
 }));

@@ -6,6 +6,8 @@ import { defineComponent, h, ref, Suspense } from 'vue'
 
 const fetchMock = vi.fn()
 const useHeadMock = vi.fn()
+const navigateToMock = vi.fn()
+const responseHeader = ref('')
 
 const detail = {
   generationId: 'g1',
@@ -57,6 +59,10 @@ beforeEach(() => {
   vi.stubGlobal('useApiBase', () => '/proxy')
   vi.stubGlobal('useRoute', () => ({ path: '/trash/areas/101', params: { areaId: '101' }, query: {}, fullPath: '/trash/areas/101' }))
   vi.stubGlobal('useHead', useHeadMock)
+  vi.stubGlobal('navigateTo', navigateToMock)
+  vi.stubGlobal('useRequestEvent', () => ({}))
+  responseHeader.value = ''
+  vi.stubGlobal('useResponseHeader', () => responseHeader)
   vi.stubGlobal('createError', (opts: { statusCode: number; statusMessage: string }) => Object.assign(new Error(opts.statusMessage), opts))
   vi.stubGlobal('useAsyncData', async (_key: string, handler: () => Promise<unknown>) => {
     const result = { data: ref(null as unknown), error: ref(null as unknown), status: ref('success'), pending: ref(false), refresh: vi.fn() }
@@ -103,36 +109,35 @@ async function mountPage(capturedErrors: unknown[] = []) {
 }
 
 describe('/trash/areas/:areaId', () => {
-  it('renders area-owned title, conditions, source links, and backend related link shape', async () => {
+  it('redirects a one-source area to the source detail with area return context', async () => {
     fetchMock.mockResolvedValue({ success: true, data: detail })
 
-    const wrapper = await mountPage()
+    await mountPage()
 
-    expect(wrapper.get('h1').text()).toContain('역삼1동')
-    expect(wrapper.text()).toContain('역삼1동 공동주택 제외')
-    expect(wrapper.text()).toContain('문전 배출')
-    expect(wrapper.get('a[href="/trash/6567"]').text()).toContain('원문 보기')
-    expect(wrapper.get('a[href="/trash/areas/100"]').text()).toContain('이전 안내')
-    expect(wrapper.text()).not.toContain('역삼2동 쓰레기 배출 안내')
+    expect(navigateToMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/trash\/6567#from=/),
+      { redirectCode: 302, replace: true }
+    )
+    const target = navigateToMock.mock.calls[0][0] as string
+    expect(decodeURIComponent(target.split('#from=')[1])).toBe('/trash?areaId=101')
   })
 
-  it('marks known areas with no schedules as noindex but keeps a 200 page body', async () => {
+  it('redirects zero or multiple-source areas to the area-filtered source list', async () => {
     fetchMock.mockResolvedValue({ success: true, data: { ...detail, schedules: [], indexEligible: false } })
 
-    const wrapper = await mountPage()
-    const head = useHeadMock.mock.calls.at(-1)?.[0]
+    await mountPage()
 
-    expect(wrapper.text()).toContain('확인된 배출 일정이 없습니다')
-    expect(head.value.meta).toContainEqual({ name: 'robots', content: 'noindex, follow' })
-  })
+    expect(navigateToMock).toHaveBeenCalledWith('/trash?areaId=101', { redirectCode: 302, replace: true })
 
-  it('uses source dataDate for the visible source date instead of contentUpdatedAt lastmod', async () => {
-    fetchMock.mockResolvedValue({ success: true, data: detail })
+    vi.resetModules()
+    navigateToMock.mockReset()
+    fetchMock.mockResolvedValue({
+      success: true,
+      data: { ...detail, schedules: [...detail.schedules, { ...detail.schedules[0], schedule: { ...detail.schedules[0].schedule, id: 9999 } }] },
+    })
 
-    const wrapper = await mountPage()
-
-    expect(wrapper.text()).toContain('2026-09-20')
-    expect(wrapper.text()).not.toContain('2026-09-28')
+    await mountPage()
+    expect(navigateToMock).toHaveBeenCalledWith('/trash?areaId=101', { redirectCode: 302, replace: true })
   })
 
   it('throws safe status errors for bad id and backend missing/gone/unavailable', async () => {
@@ -155,26 +160,43 @@ describe('/trash/areas/:areaId', () => {
     expect(errors[0]).toMatchObject({ statusCode: 410 })
 
     vi.resetModules()
+    fetchMock.mockRejectedValueOnce({ statusCode: 400 })
+    errors.length = 0
+    await mountPage(errors)
+    expect(errors[0]).toMatchObject({ statusCode: 400 })
+
+    vi.resetModules()
     fetchMock.mockRejectedValueOnce({ statusCode: 503 })
     errors.length = 0
     await mountPage(errors)
     expect(errors[0]).toMatchObject({ statusCode: 503 })
+
+    vi.resetModules()
+    fetchMock.mockResolvedValueOnce({ success: true, data: { ...detail, area: { ...detail.area, areaId: 0 } } })
+    errors.length = 0
+    await mountPage(errors)
+    expect(errors[0]).toMatchObject({ statusCode: 400 })
   })
 
-  it('흰색 평면형: 정렬 컨테이너·평면 섹션이고 hex 클래스가 없다', async () => {
+  it('동 상세 UI를 렌더하지 않는 redirect-only 페이지다', async () => {
     fetchMock.mockResolvedValue({ success: true, data: detail })
     const wrapper = await mountPage()
-    expect(wrapper.findAll('h1')).toHaveLength(1)
-    expect(wrapper.html()).not.toMatch(/-\[#[0-9a-fA-F]{3,8}\]|max-w-\[1120px\]/)
-    expect(wrapper.find('main').exists()).toBe(false)
+    expect(wrapper.find('h1').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('배출 일정')
   })
 })
 
 describe('/trash/areas/:areaId 광고 배치', () => {
-  it('광고 A안: 제목 바로 아래와 배출 일정 뒤, 두 자리에 광고를 싣는다', () => {
+  it('redirect-only 페이지라 광고 UI를 싣지 않는다', () => {
     const areaSource = readFileSync(resolve(process.cwd().endsWith('/frontend') ? process.cwd() : join(process.cwd(), 'frontend'), 'pages/trash/areas/[areaId].vue'), 'utf8')
-    expect(areaSource.match(/<AdBanner\b/g)?.length).toBe(2)
-    expect(areaSource).toMatch(/<\/PageHead>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
-    expect(areaSource).toMatch(/heading="배출 일정"[\s\S]*?<\/SectionBlock>\s*(<!--[^>]*-->\s*)?<AdBanner \/>/)
+    expect(areaSource).not.toContain('<AdBanner')
+    expect(areaSource).toContain('await navigateTo(target, { redirectCode: 302, replace: true })')
+    expect(areaSource).toContain("useResponseHeader('cache-control').value = 'no-store'")
+
+    const markNoStoreIndex = areaSource.indexOf('\nmarkRedirectNoStore()\n')
+    expect(markNoStoreIndex).toBeGreaterThanOrEqual(0)
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf("if (!/^[1-9]\\d*$/.test(rawAreaId))"))
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf('await useAsyncData('))
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf('wasteAreaRedirectTarget(areaDetail.value)'))
   })
 })

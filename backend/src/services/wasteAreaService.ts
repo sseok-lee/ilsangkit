@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { AppError, ServiceUnavailableError } from '../lib/errors.js';
+import { AppError, GoneError, NotFoundError, ServiceUnavailableError } from '../lib/errors.js';
 import { cityVariantList, districtVariantList } from './cityMapping.js';
 import type {
   ApplicableWasteArea,
@@ -31,6 +31,11 @@ export interface AreaDetail {
 export interface IndexableWasteArea {
   areaId: number;
   contentUpdatedAt: string;
+}
+
+export interface WasteAreaReadContext {
+  generationId: string;
+  requestDate: Date;
 }
 
 type AreaEntryRow = Awaited<ReturnType<typeof readDongEntries>>[number];
@@ -96,9 +101,9 @@ export async function listWasteAreas(query: AreaQuery): Promise<AreaList> {
   });
 }
 
-export async function getWasteArea(id: number): Promise<AreaDetail | null> {
-  const generationId = await requireActiveWasteGeneration();
-  const requestDate = new Date();
+export async function getWasteArea(id: number, context?: WasteAreaReadContext): Promise<AreaDetail | null> {
+  const generationId = context?.generationId ?? await requireActiveWasteGeneration();
+  const requestDate = context?.requestDate ?? new Date();
   return translateAreaRead(async () => {
     const entry = await prisma.wasteAreaEntry.findFirst({
       where: {
@@ -154,17 +159,25 @@ export async function getWasteArea(id: number): Promise<AreaDetail | null> {
   });
 }
 
+export async function requireWasteAreaDetail(id: number, context?: WasteAreaReadContext): Promise<AreaDetail> {
+  const detail = await getWasteArea(id, context);
+  if (detail) return detail;
+  if (await hasPublishedWasteAreaDetailHistory(id, context)) {
+    throw new GoneError('종료된 쓰레기 배출 지역입니다');
+  }
+  throw new NotFoundError('쓰레기 배출 지역을 찾을 수 없습니다');
+}
 
 export async function getApplicableAreasForSchedules(
   generationId: string,
-  scheduleIds: number[]
+  scheduleIds: number[],
+  requestDate = new Date()
 ): Promise<Map<number, ApplicableWasteArea[]>> {
   const uniqueScheduleIds = [...new Set(scheduleIds.filter((id) => Number.isSafeInteger(id)))];
   const result = new Map<number, ApplicableWasteArea[]>();
   for (const scheduleId of uniqueScheduleIds) result.set(scheduleId, []);
   if (uniqueScheduleIds.length === 0) return result;
 
-  const requestDate = new Date();
   return translateAreaRead(async () => {
     const entries = await readDongEntries(generationId, {}, requestDate);
     const entryByAreaId = new Map(entries.map((entry) => [entry.areaId, entry]));
@@ -275,8 +288,8 @@ export async function listIndexableWasteAreas(generationId: string): Promise<Ind
   });
 }
 
-export async function hasPublishedWasteAreaDetailHistory(id: number): Promise<boolean> {
-  const requestDate = new Date();
+export async function hasPublishedWasteAreaDetailHistory(id: number, context?: WasteAreaReadContext): Promise<boolean> {
+  const requestDate = context?.requestDate ?? new Date();
   return translateAreaRead(async () => {
     const count = await prisma.wasteAreaEntry.count({
       where: {

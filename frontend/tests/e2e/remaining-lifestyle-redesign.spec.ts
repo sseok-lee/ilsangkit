@@ -51,6 +51,17 @@ async function waitForAppPath(page: Page, path: string | RegExp) {
   await hydrated(page)
 }
 
+async function clientNavigate(page: Page, path: string) {
+  await page.evaluate((target) => {
+    const root = document.querySelector('#__nuxt') as Element & {
+      __vue_app__?: {
+        config: { globalProperties: { $router?: { push: (path: string) => Promise<void> } } }
+      }
+    }
+    void root.__vue_app__?.config.globalProperties.$router?.push(target)
+  }, path)
+}
+
 test.beforeEach(async ({ request, page }) => {
   mkdirSync(evidence, { recursive: true })
   await control(request)
@@ -194,12 +205,8 @@ test('region list, subway detail, and trash canonical pages render domain-specif
 
   await page.goto('/seoul/gangnam/trash')
   await hydrated(page)
-  await expect(page.locator('main').getByText('검증1동').first()).toBeVisible()
-  await expect(page.getByRole('link', { name: /검증1동/ })).toHaveAttribute(
-    'href',
-    '/trash/areas/101'
-  )
-  await expect(page.getByRole('link', { name: /원문 보기/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
+  await expect(page.locator('main a[href="/trash/901"]').first()).toBeVisible()
 
   const source = await request.get('/trash/901', { maxRedirects: 0 })
   expect(source.status()).toBe(200)
@@ -223,10 +230,10 @@ test('area list source navigation loads and restores modes on same mounted route
 }) => {
   await page.goto('/trash?city=서울특별시&district=강남구')
   await hydrated(page)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /원문 보기/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
+  await expect(page.locator('main a[href="/trash/901"]').first()).toBeVisible()
 
-  await page.getByRole('link', { name: /원문 보기/ }).click()
+  await page.goto('/trash?city=서울특별시&district=강남구&coverage=unresolved')
   await page.waitForURL(/coverage=unresolved/)
   await hydrated(page)
   await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
@@ -250,12 +257,11 @@ test('area list source navigation loads and restores modes on same mounted route
 
   await page.goBack()
   await waitForAppPath(page, /\/trash\?.*district=/)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '배출 일정' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
 
   await page.goto('/seoul/gangnam/trash')
   await hydrated(page)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
   await page.evaluate(() => {
     const root = document.querySelector('#__nuxt') as Element & {
       __vue_app__?: {
@@ -289,25 +295,25 @@ test('area list source navigation loads and restores modes on same mounted route
 
   await page.goBack()
   await waitForAppPath(page, '/seoul/gangnam/trash')
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
   await expect(page.locator('main').getByText('역삼검증21동')).toHaveCount(0)
 
   await control(request, { delayMs: 700 })
   await page.goto('/trash?city=서울특별시&district=강남구')
   await hydrated(page)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
   const delayedSourceRequest = page.waitForRequest(
     (req) => req.url().includes('/api/waste-schedules') && req.url().includes('coverage=unresolved')
   )
-  await page.getByRole('link', { name: /원문 보기/ }).click()
+  await clientNavigate(page, '/trash?city=서울특별시&district=강남구&coverage=unresolved')
   await page.waitForURL(/coverage=unresolved/)
   await delayedSourceRequest
+  await hydrated(page)
   await page.goBack()
   await waitForAppPath(page, /\/trash\?.*district=/)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
   await page.waitForTimeout(900)
-  await expect(page.getByRole('heading', { name: '동별 배출 안내' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '배출 일정' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '배출 일정' })).toBeVisible()
   await control(request)
 })
 
@@ -325,36 +331,19 @@ test('legacy schedule redirects to a validated source and source return context 
 
   await page.goto('/trash?city=서울특별시&district=강남구')
   await hydrated(page)
-  await page.evaluate(() => window.scrollTo(0, 520))
-  await page.getByRole('link', { name: /검증1동/ }).scrollIntoViewIfNeeded()
-  const listScrollY = await page.evaluate(() => window.scrollY)
-  expect(listScrollY).toBeGreaterThan(100)
-  await page.getByRole('link', { name: /검증1동/ }).click()
-  await waitForAppPath(page, '/trash/areas/101')
-  await expect(
-    page.getByRole('heading', { name: '서울특별시 강남구 검증1동', level: 1 })
-  ).toBeVisible()
-  await page.getByRole('link', { name: '목록으로 돌아가기' }).click()
-  await waitForAppPath(page, /\/trash\?.*district=/)
-  await expect
-    .poll(() => page.evaluate((saved) => Math.abs(window.scrollY - saved), listScrollY))
-    .toBeLessThanOrEqual(40)
+  await page.getByLabel('검증된 동 필터').selectOption('101')
+  await waitForAppPath(page, /\/trash\?.*areaId=101/)
+  await expect(page.locator('main a[href="/trash/901"]')).toHaveCount(1)
+  await expect(page.locator('main a[href="/trash/902"]')).toHaveCount(1)
 
-  await page.getByRole('link', { name: /검증1동/ }).click()
-  await waitForAppPath(page, '/trash/areas/101')
-  await expect(
-    page.getByRole('heading', { name: '서울특별시 강남구 검증1동', level: 1 })
-  ).toBeVisible()
   await page.evaluate(() => window.scrollTo(0, 900))
-  const sourceLink = page.getByRole('link', { name: /원문 보기/ }).first()
+  const sourceLink = page.locator('main a[href="/trash/901"]').first()
   await sourceLink.scrollIntoViewIfNeeded()
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
   const areaScrollYAtClick = page.evaluate(
     () =>
       new Promise<number>((resolve) => {
-        const source = Array.from(document.querySelectorAll<HTMLAnchorElement>('a')).find((link) =>
-          link.textContent?.includes('원문 보기')
-        )
+        const source = document.querySelector<HTMLAnchorElement>('main a[href="/trash/901"]')
         source?.addEventListener('click', () => resolve(window.scrollY), {
           once: true,
           capture: true,
@@ -367,8 +356,8 @@ test('legacy schedule redirects to a validated source and source return context 
   await expect(
     page.locator('main').getByText('원본 적용 조건: 일반 월+수+금').first()
   ).toBeVisible()
-  await page.getByRole('link', { name: '동별 안내로 돌아가기' }).click()
-  await waitForAppPath(page, '/trash/areas/101')
+  await page.getByRole('link', { name: '목록으로 돌아가기' }).click()
+  await waitForAppPath(page, /\/trash\?.*areaId=101/)
   await expect
     .poll(() => page.evaluate((saved) => Math.abs(window.scrollY - saved), areaScrollY))
     .toBeLessThanOrEqual(40)
@@ -396,7 +385,7 @@ test('waste source unresolved requests keep filters on first load and CSR transi
     (await page.goto('/trash?coverage=unresolved&city=서울특별시&district=강남구'))?.status()
   ).toBe(200)
   await hydrated(page)
-  await expect(page.locator('main').getByText('검증1동').first()).toBeVisible()
+  await expect(page.locator('main a[href="/trash/901"]').first()).toBeVisible()
 
   let audit = await request.get(`${api}/__test/remaining-pages`)
   expect(audit.ok()).toBe(true)

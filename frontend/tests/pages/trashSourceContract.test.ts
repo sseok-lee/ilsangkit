@@ -134,8 +134,8 @@ describe('trash source detail applicableAreas contract', () => {
 
     expect(wrapper.get('[data-testid="source-card"]').text()).toContain('원본 적용 지역: 계약구')
     expect(wrapper.get('[data-testid="source-card"]').text()).not.toContain('적용 동: 계약1동, 계약2동')
-    expect(wrapper.get('a[href="/trash/areas/101"]').text()).toContain('계약1동')
-    expect(wrapper.get('a[href="/trash/areas/102"]').text()).toContain('계약2동')
+    expect(wrapper.get('a[href="/trash?areaId=101"]').text()).toContain('계약1동')
+    expect(wrapper.get('a[href="/trash?areaId=102"]').text()).toContain('계약2동')
     expect(wrapper.find(`a[href="${contract.sourceDetail.data.sourceUrl}"]`).exists()).toBe(false)
   })
 
@@ -145,7 +145,7 @@ describe('trash source detail applicableAreas contract', () => {
     const wrapper = await mountTrashSource(emptyDetail!)
 
     expect(wrapper.text()).not.toContain('적용 동')
-    expect(wrapper.find('a[href^="/trash/areas/"]').exists()).toBe(false)
+    expect(wrapper.find('a[href^="/trash?areaId="]').exists()).toBe(false)
     const sourceCardText = wrapper.get('[data-testid="source-card"]').text()
     expect(sourceCardText).toContain('원본 적용 조건: 계약 conflict 제외')
     expect(sourceCardText).toContain('계약 만료 제외')
@@ -155,8 +155,8 @@ describe('trash source detail applicableAreas contract', () => {
     await mountTrashSource(contract.sourceDetail.data)
 
     expect(wasteSchemaAreaServed()).toEqual([
-      { '@type': 'AdministrativeArea', name: '서울특별시 계약구 계약1동' },
-      { '@type': 'AdministrativeArea', name: '서울특별시 계약구 계약2동' },
+      { '@type': 'AdministrativeArea', name: '서울특별시 계약구 계약1동', url: 'https://ilsangkit.co.kr/trash?areaId=101' },
+      { '@type': 'AdministrativeArea', name: '서울특별시 계약구 계약2동', url: 'https://ilsangkit.co.kr/trash?areaId=102' },
     ])
   })
 })

@@ -8,14 +8,31 @@
             {{ targetText }}
           </h3>
           <p class="mt-1 break-words text-sm leading-6 text-muted">
-            {{ conditionText || '해당 동 전체에 적용되는 배출 안내입니다.' }}
+            {{ conditionText || '적용 구역은 원본 대상과 검증된 동 링크를 함께 확인하세요.' }}
           </p>
         </div>
-        <UiButton variant="secondary" :href="sourceHref" class="shrink-0" @click="openSource">원문 보기</UiButton>
+        <UiButton v-if="schedule.sourceUrl" variant="secondary" :href="schedule.sourceUrl" external class="shrink-0">원문 보기</UiButton>
       </div>
     </header>
 
     <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+      <div v-if="schedule.targetRegion" class="min-w-0 sm:col-span-2">
+        <dt class="font-semibold text-muted">원본 대상</dt>
+        <dd class="mt-1 break-words text-ink">{{ schedule.targetRegion }}</dd>
+      </div>
+      <div v-if="schedule.applicableAreas.length" class="min-w-0 sm:col-span-2">
+        <dt class="font-semibold text-muted">검증된 동 링크</dt>
+        <dd class="mt-1 flex flex-wrap gap-2">
+          <a
+            v-for="area in schedule.applicableAreas"
+            :key="area.areaId"
+            :href="wasteAreaFilterHref(area.areaId)"
+            class="text-primary hover:underline"
+          >
+            {{ area.conditionText ? `${area.name} ${area.conditionText}` : area.name }}
+          </a>
+        </dd>
+      </div>
       <div v-if="schedule.emissionPlace" class="min-w-0">
         <dt class="font-semibold text-muted">배출 장소</dt>
         <dd class="mt-1 break-words text-ink">{{ schedule.emissionPlace }}</dd>
@@ -61,12 +78,12 @@
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
             <span class="material-symbols-outlined text-[20px] text-purple-600" aria-hidden="true">weekend</span>
           </div>
-          <h4 class="font-bold text-ink">대형폐기물</h4>
+          <h4 class="font-bold text-ink">일시적 다량폐기물</h4>
         </div>
         <div class="space-y-2 text-sm leading-6 text-muted">
           <p v-if="bulkTime"><span class="font-semibold text-ink">배출 시간:</span> {{ bulkTime }}</p>
-          <p v-if="details.bulkWaste.method" class="break-words"><span class="font-semibold text-ink">배출 방법:</span> {{ details.bulkWaste.method }}</p>
-          <p v-if="details.bulkWaste.place" class="break-words"><span class="font-semibold text-ink">배출 장소:</span> {{ details.bulkWaste.place }}</p>
+          <p v-if="bulkMethod" class="break-words"><span class="font-semibold text-ink">배출 방법:</span> {{ bulkMethod }}</p>
+          <p v-if="bulkPlace" class="break-words"><span class="font-semibold text-ink">배출 장소:</span> {{ bulkPlace }}</p>
         </div>
       </section>
     </div>
@@ -93,9 +110,13 @@
             </a>
           </dd>
         </div>
-        <div v-if="details?.dataCreatedDate || details?.lastModified" class="min-w-0">
+        <div v-if="details?.dataCreatedDate" class="min-w-0">
           <dt class="font-semibold text-muted">자료 기준일</dt>
-          <dd class="mt-1 break-words text-ink">{{ details.dataCreatedDate || details.lastModified }}</dd>
+          <dd class="mt-1 break-words text-ink">{{ details.dataCreatedDate }}</dd>
+        </div>
+        <div v-if="details?.lastModified" class="min-w-0">
+          <dt class="font-semibold text-muted">최종 수정일</dt>
+          <dd class="mt-1 break-words text-ink">{{ details.lastModified }}</dd>
         </div>
       </dl>
     </footer>
@@ -108,8 +129,8 @@ import type { CoverageScope } from '~/types/wasteArea'
 import type { WasteScheduleDetail } from '~/composables/useWasteSchedule'
 import UiButton from '~/components/common/UiButton.vue'
 import WasteTypeSection from '~/components/trash/WasteTypeSection.vue'
-import { formatTimeRange } from '~/utils/wasteSchedule'
-import { buildTrashSourceHref, storeTrashReturnStateForTarget, trashReturnStateFromRoute } from '~/utils/trashReturnContext'
+import { formatTimeRange, normalizeProvidedText, wasteSourceTitle } from '~/utils/wasteSchedule'
+import { wasteAreaFilterHref } from '~/utils/wasteListQuery'
 
 const props = defineProps<{
   schedule: WasteScheduleDetail
@@ -118,10 +139,15 @@ const props = defineProps<{
 }>()
 
 const details = computed(() => props.schedule.details)
-const targetText = computed(() => props.schedule.targetRegion?.replaceAll('+', ', ') || `${props.schedule.city} ${props.schedule.district}`)
+const targetText = computed(() => wasteSourceTitle({
+  targetRegion: props.schedule.targetRegion,
+  emissionPlace: props.schedule.emissionPlace,
+  city: props.schedule.city,
+  district: props.schedule.district,
+}))
 const bulkTime = computed(() => formatTimeRange(details.value?.bulkWaste?.beginTime, details.value?.bulkWaste?.endTime))
-const route = useRoute()
-const sourceHref = computed(() => buildTrashSourceHref(props.schedule.id))
+const bulkMethod = computed(() => normalizeProvidedText(details.value?.bulkWaste?.method))
+const bulkPlace = computed(() => normalizeProvidedText(details.value?.bulkWaste?.place))
 
 const scopeText = computed(() => {
   if (props.scope === 'whole') return '전체 적용'
@@ -129,16 +155,4 @@ const scopeText = computed(() => {
   return '조건별 적용'
 })
 
-function openSource(event: MouseEvent) {
-  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-  event.preventDefault()
-  const state = trashReturnStateFromRoute(route, '동별 안내로 돌아가기', props.schedule.id)
-  storeTrashReturnStateForTarget(sourceHref.value, state)
-  const router = typeof useNuxtApp === 'function' ? useNuxtApp().$router : null
-  if (import.meta.client && router?.push) {
-    router.push({ path: sourceHref.value, state })
-  } else {
-    navigateTo({ path: sourceHref.value, state })
-  }
-}
 </script>

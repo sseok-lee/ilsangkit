@@ -51,6 +51,22 @@ describe('transformToRegionSchedules', () => {
     expect(result.schedules[0].managementZone).toBe('달서구 2권역')
     expect(result.schedules[0].dataCreatedDate).toBe('2025-10-31')
   })
+
+  it('원본 적용 동과 최종 수정일을 목록 카드까지 전달하고 targetRegion null을 임의 대체하지 않는다', () => {
+    const result = transformToRegionSchedules(backendData({
+      targetRegion: null,
+      applicableAreas: [{ areaId: 101, name: '본리동', href: '/trash?areaId=101', scope: 'whole', conditionText: '' }],
+      details: {
+        lastModified: '2026-10-01T00:00:00.000Z',
+      },
+    }))
+
+    expect(result.schedules[0]).toMatchObject({
+      targetRegion: null,
+      lastModified: '2026-10-01T00:00:00.000Z',
+      applicableAreas: [{ areaId: 101, name: '본리동' }],
+    })
+  })
 })
 
 describe('useWasteSchedule().getSchedules', () => {
@@ -88,6 +104,123 @@ describe('useWasteSchedule().getSchedules', () => {
     )
   })
 
+  it('forwards areaId with an owned source AbortSignal', async () => {
+    let forwardedSignal: AbortSignal | undefined
+    const fetchMock = vi.fn(async (_url, options) => {
+      forwardedSignal = options.signal
+      return {
+        success: true,
+        data: {
+          ...backendData(),
+          selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' },
+          generationId: 'g1',
+        },
+      }
+    })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+    const signal = new AbortController().signal
+
+    const { getSchedules } = useWasteSchedule()
+
+    await getSchedules({ areaId: 101, page: 1, limit: 20 }, signal)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/waste-schedules'),
+      expect.objectContaining({
+        params: { areaId: 101, page: 1, limit: 20 },
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(forwardedSignal).toBeInstanceOf(AbortSignal)
+    expect(forwardedSignal).not.toBe(signal)
+  })
+
+  it('aborts the owned source request when the caller cancels', async () => {
+    const controller = new AbortController()
+    let forwardedSignal: AbortSignal | undefined
+    const fetchMock = vi.fn((_url, options) => {
+      forwardedSignal = options.signal
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true })
+      })
+    })
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+    const { getSchedules } = useWasteSchedule()
+    const promise = getSchedules({ areaId: 101, page: 1, limit: 20 }, controller.signal)
+    const reason = new Error('caller cancelled')
+
+    controller.abort(reason)
+
+    await expect(promise).rejects.toThrow('caller cancelled')
+    expect(forwardedSignal?.aborted).toBe(true)
+    expect(forwardedSignal?.reason).toBe(reason)
+  })
+
+  it('rejects unresolved source requests after the source timeout and aborts the owned request', async () => {
+    vi.useFakeTimers()
+    try {
+      const controller = new AbortController()
+      let forwardedSignal: AbortSignal | undefined
+      let abortEvents = 0
+      const fetchMock = vi.fn((_url, options) => {
+        forwardedSignal = options.signal
+        return new Promise((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            abortEvents += 1
+            reject(options.signal.reason)
+          }, { once: true })
+        })
+      })
+      ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = fetchMock
+
+      const { getSchedules } = useWasteSchedule()
+      const promise = getSchedules({ page: 1, limit: 20 }, controller.signal)
+      const assertion = expect(promise).rejects.toThrow('waste-schedules request timed out')
+
+      await vi.advanceTimersByTimeAsync(8000)
+      await assertion
+      expect(forwardedSignal?.aborted).toBe(true)
+      expect(forwardedSignal?.reason).toBeInstanceOf(Error)
+      expect(abortEvents).toBe(1)
+      controller.abort(new Error('late caller abort'))
+      expect(abortEvents).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rejects failed or malformed source envelopes instead of transforming them', async () => {
+    const { getSchedules } = useWasteSchedule()
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: false, data: backendData() })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/waste-schedules/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: { total: 0, page: 1, totalPages: 1 } })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/items/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: { ...backendData(), total: Number.NaN } })
+    await expect(getSchedules({ page: 1, limit: 20 })).rejects.toThrow(/total/)
+  })
+
+  it('requires selectedArea and generationId for area-filtered source results', async () => {
+    const { getSchedules } = useWasteSchedule()
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({ success: true, data: backendData() })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/selectedArea/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: { ...backendData(), selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' } },
+    })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/generationId/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({
+      success: true,
+      data: { ...backendData(), selectedArea: { areaId: 102, name: '본리동', city: '대구광역시', district: '달서구' }, generationId: 'g1' },
+    })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/selectedArea/)
+  })
 
 
   it('normalizes old detail responses without applicableAreas to an empty array', async () => {

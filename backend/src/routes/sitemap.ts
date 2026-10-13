@@ -77,13 +77,13 @@ router.get(
 
 /**
  * GET /api/sitemap/waste-areas
- * W9 색인 정책을 통과한 동별 쓰레기 배출 안내만 반환한다.
+ * 지역 중심 trash sitemap 전환 후 호환성 envelope 만 유지한다.
  */
 router.get(
   '/waste-areas',
   asyncHandler(async (_req: Request, res: Response) => {
-    const areas = await getWasteAreaIdsForSitemap();
-    res.json({ success: true, data: { areas } });
+    await getWasteAreaIdsForSitemap();
+    res.json({ success: true, data: { areas: [] } });
   })
 );
 

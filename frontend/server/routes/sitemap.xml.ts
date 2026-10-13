@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // trash — 구·군 집계 URL + W9 색인 적격 동별 URL.
+    // trash — 구·군 집계 URL만 광고한다. 원본 상세·동 필터 URL은 sitemap 대상이 아니다.
     let trashInputs
     try {
       trashInputs = await fetchWasteSitemapInputs()

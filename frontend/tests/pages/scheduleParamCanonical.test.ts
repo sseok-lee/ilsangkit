@@ -184,14 +184,10 @@ describe('noindex 응답에는 canonical 이 없다 — 카테고리 목록', ()
   // 예전엔 이 계약이 페이지 안에 인라인으로 있었고, 테스트는 같은 분기를 파일 안에 다시
   // 구현해서(`function buildHead`) 그 사본을 검사했다 — 페이지를 "항상 noindex" 로 바꿔도
   // 119개가 전부 통과했다(실측 2026-09-04).
-  it('목록 head 판정은 공용 빌더에 위임한다 — 페이지에 인라인 분기를 되살리지 않는다', () => {
-    expect(src).toContain('useHead(computed(() => buildFacilityListHead({')
-    // 위임했다는 증거는 "빌더를 부른다"가 아니라 "페이지가 robots 를 직접 쓰지 않는다"다.
-    // 문자열 포함만 보면 빌더 호출을 남겨둔 채 그 옆에 인라인 분기를 되살려도 통과한다.
-    expect(src).not.toMatch(/name:\s*['"]robots['"]/)
-    expect(src).not.toContain('PAGINATION_ROBOTS_CONTENT')
-    // canonical link 도 빌더만 만든다.
-    expect(src).not.toMatch(/rel:\s*['"]canonical['"]/)
+  it('일반 시설 목록 head 판정은 공용 빌더에 위임하고 trash 만 전용 SEO 분기를 쓴다', () => {
+    expect(src).toContain("if (categoryParam.value === 'trash')")
+    expect(src).toContain('wasteListSeo({')
+    expect(src).toContain('return buildFacilityListHead({')
   })
 
   /**
@@ -241,12 +237,25 @@ describe('rel=prev/next — key 부여 + noindex 페이지 억제', () => {
     expect(block).toContain("key: 'seo-rel-next'")
   })
 
-  it('구·군 목록: trash 블록도 key 를 붙인다 (client nav 누적 방지)', () => {
+  it('구·군 목록: trash 블록도 source-list SEO 정책으로 prev/next 를 막는다', () => {
     const src = read(PAGES.district)
     const trashBlock = src.slice(src.indexOf('// ItemList 구조화 데이터 (trash)'))
-    expect(trashBlock).toContain('if (isPageNoindex.value) return')
+    expect(src).toContain('const trashListSeo = computed(() => wasteListSeo({')
+    expect(src).toContain('const seo = trashListSeo.value')
+    expect(trashBlock).toContain('() => trashListSeo.value.noindex')
+    expect(trashBlock).toContain('if (trashListSeo.value.noindex) return')
+    expect(trashBlock).not.toContain('if (isPageNoindex.value) return')
     expect(trashBlock).toContain("key: 'seo-rel-prev'")
     expect(trashBlock).toContain("key: 'seo-rel-next'")
+  })
+
+  it('카테고리 trash 목록은 일반 rel watcher 에서 빠져 source-list 필터 rel 을 내지 않는다', () => {
+    const src = read(PAGES.category)
+    const block = src.slice(src.indexOf('// ItemList structured data'))
+    expect(block).toContain("if (categoryParam.value === 'trash') return")
+    expect(block).toContain('if (isNoindex.value) return')
+    expect(block).toContain("key: 'seo-rel-prev'")
+    expect(block).toContain("key: 'seo-rel-next'")
   })
 })
 
@@ -257,22 +266,23 @@ describe('trash 페이지네이션이 크롤 가능한 <a href> 로 렌더된다
     expect(src).toContain('hrefFor?: (page: number) => string')
   })
 
-  it('구·군 페이지가 RegionTrashSchedule 에 pageHref 를 넘긴다', () => {
+  it('구·군 페이지가 WasteListPanel 에 source-list href 함수를 넘긴다', () => {
     const src = read(PAGES.district)
-    const trashTag = src.slice(src.indexOf('<RegionTrashSchedule'), src.indexOf('<!-- 일반 시설 그리드 -->'))
-    expect(trashTag).toContain(':href-for="pageHref"')
+    const trashTag = src.slice(src.indexOf('<WasteListPanel'), src.indexOf('<!-- 일반 시설 그리드 -->'))
+    expect(trashTag).toContain(':href-for="wasteListPageHref"')
   })
 
-  it('카테고리 목록의 trash 분기도 href-for 를 넘긴다', () => {
+  it('카테고리 목록의 trash 분기도 WasteListPanel 에 source-list href 함수를 넘긴다', () => {
     const src = read(PAGES.category)
-    const trashPagination = /<Pagination v-if="!wasteLoading[^/]*\/>/.exec(src)
-    expect(trashPagination, 'trash Pagination 을 찾지 못했다').not.toBeNull()
-    expect(trashPagination![0]).toContain(':href-for="pageHref"')
+    const trashTag = src.slice(src.indexOf('<WasteListPanel'), src.indexOf('<!-- Non-trash: facility card grid -->'))
+    expect(trashTag).toContain(':href-for="wasteListPageHref"')
   })
 
-  it('두 페이지 모두 pageHref 를 buildPageHref 로 만든다 (UI 상태 키가 제거된 href)', () => {
+  it('두 페이지 모두 일반 목록은 buildPageHref, trash 목록은 wasteListPathForQuery 로 href 를 만든다', () => {
     for (const rel of [PAGES.district, PAGES.category]) {
-      expect(read(rel)).toContain('buildPageHref(route.path, route.query, page)')
+      const src = read(rel)
+      expect(src).toContain('buildPageHref(route.path, route.query, page)')
+      expect(src).toContain('wasteListPathForQuery(route.path, { ...wasteListQuery.value, page })')
     }
   })
 

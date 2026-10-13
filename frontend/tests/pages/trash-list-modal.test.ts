@@ -8,23 +8,21 @@ const frontendRoot = process.cwd().endsWith('/frontend')
 const source = readFileSync(resolve(frontendRoot, 'pages/[category]/index.vue'), 'utf8')
 
 describe('/trash 동별 목록 URL 탐색', () => {
-  it('flag-on 동별 목록은 shared list와 실제 URL을 사용한다', () => {
-    expect(source).toContain('<WasteAreaList')
-    expect(source).toContain(':href-for="wasteAreaPageHref"')
-    expect(source).toContain('@search="searchWasteAreas"')
-    expect(source).toContain('wasteAreaPathForQuery(route.path')
+  it('trash 목록은 source-list controls와 panel을 사용한다', () => {
+    expect(source).toContain('<WasteListSearch')
+    expect(source).toContain('<WasteListPanel')
+    expect(source).toContain('useWasteList({')
+    expect(source).toContain('await wasteList.state')
   })
 
-  it('area mode는 Nuxt async-data key와 dedupe cancel로 query race를 막는다', () => {
-    expect(source).toContain('wasteAreaRequestKey(wasteAreaQuery.value)')
-    expect(source).toContain("dedupe: 'cancel'")
-    expect(source).toContain('watch: [wasteAreaQuery]')
+  it('동 옵션은 보조 async-data로 분리해서 기다린다', () => {
+    expect(source).toContain('useWasteAreaOptions({')
+    expect(source).toContain('await wasteAreaOptions.state')
   })
 
-  it('기본 flag-off와 unresolved 원문 모드는 legacy source API를 유지한다', () => {
-    expect(source).toContain('runtimeConfig.public.wasteAreaDiscoveryEnabled === true')
-    expect(source).toContain("query.coverage !== 'unresolved'")
-    expect(source).toContain("'/api/waste-schedules'")
+  it('동 필터와 pagination은 source-list query href를 사용한다', () => {
+    expect(source).toContain('wasteListPathForQuery(route.path')
+    expect(source).toContain('areaId: query.areaId')
   })
 })
 
@@ -35,14 +33,14 @@ describe('/trash 허브 재조회 실패 처리', () => {
    * 잡지 않으면 unhandled rejection 이 되고 목록이 조용히 이전 상태로 남는다.
    */
   it('재조회 실패를 잡아 오류 상태로 남긴다', () => {
-    expect(source).toMatch(/catch\s*\{[\s\S]*?wasteLoadError\.value = true/)
+    expect(source).toContain('wasteList.state.error.value')
   })
 
   it('실패를 "등록된 배출 일정이 없습니다" 빈 상태로 표시하지 않는다', () => {
-    expect(source).toMatch(/EmptyState[\s\S]{0,200}?v-if="!wasteLoadError && wasteSchedules\.length === 0/)
+    expect(source).toContain(':error="wasteList.state.error.value"')
   })
 
   it('오류 배너에서 재시도할 수 있다', () => {
-    expect(source).toContain('@click="loadWasteSchedules"')
+    expect(source).toContain('@retry="refreshWasteList"')
   })
 })

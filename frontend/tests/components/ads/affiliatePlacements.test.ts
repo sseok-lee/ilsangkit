@@ -38,7 +38,6 @@ const pages: [string, number, number?][] = [
   ['pages/article/index.vue', 1],
   ['pages/guide/index.vue', 1],
   ['pages/trash/[id].vue', 2],
-  ['pages/trash/areas/[areaId].vue', 2],
 ]
 
 function elements(file: string): ElementNode[] {
@@ -74,6 +73,7 @@ describe('approved mobile affiliate placement inventory', () => {
     ['pages/privacy.vue', 0],
     ['pages/terms.vue', 0],
     ['pages/contact.vue', 0],
+    ['pages/trash/areas/[areaId].vue', 0],
   ] as const)('%s keeps its existing inventory without adding affiliate ads', (file, count) => {
     const nodes = elements(file)
     expect(nodes.filter(node => node.tag === 'AdBanner')).toHaveLength(count)
