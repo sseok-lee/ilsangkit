@@ -3,22 +3,28 @@ import { computeAreaNoindex } from '~/utils/areaNoindex'
 
 describe('computeAreaNoindex', () => {
   it('비-trash: summary.count 0이면 noindex', () => {
-    expect(computeAreaNoindex({ isTrash: false, summaryCount: 0, wasteEmpty: false, page: 1 })).toBe(true)
+    expect(computeAreaNoindex({ isTrash: false, summaryCount: 0, wasteEmpty: false, wasteSourceSubset: false, page: 1 })).toBe(true)
   })
   it('비-trash: summary.count>0이면 indexable', () => {
-    expect(computeAreaNoindex({ isTrash: false, summaryCount: 12, wasteEmpty: false, page: 1 })).toBe(false)
+    expect(computeAreaNoindex({ isTrash: false, summaryCount: 12, wasteEmpty: false, wasteSourceSubset: false, page: 1 })).toBe(false)
   })
   it('비-trash: summary 미확보(undefined)면 indexable(보수적)', () => {
-    expect(computeAreaNoindex({ isTrash: false, summaryCount: undefined, wasteEmpty: false, page: 1 })).toBe(false)
+    expect(computeAreaNoindex({ isTrash: false, summaryCount: undefined, wasteEmpty: false, wasteSourceSubset: false, page: 1 })).toBe(false)
   })
   it('page>1이면 항상 noindex', () => {
-    expect(computeAreaNoindex({ isTrash: false, summaryCount: 12, wasteEmpty: false, page: 2 })).toBe(true)
+    expect(computeAreaNoindex({ isTrash: false, summaryCount: 12, wasteEmpty: false, wasteSourceSubset: false, page: 2 })).toBe(true)
   })
   it('trash: wasteEmpty true면 noindex', () => {
-    expect(computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: true, page: 1 })).toBe(true)
+    expect(computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: true, wasteSourceSubset: false, page: 1 })).toBe(true)
   })
   it('trash: wasteEmpty false면 indexable', () => {
-    expect(computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: false, page: 1 })).toBe(false)
+    expect(computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: false, wasteSourceSubset: false, page: 1 })).toBe(false)
+  })
+  it('trash: ?coverage=unresolved 원문 부분집합은 일정이 있어도 noindex', () => {
+    expect(computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: false, wasteSourceSubset: true, page: 1 })).toBe(true)
+  })
+  it('비-trash: wasteSourceSubset 은 무시한다', () => {
+    expect(computeAreaNoindex({ isTrash: false, summaryCount: 5, wasteEmpty: false, wasteSourceSubset: true, page: 1 })).toBe(false)
   })
 })
 
@@ -45,21 +51,21 @@ describe('G(b) — noindex 페이지에서 rel=prev/next 억제', () => {
   const base = 'https://ilsangkit.co.kr/seoul/gangnam/toilet'
 
   it('noindex=true(page 2) 이면 prev/next 링크를 반환하지 않는다', () => {
-    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 50, wasteEmpty: false, page: 2 })
+    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 50, wasteEmpty: false, wasteSourceSubset: false, page: 2 })
     expect(isNoindex).toBe(true)
     const links = buildPaginationLinks(isNoindex, 2, 5, base)
     expect(links).toHaveLength(0)
   })
 
   it('noindex=true(summary 0) 이면 링크를 반환하지 않는다', () => {
-    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 0, wasteEmpty: false, page: 1 })
+    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 0, wasteEmpty: false, wasteSourceSubset: false, page: 1 })
     expect(isNoindex).toBe(true)
     const links = buildPaginationLinks(isNoindex, 1, 3, base)
     expect(links).toHaveLength(0)
   })
 
   it('noindex=false(page 1, count>0) 이면 next 링크를 반환한다', () => {
-    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 50, wasteEmpty: false, page: 1 })
+    const isNoindex = computeAreaNoindex({ isTrash: false, summaryCount: 50, wasteEmpty: false, wasteSourceSubset: false, page: 1 })
     expect(isNoindex).toBe(false)
     const links = buildPaginationLinks(isNoindex, 1, 3, base)
     expect(links.some(l => l.rel === 'next')).toBe(true)
@@ -67,7 +73,7 @@ describe('G(b) — noindex 페이지에서 rel=prev/next 억제', () => {
   })
 
   it('noindex=true(trash 비어있음) 이면 링크를 반환하지 않는다', () => {
-    const isNoindex = computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: true, page: 1 })
+    const isNoindex = computeAreaNoindex({ isTrash: true, summaryCount: undefined, wasteEmpty: true, wasteSourceSubset: false, page: 1 })
     expect(isNoindex).toBe(true)
     const links = buildPaginationLinks(isNoindex, 1, 2, base)
     expect(links).toHaveLength(0)

@@ -2,6 +2,7 @@ export type AreaKind = 'administrative' | 'legal';
 export type AreaLevel = 'province' | 'district' | 'dong' | 'ri';
 export type MatchState = 'verified' | 'unresolved' | 'conflict';
 export type CoverageScope = 'whole' | 'partial' | 'conditional';
+export type WasteDistrictMode = 'areas' | 'source' | 'empty';
 
 export interface Evidence {
   url: string;
@@ -93,6 +94,8 @@ export interface AreaList {
   page: number;
   totalPages: number;
   unresolved: { count: number; href: string | null };
+  /** city+district 지정 조회에서만 존재. 키워드와 무관한 시·군·구 단위 표시 모드 */
+  mode?: WasteDistrictMode;
 }
 
 export interface AuditCase {
