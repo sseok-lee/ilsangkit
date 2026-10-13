@@ -36,6 +36,56 @@ describe('GET /api/waste-schedules success cache headers', () => {
   });
 });
 
+describe('GET /api/waste-schedules areaId validation', () => {
+  it('passes safe integer areaId to the source list service', async () => {
+    wasteScheduleServiceMock.getByRegion.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+      selectedArea: {
+        areaId: 1,
+        name: '역삼1동',
+        city: '서울특별시',
+        district: '강남구',
+      },
+      generationId: 'generation-1',
+    });
+
+    const res = await request(app).get('/api/waste-schedules').query({ areaId: '1' });
+
+    expect(res.status).toBe(200);
+    expect(wasteScheduleServiceMock.getByRegion).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      undefined,
+      expect.objectContaining({ areaId: 1 })
+    );
+  });
+
+  it.each(['', '0', '-1', '1.5', '1e2', '9007199254740992'])('rejects areaId=%s', async (value) => {
+    const response = await request(app).get('/api/waste-schedules').query({ areaId: value });
+
+    expect(response.status).toBe(400);
+    expect(wasteScheduleServiceMock.getByRegion).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate areaId parameters', async () => {
+    const response = await request(app).get('/api/waste-schedules?areaId=1&areaId=2');
+
+    expect(response.status).toBe(400);
+    expect(wasteScheduleServiceMock.getByRegion).not.toHaveBeenCalled();
+  });
+
+  it('rejects contradictory coverage filters', async () => {
+    const response = await request(app).get('/api/waste-schedules')
+      .query({ areaId: '1', coverage: 'unresolved' });
+
+    expect(response.status).toBe(400);
+    expect(wasteScheduleServiceMock.getByRegion).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /api/waste-schedules source errors', () => {
   it('sets no-store when preserving service-wrapped publication 503 errors', async () => {
     wasteScheduleServiceMock.getByRegion.mockRejectedValue(

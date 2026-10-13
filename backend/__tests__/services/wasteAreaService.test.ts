@@ -18,6 +18,7 @@ import {
   hasPublishedWasteAreaDetailHistory,
   listIndexableWasteAreas,
   listWasteAreas,
+  requireWasteAreaDetail,
 } from '../../src/services/wasteAreaService.js';
 
 const generationId = 'generation-1';
@@ -267,6 +268,36 @@ describe('getWasteArea', () => {
 
     expect(detail?.schedules).toHaveLength(21);
     expect(new Set(detail?.schedules.map((item) => item.schedule.id)).size).toBe(21);
+  });
+
+  it('reuses a caller-pinned generation and request date for area detail reads', async () => {
+    const pinnedDate = new Date('2026-09-28T12:00:00.000Z');
+    prismaMock.wasteAreaEntry.findFirst.mockResolvedValue(areaEntry(101, '역삼1동'));
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([areaEntry(101, '역삼1동')]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([coverage(1, { areaId: 101 })]);
+
+    const detail = await getWasteArea(101, { generationId: 'generation-1', requestDate: pinnedDate });
+
+    expect(detail?.generationId).toBe('generation-1');
+    expect(prismaMock.wastePublication.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.wasteAreaEntry.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        generationId: 'generation-1',
+        validFrom: { lte: new Date('2026-09-28T00:00:00.000Z') },
+      }),
+    }));
+  });
+
+  it('throws 410 from the shared detail reader for retired public detail rows', async () => {
+    prismaMock.wasteAreaEntry.findFirst.mockResolvedValue(null);
+    prismaMock.wasteAreaEntry.count.mockResolvedValue(1);
+
+    await expect(requireWasteAreaDetail(101, {
+      generationId: 'generation-1',
+      requestDate: new Date('2026-09-28T12:00:00.000Z'),
+    })).rejects.toMatchObject({
+      statusCode: 410,
+    });
   });
 });
 
