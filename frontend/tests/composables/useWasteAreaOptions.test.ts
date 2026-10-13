@@ -159,6 +159,33 @@ describe('useWasteAreaOptions', () => {
     expect(list).not.toHaveBeenCalled()
   })
 
+
+  it('does not let an aborted old-region options response replace current-region state', async () => {
+    const current = ref({ city: '서울특별시', district: '강남구' })
+    let handlerRef: ((app: unknown, ctx: { signal: AbortSignal }) => Promise<unknown>) | null = null
+    const state = { data: ref(null), error: ref(null), status: ref('idle'), pending: ref(false), refresh: vi.fn() }
+    vi.stubGlobal('useAsyncData', vi.fn((_key, handler) => {
+      handlerRef = handler
+      return Object.assign(Promise.resolve(state), state)
+    }))
+    list.mockResolvedValue(page([area(1)], 1, 1, 'g1'))
+
+    const options = useWasteAreaOptions({
+      city: () => current.value.city,
+      district: () => current.value.district,
+      enabled: () => true,
+    })
+    const oldController = new AbortController()
+    const oldLoad = handlerRef!(null, { signal: oldController.signal })
+
+    current.value = { city: '서울특별시', district: '서초구' }
+    oldController.abort()
+    state.data.value = await oldLoad
+
+    expect(options.key.value).toBe('waste-area-options:서울특별시:서초구')
+    expect(options.result.value).toBeNull()
+  })
+
   it('renders only current-region option envelopes', () => {
     vi.stubGlobal('useAsyncData', vi.fn(() => {
       const state = {

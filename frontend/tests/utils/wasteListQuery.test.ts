@@ -18,6 +18,7 @@ describe('parseWasteListQuery', () => {
       keyword: '역삼',
       coverage: 'unresolved',
       page: '3',
+      limit: '50',
     })
 
     expect(parsed).toEqual({
@@ -26,16 +27,27 @@ describe('parseWasteListQuery', () => {
       keyword: '역삼',
       coverage: 'unresolved',
       page: 3,
-      limit: 20,
+      limit: 50,
     })
-    expect(wasteListPathForQuery('/trash', parsed)).toBe('/trash?city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=%EA%B0%95%EB%82%A8%EA%B5%AC&keyword=%EC%97%AD%EC%82%BC&coverage=unresolved&page=3')
+    expect(wasteListPathForQuery('/trash', parsed)).toBe('/trash?city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=%EA%B0%95%EB%82%A8%EA%B5%AC&keyword=%EC%97%AD%EC%82%BC&coverage=unresolved&page=3&limit=50')
   })
 
   it('rejects duplicate areaId, areaId+coverage, and path/query region conflicts', () => {
     expect(() => parseWasteListQuery({ areaId: ['1', '2'] })).toThrow(/areaId query/)
+    expect(() => parseWasteListQuery({ limit: ['20', '50'] })).toThrow(/limit query/)
     expect(() => parseWasteListQuery({ areaId: '2', coverage: 'unresolved' })).toThrow(/areaId.*coverage/)
     expect(() => parseWasteListQuery({ city: 'busan' }, { city: '서울특별시', district: '강남구' })).toThrow(/city query/)
     expect(() => parseWasteListQuery({ district: '서초구' }, { city: '서울특별시', district: '강남구' })).toThrow(/district query/)
+  })
+
+
+  it('strictly parses limit as a positive safe integer with default 20', () => {
+    expect(parseWasteListQuery({ limit: '75' })).toEqual({ page: 1, limit: 75 })
+    expect(wasteListPathForQuery('/trash', parseWasteListQuery({ limit: '75' }))).toBe('/trash?limit=75')
+
+    for (const limit of ['0', '-1', '1.5', '', String(Number.MAX_SAFE_INTEGER + 1)]) {
+      expect(() => parseWasteListQuery({ limit })).toThrow(/limit query/)
+    }
   })
 
   it('serializes only supported filter keys and omits page 1/default limit', () => {

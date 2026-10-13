@@ -150,6 +150,12 @@ describe('useWasteSchedule().getSchedules', () => {
 
     ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({
       success: true,
+      data: { ...backendData(), selectedArea: { areaId: 101, name: '본리동', city: '대구광역시', district: '달서구' } },
+    })
+    await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/generationId/)
+
+    ;(globalThis as unknown as { $fetch: ReturnType<typeof vi.fn> }).$fetch = vi.fn().mockResolvedValue({
+      success: true,
       data: { ...backendData(), selectedArea: { areaId: 102, name: '본리동', city: '대구광역시', district: '달서구' }, generationId: 'g1' },
     })
     await expect(getSchedules({ areaId: 101, page: 1, limit: 20 })).rejects.toThrow(/selectedArea/)

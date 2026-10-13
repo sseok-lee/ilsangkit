@@ -113,9 +113,7 @@ export function wasteAreaPathForQuery(basePath: string, query: AreaQuery): strin
   return search ? `${basePath}?${search}` : basePath
 }
 
-export type WasteSourceScheduleQuery = Pick<WasteListQuery, 'page' | 'limit'> & Partial<Pick<WasteListQuery, 'city' | 'district' | 'keyword' | 'coverage' | 'areaId'>>
-
-export function wasteSourceScheduleQuery(query: AreaQuery): WasteSourceScheduleQuery {
+export function wasteSourceScheduleQuery(query: AreaQuery): Partial<WasteListQuery> {
   return {
     page: query.page,
     limit: query.limit,

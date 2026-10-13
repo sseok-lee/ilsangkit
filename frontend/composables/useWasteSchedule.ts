@@ -1,5 +1,4 @@
 import { ref, readonly } from 'vue'
-import type { WasteSourceScheduleQuery } from '~/utils/wasteAreaQuery'
 import type { ApplicableWasteArea } from '~/types/wasteArea'
 import type { SelectedWasteArea, WasteListQuery } from '~/types/wasteList'
 
@@ -230,7 +229,7 @@ export function useWasteSchedule() {
     }
   }
 
-  async function getSchedules(options?: Partial<WasteListQuery> | WasteSourceScheduleQuery, signal?: AbortSignal): Promise<RegionScheduleResponse> {
+  async function getSchedules(options?: Partial<WasteListQuery>, signal?: AbortSignal): Promise<RegionScheduleResponse> {
     isLoading.value = true
     error.value = null
 

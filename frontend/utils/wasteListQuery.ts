@@ -19,13 +19,13 @@ function singleValue(query: LocationQuery, key: string): string | undefined {
   return trimmed || undefined
 }
 
-function pageValue(query: LocationQuery): string | undefined {
-  if (!Object.prototype.hasOwnProperty.call(query, 'page')) return undefined
-  const value = query.page
-  if (Array.isArray(value)) invalid('page query must not be duplicated')
-  if (typeof value !== 'string') invalid('page query must be a positive integer')
+function strictIntegerValue(query: LocationQuery, key: string): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(query, key)) return undefined
+  const value = query[key]
+  if (Array.isArray(value)) invalid(`${key} query must not be duplicated`)
+  if (typeof value !== 'string') invalid(`${key} query must be a positive integer`)
   const trimmed = value.trim()
-  if (!trimmed) invalid('page query must be a positive integer')
+  if (!trimmed) invalid(`${key} query must be a positive integer`)
   return trimmed
 }
 
@@ -46,7 +46,8 @@ export function parseWasteListQuery(query: LocationQuery, region?: { city: strin
   const areaIdValue = singleValue(query, 'areaId')
   const keyword = singleValue(query, 'keyword')
   const coverage = singleValue(query, 'coverage')
-  const page = parsePositiveInteger(pageValue(query), 'page', 1)
+  const page = parsePositiveInteger(strictIntegerValue(query, 'page'), 'page', 1)
+  const limit = parsePositiveInteger(strictIntegerValue(query, 'limit'), 'limit', DEFAULT_LIMIT)
 
   if (queryDistrict && !queryCity && !region) invalid('district query requires city query')
   if (keyword && keyword.length > MAX_KEYWORD_LENGTH) invalid('keyword query must be 100 characters or fewer')
@@ -67,7 +68,7 @@ export function parseWasteListQuery(query: LocationQuery, region?: { city: strin
     ...(keyword ? { keyword } : {}),
     ...(coverage === 'unresolved' ? { coverage } : {}),
     page,
-    limit: DEFAULT_LIMIT,
+    limit,
   }
 }
 
