@@ -330,8 +330,8 @@ if (fetchError.value) {
 // 백엔드가 대표 항목을 돌려준다. 요청 id 와 다르면 대표 URL 로 영구 이동시킨다.
 // (지역 페이지로의 301 은 여전히 금지 — 원본 본문은 대표 상세가 그대로 렌더한다.)
 const representativeId = scheduleResponse.value?.data?.id
-if (representativeId != null && representativeId !== scheduleId.value) {
-  await navigateTo(`/trash/${representativeId}`, { redirectCode: 301 })
+if (representativeId != null && Number(representativeId) !== scheduleId.value) {
+  await navigateTo(`/trash/${representativeId}`, { redirectCode: 301, replace: true })
 }
 
 const data = computed(() => {

@@ -63,8 +63,8 @@ describe('TrashDetailPage - 원본 상세 직접 접근', () => {
   it('원본 중복으로 접힌 상세는 대표 상세로만 301 한다', () => {
     const redirects = source.match(/redirectCode: 301/g) ?? []
     expect(redirects).toHaveLength(1)
-    expect(source).toMatch(/representativeId\s*!==\s*scheduleId\.value/)
-    expect(source).toMatch(/navigateTo\(`\/trash\/\$\{representativeId\}`,\s*\{\s*redirectCode: 301\s*\}\)/)
+    expect(source).toMatch(/Number\(representativeId\)\s*!==\s*scheduleId\.value/)
+    expect(source).toMatch(/navigateTo\(`\/trash\/\$\{representativeId\}`,\s*\{\s*redirectCode: 301,\s*replace: true\s*\}\)/)
   })
 
   it('광고 A안: 제목 바로 아래와 원본 배출 일정 뒤, 두 자리에 광고를 싣는다', () => {

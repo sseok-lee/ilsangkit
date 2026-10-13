@@ -26,7 +26,7 @@ describe('/trash/{id} 원본 상세 문서', () => {
   it('원본 중복으로 접힌 상세는 대표 상세로만 301 한다', () => {
     const redirects = trashDetail.match(/redirectCode: 301/g) ?? []
     expect(redirects).toHaveLength(1)
-    expect(trashDetail).toMatch(/representativeId\s*!==\s*scheduleId\.value/)
+    expect(trashDetail).toMatch(/Number\(representativeId\)\s*!==\s*scheduleId\.value/)
     expect(trashDetail).not.toContain('await navigateTo(trashRegionPath.value')
     expect(trashDetail).toContain('원본 배출 일정')
   })
