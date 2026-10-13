@@ -257,22 +257,23 @@ describe('trash 페이지네이션이 크롤 가능한 <a href> 로 렌더된다
     expect(src).toContain('hrefFor?: (page: number) => string')
   })
 
-  it('구·군 페이지가 RegionTrashSchedule 에 pageHref 를 넘긴다', () => {
+  it('구·군 페이지가 WasteListPanel 에 source-list href 함수를 넘긴다', () => {
     const src = read(PAGES.district)
-    const trashTag = src.slice(src.indexOf('<RegionTrashSchedule'), src.indexOf('<!-- 일반 시설 그리드 -->'))
-    expect(trashTag).toContain(':href-for="pageHref"')
+    const trashTag = src.slice(src.indexOf('<WasteListPanel'), src.indexOf('<!-- 일반 시설 그리드 -->'))
+    expect(trashTag).toContain(':href-for="wasteListPageHref"')
   })
 
-  it('카테고리 목록의 trash 분기도 href-for 를 넘긴다', () => {
+  it('카테고리 목록의 trash 분기도 WasteListPanel 에 source-list href 함수를 넘긴다', () => {
     const src = read(PAGES.category)
-    const trashPagination = /<Pagination v-if="!wasteLoading[^/]*\/>/.exec(src)
-    expect(trashPagination, 'trash Pagination 을 찾지 못했다').not.toBeNull()
-    expect(trashPagination![0]).toContain(':href-for="pageHref"')
+    const trashTag = src.slice(src.indexOf('<WasteListPanel'), src.indexOf('<!-- Non-trash: facility card grid -->'))
+    expect(trashTag).toContain(':href-for="wasteListPageHref"')
   })
 
-  it('두 페이지 모두 pageHref 를 buildPageHref 로 만든다 (UI 상태 키가 제거된 href)', () => {
+  it('두 페이지 모두 일반 목록은 buildPageHref, trash 목록은 wasteListPathForQuery 로 href 를 만든다', () => {
     for (const rel of [PAGES.district, PAGES.category]) {
-      expect(read(rel)).toContain('buildPageHref(route.path, route.query, page)')
+      const src = read(rel)
+      expect(src).toContain('buildPageHref(route.path, route.query, page)')
+      expect(src).toContain('wasteListPathForQuery(route.path, { ...wasteListQuery.value, page })')
     }
   })
 

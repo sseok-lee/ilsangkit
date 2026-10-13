@@ -19,6 +19,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { BrowseItem } from '~/types/facilityBrowse'
+import { wasteAreaFilterHref } from '~/utils/wasteListQuery'
 
 const props = defineProps<{ item: BrowseItem }>()
 
@@ -41,13 +42,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   subway: '지하철역',
 }
 
-function isValidWasteAreaDestination(destination: BrowseItem['destination']): destination is { kind: 'waste-area'; href: string } {
-  return destination?.kind === 'waste-area' && /^\/trash\/areas\/\d+$/.test(destination.href)
+function wasteAreaDestinationHref(destination: BrowseItem['destination']): string | null {
+  if (destination?.kind !== 'waste-area') return null
+  const match = destination.href.match(/^\/trash\/areas\/([1-9]\d*)$/)
+  if (!match) return '/trash'
+  const areaId = Number.parseInt(match[1], 10)
+  return Number.isSafeInteger(areaId) ? wasteAreaFilterHref(areaId) : '/trash'
 }
 
 const href = computed(() => {
-  if (props.item.category === 'trash' && isValidWasteAreaDestination(props.item.destination)) {
-    return props.item.destination.href
+  if (props.item.category === 'trash' && props.item.destination?.kind === 'waste-area') {
+    return wasteAreaDestinationHref(props.item.destination) || '/trash'
   }
   return `/${props.item.category}/${encodeURIComponent(props.item.id)}`
 })

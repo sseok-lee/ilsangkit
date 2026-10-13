@@ -20,7 +20,7 @@ describe('trashReturnContext', () => {
   })
 
   it('keeps legacy fragment input limited to trash list paths and allowed query keys', () => {
-    expect(sanitizeLegacyTrashFrom('/trash?city=서울특별시&district=강남구&schedule=6567&bad=x')).toBe('/trash?city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=%EA%B0%95%EB%82%A8%EA%B5%AC')
+    expect(sanitizeLegacyTrashFrom('/trash?city=서울특별시&district=강남구&areaId=101&schedule=6567&bad=x')).toBe('/trash?city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&district=%EA%B0%95%EB%82%A8%EA%B5%AC&areaId=101')
     expect(sanitizeLegacyTrashFrom('/seoul/gangnam/trash?coverage=unresolved&page=2')).toBe('/seoul/gangnam/trash?coverage=unresolved&page=2')
     expect(sanitizeLegacyTrashFrom('/facilities?category=trash')).toBeNull()
     expect(sanitizeLegacyTrashFrom('https://evil.example/trash?city=서울특별시')).toBeNull()
@@ -29,7 +29,9 @@ describe('trashReturnContext', () => {
   it('allows trusted normal navigation from known browse/search routes only through router state', () => {
     expect(sanitizeTrustedTrashReturn('/facilities?city=seoul&district=gangnam&category=trash&q=검증')).toContain('/facilities?')
     expect(sanitizeTrustedTrashReturn('/search?q=검증&category=trash')).toContain('/search?')
-    expect(sanitizeTrustedTrashReturn('/trash/areas/101?coverage=unresolved&schedule=901')).toBe('/trash/areas/101?coverage=unresolved')
+    expect(sanitizeTrustedTrashReturn('/trash/areas/101?coverage=unresolved&schedule=901')).toBe('/trash?areaId=101')
+    expect(sanitizeTrustedTrashReturn('/trash?areaId=101&schedule=901')).toBe('/trash?areaId=101')
+    expect(sanitizeTrustedTrashReturn('/trash?areaId=abc')).toBeNull()
     expect(sanitizeTrustedTrashReturn('/parking/parking-lifestyle-21')).toBeNull()
   })
 
@@ -37,14 +39,14 @@ describe('trashReturnContext', () => {
     window.scrollTo(0, 720)
 
     const state = trashReturnStateFromRoute({
-      path: '/trash/areas/101',
-      fullPath: '/trash/areas/101?coverage=unresolved',
+      path: '/trash',
+      fullPath: '/trash?areaId=101',
     } as never, '동별 안내로 돌아가기', 901)
 
     expect(state.ilsangkitTrashReturn).toEqual({
       sourceId: 901,
       context: {
-        href: '/trash/areas/101?coverage=unresolved',
+        href: '/trash?areaId=101',
         label: '동별 안내로 돌아가기',
         scrollY: 720,
       },
@@ -127,7 +129,7 @@ describe('trashReturnContext', () => {
     window.history.replaceState({ back: '/trash/areas/101?coverage=unresolved&schedule=901' }, '', '/trash/901')
 
     expect(readTrashReturnContext(901)).toEqual({
-      href: '/trash/areas/101?coverage=unresolved',
+      href: '/trash?areaId=101',
       label: '동별 안내로 돌아가기',
     })
   })
