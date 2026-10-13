@@ -68,6 +68,31 @@ describe('WasteListPanel', () => {
     expect(wrapper.text()).not.toContain('덕동 배출안내')
   })
 
+  it('18자 제목 제한 때문에 숨겨진 검색 토큰은 발췌로 보인다', () => {
+    const wrapper = mountPanel({
+      query: { ...query, keyword: '후순위토큰' },
+      result: result({
+        schedules: [{
+          id: 2002,
+          city: '전라남도',
+          district: '강진군',
+          targetRegion: '매우긴첫번째대상지역명,두번째대상지역명,후순위토큰',
+          emissionPlace: '일정 수거장소',
+          managementZone: '후순위토큰 관리구역',
+          applicableAreas: [],
+          wasteTypes: [
+            { type: '일반쓰레기', dayOfWeek: ['금'], beginTime: '20:00', endTime: '06:00' },
+          ],
+        }],
+      }),
+    })
+
+    expect(wrapper.text()).toContain('매우긴첫번째대상지역명 등')
+    const excerpt = wrapper.find('p.bg-background-light')
+    expect(excerpt.exists()).toBe(true)
+    expect(excerpt.text()).toContain('후순위토큰')
+  })
+
   it('페이지 범위 밖이면 첫 페이지 링크를 안내하고 API totalPages를 바꾸지 않는다', () => {
     const wrapper = mountPanel({
       query: { ...query, page: 5 },

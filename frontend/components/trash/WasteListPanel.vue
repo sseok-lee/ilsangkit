@@ -71,7 +71,7 @@ import Pagination from '~/components/common/Pagination.vue'
 import WasteScheduleCard from '~/components/facility/WasteScheduleCard.vue'
 import type { RegionSchedule, RegionScheduleResponse } from '~/composables/useWasteSchedule'
 import type { WasteListQuery } from '~/types/wasteList'
-import { splitWasteTargetForDisplay } from '~/utils/wasteSchedule'
+import { wasteSourceTitle } from '~/utils/wasteSchedule'
 
 const props = defineProps<{
   result: RegionScheduleResponse | null
@@ -119,8 +119,8 @@ function safeExcerpt(schedule: RegionSchedule): string {
     .join(' · ')
   const index = source.toLocaleLowerCase('ko-KR').indexOf(keyword.toLocaleLowerCase('ko-KR'))
   if (index === -1) return ''
-  const titleTokens = splitWasteTargetForDisplay(schedule.targetRegion || '').slice(0, 3).join(' ')
-  if (titleTokens.includes(keyword)) return ''
+  const visibleTitle = wasteSourceTitle(schedule)
+  if (visibleTitle.includes(keyword)) return ''
   const start = Math.max(0, index - 16)
   const prefix = start > 0 ? '…' : ''
   return `${prefix}${source.slice(start, index + keyword.length + 24)}`

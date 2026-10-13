@@ -131,3 +131,36 @@ Result: passed with no whitespace errors.
 - Real 390px/1440px browser screenshots and visual comparison are deferred to Task6 per the task brief; no integrated browser visual verification was performed in Task3.
 - `WasteListSearch.vue` and `WasteListPanel.vue` are intentionally not wired into list route pages yet because Task4 owns route integration.
 - Full frontend/backend lint and tests pass, but both packages still print existing warning/log backlogs that were outside Task3 scope.
+
+## Fix round 1 — reviewer follow-up
+
+### Changes
+
+- `frontend/components/trash/WasteListSearch.vue` now preserves a valid current `areaId` on keyword-only submit, preserves `coverage: 'unresolved'` on keyword-only submit when no area filter is active, clears the current area when city/district changes, and never emits incompatible `areaId` + `coverage` combinations.
+- `frontend/components/trash/WasteListPanel.vue` now suppresses keyword excerpts by comparing the keyword to the actual visible source title from `wasteSourceTitle`, so hidden tokens omitted by the 18-codepoint title rule can still appear as excerpts.
+- Added regression coverage for area retention, unresolved retention, incompatible filter clearing, and hidden-token excerpts.
+
+### RED evidence
+
+Command:
+
+```bash
+cd frontend && source ~/.nvm/nvm.sh && nvm use 20 && npm run test -- tests/components/trash/WasteListSearch.test.ts tests/components/trash/WasteListPanel.test.ts
+```
+
+Result before implementation: failed as expected. `WasteListSearch` dropped `areaId` on keyword submit, dropped `coverage: 'unresolved'`, and dropped `areaId` for an incompatible input state. `WasteListPanel` did not render an excerpt for a token hidden by the 18-codepoint visible title rule.
+
+### GREEN / verification evidence
+
+- Focused component suites: `cd frontend && source ~/.nvm/nvm.sh && nvm use 20 && npm run test -- tests/components/trash/WasteListSearch.test.ts tests/components/trash/WasteListPanel.test.ts` → passed, 2 files, 17 tests.
+- Broader Task3 focused suite: `cd frontend && source ~/.nvm/nvm.sh && nvm use 20 && npm run test -- tests/utils/wasteSchedulePresentation.test.ts tests/components/facility/WasteScheduleCard.test.ts tests/components/trash/WasteScheduleContent.test.ts tests/pages/trashSourceContract.test.ts tests/components/trash/WasteListPanel.test.ts tests/components/trash/WasteListSearch.test.ts tests/composables/useFacilityMeta.test.ts tests/composables/useStructuredData.test.ts` → passed, 8 files, 186 tests.
+- Frontend full suite: `cd frontend && source ~/.nvm/nvm.sh && nvm use 20 && npm run test` → passed, 382 files, 3952 passed, 1 skipped.
+- Backend targeted rerun after transient full-suite socket failure: `cd backend && source ~/.nvm/nvm.sh && nvm use 20 && source ../.superpowers/sdd/2026-10-13-trash-source-list-fallback/test-env.sh && npm run test -- __tests__/routes/homeMarket.test.ts` → passed, 1 file, 3 tests.
+- Backend full suite rerun: `cd backend && source ~/.nvm/nvm.sh && nvm use 20 && source ../.superpowers/sdd/2026-10-13-trash-source-list-fallback/test-env.sh && npm run test` → passed, 254 files, 2853 tests.
+- Frontend lint: `cd frontend && source ~/.nvm/nvm.sh && nvm use 20 && npm run lint` → 0 errors, 727 existing warnings.
+- Backend lint: `cd backend && source ~/.nvm/nvm.sh && nvm use 20 && npm run lint` → 0 errors, 100 existing warnings.
+
+### Notes
+
+- The first backend full-suite attempt failed once with `socket hang up` in `__tests__/routes/homeMarket.test.ts`; that file passed alone immediately after, and the full backend suite passed on rerun.
+- Route wiring and browser visual verification remain deferred to Task4 and Task6 respectively.

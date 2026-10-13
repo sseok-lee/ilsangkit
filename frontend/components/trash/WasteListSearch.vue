@@ -91,23 +91,44 @@ watch(() => props.query, (query) => {
   draftAreaId.value = query.areaId ? String(query.areaId) : ''
 }, { deep: true })
 
-function baseQuery() {
-  return {
+function parseDraftAreaId(): number | undefined {
+  const areaId = draftAreaId.value ? Number.parseInt(draftAreaId.value, 10) : undefined
+  return Number.isSafeInteger(areaId) ? areaId : undefined
+}
+
+function regionChanged(): boolean {
+  return draft.city !== (props.query.city || '') || draft.district !== (props.query.district || '')
+}
+
+function baseQuery(options: { preserveArea?: boolean; preserveCoverage?: boolean } = {}) {
+  const next = {
     city: draft.city || undefined,
     district: draft.district || undefined,
     keyword: draft.keyword || undefined,
+  } as { city?: string; district?: string; areaId?: number; keyword?: string; coverage?: 'unresolved' }
+
+  const areaId = options.preserveArea && !regionChanged() ? parseDraftAreaId() : undefined
+  if (areaId) {
+    next.areaId = areaId
+    return next
   }
+
+  if (options.preserveCoverage && props.query.coverage === 'unresolved') {
+    next.coverage = 'unresolved'
+  }
+
+  return next
 }
 
 function submit() {
-  emit('search', baseQuery())
+  emit('search', baseQuery({ preserveArea: true, preserveCoverage: true }))
 }
 
 function selectArea() {
-  const areaId = draftAreaId.value ? Number.parseInt(draftAreaId.value, 10) : undefined
+  const areaId = parseDraftAreaId()
   emit('search', {
     ...baseQuery(),
-    ...(Number.isSafeInteger(areaId) ? { areaId } : {}),
+    ...(areaId ? { areaId } : {}),
   })
 }
 </script>
