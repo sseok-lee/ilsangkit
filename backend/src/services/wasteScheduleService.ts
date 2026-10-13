@@ -424,6 +424,17 @@ export async function getById(id: number): Promise<WasteScheduleItem | null> {
       if (revision.state === 'inactive') {
         throw new GoneError('종료된 쓰레기 배출 정보입니다');
       }
+      if (revision.state === 'duplicate') {
+        // 원본 API 의 내용 중복으로 접힌 행 — 대표 항목을 돌려주면 프론트가 대표 URL 로 301 한다.
+        if (revision.duplicateOfScheduleId == null) return null;
+        const representative = await prisma.wasteScheduleRevision.findFirst({
+          where: { generationId, scheduleId: revision.duplicateOfScheduleId, sourceId: EXCLUDE_SEED },
+          include: { coverages: true },
+        });
+        if (!representative || representative.state !== 'active') return null;
+        const representativeAreas = await getApplicableAreasForSchedules(generationId, [representative.scheduleId]);
+        return revisionToScheduleItem(representative, representativeAreas.get(representative.scheduleId) ?? []);
+      }
       if (revision.state !== 'active') return null;
       const applicableAreas = await getApplicableAreasForSchedules(generationId, [id]);
       return revisionToScheduleItem(revision, applicableAreas.get(id) ?? []);
