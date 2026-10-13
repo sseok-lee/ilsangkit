@@ -241,12 +241,25 @@ describe('rel=prev/next — key 부여 + noindex 페이지 억제', () => {
     expect(block).toContain("key: 'seo-rel-next'")
   })
 
-  it('구·군 목록: trash 블록도 key 를 붙인다 (client nav 누적 방지)', () => {
+  it('구·군 목록: trash 블록도 source-list SEO 정책으로 prev/next 를 막는다', () => {
     const src = read(PAGES.district)
     const trashBlock = src.slice(src.indexOf('// ItemList 구조화 데이터 (trash)'))
-    expect(trashBlock).toContain('if (isPageNoindex.value) return')
+    expect(src).toContain('const trashListSeo = computed(() => wasteListSeo({')
+    expect(src).toContain('const seo = trashListSeo.value')
+    expect(trashBlock).toContain('() => trashListSeo.value.noindex')
+    expect(trashBlock).toContain('if (trashListSeo.value.noindex) return')
+    expect(trashBlock).not.toContain('if (isPageNoindex.value) return')
     expect(trashBlock).toContain("key: 'seo-rel-prev'")
     expect(trashBlock).toContain("key: 'seo-rel-next'")
+  })
+
+  it('카테고리 trash 목록은 일반 rel watcher 에서 빠져 source-list 필터 rel 을 내지 않는다', () => {
+    const src = read(PAGES.category)
+    const block = src.slice(src.indexOf('// ItemList structured data'))
+    expect(block).toContain("if (categoryParam.value === 'trash') return")
+    expect(block).toContain('if (isNoindex.value) return')
+    expect(block).toContain("key: 'seo-rel-prev'")
+    expect(block).toContain("key: 'seo-rel-next'")
   })
 })
 

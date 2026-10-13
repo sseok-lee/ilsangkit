@@ -8,6 +8,14 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { wasteAreaRedirectTarget } from '~/utils/wasteAreaRedirect'
 
 const route = useRoute()
+
+function markRedirectNoStore() {
+  if (!import.meta.server) return
+  if (useRequestEvent()) useResponseHeader('cache-control').value = 'no-store'
+}
+
+markRedirectNoStore()
+
 const rawAreaId = String(route.params.areaId ?? '')
 if (!/^[1-9]\d*$/.test(rawAreaId)) {
   throw createError({ statusCode: 400, statusMessage: '잘못된 동별 배출 안내 주소입니다' })
@@ -40,10 +48,6 @@ try {
   target = wasteAreaRedirectTarget(areaDetail.value)
 } catch {
   throw createError({ statusCode: 400, statusMessage: '잘못된 동별 배출 안내 주소입니다' })
-}
-
-if (import.meta.server) {
-  if (useRequestEvent()) useResponseHeader('cache-control').value = 'no-store'
 }
 
 await navigateTo(target, { redirectCode: 302, replace: true })

@@ -511,14 +511,16 @@ const isPageNoindex = computed(() =>
     page: pageQueryParam.value,
   })
 )
+const trashListSeo = computed(() => wasteListSeo({
+  query: wasteListQuery.value,
+  result: wasteList.result.value,
+  regionalCanonical: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`,
+  failed: !!wasteList.state.error.value,
+}))
+
 useHead(computed(() => {
   if (isTrash.value) {
-    const seo = wasteListSeo({
-      query: wasteListQuery.value,
-      result: wasteList.result.value,
-      regionalCanonical: `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`,
-      failed: !!wasteList.state.error.value,
-    })
+    const seo = trashListSeo.value
     if (seo.noindex) return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
     return { link: [{ rel: 'canonical', href: seo.canonical, key: 'canonical' }] }
   }
@@ -568,7 +570,7 @@ watch([displayFacilities, currentPage, displayTotalPages], () => {
 }, { immediate: true })
 
 // ItemList 구조화 데이터 (trash)
-watch([() => wasteList.result.value, () => wasteListQuery.value.page], () => {
+watch([() => wasteList.result.value, () => wasteListQuery.value.page, () => trashListSeo.value.noindex], () => {
   if (!isTrash.value) return
   if (wasteList.result.value?.schedules.length) {
     setItemListSchema(
@@ -580,7 +582,7 @@ watch([() => wasteList.result.value, () => wasteListQuery.value.page], () => {
   }
 
   // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
-  if (isPageNoindex.value) return
+  if (trashListSeo.value.noindex) return
 
   // 비-trash 블록과 동일하게 key 를 붙인다. unkeyed 로 두면 client 네비게이션마다
   // rel=prev/next 태그가 head 에 누적돼 한 문서가 여러 페이지를 동시에 가리킨다.

@@ -26,6 +26,13 @@ describe('trashReturnContext', () => {
     expect(sanitizeLegacyTrashFrom('https://evil.example/trash?city=서울특별시')).toBeNull()
   })
 
+  it('rejects duplicate trash list filters before storing return context', () => {
+    expect(sanitizeTrustedTrashReturn('/trash?areaId=101&areaId=102')).toBeNull()
+    expect(sanitizeTrustedTrashReturn('/trash?page=2&page=3')).toBeNull()
+    expect(sanitizeLegacyTrashFrom('/seoul/gangnam/trash?areaId=101&areaId=102')).toBeNull()
+    expect(legacyFromFragmentHash(`#from=${encodeURIComponent('/trash?page=2&page=3')}`)).toBeNull()
+  })
+
   it('allows trusted normal navigation from known browse/search routes only through router state', () => {
     expect(sanitizeTrustedTrashReturn('/facilities?city=seoul&district=gangnam&category=trash&q=검증')).toContain('/facilities?')
     expect(sanitizeTrustedTrashReturn('/search?q=검증&category=trash')).toContain('/search?')

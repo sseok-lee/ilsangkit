@@ -160,10 +160,22 @@ describe('/trash/areas/:areaId', () => {
     expect(errors[0]).toMatchObject({ statusCode: 410 })
 
     vi.resetModules()
+    fetchMock.mockRejectedValueOnce({ statusCode: 400 })
+    errors.length = 0
+    await mountPage(errors)
+    expect(errors[0]).toMatchObject({ statusCode: 400 })
+
+    vi.resetModules()
     fetchMock.mockRejectedValueOnce({ statusCode: 503 })
     errors.length = 0
     await mountPage(errors)
     expect(errors[0]).toMatchObject({ statusCode: 503 })
+
+    vi.resetModules()
+    fetchMock.mockResolvedValueOnce({ success: true, data: { ...detail, area: { ...detail.area, areaId: 0 } } })
+    errors.length = 0
+    await mountPage(errors)
+    expect(errors[0]).toMatchObject({ statusCode: 400 })
   })
 
   it('동 상세 UI를 렌더하지 않는 redirect-only 페이지다', async () => {
@@ -180,5 +192,11 @@ describe('/trash/areas/:areaId 광고 배치', () => {
     expect(areaSource).not.toContain('<AdBanner')
     expect(areaSource).toContain('await navigateTo(target, { redirectCode: 302, replace: true })')
     expect(areaSource).toContain("useResponseHeader('cache-control').value = 'no-store'")
+
+    const markNoStoreIndex = areaSource.indexOf('\nmarkRedirectNoStore()\n')
+    expect(markNoStoreIndex).toBeGreaterThanOrEqual(0)
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf("if (!/^[1-9]\\d*$/.test(rawAreaId))"))
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf('await useAsyncData('))
+    expect(markNoStoreIndex).toBeLessThan(areaSource.indexOf('wasteAreaRedirectTarget(areaDetail.value)'))
   })
 })

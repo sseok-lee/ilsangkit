@@ -694,7 +694,8 @@ watch(cityName, () => {
 
 // ItemList structured data + 페이지네이션 rel link 태그
 watch([facilities, currentPage, totalPages], () => {
-  if (facilities.value.length > 0 && categoryParam.value !== 'trash') {
+  if (categoryParam.value === 'trash') return
+  if (facilities.value.length > 0) {
     setItemListSchema(
       facilities.value.map((f, index) => ({
         name: f.name,

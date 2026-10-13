@@ -1,4 +1,4 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import type { LocationQuery, RouteLocationNormalizedLoaded } from 'vue-router'
 import { parseWasteListQuery, wasteAreaFilterHref } from '~/utils/wasteListQuery'
 
 export interface TrashReturnContext {
@@ -128,12 +128,22 @@ function sanitizePathAndQuery(
     const areaPathId = areaIdFromTrashAreaPath(url.pathname)
     if (areaPathId) return wasteAreaFilterHref(areaPathId)
     const params = new URLSearchParams()
+    const trashListPath = isTrashListPath(url.pathname)
+    const trashQuery: LocationQuery = {}
     for (const [key, value] of url.searchParams.entries()) {
       if (key === 'schedule') continue
-      if (allowedQueryKeys.has(key) && value.trim()) params.append(key, value)
+      const trimmed = value.trim()
+      if (!allowedQueryKeys.has(key) || !trimmed) continue
+      params.append(key, trimmed)
+      if (trashListPath) {
+        const existing = trashQuery[key]
+        if (existing === undefined) trashQuery[key] = trimmed
+        else if (Array.isArray(existing)) existing.push(trimmed)
+        else trashQuery[key] = [existing, trimmed]
+      }
     }
-    if (isTrashListPath(url.pathname)) {
-      parseWasteListQuery(Object.fromEntries(params.entries()))
+    if (trashListPath) {
+      parseWasteListQuery(trashQuery)
     }
     const search = params.toString()
     return `${url.pathname}${search ? `?${search}` : ''}`
