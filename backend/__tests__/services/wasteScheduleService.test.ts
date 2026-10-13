@@ -566,6 +566,32 @@ describe('waste area discovery source compatibility', () => {
     expect(areaName.items.map((item) => item.id)).toEqual([2002]);
     expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [2001, 2002]);
   });
+
+  it('matches verified area names outside the first raw page before paginating keyword results', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    const revisions = Array.from({ length: 21 }, (_, index) => revision(3001 + index, 'active'));
+    revisionFindManyMock.mockResolvedValue(revisions);
+    revisionCountMock.mockResolvedValue(revisions.length);
+    applicableAreasMock.mockResolvedValue(new Map([
+      [3021, [applicableArea(102, '원거리검증동')]],
+    ]));
+
+    const result = await getByRegion('서울', '강남구', '원거리검증동', { page: 1, limit: 1 });
+
+    expect(result.total).toBe(1);
+    expect(result.totalPages).toBe(1);
+    expect(result.items.map((item) => item.id)).toEqual([3021]);
+    expect(result.items[0].applicableAreas).toEqual([applicableArea(102, '원거리검증동')]);
+    expect(revisionFindManyMock.mock.calls[0][0]).toEqual(expect.objectContaining({
+      skip: 0,
+      take: undefined,
+    }));
+    expect(applicableAreasMock).toHaveBeenCalledWith(
+      'generation-1',
+      revisions.map((item) => item.scheduleId)
+    );
+  });
 });
 
 function revision(
