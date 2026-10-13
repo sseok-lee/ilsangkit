@@ -11,7 +11,10 @@ const route = useRoute()
 
 function markRedirectNoStore() {
   if (!import.meta.server) return
-  if (useRequestEvent()) useResponseHeader('cache-control').value = 'no-store'
+  const event = useRequestEvent()
+  if (!event) return
+  event.node.res.setHeader('cache-control', 'no-store')
+  useResponseHeader('cache-control').value = 'no-store'
 }
 
 markRedirectNoStore()

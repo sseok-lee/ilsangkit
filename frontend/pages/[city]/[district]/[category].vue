@@ -194,7 +194,13 @@ const SLUG_TO_FULL_CITY = Object.entries(CITY_FULL_NAME_TO_SLUG).reduce(
   {} as Record<string, string>,
 )
 const fullCityName = computed(() => SLUG_TO_FULL_CITY[city.value] || cityName.value)
+function inactiveWasteListQuery(): WasteListQuery {
+  return { page: parsePositivePageQuery(route.query.page), limit: 20 }
+}
+
 function parseCurrentWasteListQuery(): WasteListQuery {
+  if (!isTrash.value) return inactiveWasteListQuery()
+
   try {
     if (Array.isArray(route.query.city) || Array.isArray(route.query.district)) {
       throw createError({ statusCode: 400, statusMessage: '중복 지역 query는 사용할 수 없습니다' })

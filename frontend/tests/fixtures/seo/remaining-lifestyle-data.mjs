@@ -243,14 +243,26 @@ const wasteAreas = [
 ]
 
 function wasteScheduleRows(q) {
+  const areaId = q.get('areaId') ? Number(q.get('areaId')) : null
   return schedules.filter(row => {
     if (q.get('coverage') === 'unresolved' && row.id % 2 !== 1) return false
+    if (areaId && !row.appliesTo.some(area => area.areaId === areaId)) return false
     if (q.get('city') && q.get('city') !== row.city) return false
     if (q.get('district') && q.get('district') !== row.district) return false
     const keyword = (q.get('keyword') || '').trim()
-    if (keyword && !row.targetRegion.includes(keyword)) return false
+    if (keyword && ![row.targetRegion, row.emissionPlace, row.details?.managementZone, ...row.appliesTo.map(area => area.name)].some(value => value?.includes(keyword))) return false
     return true
   })
+}
+
+function wasteScheduleList(q) {
+  const areaId = q.get('areaId') ? Number(q.get('areaId')) : null
+  const selectedArea = areaId ? wasteAreas.find(row => row.areaId === areaId) : null
+  return {
+    generationId: 'fixture-generation-id',
+    ...pageOf(wasteScheduleRows(q), q),
+    ...(selectedArea ? { selectedArea: { areaId: selectedArea.areaId, name: selectedArea.name, city: selectedArea.city, district: selectedArea.district } } : {}),
+  }
 }
 
 function wasteAreaList(q) {
@@ -303,7 +315,7 @@ export function handleLifestyleFixture(url) {
   if (path === '/api/subway/stations/nearby') return ok({ items: [{ id: 'station-lifestyle-2', name: '검증역삼', nameSlug: 'yeoksam-lifestyle', line: '2호선', lat: 37.5006, lng: 127.0365, distance: 820 }] })
   if (path === '/api/subway/stations/gangnam-lifestyle') return ok(station)
 
-  if (path === '/api/waste-schedules') return ok(pageOf(wasteScheduleRows(q), q))
+  if (path === '/api/waste-schedules') return ok(wasteScheduleList(q))
   if (path === '/api/waste-areas') return ok(wasteAreaList(q))
   const wasteAreaMatch = path.match(/^\/api\/waste-areas\/(\d+)$/)
   if (wasteAreaMatch) {

@@ -36,7 +36,7 @@ describe('useStructuredData', () => {
         targetRegion: '요양원,칠량면소재지,초등학교.칠량시장,덕동',
         emissionPlace: '',
         applicableAreas: [
-          { areaId: 101, name: '군동면', href: '/trash?areaId=101', scope: 'conditional', conditionText: '요양원 포함' },
+          { areaId: 101, name: '군동면', href: '/trash?areaId=101' },
         ],
       })
 

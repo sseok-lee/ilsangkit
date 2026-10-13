@@ -247,7 +247,13 @@ const queryKeyword = computed(() => {
   return typeof value === 'string' ? value.trim() : ''
 })
 
+function inactiveWasteListQuery(): WasteListQuery {
+  return { page: parsePositivePageQuery(route.query.page), limit: 20 }
+}
+
 function parseCurrentWasteListQuery(): WasteListQuery {
+  if (categoryParam.value !== 'trash') return inactiveWasteListQuery()
+
   try {
     return parseWasteListQuery(route.query)
   } catch (error) {

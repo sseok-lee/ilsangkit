@@ -163,7 +163,7 @@ describe('useWasteAreaOptions', () => {
   it('does not let an aborted old-region options response replace current-region state', async () => {
     const current = ref({ city: '서울특별시', district: '강남구' })
     let handlerRef: ((app: unknown, ctx: { signal: AbortSignal }) => Promise<unknown>) | null = null
-    const state = { data: ref(null), error: ref(null), status: ref('idle'), pending: ref(false), refresh: vi.fn() }
+    const state = { data: ref<unknown | null>(null), error: ref(null), status: ref('idle'), pending: ref(false), refresh: vi.fn() }
     vi.stubGlobal('useAsyncData', vi.fn((_key, handler) => {
       handlerRef = handler
       return Object.assign(Promise.resolve(state), state)
