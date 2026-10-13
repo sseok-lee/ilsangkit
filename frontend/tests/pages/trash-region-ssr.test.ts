@@ -55,8 +55,27 @@ describe('구·군 trash 집계 페이지 SSR', () => {
   })
 
   it('area mode에서는 legacy source 목록 SSR을 호출하지 않고 unresolved mode만 source로 남긴다', () => {
-    expect(regionCategory).toContain("wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved'")
+    expect(regionCategory).toContain('if (showWasteAreaList.value) return null')
     expect(regionCategory).toContain('/api/waste-schedules')
+  })
+
+  it('확인된 동이 0개(mode=source)면 동 목록 대신 원본 일정 목록을 SSR 한다', () => {
+    expect(regionCategory).toContain("wasteAreaData.value?.mode !== 'source'")
+    // 동 목록 조회 여부는 mode 와 무관한 조건으로 정해 순환을 피한다
+    expect(regionCategory).toContain('() => wasteAreaFetchEnabled.value ? wasteAreas.list(wasteAreaQuery.value)')
+  })
+
+  it('동 목록 조회가 원본 일정 SSR 조회보다 먼저 실행된다', () => {
+    const areaFetch = regionCategory.indexOf('wasteAreas.list(wasteAreaQuery.value)')
+    const sourceFetch = regionCategory.indexOf('`${apiBase}/api/waste-schedules`')
+    expect(areaFetch).toBeGreaterThan(-1)
+    expect(sourceFetch).toBeGreaterThan(areaFetch)
+  })
+
+  it('noindex 는 실제로 렌더된 목록(동 목록 또는 원본 일정) 기준이다', () => {
+    expect(regionCategory).toContain('wasteEmpty: showWasteAreaList.value')
+    expect(regionCategory).toContain('displayWasteAreaList.value.items.length === 0')
+    expect(regionCategory).toContain("wasteSourceSubset: wasteAreaQuery.value.coverage === 'unresolved'")
   })
 
   it('배출 일정 목록을 useAsyncData 로 SSR 로드한다', () => {
@@ -96,7 +115,7 @@ describe('구·군 trash 집계 페이지 SSR', () => {
     // computeAreaNoindex 는 isTrash 면 wasteEmpty 를 그대로 반환하므로(utils/areaNoindex.ts:18)
     // 전국 trash 지역 페이지가 일제히 noindex 로 나갔다.
     expect(regionCategory).toContain(
-      'wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0'
+      ': !displayWasteLoading.value && displayWasteSchedules.value.length === 0'
     )
     expect(regionCategory).not.toContain(
       'wasteEmpty: !wasteLoading.value && wasteSchedules.value.length === 0'

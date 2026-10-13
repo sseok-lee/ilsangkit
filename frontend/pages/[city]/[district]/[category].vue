@@ -227,10 +227,17 @@ function parseCurrentWasteAreaQuery(): AreaQuery {
 }
 
 const wasteAreaQuery = computed(() => parseCurrentWasteAreaQuery())
-const showWasteAreaList = computed(() =>
+// 동 목록을 조회할지(플래그·coverage 로만 결정). 표시 여부는 응답 mode 까지 본다.
+const wasteAreaFetchEnabled = computed(() =>
   isTrash.value &&
   wasteAreaDiscoveryEnabled &&
   wasteAreaQuery.value.coverage !== 'unresolved'
+)
+// 확인된 동이 0개인 시·군·구(mode=source)는 동 목록 대신 원본 일정 목록을 보여준다.
+// 도로명·건물명 원본은 검토가 끝나도 동으로 갈 수 없어 이 경로가 영구적이다.
+// ⚠️ wasteAreaData 는 아래 동 목록 useAsyncData 에서 선언된다 — 그 선언 뒤에서만 평가된다.
+const showWasteAreaList = computed(() =>
+  wasteAreaFetchEnabled.value && wasteAreaData.value?.mode !== 'source'
 )
 
 const wasteSourceScheduleKey = computed(() => {
@@ -269,6 +276,28 @@ if (import.meta.server && summaryError.value) markDegradedResponse()
 // URL `?page=N` 에서 초기 페이지를 유추 — SSR/클라이언트 진입 모두 동일한 페이지를 렌더하도록.
 const initialPage = parsePositivePageQuery(route.query.page)
 
+const wasteAreas = useWasteAreas()
+const emptyWasteAreaList: AreaList = {
+  generationId: 'empty',
+  items: [],
+  total: 0,
+  page: initialPage,
+  totalPages: 1,
+  unresolved: { count: 0, href: null },
+}
+const {
+  data: wasteAreaData,
+  error: wasteAreaError,
+  pending: wasteAreaPending,
+  refresh: refreshWasteAreas,
+} = await useAsyncData(
+  () => isTrash.value ? wasteAreaRequestKey(wasteAreaQuery.value) : `waste-areas:inactive:${category.value}`,
+  () => wasteAreaFetchEnabled.value ? wasteAreas.list(wasteAreaQuery.value) : Promise.resolve(null),
+  { watch: [wasteAreaQuery], dedupe: 'cancel' },
+)
+if (import.meta.server && wasteAreaError.value) markDegradedResponse()
+const displayWasteAreaList = computed(() => wasteAreaData.value || { ...emptyWasteAreaList, page: isTrash.value ? wasteAreaQuery.value.page : 1 })
+
 // trash 지역: 배출 일정 "목록"을 SSR 에서 로드한다.
 //
 // 기존엔 건수(limit=1)만 SSR 하고 목록은 클라이언트 로드였다. 그래서 크롤러가 받는 HTML 에는
@@ -283,7 +312,9 @@ const { data: wasteSsr, error: wasteSsrError } = await useAsyncData(
   `waste-region-${city.value}-${district.value}-${category.value}-p${initialPage}`,
   async () => {
     if (category.value !== 'trash') return null
-    if (wasteAreaDiscoveryEnabled && wasteAreaQuery.value.coverage !== 'unresolved') return null
+    // 동 목록을 보여주는 경우에만 원본 SSR 을 건너뛴다. mode=source 면 원본 일정을
+    // coverage 없이(해당 시·군·구 활성 원본 전체) SSR 한다.
+    if (showWasteAreaList.value) return null
     const res = await $fetch<{ success: boolean; data: BackendScheduleData }>(
       `${apiBase}/api/waste-schedules`,
       {
@@ -303,28 +334,6 @@ const { data: wasteSsr, error: wasteSsrError } = await useAsyncData(
 if (import.meta.server && wasteSsrError.value) markDegradedResponse()
 
 const wasteCount = computed<number | null>(() => wasteSsr.value?.total ?? null)
-const wasteAreas = useWasteAreas()
-const emptyWasteAreaList: AreaList = {
-  generationId: 'empty',
-  items: [],
-  total: 0,
-  page: initialPage,
-  totalPages: 1,
-  unresolved: { count: 0, href: null },
-}
-const {
-  data: wasteAreaData,
-  error: wasteAreaError,
-  pending: wasteAreaPending,
-  refresh: refreshWasteAreas,
-} = await useAsyncData(
-  () => isTrash.value ? wasteAreaRequestKey(wasteAreaQuery.value) : `waste-areas:inactive:${category.value}`,
-  () => showWasteAreaList.value ? wasteAreas.list(wasteAreaQuery.value) : Promise.resolve(null),
-  { watch: [wasteAreaQuery], dedupe: 'cancel' },
-)
-if (import.meta.server && wasteAreaError.value) markDegradedResponse()
-const displayWasteAreaList = computed(() => wasteAreaData.value || { ...emptyWasteAreaList, page: isTrash.value ? wasteAreaQuery.value.page : 1 })
-
 // SEO - top-level에서 설정 (SSR에서 메타태그 렌더링).
 // canonical 은 아래 useHead(computed...) 에서 noindex 상태와 함께 reactive 하게 관리한다 (정책: .omc/notes/noindex-canonical-policy.md).
 const { setRegionMeta } = useFacilityMeta()
@@ -629,7 +638,12 @@ const isPageNoindex = computed(() =>
     // ⚠️ SSR 반영 값(display*)을 읽어야 한다. 클라이언트 전용 ref(wasteSchedules/wasteLoading)를
     // 읽으면 SSR 시점엔 항상 비어 있어(로드는 useAsyncData 가 wasteSsr 로 한다) 모든 trash
     // 지역 페이지가 noindex 로 나간다 — #677 배포 직후 실제로 발생한 회귀.
-    wasteEmpty: !displayWasteLoading.value && displayWasteSchedules.value.length === 0,
+    // 동 목록 모드에서 원본 일정 길이를 보면 SSR 시점에 항상 비어 전국 trash 지역 페이지가
+    // noindex 로 나간다(10/12 플래그 on 직후 실측) — 실제로 렌더된 목록 기준으로 판정한다.
+    wasteEmpty: showWasteAreaList.value
+      ? displayWasteAreaList.value.items.length === 0
+      : !displayWasteLoading.value && displayWasteSchedules.value.length === 0,
+    wasteSourceSubset: wasteAreaQuery.value.coverage === 'unresolved',
     page: pageQueryParam.value,
   })
 )
