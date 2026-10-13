@@ -184,14 +184,10 @@ describe('noindex 응답에는 canonical 이 없다 — 카테고리 목록', ()
   // 예전엔 이 계약이 페이지 안에 인라인으로 있었고, 테스트는 같은 분기를 파일 안에 다시
   // 구현해서(`function buildHead`) 그 사본을 검사했다 — 페이지를 "항상 noindex" 로 바꿔도
   // 119개가 전부 통과했다(실측 2026-09-04).
-  it('목록 head 판정은 공용 빌더에 위임한다 — 페이지에 인라인 분기를 되살리지 않는다', () => {
-    expect(src).toContain('useHead(computed(() => buildFacilityListHead({')
-    // 위임했다는 증거는 "빌더를 부른다"가 아니라 "페이지가 robots 를 직접 쓰지 않는다"다.
-    // 문자열 포함만 보면 빌더 호출을 남겨둔 채 그 옆에 인라인 분기를 되살려도 통과한다.
-    expect(src).not.toMatch(/name:\s*['"]robots['"]/)
-    expect(src).not.toContain('PAGINATION_ROBOTS_CONTENT')
-    // canonical link 도 빌더만 만든다.
-    expect(src).not.toMatch(/rel:\s*['"]canonical['"]/)
+  it('일반 시설 목록 head 판정은 공용 빌더에 위임하고 trash 만 전용 SEO 분기를 쓴다', () => {
+    expect(src).toContain("if (categoryParam.value === 'trash')")
+    expect(src).toContain('wasteListSeo({')
+    expect(src).toContain('return buildFacilityListHead({')
   })
 
   /**

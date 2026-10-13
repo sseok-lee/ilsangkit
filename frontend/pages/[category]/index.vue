@@ -211,8 +211,9 @@ import { buildFacilitySearchLog } from '~/utils/searchLog'
 import { useSearchSuggest } from '~/composables/useSearchSuggest'
 import type { FacilityCategory } from '~/types/facility'
 import { useAnalytics } from '~/composables/useAnalytics'
-import { parsePositivePageQuery } from '~/utils/pageQuery'
+import { PAGINATION_ROBOTS_CONTENT, parsePositivePageQuery } from '~/utils/pageQuery'
 import { buildFacilityListHead, buildFacilityListCanonicalPath } from '~/utils/facilityListHead'
+import { wasteListSeo } from '~/utils/wasteListSeo'
 import type { WasteListQuery } from '~/types/wasteList'
 
 const route = useRoute()
@@ -492,15 +493,29 @@ const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
 // keyword 검색 결과는(city 만 있는 경우와 달리) noindex — shouldNoindexFacilityList(순수 함수)로 판정.
 // `?city=` 만 있는 경우는 기존과 동일하게 색인 유지된다.
 const isNoindex = computed(() => shouldNoindexFacilityList({ page: pageQueryParam.value, keyword: queryKeyword.value, query: route.query }))
+const trashListSeo = computed(() => wasteListSeo({
+  query: wasteListQuery.value,
+  result: wasteList.result.value,
+  regionalCanonical: canonicalHref.value,
+  failed: !!wasteList.state.error.value,
+}))
 
 // 판정은 utils/facilityListHead.ts 한곳에서만 한다. 여기 인라인으로 두면 테스트가 실물을
 // 부르지 못하고 사본을 검사하게 된다(그 함수 주석 참고).
-useHead(computed(() => buildFacilityListHead({
-  page: pageQueryParam.value,
-  keyword: queryKeyword.value,
-  query: route.query,
-  canonicalHref: canonicalHref.value,
-})))
+useHead(computed(() => {
+  if (categoryParam.value === 'trash') {
+    const seo = trashListSeo.value
+    if (seo.noindex) return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
+    return { link: [{ rel: 'canonical', href: seo.canonical, key: 'canonical' }] }
+  }
+
+  return buildFacilityListHead({
+    page: pageQueryParam.value,
+    keyword: queryKeyword.value,
+    query: route.query,
+    canonicalHref: canonicalHref.value,
+  })
+}))
 
 // Methods
 async function performSearch() {

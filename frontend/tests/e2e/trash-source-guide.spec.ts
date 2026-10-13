@@ -49,6 +49,17 @@ async function clientNavigate(page: Page, path: string) {
   }, path)
 }
 
+async function expectIndexableCanonical(page: Page, href: string) {
+  await expect(page.locator('head meta[name="robots"][content*="noindex"]')).toHaveCount(0)
+  await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', href)
+}
+
+async function expectNoindexWithoutCanonical(page: Page) {
+  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow')
+  await expect(page.locator('head link[rel="canonical"]')).toHaveCount(0)
+  await expect(page.locator('head link[rel="prev"], head link[rel="next"]')).toHaveCount(0)
+}
+
 test.beforeEach(async ({ request, page }) => {
   mkdirSync(evidence, { recursive: true })
   await reset(request)
@@ -97,6 +108,30 @@ test('renders nationwide and city-only source-first lists with source cards', as
   state = await fixtureState(request)
   expect(state.requests.some(item => item.startsWith('/api/waste-schedules?') && item.includes('city=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C'))).toBe(true)
   expect(state.requests.some(item => item.startsWith('/api/waste-areas'))).toBe(false)
+})
+
+test('noindexes root trash area and unresolved filters without stale client head state', async ({ page }) => {
+  for (const path of ['/trash?areaId=210', '/trash?coverage=unresolved']) {
+    const response = await page.goto(path)
+    expect(response?.status(), path).toBe(200)
+    const html = await response?.text()
+    expect(html, path).toContain('<meta name="robots" content="noindex, follow">')
+    expect(html, path).not.toMatch(/<link\b[^>]*rel="canonical"/)
+    expect(html, path).not.toMatch(/<link\b[^>]*rel="(?:prev|next)"/)
+
+    await hydrated(page)
+    await expectNoindexWithoutCanonical(page)
+
+    await clientNavigate(page, '/trash')
+    await page.waitForURL('/trash')
+    await hydrated(page)
+    await expectIndexableCanonical(page, 'https://ilsangkit.co.kr/trash')
+  }
+
+  await clientNavigate(page, '/trash?city=seoul&district=강남구')
+  await page.waitForURL(/city=seoul/)
+  await hydrated(page)
+  await expectIndexableCanonical(page, 'https://ilsangkit.co.kr/seoul/gangnam/trash')
 })
 
 test('redirects legacy area URLs with no-store for single, multiple, empty, and error lifecycles', async ({ request }) => {
