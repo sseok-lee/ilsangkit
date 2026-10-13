@@ -10,7 +10,7 @@ import { validateStrictWasteReferences, type WasteReferenceMetadata } from './wa
 import { evaluateWasteIndex } from './wasteIndexPolicy.js';
 import { buildWasteSourceScope } from '../utils/wasteSourceScope.js';
 
-export type WasteRevisionStateValue = 'active' | 'inactive' | 'conflict';
+export type WasteRevisionStateValue = 'active' | 'inactive' | 'conflict' | 'duplicate';
 export type WasteScheduleProvenanceValue = 'legacy' | 'raw';
 
 export interface WasteGenerationSourceRow {
@@ -35,6 +35,7 @@ export interface PreviousWasteRevision extends WasteGenerationSourceRow {
   state: WasteRevisionStateValue;
   missingCompleteRuns: number;
   terminationEvidence: unknown;
+  duplicateOfScheduleId: number | null;
 }
 
 export interface BuiltWasteRevision extends PreviousWasteRevision {
@@ -88,6 +89,7 @@ export interface WasteGenerationPlan {
     activeCount: number;
     inactiveCount: number;
     conflictCount: number;
+    duplicateCount: number;
     unresolvedCoverageCount: number;
     duplicateSourceIdentities: string[];
     carriedMissingCount: number;
@@ -145,6 +147,7 @@ export function buildWasteGenerationPlan(input: BuildInput): WasteGenerationPlan
       state: 'active',
       missingCompleteRuns: 0,
       terminationEvidence: null,
+      duplicateOfScheduleId: null,
       coverageCandidates: resolveCoverage({
         scheduleId: row.scheduleId,
         sourceScope: buildWasteSourceScope(row),
@@ -185,7 +188,7 @@ export function buildWasteGenerationPlan(input: BuildInput): WasteGenerationPlan
       };
     });
 
-  const revisions = [...currentRevisions, ...carriedMissing];
+  const revisions = [...collapseContentDuplicates(currentRevisions), ...carriedMissing];
   const selectedRelations = input.references.relations
     .filter((relation) => selectedKeys.has(relation.toKey) && (!relation.fromKey || selectedKeys.has(relation.fromKey)));
   const areaEntries = buildAreaEntries(
@@ -211,6 +214,7 @@ export function buildWasteGenerationPlan(input: BuildInput): WasteGenerationPlan
     contentHash: revision.contentHash,
     missingCompleteRuns: revision.missingCompleteRuns,
     sourceModifiedAt: revision.sourceModifiedAt,
+    duplicateOfScheduleId: revision.duplicateOfScheduleId ?? null,
   })));
   const relationHash = hashJson(areaRelations.map(({ relationKey, relation }) => ({ relationKey, relation })));
   const coverageHash = hashJson(revisions.flatMap((revision) => revision.coverageCandidates.map((candidate) => ({
@@ -230,6 +234,7 @@ export function buildWasteGenerationPlan(input: BuildInput): WasteGenerationPlan
     activeCount: revisions.filter((revision) => revision.state === 'active').length,
     inactiveCount: revisions.filter((revision) => revision.state === 'inactive').length,
     conflictCount,
+    duplicateCount: revisions.filter((revision) => revision.state === 'duplicate').length,
     unresolvedCoverageCount,
     duplicateSourceIdentities,
     carriedMissingCount: carriedMissing.length,
@@ -431,6 +436,77 @@ function stripCollectionOnlyFields(value: unknown): unknown {
       .filter(([key]) => !['collectedAt', 'observedAt'].includes(key))
       .map(([key, entryValue]) => [key, stripCollectionOnlyFields(entryValue)])
   );
+}
+
+const DUPLICATE_IGNORED_DETAIL_KEYS = ['dataCreatedDate', 'lastModified'];
+
+function stripDuplicateIgnoredFields(details: unknown): unknown {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return details;
+  return Object.fromEntries(
+    Object.entries(details as Record<string, unknown>)
+      .filter(([key]) => !DUPLICATE_IGNORED_DETAIL_KEYS.includes(key))
+  );
+}
+
+/**
+ * 원본 API 가 관리번호만 바꿔 같은 내용을 여러 번 내려주는 행을 묶는 키.
+ * sourceId·생성일·수정일만 빼고 나머지 내용이 모두 같으면 같은 키가 된다.
+ */
+export function duplicateContentKey(row: WasteGenerationSourceRow): string {
+  return hashJson({
+    city: row.city,
+    district: row.district,
+    targetRegion: row.targetRegion,
+    emissionPlace: row.emissionPlace,
+    sourceUrl: row.sourceUrl,
+    govCode: row.govCode,
+    details: stripDuplicateIgnoredFields(stripCollectionOnlyFields(row.details)),
+  });
+}
+
+function detailText(details: unknown, key: string): string {
+  if (!details || typeof details !== 'object') return '';
+  const value = (details as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : '';
+}
+
+// 대표 우선순위: dataCreatedDate 최신 → lastModified 최신 → sourceId 큰 값. 값이 없으면 가장 뒤.
+function compareRepresentative(a: WasteGenerationSourceRow, b: WasteGenerationSourceRow): number {
+  for (const key of DUPLICATE_IGNORED_DETAIL_KEYS) {
+    const av = detailText(a.details, key);
+    const bv = detailText(b.details, key);
+    if (av !== bv) return av < bv ? 1 : -1;
+  }
+  if (a.sourceId !== b.sourceId) return a.sourceId < b.sourceId ? 1 : -1;
+  return 0;
+}
+
+/**
+ * 같은 세대에 들어온 내용 중복 행 중 대표 1건만 active 로 두고 나머지는 duplicate 로 접는다.
+ * 매 수집마다 다시 계산하므로 대표가 원본에서 사라지면 남은 행이 다음 세대에서 대표가 된다.
+ */
+export function collapseContentDuplicates<
+  T extends WasteGenerationSourceRow & { state: WasteRevisionStateValue; duplicateOfScheduleId?: number | null }
+>(revisions: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  for (const revision of revisions) {
+    const key = duplicateContentKey(revision);
+    const group = groups.get(key);
+    if (group) group.push(revision);
+    else groups.set(key, [revision]);
+  }
+  const representativeOf = new Map<number, number>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const [representative, ...rest] = [...group].sort(compareRepresentative);
+    for (const revision of rest) representativeOf.set(revision.scheduleId, representative.scheduleId);
+  }
+  return revisions.map((revision) => {
+    const representativeId = representativeOf.get(revision.scheduleId);
+    return representativeId === undefined
+      ? revision
+      : { ...revision, state: 'duplicate' as const, duplicateOfScheduleId: representativeId };
+  });
 }
 
 function hasPublicSource(revision: BuiltWasteRevision): boolean {

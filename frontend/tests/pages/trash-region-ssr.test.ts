@@ -23,8 +23,10 @@ const trashDetail = readFileSync(resolve(frontendRoot, 'pages/trash/[id].vue'), 
 const regionCategory = readFileSync(resolve(frontendRoot, 'pages/[city]/[district]/[category].vue'), 'utf8')
 
 describe('/trash/{id} 원본 상세 문서', () => {
-  it('소스 상세 URL은 301 없이 직접 SSR 문서로 유지한다', () => {
-    expect(trashDetail).not.toContain('redirectCode: 301')
+  it('원본 중복으로 접힌 상세는 대표 상세로만 301 한다', () => {
+    const redirects = trashDetail.match(/redirectCode: 301/g) ?? []
+    expect(redirects).toHaveLength(1)
+    expect(trashDetail).toMatch(/Number\(representativeId\)\s*!==\s*scheduleId\.value/)
     expect(trashDetail).not.toContain('await navigateTo(trashRegionPath.value')
     expect(trashDetail).toContain('원본 배출 일정')
   })

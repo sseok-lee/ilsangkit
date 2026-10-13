@@ -166,6 +166,38 @@ describe('wastePublicationService', () => {
     expect(saved).toHaveLength(areas.length);
   });
 
+  it('persists duplicateOfScheduleId of collapsed revisions into revision createMany data', async () => {
+    const { prepareWasteGeneration } = await import('../../src/services/wastePublicationService.js');
+    prismaMock.prisma.syncHistory.create.mockResolvedValue({ id: 'history' });
+    const makeRow = (scheduleId: number, sourceId: string) => ({
+      scheduleId,
+      city: '서울특별시',
+      district: '강남구',
+      sourceId,
+      targetRegion: '역삼1동',
+      emissionPlace: '집 앞',
+      details: { livingWaste: { dayOfWeek: '월' }, dataCreatedDate: '2025-01-01', lastModified: '2025-02-01 00:00:00' },
+      sourceUrl: 'https://example.test/source',
+      govCode: '3220000',
+      rawPayload: null,
+    });
+
+    await prepareWasteGeneration({
+      baseGenerationId: null,
+      references: emptyRefs,
+      rows: [makeRow(1, 'dup-a'), makeRow(2, 'dup-b')],
+      provenance: 'raw',
+      sourceComplete: true,
+      dryRun: false,
+    });
+
+    const saved = prismaMock.prisma.wasteScheduleRevision.createMany.mock.calls
+      .flatMap(([input]) => input.data) as Array<{ scheduleId: number; state: string; duplicateOfScheduleId: number | null }>;
+    expect(saved).toHaveLength(2);
+    expect(saved.find((r) => r.scheduleId === 1)).toMatchObject({ state: 'duplicate', duplicateOfScheduleId: 2 });
+    expect(saved.find((r) => r.scheduleId === 2)).toMatchObject({ state: 'active', duplicateOfScheduleId: null });
+  });
+
   it('blocks persisted prepare writes unless discovery is explicitly enabled', async () => {
     delete process.env.WASTE_AREA_DISCOVERY_ENABLED;
     const { prepareWasteGeneration } = await import('../../src/services/wastePublicationService.js');

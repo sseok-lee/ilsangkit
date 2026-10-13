@@ -44,6 +44,7 @@ enum WasteRevisionState {
   active
   inactive
   conflict
+  duplicate
 }
 
 enum WasteCoverageScope {
@@ -1096,6 +1097,7 @@ model WasteScheduleRevision {
   state               WasteRevisionState
   missingCompleteRuns Int
   terminationEvidence Json?
+  duplicateOfScheduleId Int?
   generation          WasteGeneration         @relation(fields: [generationId], references: [id], onDelete: Cascade)
   schedule            WasteSchedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   coverages           WasteScheduleCoverage[]

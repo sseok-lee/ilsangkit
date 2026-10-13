@@ -475,9 +475,46 @@ describe('waste area discovery source compatibility', () => {
 
     await expect(getById(7)).rejects.toMatchObject({ statusCode: 410 });
   });
+
+  it('duplicate 상세는 같은 세대의 active 대표 항목을 반환한다', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindFirstMock
+      .mockResolvedValueOnce({ ...revision(7, 'duplicate'), duplicateOfScheduleId: 9 })
+      .mockResolvedValueOnce(revision(9, 'active'));
+    applicableAreasMock.mockResolvedValue(new Map());
+
+    const detail = await getById(7);
+
+    expect(revisionFindFirstMock.mock.calls.at(-1)?.[0].where).toMatchObject({
+      generationId: 'generation-1',
+      scheduleId: 9,
+    });
+    expect(applicableAreasMock).toHaveBeenCalledWith('generation-1', [9]);
+    expect(detail?.id).toBe(9);
+  });
+
+  it('duplicate 의 대표가 active 가 아니면 null(404)', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindFirstMock
+      .mockResolvedValueOnce({ ...revision(7, 'duplicate'), duplicateOfScheduleId: 9 })
+      .mockResolvedValueOnce(revision(9, 'inactive'));
+
+    await expect(getById(7)).resolves.toBeNull();
+  });
+
+  it('duplicate 인데 대표 참조가 없으면 null(404)', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'true';
+    publicationFindUniqueMock.mockResolvedValue({ activeGenerationId: 'generation-1' });
+    revisionFindFirstMock.mockResolvedValueOnce({ ...revision(7, 'duplicate'), duplicateOfScheduleId: null });
+
+    await expect(getById(7)).resolves.toBeNull();
+    expect(revisionFindFirstMock).toHaveBeenCalledTimes(1);
+  });
 });
 
-function revision(scheduleId: number, state: 'active' | 'inactive') {
+function revision(scheduleId: number, state: 'active' | 'inactive' | 'duplicate') {
   return {
     generationId: 'generation-1',
     scheduleId,
@@ -498,6 +535,7 @@ function revision(scheduleId: number, state: 'active' | 'inactive') {
     state,
     missingCompleteRuns: state === 'inactive' ? 2 : 0,
     terminationEvidence: state === 'inactive' ? { reason: 'fixture' } : null,
+    duplicateOfScheduleId: null,
     coverages: [
       {
         generationId: 'generation-1',

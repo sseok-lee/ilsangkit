@@ -42,6 +42,7 @@ export interface WasteGenerationReviewReport {
     provenance: string;
     contentHash: string;
     missingCompleteRuns: number;
+    duplicateOfScheduleId: number | null;
     sourceModifiedAt: string | null;
     observedAt: string;
     contentUpdatedAt: string;
@@ -174,6 +175,7 @@ function buildReviewReport(
       provenance: revision.provenance,
       contentHash: revision.contentHash,
       missingCompleteRuns: revision.missingCompleteRuns,
+      duplicateOfScheduleId: revision.duplicateOfScheduleId ?? null,
       sourceModifiedAt: revision.sourceModifiedAt?.toISOString() ?? null,
       observedAt: revision.observedAt.toISOString(),
       contentUpdatedAt: revision.contentUpdatedAt.toISOString(),
@@ -334,6 +336,7 @@ async function readPreviousRevisions(baseGenerationId: string | null): Promise<P
     state: row.state,
     missingCompleteRuns: row.missingCompleteRuns,
     terminationEvidence: row.terminationEvidence,
+    duplicateOfScheduleId: row.duplicateOfScheduleId,
   }));
 }
 
@@ -530,6 +533,7 @@ async function persistRevisions(
         state: revision.state,
         missingCompleteRuns: revision.missingCompleteRuns,
         terminationEvidence: revision.terminationEvidence as Prisma.InputJsonValue,
+        duplicateOfScheduleId: revision.duplicateOfScheduleId ?? null,
       })),
     });
   }
