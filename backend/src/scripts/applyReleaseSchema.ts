@@ -510,9 +510,10 @@ const WASTE_TABLES: ExpectedTable[] = [
       { name: 'sourceModifiedAt', type: 'datetime(3)', nullable: true },
       { name: 'observedAt', type: 'datetime(3)', nullable: false },
       { name: 'contentUpdatedAt', type: 'datetime(3)', nullable: false },
-      { name: 'state', type: "enum('active','inactive','conflict')", nullable: false },
+      { name: 'state', type: "enum('active','inactive','conflict','duplicate')", nullable: false },
       { name: 'missingCompleteRuns', type: 'int', nullable: false },
       { name: 'terminationEvidence', type: 'json', nullable: true },
+      { name: 'duplicateOfScheduleId', type: 'int', nullable: true },
     ],
     indexes: [
       { name: 'PRIMARY', unique: true, columns: ['generationId', 'scheduleId'] },

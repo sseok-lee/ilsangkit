@@ -10,7 +10,7 @@ import { validateStrictWasteReferences, type WasteReferenceMetadata } from './wa
 import { evaluateWasteIndex } from './wasteIndexPolicy.js';
 import { buildWasteSourceScope } from '../utils/wasteSourceScope.js';
 
-export type WasteRevisionStateValue = 'active' | 'inactive' | 'conflict';
+export type WasteRevisionStateValue = 'active' | 'inactive' | 'conflict' | 'duplicate';
 export type WasteScheduleProvenanceValue = 'legacy' | 'raw';
 
 export interface WasteGenerationSourceRow {
@@ -35,6 +35,7 @@ export interface PreviousWasteRevision extends WasteGenerationSourceRow {
   state: WasteRevisionStateValue;
   missingCompleteRuns: number;
   terminationEvidence: unknown;
+  duplicateOfScheduleId: number | null;
 }
 
 export interface BuiltWasteRevision extends PreviousWasteRevision {
@@ -145,6 +146,7 @@ export function buildWasteGenerationPlan(input: BuildInput): WasteGenerationPlan
       state: 'active',
       missingCompleteRuns: 0,
       terminationEvidence: null,
+      duplicateOfScheduleId: null,
       coverageCandidates: resolveCoverage({
         scheduleId: row.scheduleId,
         sourceScope: buildWasteSourceScope(row),

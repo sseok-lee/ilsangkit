@@ -334,6 +334,7 @@ async function readPreviousRevisions(baseGenerationId: string | null): Promise<P
     state: row.state,
     missingCompleteRuns: row.missingCompleteRuns,
     terminationEvidence: row.terminationEvidence,
+    duplicateOfScheduleId: row.duplicateOfScheduleId,
   }));
 }
 
