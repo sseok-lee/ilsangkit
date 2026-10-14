@@ -672,6 +672,8 @@ export interface GroupedCategory {
   label: string
   count: number
   unit?: '곳' | '지역' | '건'
+  /** '전체 보기' 이동처(source 모드 쓰레기 그룹은 지역 페이지). 없으면 /{category}?keyword= */
+  moreHref?: string
   items: Facility[]
 }
 

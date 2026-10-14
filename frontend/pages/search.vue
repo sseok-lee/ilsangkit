@@ -154,7 +154,7 @@
                   layout="rows"
                   more-label="전체 보기"
                   :cat-category="group.category"
-                  :more-href="`/${group.category}?keyword=${encodeURIComponent(applied.q)}`"
+                  :more-href="group.moreHref ?? `/${group.category}?keyword=${encodeURIComponent(applied.q)}`"
                 >
                   <FacilitySearchRow
                     v-for="facility in group.items.slice(0, 3)"
