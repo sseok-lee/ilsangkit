@@ -630,9 +630,15 @@ watch(wasteSourceScheduleKey, (next, prev) => {
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
 // route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
+// 지역 페이지 ?keyword= 결과는 기본 페이지의 부분집합/중복이라 최상위 목록과 같이 noindex.
+const routeKeyword = computed(() => {
+  const raw = route.query.keyword
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return typeof value === 'string' ? value.trim() : ''
+})
 // isPageNoindex 를 shared computed 로 추출해 rel=prev/next 게이팅에도 재사용한다.
 const isPageNoindex = computed(() =>
-  shouldNoindexFacilityList({ page: pageQueryParam.value, query: route.query }) ||
+  shouldNoindexFacilityList({ page: pageQueryParam.value, query: route.query, keyword: routeKeyword.value }) ||
   computeAreaNoindex({
     isTrash: isTrash.value,
     summaryCount: summary.value?.count,
@@ -648,6 +654,16 @@ const isPageNoindex = computed(() =>
     page: pageQueryParam.value,
   })
 )
+// rel=prev/next 는 watch 안에서 imperative 하게 useHead 하지 않고 이 computed 한 곳에서만 만든다.
+// watch 안의 useHead 는 호출마다 새 head 엔트리를 만들고 '빈 배열'로는 이전 keyed 링크를 지울 수 없어,
+// client 네비게이션으로 noindex 가 된 뒤에도 seo-rel-prev/next 가 남았다. computed 는 의존값이 바뀌면
+// 같은 엔트리가 재계산되므로 noindex 가 되는 순간 링크가 사라진다. SSR 출력은 동일하다.
+const relPaginationPage = computed(() => isTrash.value
+  ? (showWasteAreaList.value ? displayWasteAreaList.value.page : wasteCurrentPage.value)
+  : currentPage.value)
+const relPaginationTotalPages = computed(() => isTrash.value
+  ? (showWasteAreaList.value ? displayWasteAreaList.value.totalPages : displayWasteTotalPages.value)
+  : displayTotalPages.value)
 useHead(computed(() => {
   if (isPageNoindex.value) {
     return { meta: [{ name: 'robots', content: PAGINATION_ROBOTS_CONTENT }] }
@@ -662,10 +678,23 @@ useHead(computed(() => {
     ],
   }
 }))
+useHead(computed(() => {
+  // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
+  if (isPageNoindex.value) return {}
+  const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
+  const page = relPaginationPage.value
+  const link: Array<{ rel: string; href: string; key: string }> = []
+  if (page > 1) {
+    link.push({ rel: 'prev', href: `${baseUrl}?page=${page - 1}`, key: 'seo-rel-prev' })
+  }
+  if (page < relPaginationTotalPages.value) {
+    link.push({ rel: 'next', href: `${baseUrl}?page=${page + 1}`, key: 'seo-rel-next' })
+  }
+  return { link }
+}))
 
 // ItemList 구조화 데이터 (non-trash only)
-// display* 를 소스로 immediate:true → SSR HTML 에도 ItemList/rel=prev·next 가 포함된다.
-// 링크에 key 를 부여해 재실행 시 중복 태그가 쌓이지 않게 한다.
+// display* 를 소스로 immediate:true → SSR HTML 에도 ItemList 가 포함된다. (rel=prev/next 는 위 useHead computed)
 watch([displayFacilities, currentPage, displayTotalPages], () => {
   if (isTrash.value) return
   if (displayFacilities.value.length > 0) {
@@ -677,50 +706,34 @@ watch([displayFacilities, currentPage, displayTotalPages], () => {
       }))
     )
   }
-
-  // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
-  if (isPageNoindex.value) return
-
-  const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
-  const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
-
-  if (currentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${currentPage.value - 1}`, key: 'seo-rel-prev' })
-  }
-  if (currentPage.value < displayTotalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${currentPage.value + 1}`, key: 'seo-rel-next' })
-  }
-
-  useHead({ link: paginationLinks })
 }, { immediate: true })
 
 // ItemList 구조화 데이터 (trash)
-watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
+// 비-trash 블록과 같이 SSR 표시값(display*) + immediate:true → 크롤러가 받는 SSR HTML 에 ItemList 가 실린다.
+// (이전엔 클라이언트 전용 ref 를 읽어 SSR 에 없었고, 동 목록 모드에선 클라이언트에서도 없었다.)
+watch([showWasteAreaList, displayWasteAreaList, displayWasteSchedules, wasteCurrentPage, displayWasteTotalPages], () => {
   if (!isTrash.value) return
-  if (wasteSchedules.value.length > 0) {
+
+  const areaMode = showWasteAreaList.value
+  const page = areaMode ? displayWasteAreaList.value.page : wasteCurrentPage.value
+  const limit = wasteAreaQuery.value.limit
+
+  if (areaMode && displayWasteAreaList.value.items.length > 0) {
     setItemListSchema(
-      wasteSchedules.value.map((s, index) => ({
-        name: s.targetRegion,
-        position: (wasteCurrentPage.value - 1) * 20 + index + 1,
+      displayWasteAreaList.value.items.map((a, index) => ({
+        name: a.name,
+        url: a.href,
+        position: (page - 1) * limit + index + 1,
+      }))
+    )
+  } else if (!areaMode && displayWasteSchedules.value.length > 0) {
+    setItemListSchema(
+      displayWasteSchedules.value.map((s, index) => ({
+        name: s.targetRegion || s.emissionPlace || `${districtName.value} 쓰레기 배출`,
+        url: `/trash/${s.id}`,
+        position: (page - 1) * limit + index + 1,
       }))
     )
   }
-
-  // noindex 페이지에는 rel=prev/next 를 내보내지 않는다 (모순 신호 방지).
-  if (isPageNoindex.value) return
-
-  // 비-trash 블록과 동일하게 key 를 붙인다. unkeyed 로 두면 client 네비게이션마다
-  // rel=prev/next 태그가 head 에 누적돼 한 문서가 여러 페이지를 동시에 가리킨다.
-  const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
-  const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
-
-  if (wasteCurrentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteCurrentPage.value - 1}`, key: 'seo-rel-prev' })
-  }
-  if (wasteCurrentPage.value < wasteTotalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteCurrentPage.value + 1}`, key: 'seo-rel-next' })
-  }
-
-  useHead({ link: paginationLinks })
-})
+}, { immediate: true })
 </script>
