@@ -630,9 +630,15 @@ watch(wasteSourceScheduleKey, (next, prev) => {
 // 정책: noindex 일 때는 canonical 을 함께 내보내지 않는다 (.omc/notes/noindex-canonical-policy.md).
 // route.query.page 변경에 reactive 하게 반응해야 client-side 페이지 이동에서도 정책이 유지된다.
 const pageQueryParam = computed(() => parsePositivePageQuery(route.query.page))
+// 지역 페이지 ?keyword= 결과는 기본 페이지의 부분집합/중복이라 최상위 목록과 같이 noindex.
+const routeKeyword = computed(() => {
+  const raw = route.query.keyword
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return typeof value === 'string' ? value.trim() : ''
+})
 // isPageNoindex 를 shared computed 로 추출해 rel=prev/next 게이팅에도 재사용한다.
 const isPageNoindex = computed(() =>
-  shouldNoindexFacilityList({ page: pageQueryParam.value, query: route.query }) ||
+  shouldNoindexFacilityList({ page: pageQueryParam.value, query: route.query, keyword: routeKeyword.value }) ||
   computeAreaNoindex({
     isTrash: isTrash.value,
     summaryCount: summary.value?.count,
@@ -695,13 +701,30 @@ watch([displayFacilities, currentPage, displayTotalPages], () => {
 }, { immediate: true })
 
 // ItemList 구조화 데이터 (trash)
-watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
+// 비-trash 블록과 같이 SSR 표시값(display*) + immediate:true → 크롤러가 받는 SSR HTML 에 ItemList·rel=prev/next 가 실린다.
+// (이전엔 클라이언트 전용 ref 를 읽어 SSR 에 없었고, 동 목록 모드에선 클라이언트에서도 없었다.)
+watch([showWasteAreaList, displayWasteAreaList, displayWasteSchedules, wasteCurrentPage, displayWasteTotalPages], () => {
   if (!isTrash.value) return
-  if (wasteSchedules.value.length > 0) {
+
+  const areaMode = showWasteAreaList.value
+  const page = areaMode ? displayWasteAreaList.value.page : wasteCurrentPage.value
+  const totalPages = areaMode ? displayWasteAreaList.value.totalPages : displayWasteTotalPages.value
+  const limit = areaMode ? wasteAreaQuery.value.limit : 20
+
+  if (areaMode && displayWasteAreaList.value.items.length > 0) {
     setItemListSchema(
-      wasteSchedules.value.map((s, index) => ({
-        name: s.targetRegion,
-        position: (wasteCurrentPage.value - 1) * 20 + index + 1,
+      displayWasteAreaList.value.items.map((a, index) => ({
+        name: a.name,
+        url: a.href,
+        position: (page - 1) * limit + index + 1,
+      }))
+    )
+  } else if (!areaMode && displayWasteSchedules.value.length > 0) {
+    setItemListSchema(
+      displayWasteSchedules.value.map((s, index) => ({
+        name: s.targetRegion || s.emissionPlace || `${districtName.value} 쓰레기 배출`,
+        url: `/trash/${s.id}`,
+        position: (page - 1) * limit + index + 1,
       }))
     )
   }
@@ -713,14 +736,12 @@ watch([wasteSchedules, wasteCurrentPage, wasteTotalPages], () => {
   // rel=prev/next 태그가 head 에 누적돼 한 문서가 여러 페이지를 동시에 가리킨다.
   const paginationLinks: Array<{ rel: string; href: string; key: string }> = []
   const baseUrl = `https://ilsangkit.co.kr/${city.value}/${district.value}/${category.value}`
-
-  if (wasteCurrentPage.value > 1) {
-    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${wasteCurrentPage.value - 1}`, key: 'seo-rel-prev' })
+  if (page > 1) {
+    paginationLinks.push({ rel: 'prev', href: `${baseUrl}?page=${page - 1}`, key: 'seo-rel-prev' })
   }
-  if (wasteCurrentPage.value < wasteTotalPages.value) {
-    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${wasteCurrentPage.value + 1}`, key: 'seo-rel-next' })
+  if (page < totalPages) {
+    paginationLinks.push({ rel: 'next', href: `${baseUrl}?page=${page + 1}`, key: 'seo-rel-next' })
   }
-
   useHead({ link: paginationLinks })
-})
+}, { immediate: true })
 </script>

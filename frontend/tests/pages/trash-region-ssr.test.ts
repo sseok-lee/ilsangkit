@@ -162,3 +162,24 @@ describe('trash 지역 페이지네이션', () => {
     expect(regionCategory).not.toContain('const wasteTotalPages = ref(1)')
   })
 })
+
+describe('지역 페이지 keyword noindex · 쓰레기 ItemList SSR', () => {
+  it('isPageNoindex 가 route keyword 를 shouldNoindexFacilityList 에 넘긴다', () => {
+    expect(regionCategory).toMatch(/shouldNoindexFacilityList\(\{\s*page: pageQueryParam\.value,\s*query: route\.query,\s*keyword: routeKeyword\.value\s*\}\)/)
+  })
+
+  it('쓰레기 ItemList watch 는 SSR 표시값을 읽고 immediate 로 실행된다', () => {
+    const block = regionCategory.slice(regionCategory.indexOf('// ItemList 구조화 데이터 (trash)'))
+    expect(block).toMatch(/watch\(\[showWasteAreaList, displayWasteAreaList, displayWasteSchedules, wasteCurrentPage, displayWasteTotalPages\]/)
+    expect(block).toMatch(/\}, \{ immediate: true \}\)/)
+    expect(block).not.toMatch(/watch\(\[wasteSchedules, wasteCurrentPage, wasteTotalPages\]/)
+  })
+
+  it('쓰레기 ItemList 항목에 상세 url 을 넣는다(동 /trash/areas/, 원본 /trash/)', () => {
+    const block = regionCategory.slice(regionCategory.indexOf('// ItemList 구조화 데이터 (trash)'))
+    expect(block).toContain('url: a.href')
+    expect(block).toContain('url: `/trash/${s.id}`')
+    expect(block).toContain("key: 'seo-rel-prev'")
+    expect(block).toContain("key: 'seo-rel-next'")
+  })
+})

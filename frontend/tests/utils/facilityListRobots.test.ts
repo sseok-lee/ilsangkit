@@ -14,4 +14,8 @@ describe('shouldNoindexFacilityList', () => {
   it('page2+ → noindex(true)', () => {
     expect(shouldNoindexFacilityList({ page: 2 })).toBe(true)
   })
+  it('keyword 가 공백이 아니면 noindex', () => {
+    expect(shouldNoindexFacilityList({ page: 1, query: {}, keyword: '내손동' })).toBe(true)
+    expect(shouldNoindexFacilityList({ page: 1, query: {}, keyword: '   ' })).toBe(false)
+  })
 })
