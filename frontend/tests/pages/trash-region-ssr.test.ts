@@ -179,7 +179,11 @@ describe('지역 페이지 keyword noindex · 쓰레기 ItemList SSR', () => {
     const block = regionCategory.slice(regionCategory.indexOf('// ItemList 구조화 데이터 (trash)'))
     expect(block).toContain('url: a.href')
     expect(block).toContain('url: `/trash/${s.id}`')
-    expect(block).toContain("key: 'seo-rel-prev'")
-    expect(block).toContain("key: 'seo-rel-next'")
+  })
+
+  it('쓰레기 ItemList position 의 limit 은 모드와 무관하게 wasteAreaQuery.limit 을 쓴다', () => {
+    const block = regionCategory.slice(regionCategory.indexOf('// ItemList 구조화 데이터 (trash)'))
+    expect(block).toContain('const limit = wasteAreaQuery.value.limit')
+    expect(block).not.toMatch(/areaMode \? wasteAreaQuery\.value\.limit : 20/)
   })
 })

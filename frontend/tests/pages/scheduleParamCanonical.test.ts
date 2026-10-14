@@ -241,12 +241,18 @@ describe('rel=prev/next — key 부여 + noindex 페이지 억제', () => {
     expect(block).toContain("key: 'seo-rel-next'")
   })
 
-  it('구·군 목록: trash 블록도 key 를 붙인다 (client nav 누적 방지)', () => {
+  it('구·군 목록: rel=prev/next 는 반응형 useHead(computed) 한 곳에서만 나가고 noindex 면 빠진다', () => {
     const src = read(PAGES.district)
-    const trashBlock = src.slice(src.indexOf('// ItemList 구조화 데이터 (trash)'))
-    expect(trashBlock).toContain('if (isPageNoindex.value) return')
-    expect(trashBlock).toContain("key: 'seo-rel-prev'")
-    expect(trashBlock).toContain("key: 'seo-rel-next'")
+    const head = src.slice(src.indexOf('useHead(computed(() => {\n  // noindex 페이지에는 rel=prev/next'), src.indexOf('// ItemList 구조화 데이터 (non-trash only)'))
+    expect(head).toContain("key: 'seo-rel-prev'")
+    expect(head).toContain("key: 'seo-rel-next'")
+    // noindex 면 빈 객체 → computed 재계산으로 stale prev/next 가 client nav 에서 제거된다.
+    expect(head).toContain('if (isPageNoindex.value) return {}')
+    expect(head.indexOf('isPageNoindex.value')).toBeLessThan(head.indexOf("key: 'seo-rel-prev'"))
+    // watch 블록은 더 이상 link 를 imperative 하게 useHead 하지 않는다(누적·잔존 원인).
+    const watches = src.slice(src.indexOf('// ItemList 구조화 데이터 (non-trash only)'))
+    expect(watches).not.toContain('useHead({ link')
+    expect(watches).not.toContain("key: 'seo-rel-prev'")
   })
 })
 
