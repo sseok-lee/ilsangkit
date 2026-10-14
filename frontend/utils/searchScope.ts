@@ -1,7 +1,7 @@
 import { CATEGORY_META, FACILITY_CATEGORIES, type FacilityCategory } from '~/types/facility'
 
 export type SearchScope =
-  | { kind: 'facility'; category: FacilityCategory; citySlug?: string }
+  | { kind: 'facility'; category: FacilityCategory; citySlug?: string; districtSlug?: string }
   | { kind: 'realestate' }
 
 // 시설 스코프로 인정하는 카테고리(15). subway 는 역(station) 그룹 단위라
@@ -33,6 +33,11 @@ function contextCitySlug(route: RouteLike): string | undefined {
 export function resolveSearchScope(route: RouteLike): SearchScope {
   const paramCategory = route?.params?.category
   if (typeof paramCategory === 'string' && FACILITY_SCOPE_CATEGORIES.has(paramCategory)) {
+    const city = route?.params?.city
+    const district = route?.params?.district
+    if (paramCategory === 'trash' && typeof city === 'string' && city && typeof district === 'string' && district) {
+      return { kind: 'facility', category: 'trash', citySlug: contextCitySlug(route), districtSlug: district }
+    }
     return { kind: 'facility', category: paramCategory as FacilityCategory, citySlug: contextCitySlug(route) }
   }
   const firstSeg = (typeof route?.path === 'string' ? route.path : '').split('/').filter(Boolean)[0]
@@ -46,6 +51,10 @@ export function resolveSearchScope(route: RouteLike): SearchScope {
 export function buildSearchDestination(scope: SearchScope, keyword: string): string {
   const q = encodeURIComponent(keyword.trim())
   if (scope.kind === 'facility') {
+    if (scope.category === 'trash' && scope.citySlug && scope.districtSlug) {
+      // 원본 목록(source) 구·군은 시·도 동 목록에 나오지 않으므로 같은 지역 페이지 안에서 검색한다.
+      return `/${encodeURIComponent(scope.citySlug)}/${encodeURIComponent(scope.districtSlug)}/trash?keyword=${q}`
+    }
     const city = scope.citySlug ? `&city=${encodeURIComponent(scope.citySlug)}` : ''
     return `/${scope.category}?keyword=${q}${city}`
   }

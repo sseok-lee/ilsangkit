@@ -79,4 +79,25 @@ describe('RegionFacilityCategoryGrid', () => {
     expect(w.get('section#facilities').classes()).toContain('section-flat')
     expect(w.html()).not.toMatch(/rounded-xl|bg-primary\/5|slate-/)
   })
+
+  it('쓰레기 카드는 areas 모드면 "N개 지역", 다른 카테고리는 "N개"', () => {
+    const wrapper = mount(RegionFacilityCategoryGrid, {
+      props: { city: 'seoul', district: 'gangnam', total: 80, categories: { parking: 80, trash: 22 }, topCategories: ['parking'], wasteMode: 'areas' },
+      global: globalConfig,
+    })
+    const text = wrapper.text()
+    expect(text).toContain('22개 지역')
+    expect(text).toContain('80개')
+  })
+
+  it('쓰레기 카드는 source·legacy·미지정이면 "N건"', () => {
+    for (const wasteMode of ['source', 'legacy', undefined] as const) {
+      const wrapper = mount(RegionFacilityCategoryGrid, {
+        props: { city: 'gyeonggi', district: 'uiwang', total: 10, categories: { trash: 339 }, topCategories: [], wasteMode },
+        global: globalConfig,
+      })
+      expect(wrapper.text()).toContain('339건')
+      expect(wrapper.text()).not.toContain('339개')
+    }
+  })
 })

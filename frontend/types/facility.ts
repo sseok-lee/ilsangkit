@@ -671,7 +671,7 @@ export interface GroupedCategory {
   category: FacilityCategory
   label: string
   count: number
-  unit?: '곳' | '지역'
+  unit?: '곳' | '지역' | '건'
   items: Facility[]
 }
 

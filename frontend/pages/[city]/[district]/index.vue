@@ -45,6 +45,7 @@
           :total="areaData.facilities.total"
           :categories="sortedFacilityCategories"
           :top-categories="areaData.facilities.topCategories ?? []"
+          :waste-mode="areaData.facilities.wasteMode"
         />
 
         <!-- Ad: Facilities 후 -->

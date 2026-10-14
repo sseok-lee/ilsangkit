@@ -68,3 +68,18 @@ describe('scopePlaceholder', () => {
     expect(scopePlaceholder({ kind: 'realestate' })).toBe('아파트·단지·지역 검색')
   })
 })
+
+describe('지역 쓰레기 페이지 헤더 검색', () => {
+  it('/[city]/[district]/trash 에서는 같은 지역 페이지 ?keyword= 로 간다', () => {
+    const scope = resolveSearchScope({ path: '/gyeonggi/uiwang/trash', params: { city: 'gyeonggi', district: 'uiwang', category: 'trash' }, query: {} })
+    expect(buildSearchDestination(scope, '내손동')).toBe('/gyeonggi/uiwang/trash?keyword=%EB%82%B4%EC%86%90%EB%8F%99')
+  })
+  it('지역 페이지라도 trash 가 아니면 기존 목적지', () => {
+    const scope = resolveSearchScope({ path: '/seoul/gangnam/parking', params: { city: 'seoul', district: 'gangnam', category: 'parking' }, query: {} })
+    expect(buildSearchDestination(scope, '역삼')).toBe('/parking?keyword=%EC%97%AD%EC%82%BC&city=seoul')
+  })
+  it('최상위 /trash 는 기존 목적지', () => {
+    const scope = resolveSearchScope({ path: '/trash', params: { category: 'trash' }, query: { city: 'seoul' } })
+    expect(buildSearchDestination(scope, '역삼')).toBe('/trash?keyword=%EC%97%AD%EC%82%BC&city=seoul')
+  })
+})
