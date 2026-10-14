@@ -9,8 +9,20 @@ import { countWifiGroups, countWifiGroupsByDistrict } from './wifiService.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
 import { CATEGORY_REGISTRY } from './categoryRegistry.js';
 import type { FacilityCategory } from './categoryRegistry.js';
+import { getWasteDistrictDisplay } from './wasteAreaService.js';
+import type { WasteDistrictMode } from '../types/wasteArea.js';
+import { ServiceUnavailableError } from '../lib/errors.js';
 
 const ALL_CATEGORIES: FacilityCategory[] = ['toilet', 'wifi', 'clothes', 'parking', 'aed', 'library', 'hospital', 'pharmacy', 'park', 'school', 'market', 'childcare', 'ev-charger', 'sports'];
+
+/** 쓰레기배출은 시설이 아니고 단위(동 수/원본 건수)도 달라 합계·상위 카테고리에서 뺀다. */
+function facilityTotals(categories: Record<string, number>): { total: number; topCategories: string[] } {
+  const facilities = Object.entries(categories).filter(([cat]) => cat !== 'trash');
+  return {
+    total: facilities.reduce((sum, [, count]) => sum + count, 0),
+    topCategories: facilities.sort(([, a], [, b]) => b - a).slice(0, 3).map(([cat]) => cat),
+  };
+}
 
 // --- In-memory caches ---
 export const statsByCityCache = new Map<string, { data: unknown; expiresAt: number }>();
@@ -93,18 +105,13 @@ export async function getStatsByCity(citySlug: string): Promise<{
   }
   cityCategories.trash = trashTotal;
 
-  const total = Object.values(cityCategories).reduce((sum, c) => sum + c, 0);
-
-  const topCategories = Object.entries(cityCategories)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([cat]) => cat);
+  const { total, topCategories } = facilityTotals(cityCategories);
 
   // district별 total
   const districts = [...districtMap.entries()]
     .map(([district, cats]) => ({
       district,
-      total: Object.values(cats).reduce((sum, c) => sum + c, 0),
+      total: facilityTotals(cats).total,
     }))
     .filter((d) => d.total > 0)
     .sort((a, b) => a.district.localeCompare(b.district));
@@ -176,11 +183,7 @@ export async function getDistrictStatsByCity(citySlug: string): Promise<Map<stri
   const result = new Map<string, { total: number; categories: Record<string, number>; topCategories: string[] }>();
 
   for (const [district, categories] of districtMap) {
-    const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
-    const topCategories = Object.entries(categories)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 3)
-      .map(([cat]) => cat);
+    const { total, topCategories } = facilityTotals(categories);
     result.set(district, { total, categories, topCategories });
   }
 
@@ -195,11 +198,12 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
   total: number;
   categories: Record<string, number>;
   topCategories: string[];
+  wasteMode: WasteDistrictMode | 'legacy';
 } | null> {
   const cacheKey = `${citySlug}:${districtSlug}`;
   const cached = statsByDistrictCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.data as { total: number; categories: Record<string, number>; topCategories: string[] };
+    return cached.data as { total: number; categories: Record<string, number>; topCategories: string[]; wasteMode: WasteDistrictMode | 'legacy' };
   }
 
   const fullName = CITY_SLUG_TO_FULL[citySlug];
@@ -219,7 +223,7 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
   const where = { city: cityCondition, district: region.district };
   const trashWhere = { ...where, stagedMarker: null };
 
-  const [categoryCounts, trashCount] = await Promise.all([
+  const [categoryCounts, wasteDisplay] = await Promise.all([
     Promise.all(
       ALL_CATEGORIES.map(async (cat) => ({
         category: cat,
@@ -228,23 +232,24 @@ export async function getStatsByDistrict(citySlug: string, districtSlug: string)
           : await CATEGORY_REGISTRY[cat].model().count({ where }),
       }))
     ),
-    prisma.wasteSchedule.count({ where: trashWhere }),
+    getWasteDistrictDisplay(fullName, region.district).catch((err: unknown) => {
+      // 표시 건수 조회 실패는 허브 전체를 죽이지 않고 레거시 count 로 폴백한다.
+      if (err instanceof ServiceUnavailableError) return null;
+      throw err;
+    }),
   ]);
+  const legacyCount = wasteDisplay ? 0 : await prisma.wasteSchedule.count({ where: trashWhere });
 
   const categories: Record<string, number> = {};
   for (const { category, count } of categoryCounts) {
     categories[category] = count;
   }
-  categories.trash = trashCount;
+  categories.trash = wasteDisplay ? wasteDisplay.count : legacyCount;
+  const wasteMode: WasteDistrictMode | 'legacy' = wasteDisplay ? wasteDisplay.mode : 'legacy';
 
-  const total = Object.values(categories).reduce((sum, c) => sum + c, 0);
+  const { total, topCategories } = facilityTotals(categories);
 
-  const topCategories = Object.entries(categories)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([cat]) => cat);
-
-  const districtResult = { total, categories, topCategories };
+  const districtResult = { total, categories, topCategories, wasteMode };
   statsByDistrictCache.set(cacheKey, { data: districtResult, expiresAt: Date.now() + STATS_CACHE_TTL });
   return districtResult;
 }
