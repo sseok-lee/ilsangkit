@@ -4,6 +4,11 @@ export type MatchState = 'verified' | 'unresolved' | 'conflict';
 export type CoverageScope = 'whole' | 'partial' | 'conditional';
 export type WasteDistrictMode = 'areas' | 'source' | 'empty';
 
+export interface WasteDistrictDisplay {
+  mode: WasteDistrictMode;
+  count: number;
+}
+
 export interface Evidence {
   url: string;
   version: string;
