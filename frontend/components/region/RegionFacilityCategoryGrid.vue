@@ -19,7 +19,7 @@
               class="ml-1.5 text-[12px] font-semibold text-primary"
             >많은 시설</span>
           </span>
-          <span class="mt-0.5 block text-[13px] text-muted tabular-nums">{{ count.toLocaleString() }}개</span>
+          <span class="mt-0.5 block text-[13px] text-muted tabular-nums">{{ countLabel(cat, count) }}</span>
         </span>
         <span class="material-symbols-outlined text-[18px] text-faint group-hover:text-primary" aria-hidden="true">chevron_right</span>
       </NuxtLink>
@@ -32,11 +32,19 @@ import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory } from '~/types/facility'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 
-defineProps<{
+const props = defineProps<{
   city: string
   district: string
   total: number
   categories: Record<string, number>
   topCategories: string[]
+  wasteMode?: 'areas' | 'source' | 'empty' | 'legacy'
 }>()
+
+// 쓰레기배출은 시설이 아니라 지역 페이지와 같은 단위로 보여준다(동 목록=지역 수, 원본 목록=건수).
+function countLabel(cat: string | number, count: number): string {
+  const n = count.toLocaleString()
+  if (String(cat) !== 'trash') return `${n}개`
+  return props.wasteMode === 'areas' ? `${n}개 지역` : `${n}건`
+}
 </script>

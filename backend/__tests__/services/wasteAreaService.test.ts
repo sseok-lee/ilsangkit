@@ -16,9 +16,11 @@ vi.mock('../../src/lib/prisma.js', () => ({
 import {
   decideWasteDistrictMode,
   getWasteArea,
+  getWasteDistrictDisplay,
   hasPublishedWasteAreaDetailHistory,
   listIndexableWasteAreas,
   listWasteAreas,
+  wasteDistrictDisplayFromCounts,
 } from '../../src/services/wasteAreaService.js';
 
 const generationId = 'generation-1';
@@ -329,6 +331,69 @@ describe('listWasteAreas mode', () => {
 
     expect(result).not.toHaveProperty('mode');
     expect(prismaMock.wasteScheduleRevision.count).not.toHaveBeenCalled();
+  });
+});
+
+describe('wasteDistrictDisplayFromCounts', () => {
+  it('동이 있으면 areas 와 동 수', () => {
+    expect(wasteDistrictDisplayFromCounts(22, 1)).toEqual({ mode: 'areas', count: 22 });
+  });
+  it('동이 없고 원본이 있으면 source 와 원본 수', () => {
+    expect(wasteDistrictDisplayFromCounts(0, 339)).toEqual({ mode: 'source', count: 339 });
+  });
+  it('둘 다 없으면 empty 와 0', () => {
+    expect(wasteDistrictDisplayFromCounts(0, 0)).toEqual({ mode: 'empty', count: 0 });
+  });
+});
+
+describe('getWasteDistrictDisplay', () => {
+  it('플래그 off 면 null 이고 DB 를 조회하지 않는다', async () => {
+    process.env.WASTE_AREA_DISCOVERY_ENABLED = 'false';
+    await expect(getWasteDistrictDisplay('서울특별시', '강남구')).resolves.toBeNull();
+    expect(prismaMock.wastePublication.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('플래그 on 인데 활성 세대가 없으면 null', async () => {
+    prismaMock.wastePublication.findUnique.mockResolvedValue({ activeGenerationId: null });
+    await expect(getWasteDistrictDisplay('서울특별시', '강남구')).resolves.toBeNull();
+  });
+
+  it('확인된 동이 있으면 areas 와 동 수 (listWasteAreas 와 같은 mode)', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([areaEntry(101, '역삼1동'), areaEntry(102, '역삼2동')]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([
+      coverage(1, { areaId: 101 }),
+      coverage(1, { areaId: 102 }),
+    ]);
+    prismaMock.wasteScheduleRevision.count.mockResolvedValue(5);
+
+    const list = await listWasteAreas({ city: '서울', district: '강남구', page: 1, limit: 20 });
+    const display = await getWasteDistrictDisplay('서울', '강남구');
+
+    expect(display).toEqual({ mode: list.mode, count: 2 });
+    expect(display?.mode).toBe('areas');
+  });
+
+  it('동 0 + 원본 348건이면 source 와 원본 수', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleRevision.count.mockResolvedValue(348);
+
+    const list = await listWasteAreas({ city: '경기도', district: '의왕시', page: 1, limit: 20 });
+    const display = await getWasteDistrictDisplay('경기도', '의왕시');
+
+    expect(display).toEqual({ mode: 'source', count: 348 });
+    expect(display?.mode).toBe(list.mode);
+  });
+
+  it('동도 원본도 없으면 empty 와 0', async () => {
+    prismaMock.wasteAreaEntry.findMany.mockResolvedValue([]);
+    prismaMock.wasteScheduleCoverage.findMany.mockResolvedValue([]);
+
+    const list = await listWasteAreas({ city: '경상남도', district: '함안군', page: 1, limit: 20 });
+    const display = await getWasteDistrictDisplay('경상남도', '함안군');
+
+    expect(display).toEqual({ mode: 'empty', count: 0 });
+    expect(display?.mode).toBe(list.mode);
   });
 });
 

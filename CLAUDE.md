@@ -179,7 +179,10 @@ Nitro 서버사이드: 사이트맵(`/sitemap.xml`, `/sitemap/[...].ts`), OG 이
 ## Deploy
 - CI: GitHub Actions — `Test` 워크플로우(lint+test+build) 성공 시 `Deploy to Cafe24` 워크플로우 자동 트리거
 - Test: backend(MySQL 서비스 컨테이너 + prisma db push) / frontend(nuxt prepare + lint + test + build) 병렬
-- Deploy: backend/frontend 빌드 → SCP → 서버에서 `npm ci` + `prisma db push` + `pm2 restart`
+- Deploy: backend/frontend 빌드 → SCP → 서버에서 `scripts/deploy/fixed-deploy.sh` (`npm ci --omit=dev` + `prisma generate` + `pm2 delete/start` + release-readiness 헬스체크)
+- ⚠️ **배포는 DB 스키마를 바꾸지 않는다** (`db push`/`migrate deploy` 없음). 스키마 변경은 `backend/prisma/migrations/`에 마이그레이션을 추가하고, **코드 배포 전에** 운영에 수동 적용한다 — 새 Prisma 클라이언트가 새 컬럼을 SELECT 하므로 순서가 바뀌면 운영 쿼리가 깨진다
+  - 운영 적용: 백업(mysqldump) → `prisma migrate deploy` (또는 SQL 직접 적용 후 `prisma migrate resolve --applied <name>`) → `prisma migrate status`가 up to date 인지 확인
+  - `applyReleaseSchema` 등 Prisma 밖 경로로 스키마를 넣었다면 `migrate resolve --applied`로 `_prisma_migrations` 이력도 남긴다(안 남기면 이후 `migrate deploy`가 기존 테이블을 다시 만들려 한다)
 - 서버: Cafe24, PM2 (`ilsangkit-backend`, `ilsangkit-frontend`)
 - 프로덕션 도메인: `ilsangkit.co.kr`
 

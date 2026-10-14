@@ -9,6 +9,7 @@ import type {
   AreaSummary,
   CoverageScope,
   Evidence,
+  WasteDistrictDisplay,
   WasteDistrictMode,
 } from '../types/wasteArea.js';
 import type { WasteScheduleItem } from './wasteScheduleService.js';
@@ -116,6 +117,35 @@ export function decideWasteDistrictMode(areaCount: number, sourceCount: number):
   if (areaCount > 0) return 'areas';
   if (sourceCount > 0) return 'source';
   return 'empty';
+}
+
+/** 허브·검색이 지역 페이지와 같은 숫자를 보여주도록 mode 에 맞는 건수를 고른다. */
+export function wasteDistrictDisplayFromCounts(areaCount: number, sourceCount: number): WasteDistrictDisplay {
+  const mode = decideWasteDistrictMode(areaCount, sourceCount);
+  return { mode, count: mode === 'areas' ? areaCount : mode === 'source' ? sourceCount : 0 };
+}
+
+/**
+ * 구·군 쓰레기 페이지가 보여줄 mode 와 건수. 지역 페이지(listWasteAreas)와 같은 계산이다.
+ * 플래그 off 또는 활성 세대 없음 → null(호출자가 레거시 계산으로 폴백).
+ */
+export async function getWasteDistrictDisplay(city: string, district: string): Promise<WasteDistrictDisplay | null> {
+  if (!isWasteAreaDiscoveryEnabled()) return null;
+  let generationId: string;
+  try {
+    generationId = await requireActiveWasteGeneration();
+  } catch (error) {
+    if (error instanceof ServiceUnavailableError) return null;
+    throw error;
+  }
+  const requestDate = new Date();
+  const query = { city, district, page: 1, limit: 1 };
+  return translateAreaRead(async () => {
+    const entries = (await readDongEntries(generationId, query, requestDate))
+      .filter((entry) => isEffectiveRow(entry, requestDate));
+    const areaCount = (await buildSummaries(generationId, entries, requestDate)).length;
+    return wasteDistrictDisplayFromCounts(areaCount, await countActiveSourceRevisions(generationId, query));
+  });
 }
 
 export async function getWasteArea(id: number): Promise<AreaDetail | null> {
