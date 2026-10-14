@@ -21,7 +21,9 @@ const DETAIL_PAGES = [
 ]
 
 function source(rel: string): string {
-  const root = process.cwd().endsWith('/frontend') ? process.cwd() : resolve(process.cwd(), 'frontend')
+  const root = process.cwd().endsWith('/frontend')
+    ? process.cwd()
+    : resolve(process.cwd(), 'frontend')
   return readFileSync(resolve(root, rel), 'utf8')
 }
 
@@ -87,23 +89,20 @@ describe('상세 폴드 첫 광고 규격 상한', () => {
     })
   }
 
-  it('sizing="fixed" 는 full-width-responsive 를 끈다 — full-bleed·z-index 제거의 근거', () => {
-    const s = source('components/ads/AdBanner.vue')
-    expect(s).toMatch(/isCompactMobileActive\.value \|\| props\.sizing === 'fixed'\s*\?\s*'false'/)
-  })
+  // Fixed full-width behavior is exercised on the mounted component in AdBanner.test.ts.
 
   it('폴드 아래 슬롯은 auto 를 유지한다 — 부동산 상세 나머지 3개', () => {
     const s = source('pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
-    const slots = [...s.matchAll(/<AdBanner\b[^>]*>/g)].map(match => match[0])
+    const slots = [...s.matchAll(/<AdBanner\b[^>]*>/g)].map((match) => match[0])
     expect(slots).toHaveLength(4)
 
-    const fixedSlots = slots.filter(tag => tag.includes('sizing="fixed"'))
+    const fixedSlots = slots.filter((tag) => tag.includes('sizing="fixed"'))
     expect(fixedSlots).toHaveLength(1)
     expect(fixedSlots[0]).toContain(':fixed-height="280"')
     expect(fixedSlots[0]).toContain('estate-ad-slot--first')
 
-    const autoSlots = slots.filter(tag => !tag.includes('sizing="fixed"'))
+    const autoSlots = slots.filter((tag) => !tag.includes('sizing="fixed"'))
     expect(autoSlots).toHaveLength(3)
-    expect(autoSlots.every(tag => tag.includes('estate-ad-slot'))).toBe(true)
+    expect(autoSlots.every((tag) => tag.includes('estate-ad-slot'))).toBe(true)
   })
 })

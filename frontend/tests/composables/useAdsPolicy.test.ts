@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { defineComponent, h, nextTick, reactive, ref } from 'vue'
+import { defineComponent, h, nextTick, reactive } from 'vue'
 import { mount } from '@vue/test-utils'
-import { isBotSignature, useAdsEnabled, useAdsPolicy, suppressAds, markAdsBlocked, isAdFreePath, canLoadAdScript } from '~/composables/useAdsPolicy'
+import {
+  isBotSignature,
+  useAdsEnabled,
+  useAdsPolicy,
+  suppressAds,
+  isAdFreePath,
+  canLoadAdScript,
+} from '~/composables/useAdsPolicy'
 
 const realConfig = (globalThis as any).useRuntimeConfig
 const realRoute = (globalThis as any).useRoute
@@ -11,8 +18,14 @@ const realNavigatorWebdriver = navigator.webdriver
 afterEach(() => {
   ;(globalThis as any).useRuntimeConfig = realConfig
   ;(globalThis as any).useRoute = realRoute
-  Object.defineProperty(navigator, 'userAgent', { value: realNavigatorUserAgent, configurable: true })
-  Object.defineProperty(navigator, 'webdriver', { value: realNavigatorWebdriver, configurable: true })
+  Object.defineProperty(navigator, 'userAgent', {
+    value: realNavigatorUserAgent,
+    configurable: true,
+  })
+  Object.defineProperty(navigator, 'webdriver', {
+    value: realNavigatorWebdriver,
+    configurable: true,
+  })
   ;(globalThis as any).__resetUseState?.()
   sessionStorage.clear()
 })
@@ -32,13 +45,17 @@ describe('isBotSignature', () => {
     expect(isBotSignature('compatible; Amazonbot/0.1', false)).toBe(true)
   })
   it('실 iPhone Safari는 봇 아님', () => {
-    expect(isBotSignature('Mozilla/5.0 (iPhone; CPU iPhone OS 18_5) Safari/604.1', false)).toBe(false)
+    expect(isBotSignature('Mozilla/5.0 (iPhone; CPU iPhone OS 18_5) Safari/604.1', false)).toBe(
+      false
+    )
   })
   it('네이버 인앱은 webdriver여도 allowlist-wins로 통과', () => {
     expect(isBotSignature('Mozilla/5.0 ... NAVER(inapp; search; 2100; 12.21)', true)).toBe(false)
   })
   it('SamsungBrowser는 봇 아님', () => {
-    expect(isBotSignature('Mozilla/5.0 (Linux; Android 10) SamsungBrowser/30.0 Chrome/143', false)).toBe(false)
+    expect(
+      isBotSignature('Mozilla/5.0 (Linux; Android 10) SamsungBrowser/30.0 Chrome/143', false)
+    ).toBe(false)
   })
 })
 
@@ -54,7 +71,10 @@ describe('useAdsEnabled', () => {
 
 describe('canLoadAdScript', () => {
   it('webdriver 봇 환경에서는 AdSense 스크립트를 즉시 싣지 않는다', () => {
-    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 Chrome/146', configurable: true })
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 Chrome/146',
+      configurable: true,
+    })
     Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true })
 
     expect(canLoadAdScript()).toBe(false)
@@ -83,7 +103,7 @@ describe('useAdsPolicy.shouldServeAds', () => {
     const RuntimeAdSlot = defineComponent({
       setup() {
         const { shouldServeAds } = useAdsPolicy()
-        return () => shouldServeAds.value ? h('div', { class: 'ad-slot' }, 'ad') : null
+        return () => (shouldServeAds.value ? h('div', { class: 'ad-slot' }, 'ad') : null)
       },
     })
     const wrapper = mount(RuntimeAdSlot)
@@ -94,7 +114,10 @@ describe('useAdsPolicy.shouldServeAds', () => {
     expect(wrapper.find('.ad-slot').exists()).toBe(false)
   })
   it('webdriver 봇 판정은 mounted 이후 반영해 hydration 첫 렌더를 안정화한다', async () => {
-    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 HeadlessChrome/146', configurable: true })
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 HeadlessChrome/146',
+      configurable: true,
+    })
     Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true })
 
     // 컴포넌트 mounted 전에는 SSR과 같은 값(true)을 유지해야 hydration mismatch가 나지 않는다.
@@ -103,7 +126,7 @@ describe('useAdsPolicy.shouldServeAds', () => {
     const RuntimeAdSlot = defineComponent({
       setup() {
         const { shouldServeAds } = useAdsPolicy()
-        return () => shouldServeAds.value ? h('div', { class: 'ad-slot' }, 'ad') : null
+        return () => (shouldServeAds.value ? h('div', { class: 'ad-slot' }, 'ad') : null)
       },
     })
     const wrapper = mount(RuntimeAdSlot)
@@ -117,16 +140,11 @@ describe('useAdsPolicy.shouldServeAds', () => {
   })
 })
 
-describe('useAdsPolicy — 애드블록', () => {
-  it('ads:blocked state가 true면 shouldServeAds=false', () => {
+describe('legacy blocked cache', () => {
+  it('ignores old reactive and session blocking values', () => {
     ;(globalThis as any).useState('ads:blocked', () => false).value = true
-    expect(useAdsPolicy().shouldServeAds.value).toBe(false)
-  })
-  it('markAdsBlocked는 ref를 true로 + sessionStorage 세팅', () => {
-    const r = ref(false)
-    markAdsBlocked(r)
-    expect(r.value).toBe(true)
-    expect(sessionStorage.getItem('ads:blocked')).toBe('1')
+    sessionStorage.setItem('ads:blocked', '1')
+    expect(useAdsPolicy().shouldServeAds.value).toBe(true)
   })
 })
 

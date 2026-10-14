@@ -1,7 +1,8 @@
-import { computed, getCurrentInstance, onMounted, type ComputedRef, type Ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, type ComputedRef } from 'vue'
 
 // 광고를 발화하면 안 되는 비인간/자동화 UA. 'Headless'는 구·신 헤드리스 모두 커버.
-const BOT_UA = /Headless|playwright|puppeteer|lighthouse|bot|crawl|spider|slurp|bingbot|googlebot|yeti|yandex|amazonbot|bytespider|ahrefs|semrush/i
+const BOT_UA =
+  /Headless|playwright|puppeteer|lighthouse|bot|crawl|spider|slurp|bingbot|googlebot|yeti|yandex|amazonbot|bytespider|ahrefs|semrush/i
 // 실모바일/인앱 — 봇 매칭보다 우선(allowlist-wins). 과탐=수익 손실 방지.
 const HUMAN_UA = /NAVER\(inapp|SamsungBrowser|FBAN|FBAV|Instagram|KAKAOTALK|Line\//i
 
@@ -9,7 +10,7 @@ const HUMAN_UA = /NAVER\(inapp|SamsungBrowser|FBAN|FBAV|Instagram|KAKAOTALK|Line
 export function isBotSignature(userAgent: string, webdriver: boolean): boolean {
   if (!userAgent) return false
   if (HUMAN_UA.test(userAgent)) return false // allowlist-wins (네이버 인앱이 webdriver여도 통과)
-  if (webdriver) return true                  // Playwright/Selenium (단, Lighthouse는 CDP라 못 잡음)
+  if (webdriver) return true // Playwright/Selenium (단, Lighthouse는 CDP라 못 잡음)
   return BOT_UA.test(userAgent)
 }
 
@@ -41,14 +42,16 @@ const AD_FREE_PATTERNS: RegExp[] = []
 /** 경로 끝 슬래시만 다른 경우(/real-estate/)도 같은 페이지다. */
 export function isAdFreePath(pathname: string): boolean {
   const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
-  return AD_FREE_PATHS.has(normalized) || AD_FREE_PATTERNS.some((pattern) => pattern.test(normalized))
+  return (
+    AD_FREE_PATHS.has(normalized) || AD_FREE_PATTERNS.some((pattern) => pattern.test(normalized))
+  )
 }
 
 /**
  * 플러그인(스크립트 주입)용 — per-page suppression은 보지 않음(전역·1회).
  *
- * ⚠️ 이 판정은 **최초 로드 시점의 경로**로만 이뤄진다. 다른 페이지에서 SPA 소프트
- * 내비게이션으로 /real-estate 에 들어오면 스크립트가 이미 주입돼 있어 막지 못한다.
+ * 최초 적격 경로와 실패 후 다음 경로의 재시도 전에 평가한다. 이미 로드된 뒤 SPA로
+ * /real-estate 에 들어오면 SDK가 삽입한 자동 광고를 이 함수로 되돌릴 수는 없다.
  * GNB·푸터가 HardLink(전체 리로드)라 실사용 유입 대부분은 이 경로를 탄다.
  */
 export function canLoadAdScript(): boolean {
@@ -61,22 +64,10 @@ export function suppressAds(value: boolean): void {
   useState<boolean>('ads:suppressed', () => false).value = value
 }
 
-/** 애드블록(스크립트 로드 실패) 감지 시 호출. 넘겨받은 blocked ref 를 true 로 + 세션 저장.
- *  ref 를 인자로 받아 async 콜백(plugin onerror/timeout)에서 useState 문맥 없이 쓸 수 있게 한다. */
-export function markAdsBlocked(blocked: Ref<boolean>): void {
-  blocked.value = true
-  try {
-    sessionStorage.setItem('ads:blocked', '1')
-  } catch {
-    // SSR(sessionStorage 미정의)·프라이빗 모드 등 — 무시(런타임 state 만으로 동작)
-  }
-}
-
 /** AdBanner용 — 3요소 전부. shouldServeAds는 suppression을 추적하는 reactive. */
 export function useAdsPolicy(): { shouldServeAds: ComputedRef<boolean> } {
   const adsEnabled = useAdsEnabled()
   const suppressed = useState<boolean>('ads:suppressed', () => false)
-  const blocked = useState<boolean>('ads:blocked', () => false)
   const botDetected = useState<boolean>('ads:bot-detected', () => false)
   const route = useRoute()
 
@@ -91,11 +82,7 @@ export function useAdsPolicy(): { shouldServeAds: ComputedRef<boolean> } {
 
   const shouldServeAds = computed(() => {
     const currentPath = typeof route.path === 'string' ? route.path : ''
-    return adsEnabled
-      && !botDetected.value
-      && !suppressed.value
-      && !blocked.value
-      && !isAdFreePath(currentPath)
+    return adsEnabled && !botDetected.value && !suppressed.value && !isAdFreePath(currentPath)
   })
   return { shouldServeAds }
 }
