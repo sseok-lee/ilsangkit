@@ -2,7 +2,7 @@
 // @SPEC docs/planning/02-trd.md#API-설계
 
 import { prisma } from '../lib/prisma.js';
-import { ValidationError } from '../lib/errors.js';
+import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
 import { FacilitySearchInput } from '../schemas/facility.js';
 import type { BrowseCategory, BrowseItem } from '../schemas/facilityBrowse.js';
 import { PAGINATION, SEARCH_DEFAULTS, NEARBY_SUMMARY } from '../constants/index.js';
@@ -41,7 +41,8 @@ import { wifiGroupSearch } from './wifiService.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRecovery, type Recovery } from './search/searchRecovery.js';
 import { escapeSqlLikeKeyword } from './search/sqlLike.js';
-import { isWasteAreaDiscoveryEnabled, listWasteAreas } from './wasteAreaService.js';
+import { getWasteDistrictDisplay, isWasteAreaDiscoveryEnabled, listWasteAreas } from './wasteAreaService.js';
+import { getByRegion as getWasteSchedulesByRegion } from './wasteScheduleService.js';
 import type { AreaSummary } from '../types/wasteArea.js';
 import {
   buildStratifiedIdsSql,
@@ -441,7 +442,7 @@ interface GroupedCategoryResult {
   category: FacilityCategory | 'trash';
   label: string;
   count: number;
-  unit?: '시설' | '충전소' | '장소' | '역' | '지역';
+  unit?: '시설' | '충전소' | '장소' | '역' | '지역' | '건';
   items: FacilityItem[];
 }
 
@@ -642,21 +643,44 @@ export async function searchGrouped(params: FacilitySearchInput): Promise<Groupe
   // categoryToken이 trash이거나 미특정일 때만 조회
   if (shouldSearchTrash) {
     if (isWasteAreaDiscoveryEnabled()) {
-      const trash = await listWasteAreas({
-        city: effectiveCity,
-        district: effectiveDistrict,
-        keyword: nameText,
-        page: 1,
-        limit: 3,
-      });
-      if (trash.total > 0) {
-        categories.push({
-          category: 'trash',
-          label: '쓰레기배출',
-          count: trash.total,
-          unit: '지역',
-          items: trash.items.map(mapWasteAreaToFacilityItem),
-        });
+      try {
+        // 지역 페이지와 같은 mode 를 따른다 — source 모드 구·군은 동 목록이 0 이라 원본으로 보여준다.
+        const display = effectiveCity && effectiveDistrict
+          ? await getWasteDistrictDisplay(effectiveCity, effectiveDistrict)
+          : null;
+        if (display?.mode === 'source') {
+          const source = await getWasteSchedulesByRegion(effectiveCity, effectiveDistrict, nameText || undefined, { page: 1, limit: 3 });
+          if (source.total > 0) {
+            categories.push({
+              category: 'trash',
+              label: '쓰레기배출',
+              count: source.total,
+              unit: '건',
+              items: source.items.map(mapWasteScheduleToFacilityItem),
+            });
+          }
+        } else {
+          const trash = await listWasteAreas({
+            city: effectiveCity,
+            district: effectiveDistrict,
+            keyword: nameText,
+            page: 1,
+            limit: 3,
+          });
+          if (trash.total > 0) {
+            categories.push({
+              category: 'trash',
+              label: '쓰레기배출',
+              count: trash.total,
+              unit: '지역',
+              items: trash.items.map(mapWasteAreaToFacilityItem),
+            });
+          }
+        }
+      } catch (error) {
+        // 활성 세대가 없을 때(발행 전·롤백 직후) 통합검색 전체가 503 이 되지 않도록 trash 그룹만 뺀다.
+        if (!(error instanceof ServiceUnavailableError)) throw error;
+        console.warn('[searchGrouped] waste search skipped:', error.message);
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
