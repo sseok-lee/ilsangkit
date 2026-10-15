@@ -2,8 +2,12 @@ import { expect, type BrowserContext, type Page, type Route } from '@playwright/
 
 export interface FakeAdRequest {
   order: number
+  intendedOrder: number
   slot: string
-  format: string
+  format: string | null
+  fullWidth: string | null
+  width: number
+  height: number
 }
 export interface FakeAds {
   pushCount: number
@@ -22,8 +26,8 @@ declare global {
 }
 
 // Indices address recorded requests, never an arbitrary/unrequested DOM element.
-// This verifies the app's push intent, not Google's internal element selection.
-const sdk = `(() => {
+// Consume the first available INS like the SDK; diagnostic intent only checks attribution.
+const sdk = (resizeOnPush?: number) => `(() => {
   const queued = window.adsbygoogle;
   const requested = new WeakSet();
   const targets = [];
@@ -55,15 +59,22 @@ const sdk = `(() => {
     window.__fakeAds.pushCount++;
     const events = window.__ilsangkitAdDebug?.snapshot() ?? [];
     const event = [...events].reverse().find((entry) => entry.kind === 'push-attempt');
-    const ins = event?.order
-      ? document.querySelectorAll('.ad-banner ins.adsbygoogle')[event.order - 1]
-      : null;
-    if (!ins) instrumentationFailure('Fake SDK cannot identify the requested slot');
+    const slots = Array.from(document.querySelectorAll('.ad-banner ins'));
+    const intended = event?.order ? slots[event.order - 1] : null;
+    if (!intended) instrumentationFailure('Fake SDK cannot identify the requested slot');
+    const ins = Array.from(document.getElementsByTagName('ins')).find((el) =>
+      /(^| )adsbygoogle($| )/.test(el.className) &&
+      !['done', 'reserved'].includes(el.getAttribute('data-adsbygoogle-status')));
+    if (!ins) instrumentationFailure('Fake SDK found no available slot');
     if (requested.has(ins)) instrumentationFailure('Fake SDK received a repeated request');
     requested.add(ins);
     targets.push(ins);
-    window.__fakeAds.requests.push({ order: event.order,
-      slot: ins.getAttribute('data-ad-slot'), format: ins.getAttribute('data-ad-format') });
+    window.__fakeAds.requests.push({ order: slots.indexOf(ins) + 1, intendedOrder: event.order,
+      slot: ins.getAttribute('data-ad-slot'), format: ins.getAttribute('data-ad-format'),
+      fullWidth: ins.getAttribute('data-full-width-responsive'),
+      width: ins.getBoundingClientRect().width, height: ins.getBoundingClientRect().height });
+    if (ins !== intended) instrumentationFailure('Fake SDK consumed a different slot than the request intent');
+    if (${resizeOnPush !== undefined}) window.__fakeAds.resize(targets.length - 1, ${resizeOnPush ?? 0});
     if (window.__fakeAds.throwNext) {
       window.__fakeAds.throwNext = false;
       throw new TypeError('fake SDK failure');
@@ -75,7 +86,7 @@ const sdk = `(() => {
 
 export async function installFakeAdSdk(
   context: BrowserContext,
-  options: { hold?: boolean; failAfterMs?: number } = {}
+  options: { hold?: boolean; failAfterMs?: number; resizeOnPush?: number } = {}
 ) {
   let attempts = 0
   const pending: Route[] = []
@@ -92,7 +103,11 @@ export async function installFakeAdSdk(
           await new Promise((resolve) => setTimeout(resolve, options.failAfterMs))
         await route.abort('failed')
       } else if (options.hold) pending.push(route)
-      else await route.fulfill({ contentType: 'application/javascript', body: sdk })
+      else
+        await route.fulfill({
+          contentType: 'application/javascript',
+          body: sdk(options.resizeOnPush),
+        })
     } else if (url.origin === 'http://127.0.0.1:13010') await route.continue()
     else {
       blocked.push(url.origin)
@@ -124,7 +139,9 @@ export async function installFakeAdSdk(
     },
     blocked,
     async releaseSdk() {
-      await pending.shift()?.fulfill({ contentType: 'application/javascript', body: sdk })
+      await pending
+        .shift()
+        ?.fulfill({ contentType: 'application/javascript', body: sdk(options.resizeOnPush) })
     },
     async failSdk() {
       await pending.shift()?.abort('failed')

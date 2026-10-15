@@ -25,22 +25,20 @@ declare global {
   }
 }
 
-export async function installAdFrameRecorder(context: BrowserContext): Promise<void> {
-  await context.addInitScript(() => {
+export async function installAdFrameRecorder(
+  context: BrowserContext,
+  options: { afterSelector?: string } = {}
+): Promise<void> {
+  await context.addInitScript((afterSelector) => {
     window.__adFrames = []
     window.__adPhase = 'initial'
     function record(at: number) {
-      const after = document.querySelector<HTMLElement>('#after')
+      const after = document.querySelector<HTMLElement>(afterSelector)
       const elements = Array.from(document.querySelectorAll<HTMLElement>('.ad-banner'))
       const styleReady =
         document.body &&
         getComputedStyle(document.body).getPropertyValue('--ad-fixture-ready').trim() === '1'
-      if (
-        styleReady &&
-        after?.isConnected &&
-        elements.length &&
-        elements.every((el) => el.isConnected)
-      ) {
+      if (styleReady && after?.isConnected && elements.every((el) => el.isConnected)) {
         const afterY = after.getBoundingClientRect().top + window.scrollY
         const slots = elements.map((el) => {
           const css = getComputedStyle(el)
@@ -67,7 +65,7 @@ export async function installAdFrameRecorder(context: BrowserContext): Promise<v
       requestAnimationFrame(record)
     }
     requestAnimationFrame(record)
-  })
+  }, options.afterSelector ?? '#after')
 }
 
 export async function markAdPhase(page: Page, phase: AdPhase): Promise<void> {

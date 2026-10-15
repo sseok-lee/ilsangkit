@@ -68,6 +68,12 @@
           <AddressLine :address="fullAddress" />
         </p>
 
+        <AdBanner
+          data-testid="building-header-ad"
+          class="estate-header-mobile-ad"
+          variant="mobile-banner-320x100"
+          only="mobile"
+        />
         <SummaryRow lead class="mt-[22px] md:mt-7" aria-label="실거래 요약" :items="estateSummaryItems" />
         <div v-if="overviewError" class="estate-inline-error" role="alert">
           <span>최근 매매 요약을 불러오지 못했습니다. 가격 흐름과 거래 내역은 마지막 성공 데이터를 유지합니다.</span>
@@ -1790,6 +1796,10 @@ const hasNearby = computed(() =>
 </script>
 
 <style scoped>
+.estate-header-mobile-ad {
+  margin: 16px 0 0;
+}
+
 .estate-record-note {
   margin: 8px 0 16px;
   max-width: 36ch;

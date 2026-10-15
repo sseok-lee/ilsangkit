@@ -8,6 +8,196 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe('manual slot requests', () => {
+  it('waits for 320 content pixels, then requests once', async () => {
+    h = await mountRequestHarness({ minWidth: 320, width: 319.75 })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.beforePush).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-width')
+    expect(h.request.attempted.value).toBe(false)
+    expect(h.request.outcome.value).toBe('idle')
+    h.request.reevaluate()
+    h.triggerResize()
+    await h.flush()
+    expect(h.events.mock.calls.filter(([kind]) => kind === 'waiting-width')).toHaveLength(1)
+    h.setWidth(320)
+    h.triggerResize()
+    await h.flush()
+    expect(h.beforePush).toHaveBeenCalledTimes(1)
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(h.request.attempted.value).toBe(true)
+    h.triggerResize()
+    h.request.reevaluate()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(h.observers.every(({ elements }) => elements.size === 0)).toBe(true)
+  })
+  it.each([
+    { width: 0, requests: 0 },
+    { width: 319, requests: 0 },
+    { width: 320, requests: 1 },
+    { width: 353, requests: 1 },
+    { width: NaN, requests: 0 },
+    { width: Infinity, requests: 0 },
+  ])('requires finite content width at the threshold ($width)', async ({ width, requests }) => {
+    h = await mountRequestHarness({ minWidth: 320, width })
+    await h.flush()
+    expect(h.beforePush).toHaveBeenCalledTimes(requests)
+    expect(h.push).toHaveBeenCalledTimes(requests)
+    expect(h.request.attempted.value).toBe(requests === 1)
+    if (!requests) {
+      expect(h.events).toHaveBeenCalledWith('waiting-width')
+      h.setWidth(320)
+      h.triggerResize()
+      await h.flush()
+      expect(h.push).toHaveBeenCalledTimes(1)
+    }
+  })
+  it('uses the parent width even when the child has 320 pixels', async () => {
+    h = await mountRequestHarness({ minWidth: 320, width: 319, ready: false })
+    await h.flush()
+    h.setElementWidth(h.element.value!, 320)
+    h.setReady(true)
+    await h.flush()
+    expect(h.element.value!.getBoundingClientRect().width).toBe(320)
+    expect(h.push).not.toHaveBeenCalled()
+    h.setElementWidth(h.container.value!, 320)
+    h.triggerResize()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('subtracts both padding and borders from the parent before requesting', async () => {
+    h = await mountRequestHarness({ minWidth: 320, width: 340, ready: false })
+    await h.flush()
+    h.container.value!.style.cssText = 'padding: 0 10px; border: 1px solid black'
+    h.setReady(true)
+    await h.flush()
+    expect(h.beforePush).not.toHaveBeenCalled()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-width')
+    h.setWidth(342)
+    h.triggerResize()
+    await h.flush()
+    expect(h.beforePush).toHaveBeenCalledTimes(1)
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('keeps the default slot offsetWidth contract at one pixel', async () => {
+    h = await mountRequestHarness({ width: 1, ready: false })
+    await h.flush()
+    h.setElementWidth(h.container.value!, 0)
+    h.container.value!.style.cssText = 'padding: 10px; border: 1px solid black'
+    h.setReady(true)
+    await h.flush()
+    expect(h.beforePush).toHaveBeenCalledTimes(1)
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it.each(['sdk', 'proximity', 'visibility'] as const)(
+    'rechecks a reduced width after waiting for %s and recovers',
+    async (wait) => {
+      h = await mountRequestHarness({
+        minWidth: 320,
+        width: 320,
+        ready: wait !== 'sdk',
+        near: wait !== 'proximity',
+        visible: wait !== 'visibility',
+      })
+      await h.flush()
+      expect(h.push).not.toHaveBeenCalled()
+      h.setWidth(319.75)
+      if (wait === 'sdk') h.setReady(true)
+      if (wait === 'proximity') h.enterViewport()
+      if (wait === 'visibility') h.setVisibility('visible')
+      await h.flush()
+      expect(h.beforePush).not.toHaveBeenCalled()
+      expect(h.push).not.toHaveBeenCalled()
+      expect(h.events).toHaveBeenCalledWith('waiting-width')
+      expect(h.request.attempted.value).toBe(false)
+      h.leaveViewport()
+      h.setWidth(320)
+      h.triggerResize()
+      await h.flush()
+      expect(h.push).toHaveBeenCalledTimes(1)
+    }
+  )
+  it.each([undefined, 320])('rechecks width immediately before marking an attempt (minWidth %s)', async (minWidth) => {
+    h = await mountRequestHarness({ minWidth, width: 320, near: false })
+    await h.flush()
+    const parent = h.container.value!
+    const property = minWidth === undefined ? 'offsetWidth' : 'getBoundingClientRect'
+    const descriptor = Object.getOwnPropertyDescriptor(parent, property)
+    let reads = 0
+    Object.defineProperty(parent, property, {
+      configurable: true,
+      ...(minWidth === undefined
+        ? { get: () => reads++ === 0 ? 320 : 0 }
+        : { value: () => new DOMRect(0, 0, reads++ === 0 ? 320 : 319.75, 0) }),
+    })
+    h.enterViewport()
+    await h.flush()
+    expect(h.beforePush).not.toHaveBeenCalled()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.request.attempted.value).toBe(false)
+    expect(h.request.outcome.value).toBe('idle')
+    expect(h.events).toHaveBeenCalledWith('waiting-width')
+    expect(h.observers.some(({ elements }) => elements.has(parent))).toBe(true)
+    if (descriptor) Object.defineProperty(parent, property, descriptor)
+    else Reflect.deleteProperty(parent, property)
+    h.triggerResize()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('recovers to minimum width with the window resize fallback and removes it', async () => {
+    const remove = vi.spyOn(window, 'removeEventListener')
+    h = await mountRequestHarness({ minWidth: 320, width: 319.75, resizeObserver: false })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setWidth(320)
+    window.dispatchEvent(new Event('resize'))
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(remove).toHaveBeenCalledWith('resize', expect.any(Function))
+    window.dispatchEvent(new Event('resize'))
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('ignores stale minimum-width callbacks after clearing, replacement, policy off and unmount', async () => {
+    h = await mountRequestHarness({ minWidth: 320, width: 319.75 })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    const old = h.observers.find(({ elements }) => elements.size)!
+    const retry = () => old.callback([], {} as ResizeObserver)
+    h.request.clearPendingAdRequest()
+    h.setWidth(320)
+    retry()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setWidth(319.75)
+    h.replaceElement()
+    await h.flush()
+    h.setWidth(320)
+    retry()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setAllowed(false)
+    await h.flush()
+    retry()
+    h.triggerResize()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setWidth(319.75)
+    h.setAllowed(true)
+    await h.flush()
+    const latest = h.observers.find(({ elements }) => elements.size)!
+    h.unmount()
+    h.setWidth(320)
+    retry()
+    latest.callback([], {} as ResizeObserver)
+    window.dispatchEvent(new Event('resize'))
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.observers.every(({ elements }) => elements.size === 0)).toBe(true)
+    expect(h.intersections.every(({ elements }) => elements.size === 0)).toBe(true)
+  })
   it('remembers proximity while waiting and requires it again for a new ins', async () => {
     h = await mountRequestHarness({ ready: false, near: false })
     await h.flush()

@@ -13,8 +13,42 @@ export interface AdRequestOptions {
   sdkReady: () => boolean
   beforePush: (ins: HTMLElement) => void
   onEvent: (event: RequestEvent, errorKind?: 'type-error' | 'error' | 'unknown') => void
+  minWidth?: number
 }
 type Outcome = 'idle' | 'returned' | 'error'
+
+// Only elements registered by this request helper belong to the app. Never
+// change provider-created elements or forge data-adsbygoogle-status.
+const ownedElements = new Set<HTMLElement>()
+
+function pushOwnedAd(ins: HTMLElement, push: () => void) {
+  // The loaded SDK selects the first available INS synchronously for push({}).
+  // Withhold other owned candidates for this call, including failed attempts
+  // that the SDK never marked done. Their guards/sizing must run on their turn.
+  const withheld = Array.from(ownedElements).filter(
+    (element) =>
+      element !== ins &&
+      element.classList.contains('adsbygoogle') &&
+      !['done', 'reserved'].includes(element.dataset.adsbygoogleStatus ?? '')
+  )
+  try {
+    for (const element of withheld) element.classList.remove('adsbygoogle')
+    push()
+  } finally {
+    // Restore only our token; preserve all other SDK class/style mutations.
+    for (const element of withheld) element.classList.add('adsbygoogle')
+  }
+}
+
+export function measureAdContentWidth(element: HTMLElement): number {
+  if (!import.meta.client) return 0
+  const css = getComputedStyle(element)
+  const px = (value: string) => Number.parseFloat(value) || 0
+  const width = element.getBoundingClientRect().width
+    - px(css.paddingLeft) - px(css.paddingRight)
+    - px(css.borderLeftWidth) - px(css.borderRightWidth)
+  return Number.isFinite(width) ? Math.max(0, width) : 0
+}
 
 export function useDeferredAdSenseRequest(
   container: Ref<HTMLElement | null>,
@@ -78,6 +112,27 @@ export function useDeferredAdSenseRequest(
       clearPendingAdRequest()
       return
     }
+    const hasEnoughWidth = () => {
+      const width =
+        options.minWidth === undefined ? parent.offsetWidth : measureAdContentWidth(parent)
+      return Number.isFinite(width) && width > 0 && width >= (options.minWidth ?? 0)
+    }
+    const waitForWidth = () => {
+      stopVisibility()
+      reportWait('waiting-width')
+      if (!observer && !resizeFallback) {
+        const retry = () => {
+          if (!disposed && token === generation && ins === options.element.value) reevaluate()
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+          observer = new ResizeObserver(retry)
+          observer.observe(parent)
+        } else {
+          resizeFallback = retry
+          window.addEventListener('resize', retry)
+        }
+      }
+    }
     // Observe before SDK/width waits so an early approach qualifies this ins.
     if (!nearElements.has(ins) && !intersection) {
       if (typeof IntersectionObserver === 'undefined') nearElements.add(ins)
@@ -115,21 +170,8 @@ export function useDeferredAdSenseRequest(
       stopVisibility()
       return
     }
-    if (!(parent.offsetWidth > 0) || !Number.isFinite(parent.offsetWidth)) {
-      stopVisibility()
-      reportWait('waiting-width')
-      if (!observer && !resizeFallback) {
-        const retry = () => {
-          if (!disposed && token === generation && ins === options.element.value) reevaluate()
-        }
-        if (typeof ResizeObserver !== 'undefined') {
-          observer = new ResizeObserver(retry)
-          observer.observe(parent)
-        } else {
-          resizeFallback = retry
-          window.addEventListener('resize', retry)
-        }
-      }
+    if (!hasEnoughWidth()) {
+      waitForWidth()
       return
     }
     stopResize()
@@ -161,6 +203,10 @@ export function useDeferredAdSenseRequest(
       attempts.has(ins)
     )
       return
+    if (!hasEnoughWidth()) {
+      waitForWidth()
+      return
+    }
     waiting = null
     // Mark before callbacks: SDK push can synchronously resize or re-enter Vue.
     attempts.set(ins, 'idle')
@@ -172,7 +218,7 @@ export function useDeferredAdSenseRequest(
         adsbygoogle?: { push(value: Record<string, never>): unknown }
       }
       win.adsbygoogle = win.adsbygoogle || []
-      win.adsbygoogle.push({})
+      pushOwnedAd(ins, () => win.adsbygoogle!.push({}))
       attempts.set(ins, 'returned')
       outcome.value = 'returned'
       options.onEvent('push-returned')
@@ -197,6 +243,16 @@ export function useDeferredAdSenseRequest(
       pushAd(token)
     })
   }
+  // Register as refs attach, before any sibling's nextTick request can run.
+  watch(
+    options.element,
+    (ins, previous) => {
+      if (!import.meta.client) return
+      if (previous) ownedElements.delete(previous)
+      if (ins) ownedElements.add(ins)
+    },
+    { flush: 'sync', immediate: true }
+  )
   watch(
     [container, options.element, canRequest, options.sdkReady],
     () => {
@@ -207,6 +263,7 @@ export function useDeferredAdSenseRequest(
   )
   onBeforeUnmount(() => {
     disposed = true
+    if (options.element.value) ownedElements.delete(options.element.value)
     clearPendingAdRequest()
   })
   return {
