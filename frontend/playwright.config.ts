@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './tests/e2e',
   // These suites require playwright.seo.config.ts and its fixture servers.
   testIgnore: [
+    '**/ad-cls.spec.ts',
+    '**/ad-lifecycle.spec.ts',
     '**/mobile-affiliate-placement.spec.ts',
     '**/seo-rendering-recovery.spec.ts',
     '**/real-estate-nearby.spec.ts',

@@ -1,37 +1,121 @@
-import { canLoadAdScript, markAdsBlocked } from '~/composables/useAdsPolicy'
+import { getCurrentScope, onScopeDispose, watch } from 'vue'
+import { canLoadAdScript, isAdFreePath } from '~/composables/useAdsPolicy'
+import { useAdSenseRuntime } from '~/composables/useAdSenseRuntime'
 
-// AdSense adsbygoogle.js 를 hydration 완료 후(onNuxtReady)에 주입한다.
-// (head 정적 async 는 Auto Ads 가 hydration 도중 DOM 주입 → mismatch/레이아웃 깨짐, 2026-06-09 실측)
 const ADSENSE_SRC =
   'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2088264360250020'
+const ownerKey = Symbol.for('ilsangkit.adLoader')
+interface LoaderOwner {
+  active: boolean
+  hydrated: boolean
+  script: HTMLScriptElement | null
+  errorPath: string | null
+  detach: () => void
+}
 
-export default defineNuxtPlugin(() => {
-  // plugin setup(문맥 있음)에서 ref 를 캡처 → async 콜백에선 ref 만 사용.
-  const blocked = useState<boolean>('ads:blocked', () => false)
-
-  onNuxtReady(() => {
-    // CI(adsEnabled=false)·봇/헤드리스면 스크립트 자체를 주입하지 않는다.
-    if (!canLoadAdScript()) return
-
-    // 이번 세션에서 이미 애드블록 확인됨 → 주입/슬롯 스킵(빈칸 없이 바로 미표시).
-    try {
-      if (sessionStorage.getItem('ads:blocked') === '1') {
-        blocked.value = true
-        return
-      }
-    } catch {
-      // sessionStorage 불가 — 무시하고 정상 경로 진행
-    }
-
-    // HMR/재실행 대비 중복 주입 가드
-    if (document.querySelector(`script[src="${ADSENSE_SRC}"]`)) return
-
-    const s = document.createElement('script')
-    s.src = ADSENSE_SRC
-    s.async = true
-    s.crossOrigin = 'anonymous'
-    // 애드블록/네트워크 실패 → 로드 실패. 이 경우에만 차단으로 판정(오탐 방지).
-    s.onerror = () => markAdsBlocked(blocked)
-    document.head.appendChild(s)
+export default defineNuxtPlugin((nuxtApp) => {
+  // Old network errors must not disable ads throughout this browser session.
+  try {
+    sessionStorage.removeItem('ads:blocked')
+  } catch {
+    /* Storage can be unavailable. */
+  }
+  const runtime = useAdSenseRuntime()
+  runtime.initializeDebug()
+  const app = nuxtApp as typeof nuxtApp & { [ownerKey]?: LoaderOwner }
+  if (app[ownerKey]?.active) return
+  const owner = (app[ownerKey] ??= {
+    active: false,
+    hydrated: false,
+    script: null,
+    errorPath: null,
+    detach() {},
   })
+  owner.active = true
+  const route = useRoute()
+  const eligible = () =>
+    !isAdFreePath(route.path) && nuxtApp.runWithContext(() => canLoadAdScript())
+
+  function listen(script: HTMLScriptElement, attempt: number) {
+    owner.detach()
+    const finish = (phase: 'ready' | 'error') => {
+      if (
+        !owner.active ||
+        script !== owner.script ||
+        attempt !== runtime.loader.value.attempts ||
+        runtime.loader.value.phase !== 'loading'
+      )
+        return
+      if (phase === 'error') owner.errorPath = route.path
+      runtime.setLoader(phase, attempt)
+      runtime.record({ kind: phase === 'ready' ? 'script-ready' : 'script-error' })
+      owner.detach()
+    }
+    const loaded = () => finish('ready')
+    const failed = () => finish('error')
+    script.addEventListener('load', loaded)
+    script.addEventListener('error', failed)
+    owner.detach = () => {
+      script.removeEventListener('load', loaded)
+      script.removeEventListener('error', failed)
+    }
+  }
+
+  function load() {
+    if (!owner.active || !owner.hydrated || !eligible()) return
+    const state = runtime.loader.value
+    if (state.phase === 'loading' || state.phase === 'ready') return
+    if (state.phase === 'error') {
+      if (
+        state.attempts >= 2 ||
+        route.path === owner.errorPath ||
+        !navigator.onLine ||
+        document.visibilityState !== 'visible'
+      )
+        return
+      owner.detach()
+      owner.script?.remove()
+      owner.script = null
+      runtime.record({ kind: 'script-retry' })
+    }
+    const attempt = state.attempts + 1
+    // Adopt an existing SDK tag without injecting another or disturbing Auto Ads.
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${ADSENSE_SRC}"]`)
+    const script = existing ?? document.createElement('script')
+    owner.script = script
+    runtime.setLoader('loading', attempt)
+    runtime.record({ kind: 'script-start' })
+    listen(script, attempt)
+    if (!existing) {
+      script.src = ADSENSE_SRC
+      script.async = true
+      script.crossOrigin = 'anonymous'
+      script.dataset.ilsangkitAdsense = 'true'
+      document.head.appendChild(script)
+    }
+  }
+
+  if (owner.script && runtime.loader.value.phase === 'loading')
+    listen(owner.script, runtime.loader.value.attempts)
+  const stop = watch(
+    () => route.path,
+    (path, previous) => {
+      if (path !== previous) load()
+    },
+    { flush: 'post' }
+  )
+  // Script injection stays after hydration; no timeout is evidence of a load error.
+  onNuxtReady(() => {
+    if (owner.active) {
+      owner.hydrated = true
+      load()
+    }
+  })
+  const dispose = () => {
+    owner.active = false
+    owner.detach()
+    stop()
+  }
+  if (getCurrentScope()) onScopeDispose(dispose)
+  if (import.meta.hot) import.meta.hot.dispose(dispose)
 })

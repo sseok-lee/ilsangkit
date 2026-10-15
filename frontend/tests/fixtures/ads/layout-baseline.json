@@ -1,0 +1,46 @@
+{
+  "ads-desktop:fixed": {
+    "source": "ba25b6cd1ae9f65699a4178b020c38d794bb94ae",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "height": 280,
+    "beforeY": 465,
+    "afterY": 465,
+    "shift": 0.003872010030864197
+  },
+  "ads-desktop:auto": {
+    "source": "ba25b6cd1ae9f65699a4178b020c38d794bb94ae",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "height": 280,
+    "beforeY": 278,
+    "afterY": 458,
+    "shift": 0.03125
+  },
+  "ads-mobile:fixed": {
+    "source": "ba25b6cd1ae9f65699a4178b020c38d794bb94ae",
+    "viewport": {
+      "width": 393,
+      "height": 852
+    },
+    "height": 280,
+    "beforeY": 465,
+    "afterY": 465,
+    "shift": 0.010160075141824038
+  },
+  "ads-mobile:auto": {
+    "source": "ba25b6cd1ae9f65699a4178b020c38d794bb94ae",
+    "viewport": {
+      "width": 393,
+      "height": 852
+    },
+    "height": 280,
+    "beforeY": 458,
+    "afterY": 458,
+    "shift": 0
+  }
+}

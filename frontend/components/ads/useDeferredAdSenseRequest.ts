@@ -1,77 +1,218 @@
-import { nextTick, onBeforeUnmount, ref, type Ref } from 'vue'
+import { nextTick, onBeforeUnmount, readonly, ref, watch, type Ref } from 'vue'
+
+export type RequestEvent =
+  | 'waiting-sdk'
+  | 'waiting-width'
+  | 'waiting-viewport'
+  | 'waiting-visible'
+  | 'push-attempt'
+  | 'push-returned'
+  | 'push-error'
+export interface AdRequestOptions {
+  element: Ref<HTMLElement | null>
+  sdkReady: () => boolean
+  beforePush: (ins: HTMLElement) => void
+  onEvent: (event: RequestEvent, errorKind?: 'type-error' | 'error' | 'unknown') => void
+}
+type Outcome = 'idle' | 'returned' | 'error'
 
 export function useDeferredAdSenseRequest(
   container: Ref<HTMLElement | null>,
-  canRequest: () => boolean = () => true,
+  canRequest: () => boolean,
+  options: AdRequestOptions
 ) {
-  const hasRequestedAd = ref(false)
-  let requestGeneration = 0
-  let resizeObserver: ResizeObserver | null = null
+  const attempted = ref(false)
+  const outcome = ref<Outcome>('idle')
+  const attempts = new WeakMap<HTMLElement, Outcome>()
+  const nearElements = new WeakSet<HTMLElement>()
+  let generation = 0
+  let disposed = false
+  let pending = false
+  let observer: ResizeObserver | null = null
+  let intersection: IntersectionObserver | null = null
+  let visibilityListener: (() => void) | null = null
+  let resizeFallback: (() => void) | null = null
+  let waiting: RequestEvent | null = null
+  let current: HTMLElement | null = null
 
-  function teardownResizeRetry() {
-    if (resizeObserver) {
-      resizeObserver.disconnect()
-      resizeObserver = null
-    }
+  function stopResize() {
+    observer?.disconnect()
+    observer = null
+    if (resizeFallback) window.removeEventListener('resize', resizeFallback)
+    resizeFallback = null
   }
-
+  function stopVisibility() {
+    if (visibilityListener) document.removeEventListener('visibilitychange', visibilityListener)
+    visibilityListener = null
+  }
   function clearPendingAdRequest() {
-    requestGeneration++
-    teardownResizeRetry()
+    generation++
+    pending = false
+    stopResize()
+    intersection?.disconnect()
+    intersection = null
+    stopVisibility()
   }
-
-  // 컨테이너가 아직 0폭(레이아웃 미완료/cross-viewport hidden 등)이면 push 를 그냥
-  // 포기하지 말고, 폭이 잡히는 순간 재시도한다. 단발 push 가 layout 타이밍을 놓쳐
-  // 슬롯이 영영 미요청(unset)으로 남는 회귀를 방지.
-  function scheduleResizeRetry(generation: number, el: HTMLElement) {
-    if (typeof ResizeObserver === 'undefined') return
-    teardownResizeRetry()
-    resizeObserver = new ResizeObserver(() => {
-      if (generation !== requestGeneration) {
-        teardownResizeRetry()
-        return
-      }
-      if (el.offsetWidth > 0) pushAd(generation)
-    })
-    resizeObserver.observe(el)
+  function reportWait(reason: RequestEvent) {
+    if (waiting !== reason) options.onEvent(reason)
+    waiting = reason
   }
-
-  function pushAd(generation: number) {
-    if (!import.meta.client || generation !== requestGeneration || !canRequest() || hasRequestedAd.value) return
-    const containerEl = container.value
-    if (!containerEl?.querySelector('ins.adsbygoogle')) return
-    // 부모가 display:none (예: cross-viewport hidden md:block) 이면 push skip — wasted impression 방지.
-    // happy-dom 테스트 환경에서는 offsetWidth 가 layout 계산 후에야 0/non-0 으로 의미를 가지므로
-    // 0 을 명시적으로만 차단 (undefined/NaN 은 통과). 0폭이면 폭이 잡힐 때까지 재시도 예약.
-    if (containerEl.offsetWidth === 0) {
-      scheduleResizeRetry(generation, containerEl)
+  function pushAd(token: number) {
+    if (disposed || token !== generation) return
+    const ins = options.element.value
+    const parent = container.value
+    if (ins !== current) {
+      current = ins
+      waiting = null
+      attempted.value = !!ins && attempts.has(ins)
+      outcome.value = ins ? (attempts.get(ins) ?? 'idle') : 'idle'
+    }
+    if (
+      !canRequest() ||
+      !ins?.isConnected ||
+      !parent?.isConnected ||
+      !parent.contains(ins) ||
+      attempts.has(ins)
+    ) {
+      waiting = null
+      clearPendingAdRequest()
       return
     }
-    teardownResizeRetry()
-    hasRequestedAd.value = true
+    // Observe before SDK/width waits so an early approach qualifies this ins.
+    if (!nearElements.has(ins) && !intersection) {
+      if (typeof IntersectionObserver === 'undefined') nearElements.add(ins)
+      else {
+        intersection = new IntersectionObserver(
+          (entries) => {
+            if (
+              disposed ||
+              token !== generation ||
+              ins !== options.element.value ||
+              parent !== container.value ||
+              !canRequest()
+            )
+              return
+            if (!entries.some((entry) => entry.target === parent && entry.isIntersecting)) return
+            nearElements.add(ins)
+            intersection?.disconnect()
+            intersection = null
+            reevaluate()
+          },
+          { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 }
+        )
+        intersection.observe(parent)
+      }
+    }
+    if (!options.sdkReady()) {
+      stopResize()
+      stopVisibility()
+      reportWait('waiting-sdk')
+      return
+    }
+    if (getComputedStyle(ins).display === 'none') {
+      waiting = null
+      stopResize()
+      stopVisibility()
+      return
+    }
+    if (!(parent.offsetWidth > 0) || !Number.isFinite(parent.offsetWidth)) {
+      stopVisibility()
+      reportWait('waiting-width')
+      if (!observer && !resizeFallback) {
+        const retry = () => {
+          if (!disposed && token === generation && ins === options.element.value) reevaluate()
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+          observer = new ResizeObserver(retry)
+          observer.observe(parent)
+        } else {
+          resizeFallback = retry
+          window.addEventListener('resize', retry)
+        }
+      }
+      return
+    }
+    stopResize()
+    if (!nearElements.has(ins)) {
+      stopVisibility()
+      reportWait('waiting-viewport')
+      return
+    }
+    if (document.visibilityState !== 'visible') {
+      reportWait('waiting-visible')
+      if (!visibilityListener) {
+        visibilityListener = () => {
+          if (!disposed && token === generation && ins === options.element.value) reevaluate()
+        }
+        document.addEventListener('visibilitychange', visibilityListener)
+      }
+      return
+    }
+    stopVisibility()
+    if (
+      disposed ||
+      token !== generation ||
+      !canRequest() ||
+      ins !== options.element.value ||
+      parent !== container.value ||
+      !ins.isConnected ||
+      !parent.isConnected ||
+      !parent.contains(ins) ||
+      attempts.has(ins)
+    )
+      return
+    waiting = null
+    // Mark before callbacks: SDK push can synchronously resize or re-enter Vue.
+    attempts.set(ins, 'idle')
+    attempted.value = true
     try {
-      const win = window as Window & { adsbygoogle?: Array<Record<string, never>> }
+      options.beforePush(ins)
+      options.onEvent('push-attempt')
+      const win = window as Window & {
+        adsbygoogle?: { push(value: Record<string, never>): unknown }
+      }
       win.adsbygoogle = win.adsbygoogle || []
       win.adsbygoogle.push({})
-    } catch {
-      // adsbygoogle push 실패는 무시 (광고 차단기/네트워크 실패 시 자연 collapse)
+      attempts.set(ins, 'returned')
+      outcome.value = 'returned'
+      options.onEvent('push-returned')
+    } catch (error) {
+      attempts.set(ins, 'error')
+      outcome.value = 'error'
+      options.onEvent(
+        'push-error',
+        error instanceof TypeError ? 'type-error' : error instanceof Error ? 'error' : 'unknown'
+      )
+    } finally {
+      clearPendingAdRequest()
     }
   }
-
-  function scheduleAdRequest() {
-    if (!import.meta.client || !canRequest()) return
-    hasRequestedAd.value = false
-    teardownResizeRetry()
-    const generation = ++requestGeneration
-    // 즉시 push — 지연/뷰포트 게이팅 제거 (AdSense가 동일 페이지 다중 슬롯을 한꺼번에 인지해야 채움률 확보)
-    nextTick(() => pushAd(generation))
+  function reevaluate() {
+    if (!import.meta.client || disposed || pending) return
+    pending = true
+    const token = generation
+    void nextTick(() => {
+      if (token !== generation || disposed) return
+      pending = false
+      pushAd(token)
+    })
   }
-
-  onBeforeUnmount(clearPendingAdRequest)
-
+  watch(
+    [container, options.element, canRequest, options.sdkReady],
+    () => {
+      clearPendingAdRequest()
+      reevaluate()
+    },
+    { flush: 'post', immediate: true }
+  )
+  onBeforeUnmount(() => {
+    disposed = true
+    clearPendingAdRequest()
+  })
   return {
+    attempted: readonly(attempted),
+    outcome: readonly(outcome),
+    reevaluate,
     clearPendingAdRequest,
-    hasRequestedAd,
-    scheduleAdRequest,
   }
 }
