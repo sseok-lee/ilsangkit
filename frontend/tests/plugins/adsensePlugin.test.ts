@@ -1,22 +1,131 @@
-import { readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mountPluginHarness } from '../helpers/adHarness'
+import { useAdSenseRuntime } from '~/composables/useAdSenseRuntime'
+let h: Awaited<ReturnType<typeof mountPluginHarness>> | undefined
+const scripts = () =>
+  document.querySelectorAll<HTMLScriptElement>('script[src*="pagead/js/adsbygoogle.js"]')
+const state = () => useAdSenseRuntime().loader.value
+afterEach(() => {
+  h?.dispose()
+  h = undefined
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
-const root = process.cwd().endsWith('/frontend') ? process.cwd() : join(process.cwd(), 'frontend')
-const src = () => readFileSync(resolve(root, 'plugins/adsense.client.ts'), 'utf8')
+describe('AdSense loader', () => {
+  it('waits for hydration, clears only legacy cache, and becomes ready only on load', async () => {
+    sessionStorage.setItem('ads:blocked', '1')
+    sessionStorage.setItem('unrelated', 'keep')
+    h = await mountPluginHarness()
+    expect(scripts()).toHaveLength(0)
+    await h.nuxtReady()
+    expect(scripts()).toHaveLength(1)
+    expect(state()).toEqual({ phase: 'loading', attempts: 1 })
+    expect(sessionStorage.getItem('ads:blocked')).toBeNull()
+    expect(sessionStorage.getItem('unrelated')).toBe('keep')
+    scripts()[0].dispatchEvent(new Event('load'))
+    expect(state()).toEqual({ phase: 'ready', attempts: 1 })
+  })
+  it('does not time out or turn script errors into session blocking', async () => {
+    vi.useFakeTimers()
+    h = await mountPluginHarness()
+    await h.nuxtReady()
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(state().phase).toBe('loading')
+    scripts()[0].dispatchEvent(new Event('error'))
+    expect(state().phase).toBe('error')
+    expect(sessionStorage.getItem('ads:blocked')).toBeNull()
+  })
+  it('retries once on a different route and ignores stale events', async () => {
+    h = await mountPluginHarness()
+    await h.nuxtReady()
+    const old = scripts()[0]
+    old.dispatchEvent(new Event('error'))
+    await h.navigate('/guide/second')
+    expect(scripts()).toHaveLength(1)
+    expect(state()).toEqual({ phase: 'loading', attempts: 2 })
+    scripts()[0].dispatchEvent(new Event('load'))
+    old.dispatchEvent(new Event('error'))
+    old.dispatchEvent(new Event('load'))
+    expect(state()).toEqual({ phase: 'ready', attempts: 2 })
+    await h.navigate('/guide/third')
+    expect(scripts()).toHaveLength(1)
+  })
+  it('stops after two failed attempts', async () => {
+    h = await mountPluginHarness()
+    await h.nuxtReady()
+    scripts()[0].dispatchEvent(new Event('error'))
+    await h.navigate('/guide/second')
+    scripts()[0].dispatchEvent(new Event('error'))
+    await h.navigate('/guide/third')
+    expect(state()).toEqual({ phase: 'error', attempts: 2 })
+  })
+  it('requires a later eligible online visible route, never a timer or query change', async () => {
+    h = await mountPluginHarness()
+    await h.nuxtReady()
+    scripts()[0].dispatchEvent(new Event('error'))
+    await h.navigate(h.route.path)
+    expect(state().attempts).toBe(1)
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    await h.navigate('/guide/offline')
+    expect(state().attempts).toBe(1)
+    online.mockReturnValue(true)
+    const visible = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    await h.navigate('/guide/hidden')
+    expect(state().attempts).toBe(1)
+    visible.mockReturnValue('visible')
+    await h.navigate('/real-estate')
+    expect(state().attempts).toBe(1)
+    await h.navigate('/guide/eligible')
+    expect(state().attempts).toBe(2)
+  })
+  it('loads on the first eligible route if initial page is excluded', async () => {
+    h = await mountPluginHarness()
+    await h.navigate('/real-estate')
+    await h.nuxtReady()
+    expect(scripts()).toHaveLength(0)
+    await h.navigate('/real-estate/apt-sale')
+    expect(scripts()).toHaveLength(1)
+  })
+  it('prevents duplicate setup and preserves loaded SDK on cleanup', async () => {
+    h = await mountPluginHarness()
+    h.setup()
+    await h.nuxtReady()
+    expect(scripts()).toHaveLength(1)
+    scripts()[0].dispatchEvent(new Event('load'))
+    h.setup()
+    await h.nuxtReady()
+    expect(state().attempts).toBe(1)
+  })
+  it('tolerates sessionStorage access errors', async () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    h = await mountPluginHarness()
+    await h.nuxtReady()
+    expect(scripts()).toHaveLength(1)
+  })
+})
 
-describe('adsense.client plugin', () => {
-  it('canLoadAdScript() 게이트로 스크립트 주입을 차단한다', () => {
-    expect(src()).toContain('canLoadAdScript')
-    expect(src()).toMatch(/if\s*\(\s*!canLoadAdScript\(\)\s*\)\s*return/)
-  })
-
-  it('스크립트 로드 실패(onerror)를 애드블록으로 감지한다', () => {
-    expect(src()).toContain('onerror')
-    expect(src()).toContain('markAdsBlocked')
-  })
-  it('세션에 차단 기록이 있으면 주입을 스킵한다', () => {
-    expect(src()).toContain("sessionStorage")
-    expect(src()).toContain("ads:blocked")
-  })
+it('reattaches an inactive owner without replacing its loading or ready SDK', async () => {
+  h = await mountPluginHarness()
+  await h.nuxtReady()
+  const script = scripts()[0]
+  h.suspend()
+  h.resume()
+  await h.nuxtReady()
+  expect(scripts()[0]).toBe(script)
+  script.dispatchEvent(new Event('load'))
+  expect(state()).toEqual({ phase: 'ready', attempts: 1 })
+  h.suspend()
+  expect(script.isConnected).toBe(true)
+  h.resume()
+  await h.nuxtReady()
+  expect(scripts()[0]).toBe(script)
+})
+it('page suppression affects manual slots but not SDK loading', async () => {
+  h = await mountPluginHarness()
+  useState('ads:suppressed', () => false).value = true
+  await h.nuxtReady()
+  expect(scripts()).toHaveLength(1)
 })
