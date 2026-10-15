@@ -22,11 +22,45 @@ export async function flushAds() {
   for (let i = 0; i < 5; i++) await nextTick()
 }
 
+export interface ControlledIntersection {
+  callback: IntersectionObserverCallback
+  elements: Set<Element>
+  options: IntersectionObserverInit
+}
+
 export function setupAdEnvironment(
-  options: { width?: number; desktop?: boolean; path?: string } = {}
+  options: {
+    width?: number
+    desktop?: boolean
+    path?: string
+    near?: boolean
+    visible?: boolean
+    intersectionObserver?: boolean
+  } = {}
 ) {
   let width = options.width ?? 353
+  let near = options.near ?? true
+  let visibility = options.visible === false ? 'hidden' : 'visible'
+  const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState')
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    get: () => visibility,
+  })
   const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')
+  const rectDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    'getBoundingClientRect'
+  )
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  const renderedHeights = new WeakMap<HTMLElement, number>()
+  Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value(this: HTMLElement) {
+      const rect = originalRect.call(this)
+      const height = renderedHeights.get(this)
+      return height === undefined ? rect : new DOMRect(rect.x, rect.y, rect.width, height)
+    },
+  })
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
     configurable: true,
     get: () => width,
@@ -51,6 +85,38 @@ export function setupAdEnvironment(
       this.record.elements.clear()
     }
   }
+  const intersections: ControlledIntersection[] = []
+  function emitIntersection(record: ControlledIntersection, target: Element, isIntersecting: boolean) {
+    record.callback(
+      [{ target, isIntersecting, intersectionRatio: 0 } as IntersectionObserverEntry],
+      {} as IntersectionObserver
+    )
+  }
+  class ControlledIntersectionObserver {
+    record: ControlledIntersection
+    constructor(callback: IntersectionObserverCallback, options: IntersectionObserverInit = {}) {
+      this.record = { callback, options, elements: new Set() }
+      intersections.push(this.record)
+    }
+    observe(element: Element) {
+      this.record.elements.add(element)
+      queueMicrotask(() => {
+        if (this.record.elements.has(element)) emitIntersection(this.record, element, near)
+      })
+    }
+    unobserve(element: Element) {
+      this.record.elements.delete(element)
+    }
+    disconnect() {
+      this.record.elements.clear()
+    }
+  }
+  function setNear(value: boolean, target?: Element) {
+    near = value
+    for (const record of intersections)
+      for (const element of [...record.elements])
+        if (!target || element === target) emitIntersection(record, element, value)
+  }
   const listeners = new Set<() => void>()
   const mq = {
     matches: options.desktop ?? false,
@@ -58,6 +124,10 @@ export function setupAdEnvironment(
     removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
   }
   vi.stubGlobal('ResizeObserver', ControlledResizeObserver)
+  vi.stubGlobal(
+    'IntersectionObserver',
+    options.intersectionObserver === false ? undefined : ControlledIntersectionObserver
+  )
   vi.stubGlobal('matchMedia', () => mq)
   vi.stubGlobal('useRoute', () => route)
   vi.stubGlobal('useNuxtApp', () => app)
@@ -68,9 +138,23 @@ export function setupAdEnvironment(
     route,
     push,
     observers,
+    intersections,
+    enterViewport(target?: Element) {
+      setNear(true, target)
+    },
+    leaveViewport(target?: Element) {
+      setNear(false, target)
+    },
+    setVisibility(value: 'visible' | 'hidden') {
+      visibility = value
+      document.dispatchEvent(new Event('visibilitychange'))
+    },
     flush: flushAds,
     setWidth(value: number) {
       width = value
+    },
+    setRenderedHeight(ins: HTMLElement, height: number) {
+      renderedHeights.set(ins, height)
     },
     triggerResize() {
       for (const entry of observers)
@@ -81,8 +165,17 @@ export function setupAdEnvironment(
       listeners.forEach((cb) => cb())
     },
     dispose() {
+      listeners.clear()
+      for (const record of intersections) record.elements.clear()
+      for (const record of observers) record.elements.clear()
+      if (visibilityDescriptor)
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor)
+      else Reflect.deleteProperty(document, 'visibilityState')
       if (descriptor) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', descriptor)
-      else delete (HTMLElement.prototype as any).offsetWidth
+      else Reflect.deleteProperty(HTMLElement.prototype, 'offsetWidth')
+      if (rectDescriptor)
+        Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', rectDescriptor)
+      else Reflect.deleteProperty(HTMLElement.prototype, 'getBoundingClientRect')
       delete (window as any).adsbygoogle
       delete (window as any).__ilsangkitAdDebug
       sessionStorage.clear()
@@ -174,7 +267,11 @@ export async function mountPluginHarness() {
 }
 
 export async function mountRequestHarness(
-  options: { width?: number; ready?: boolean; allowed?: boolean; resizeObserver?: boolean } = {}
+  options: Parameters<typeof setupAdEnvironment>[0] & {
+    ready?: boolean
+    allowed?: boolean
+    resizeObserver?: boolean
+  } = {}
 ) {
   const { h, shallowRef } = await import('vue')
   const { useDeferredAdSenseRequest } = await import('~/components/ads/useDeferredAdSenseRequest')

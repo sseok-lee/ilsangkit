@@ -7,9 +7,8 @@
       `ad-banner--${attributes.format}`,
       attributes.compact ? 'ad-banner--compact-mobile' : 'ad-banner--default',
       'my-3 w-full',
-      { 'ad-banner--collapsed': collapseReason },
+      { 'ad-banner--collapsed': collapseReason, 'ad-banner--empty': renderedHeight <= 0 },
     ]"
-    :style="{ '--ad-fixed-height': `${attributes.fixedHeight}px` }"
   >
     <ClientOnly>
       <ins
@@ -53,20 +52,10 @@ const props = withDefaults(
     adFormat?: 'auto' | 'rectangle' | 'horizontal' | 'vertical'
     fullWidthResponsive?: 'true' | 'false'
     only?: 'mobile' | 'desktop'
-    sizing?: 'fixed' | 'min'
-    fixedHeight?: number
     variant?: 'default' | 'compact-mobile'
   }>(),
-  { adFormat: 'auto', fullWidthResponsive: 'true', sizing: 'min', variant: 'default' }
+  { fullWidthResponsive: 'true', variant: 'default' }
 )
-
-if (
-  import.meta.dev &&
-  props.sizing === 'fixed' &&
-  (props.adFormat === 'auto' || !props.fixedHeight)
-) {
-  console.warn('[AdBanner] sizing="fixed" requires an explicit format and height')
-}
 
 const route = useRoute()
 const runtime = useAdSenseRuntime()
@@ -84,6 +73,7 @@ const shouldShow = computed(
     (!props.only || (viewportKnown.value && (props.only === 'desktop') === isDesktop.value))
 )
 const adStatus = ref('')
+const renderedHeight = ref(0)
 const elementHidden = ref(false)
 const collapseReason = computed<AdCollapseReason>(() => {
   if (runtime.loader.value.phase === 'error') return 'loader-error'
@@ -94,18 +84,15 @@ const collapseReason = computed<AdCollapseReason>(() => {
 
 const proposedAttributes = computed(() => {
   const compact = props.variant === 'compact-mobile' && !isDesktop.value
-  const fixedHeight = compact ? 150 : props.sizing === 'fixed' ? (props.fixedHeight ?? 0) : 0
+  const format = props.adFormat ?? (compact || isDesktop.value ? 'horizontal' : 'auto')
   return {
     slot: props.adSlot ?? (isDesktop.value ? AD_SLOT_DESKTOP : AD_SLOT_MOBILE),
-    format: compact && props.adFormat === 'auto' ? 'horizontal' : props.adFormat,
-    fullWidth: compact || props.sizing === 'fixed' ? 'false' : props.fullWidthResponsive,
+    format,
+    fullWidth: compact ? 'false' : props.fullWidthResponsive,
     style: compact
-      ? 'display: inline-block; width: 100%; max-width: 336px; height: 150px;'
-      : fixedHeight
-        ? `display: inline-block; width: 100%; height: ${fixedHeight}px;`
-        : 'display: block; width: 100%;',
+      ? 'display: block; width: 100%; max-width: 336px; margin-inline: auto;'
+      : 'display: block; width: 100%;',
     compact,
-    fixedHeight,
   }
 })
 const lockedAttributes = shallowRef<typeof proposedAttributes.value | null>(null)
@@ -163,6 +150,7 @@ watch(
   (ins) => {
     stopObserving()
     adStatus.value = ''
+    renderedHeight.value = 0
     elementHidden.value = false
     if (!ins) {
       lockedAttributes.value = null
@@ -173,6 +161,7 @@ watch(
     record({ kind: 'slot-mounted' }, ins)
     const read = () => {
       if (!active || ins !== insRef.value || !ins.isConnected) return
+      renderedHeight.value = Math.max(0, ins.getBoundingClientRect().height)
       const status = ins.dataset.adStatus ?? ''
       // Our own unfilled CSS must not be mistaken for an external blocker.
       const hidden = status !== 'unfilled' && getComputedStyle(ins).display === 'none'
@@ -235,31 +224,13 @@ onBeforeUnmount(() => {
 
 <style>
 .ad-banner {
-  --ad-min-height: 0px;
   position: relative;
-  min-height: max(var(--ad-min-height), var(--ad-fixed-height, 0px));
+  min-height: 0;
 }
-.ad-banner--auto {
-  --ad-min-height: 122px;
-}
-@media (max-width: 767px) {
-  .ad-banner--auto {
-    --ad-min-height: 302px;
-  }
-}
-.ad-banner--horizontal {
-  --ad-min-height: 112px;
-}
-.ad-banner--rectangle {
-  --ad-min-height: 272px;
-}
-.ad-banner--compact-mobile {
-  --ad-min-height: 170px;
-  text-align: center;
-}
-/* Inline fixed ads must not add a text-baseline gap after hydration. */
-.ad-banner ins.adsbygoogle {
-  vertical-align: top;
+.ad-banner--empty {
+  margin-block: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
 }
 .ad-banner--collapsed {
   height: 0 !important;

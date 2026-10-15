@@ -120,7 +120,7 @@
 
 
               <!-- Ad: HERO 아래 -->
-              <AdBanner sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+              <AdBanner full-width-responsive="false" />
 
               <!-- T1 BasicInfo (기본정보·운영시간) — 헤더 광고 직후 핵심 정보 우선 -->
               <DetailBasicInfo

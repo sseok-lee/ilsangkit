@@ -19,6 +19,8 @@ export type AdDebugKind =
   | 'slot-mounted'
   | 'waiting-sdk'
   | 'waiting-width'
+  | 'waiting-viewport'
+  | 'waiting-visible'
   | 'push-attempt'
   | 'push-returned'
   | 'push-error'

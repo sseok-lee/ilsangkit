@@ -1,11 +1,225 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { mountRequestHarness } from '../../helpers/adHarness'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mountPluginHarness, mountRequestHarness } from '../../helpers/adHarness'
+import { useAdSenseRuntime } from '~/composables/useAdSenseRuntime'
 let h: Awaited<ReturnType<typeof mountRequestHarness>> | undefined
 afterEach(() => {
   h?.dispose()
   h = undefined
+  vi.restoreAllMocks()
 })
 describe('manual slot requests', () => {
+  it('remembers proximity while waiting and requires it again for a new ins', async () => {
+    h = await mountRequestHarness({ ready: false, near: false })
+    await h.flush()
+    h.enterViewport()
+    await h.flush()
+    h.leaveViewport()
+    h.setReady(true)
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    h.replaceElement()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    h.enterViewport()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(2)
+  })
+  it('waits for a visible document without causing another SDK load', async () => {
+    h = await mountRequestHarness({ visible: false })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-visible')
+    h.setVisibility('visible')
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(document.querySelectorAll('script[src*="adsbygoogle.js"]')).toHaveLength(0)
+  })
+  it('uses exact proximity options and accepts zero intersection ratio and height', async () => {
+    h = await mountRequestHarness({ near: false })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-viewport')
+    const active = h.intersections.filter(({ elements }) => elements.size)
+    expect(active).toHaveLength(1)
+    expect(active[0].options).toEqual({
+      root: null,
+      rootMargin: '0px 0px 300px 0px',
+      threshold: 0,
+    })
+    expect(active[0].elements.has(h.container.value!)).toBe(true)
+    active[0].callback(
+      [{ target: document.body as Element, isIntersecting: true, intersectionRatio: 0 } as IntersectionObserverEntry],
+      {} as IntersectionObserver
+    )
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.enterViewport()
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(active[0].elements.size).toBe(0)
+  })
+  it('deduplicates the first blocking wait and preserves proximity through width recovery', async () => {
+    h = await mountRequestHarness({ ready: false, width: 0, near: false, visible: false })
+    await h.flush()
+    h.request.reevaluate()
+    await h.flush()
+    expect(h.events.mock.calls.map(([kind]) => kind)).toEqual(['waiting-sdk'])
+    h.setReady(true)
+    await h.flush()
+    expect(h.events.mock.calls.map(([kind]) => kind)).toEqual(['waiting-sdk', 'waiting-width'])
+    h.enterViewport()
+    await h.flush()
+    h.leaveViewport()
+    h.setWidth(353)
+    h.triggerResize()
+    await h.flush()
+    expect(h.events.mock.calls.map(([kind]) => kind)).toEqual([
+      'waiting-sdk',
+      'waiting-width',
+      'waiting-visible',
+    ])
+    h.request.reevaluate()
+    h.setVisibility('hidden')
+    await h.flush()
+    expect(h.events.mock.calls.filter(([kind]) => kind === 'waiting-visible')).toHaveLength(1)
+    h.setVisibility('visible')
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('deduplicates viewport waits until the blocking condition changes', async () => {
+    h = await mountRequestHarness({ near: false, visible: false })
+    await h.flush()
+    h.request.reevaluate()
+    h.leaveViewport()
+    await h.flush()
+    expect(h.events.mock.calls.map(([kind]) => kind)).toEqual(['waiting-viewport'])
+    h.enterViewport()
+    await h.flush()
+    expect(h.events.mock.calls.map(([kind]) => kind)).toEqual([
+      'waiting-viewport',
+      'waiting-visible',
+    ])
+  })
+  it('falls back only on proximity when IntersectionObserver is unavailable', async () => {
+    h = await mountRequestHarness({
+      intersectionObserver: false,
+      near: false,
+      visible: false,
+      width: 0,
+    })
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-width')
+    h.setWidth(353)
+    h.triggerResize()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.events).toHaveBeenCalledWith('waiting-visible')
+    h.setVisibility('visible')
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+  })
+  it('clears request observers and visibility listeners while preserving acquired proximity', async () => {
+    const remove = vi.spyOn(document, 'removeEventListener')
+    h = await mountRequestHarness({ visible: false, width: 0 })
+    await h.flush()
+    h.setWidth(353)
+    h.triggerResize()
+    await h.flush()
+    h.request.clearPendingAdRequest()
+    expect(h.observers.every(({ elements }) => elements.size === 0)).toBe(true)
+    expect(h.intersections.every(({ elements }) => elements.size === 0)).toBe(true)
+    expect(remove.mock.calls.some(([type]) => type === 'visibilitychange')).toBe(true)
+    h.leaveViewport()
+    h.request.reevaluate()
+    await h.flush()
+    h.setVisibility('visible')
+    await h.flush()
+    expect(h.push).toHaveBeenCalledTimes(1)
+    expect(remove.mock.calls.filter(([type]) => type === 'visibilitychange')).toHaveLength(2)
+  })
+  it('rejects stale IO across replacement, policy off, generation clearing and unmount', async () => {
+    h = await mountRequestHarness({ near: false })
+    await h.flush()
+    const old = h.intersections.find(({ elements }) => elements.size)!
+    const parent = h.container.value!
+    const enter = () =>
+      old.callback(
+        [{ target: parent as Element, isIntersecting: true, intersectionRatio: 0 } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      )
+    h.request.clearPendingAdRequest()
+    h.request.reevaluate()
+    await h.flush()
+    enter()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.replaceElement()
+    await h.flush()
+    enter()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setAllowed(false)
+    await h.flush()
+    h.enterViewport()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.intersections.every(({ elements }) => elements.size === 0)).toBe(true)
+    h.setAllowed(true)
+    h.leaveViewport()
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.unmount()
+    enter()
+    h.setVisibility('visible')
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(h.intersections.every(({ elements }) => elements.size === 0)).toBe(true)
+  })
+  it('invalidates a cleared visibility callback and removes listeners on policy off and unmount', async () => {
+    const add = vi.spyOn(document, 'addEventListener')
+    const remove = vi.spyOn(document, 'removeEventListener')
+    h = await mountRequestHarness({ visible: false })
+    await h.flush()
+    const old = add.mock.calls.find(([type]) => type === 'visibilitychange')![1] as EventListener
+    h.request.clearPendingAdRequest()
+    h.setVisibility('visible')
+    old(new Event('visibilitychange'))
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    h.setVisibility('hidden')
+    h.request.reevaluate()
+    await h.flush()
+    h.setAllowed(false)
+    await h.flush()
+    expect(remove.mock.calls.filter(([type]) => type === 'visibilitychange')).toHaveLength(2)
+    h.setAllowed(true)
+    await h.flush()
+    h.unmount()
+    h.setVisibility('visible')
+    old(new Event('visibilitychange'))
+    await h.flush()
+    expect(h.push).not.toHaveBeenCalled()
+    expect(remove.mock.calls.filter(([type]) => type === 'visibilitychange')).toHaveLength(3)
+  })
+  it('does not retry a failed SDK when document visibility or width changes', async () => {
+    const plugin = await mountPluginHarness()
+    try {
+      await plugin.nuxtReady()
+      const script = document.querySelector<HTMLScriptElement>('script[src*="adsbygoogle.js"]')!
+      script.dispatchEvent(new Event('error'))
+      plugin.setVisibility('hidden')
+      plugin.setVisibility('visible')
+      plugin.triggerResize()
+      window.dispatchEvent(new Event('resize'))
+      await plugin.flush()
+      expect(useAdSenseRuntime().loader.value).toEqual({ phase: 'error', attempts: 1 })
+      expect(document.querySelectorAll('script[src*="adsbygoogle.js"]')).toHaveLength(1)
+      expect(document.querySelector('script[src*="adsbygoogle.js"]')).toBe(script)
+    } finally {
+      plugin.dispose()
+    }
+  })
   it('waits for ready and positive width, then requests the element once', async () => {
     h = await mountRequestHarness({ width: 0, ready: false })
     await h.flush()
@@ -64,6 +278,8 @@ describe('manual slot requests', () => {
     expect(h.push).toHaveBeenCalledTimes(1)
     expect(h.request.outcome.value).toBe('error')
     expect(h.events).toHaveBeenCalledWith('push-error', 'type-error')
+    expect(h.observers.every(({ elements }) => elements.size === 0)).toBe(true)
+    expect(h.intersections.every(({ elements }) => elements.size === 0)).toBe(true)
     h.request.clearPendingAdRequest()
     h.request.reevaluate()
     await h.flush()

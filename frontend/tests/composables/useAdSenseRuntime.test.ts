@@ -35,9 +35,16 @@ describe('ad runtime', () => {
   })
   it('does not expose an API in production without opt-in', () => {
     const store = createAdDebugStore({ dev: false, readDebugSetting: () => null, now: () => 0 })
-    store.record({ kind: 'script-start' })
+    store.record({ kind: 'waiting-viewport' })
+    store.record({ kind: 'waiting-visible' })
     expect(store.enabled).toBe(false)
     expect(store.snapshot()).toEqual([])
+  })
+  it('records proximity and visibility as identifiers only', () => {
+    const store = createAdDebugStore({ dev: true, readDebugSetting: () => null, now: () => 0 })
+    store.record({ kind: 'waiting-viewport' })
+    store.record({ kind: 'waiting-visible' })
+    expect(store.snapshot().map(({ kind }) => kind)).toEqual(['waiting-viewport', 'waiting-visible'])
   })
   it('tolerates denied storage and enables dev without storage access', () => {
     const denied = () => {
@@ -50,21 +57,24 @@ describe('ad runtime', () => {
       true
     )
   })
-  it('retains only the newest 200 records, whitelists fields and copies snapshots', () => {
-    const store = createAdDebugStore({ dev: false, readDebugSetting: () => '1', now: () => 4 })
-    for (let width = 0; width < 201; width++)
-      store.record({
-        kind: 'waiting-width',
-        width,
-        pageType: '/private/path',
-        url: '/private',
-        message: 'secret',
-      } as any)
-    const snapshot = store.snapshot()
-    expect(snapshot).toHaveLength(200)
-    expect(snapshot[0]).toEqual({ kind: 'waiting-width', width: 1, pageType: 'other', at: 4 })
-    snapshot[0].width = -1
-    expect(store.snapshot()[0].width).toBe(1)
-    expect(JSON.stringify(store.snapshot())).not.toMatch(/private|secret/)
-  })
+  it.each(['waiting-width', 'waiting-viewport', 'waiting-visible'] as const)(
+    'caps, whitelists and copies %s diagnostics',
+    (kind) => {
+      const store = createAdDebugStore({ dev: false, readDebugSetting: () => '1', now: () => 4 })
+      for (let width = 0; width < 201; width++)
+        store.record({
+          kind,
+          width,
+          pageType: '/private/path',
+          url: '/private',
+          message: 'secret',
+        } as any)
+      const snapshot = store.snapshot()
+      expect(snapshot).toHaveLength(200)
+      expect(snapshot[0]).toEqual({ kind, width: 1, pageType: 'other', at: 4 })
+      snapshot[0].width = -1
+      expect(store.snapshot()[0].width).toBe(1)
+      expect(JSON.stringify(store.snapshot())).not.toMatch(/private|secret/)
+    }
+  )
 })

@@ -82,10 +82,12 @@
         </nav>
       </PageHead>
 
-      <!-- Ad: Hero 직후 (fold 하단) — 모바일 실측 384px 로 폴드 안이라 규격 상한을 둔다.
-           높이 미지정이면 AdSense 가 390×390(뷰포트의 46%)을 배정하고 full-bleed 로 번진다.
-           시설 상세 첫 슬롯과 동일 조합. 폴드 아래 슬롯은 auto 유지. -->
-      <AdBanner class="estate-ad-slot estate-ad-slot--first order-3 md:order-3" sizing="fixed" ad-format="rectangle" :fixed-height="280" />
+      <!-- Ad: Hero 직후 (fold 하단) — 초기 높이 예약 없이 SDK의 실제 크기를 허용한다.
+           첫 슬롯의 full-width 확장은 끄고 포맷은 viewport 기본값을 따른다. -->
+      <AdBanner
+        class="estate-ad-slot estate-ad-slot--first order-3 md:order-3"
+        full-width-responsive="false"
+      />
 
       <!-- 위치·로드뷰 (responsive: mobile은 로드뷰만, md+에서 지도+로드뷰 2-col) -->
       <SectionBlock variant="flat" id="location" class="order-9 md:order-11" heading="위치" :subtext="locationSectionSubtext">
@@ -1899,10 +1901,6 @@ const hasNearby = computed(() =>
 
   .estate-ad-slot {
     margin: 22px 0;
-  }
-
-  .estate-ad-slot--first {
-    min-height: 280px;
   }
 
   .estate-chart-shell {

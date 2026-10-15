@@ -1,44 +1,81 @@
 import { test, expect } from '@playwright/test'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
-import { installFakeAdSdk } from './helpers/adSdk'
+import { readFileSync } from 'node:fs'
+import { assertNoFakeAdInstrumentationErrors, installFakeAdSdk } from './helpers/adSdk'
+import { installAdFrameRecorder, markAdPhase, readAdFrames } from './helpers/adFrames'
 
-const baselinePath = new URL('../fixtures/ads/layout-baseline.json', import.meta.url)
-for (const scenario of ['fixed', 'auto']) {
-  test(`${scenario} normal fill layout`, async ({ page, context }, info) => {
-    const sdk = await installFakeAdSdk(context)
-    await page.goto(`/${scenario}`)
-    await expect.poll(() => page.evaluate(() => window.__fakeAds?.pushCount)).toBe(1)
-    const beforeY = (await page.locator('#after').boundingBox())!.y
-    await page.evaluate(() => window.__fakeAds.fill(0, 'filled', 280))
-    await expect(page.locator('ins.adsbygoogle')).toHaveAttribute('data-ad-status', 'filled')
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-    )
-    const afterY = (await page.locator('#after').boundingBox())!.y
-    const shift = await page.evaluate(() => window.__adShift)
-    expect(sdk.attempts).toBe(1)
-    expect(await page.evaluate(() => window.__ilsangkitAdDebug)).toBeUndefined()
-    await info.attach('normal-fill-metrics', {
-      body: JSON.stringify({ viewport: page.viewportSize(), beforeY, afterY, shift }),
-      contentType: 'application/json',
-    })
-    const key = `${info.project.name}:${scenario}`
-    if (process.env.ADS_CAPTURE_BASELINE === '1') {
-      const records = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : {}
-      records[key] = {
-        source: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-        viewport: page.viewportSize(),
-        height: 280,
-        beforeY,
-        afterY,
-        shift,
+test.afterEach(async ({ page }) => {
+  await assertNoFakeAdInstrumentationErrors(page)
+})
+
+// Read-only R1 comparison context. R2 deliberately allows measured normal-fill CLS.
+const baseline = JSON.parse(
+  readFileSync(new URL('../fixtures/ads/layout-baseline.json', import.meta.url), 'utf8')
+)
+for (const scenario of ['default', 'auto']) {
+  for (const height of [100, 280, 390]) {
+    test(`${scenario} natural ${height}px fill geometry and ten-second stability`, async ({
+      page,
+      context,
+    }, info) => {
+      await installAdFrameRecorder(context)
+      const sdk = await installFakeAdSdk(context)
+      await page.goto(`/${scenario}`)
+      await expect.poll(() => page.evaluate(() => window.__fakeAds?.requests.length)).toBe(1)
+      const before = (await readAdFrames(page)).at(-1)!
+      expect(before.slots[0].height).toBe(0)
+      const reference = info.outputPath('empty-reference.png')
+      await page.screenshot({ path: reference })
+      await info.attach('empty-reference', { path: reference, contentType: 'image/png' })
+      await page.evaluate((size) => window.__fakeAds.fill(0, 'filled', size), height)
+      await markAdPhase(page, 'filled')
+      await expect
+        .poll(() => page.locator('.ad-banner').evaluate((el) => el.getBoundingClientRect().height))
+        .toBe(height)
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          )
+      )
+      const filled = (await readAdFrames(page)).at(-1)!
+      const oldSlot = before.slots[0]
+      const newSlot = filled.slots[0]
+      const expectedDelta =
+        newSlot.height -
+        oldSlot.height +
+        newSlot.marginTop +
+        newSlot.marginBottom -
+        oldSlot.marginTop -
+        oldSlot.marginBottom
+      expect(Math.abs(filled.afterY - before.afterY - expectedDelta)).toBeLessThan(1)
+      expect(newSlot.insHeight).toBe(height)
+      expect(expectedDelta).toBeGreaterThanOrEqual(height)
+      await page.waitForTimeout(10000)
+      const frames = await readAdFrames(page)
+      for (const frame of frames.filter((frame) => frame.at >= filled.at)) {
+        expect(Math.abs(frame.afterY - filled.afterY)).toBeLessThan(1)
+        expect(frame.slots[0].height).toBe(height)
       }
-      writeFileSync(baselinePath, JSON.stringify(records, null, 2) + '\n')
-    } else {
-      const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))[key]
-      expect(page.viewportSize()).toEqual(baseline.viewport)
-      expect(shift - baseline.shift).toBeLessThan(0.01)
-    }
-  })
+      expect(sdk.attempts).toBe(1)
+      await info.attach('r2-normal-fill-frames', {
+        body: JSON.stringify({
+          viewport: page.viewportSize(),
+          scenario,
+          height,
+          beforeY: before.afterY,
+          afterY: filled.afterY,
+          expectedDelta,
+          shift: frames.at(-1)!.shift,
+          r1Comparison:
+            baseline[`${info.project.name}:${scenario === 'default' ? 'fixed' : 'auto'}`],
+          frames,
+          shifts: await page.evaluate(() => window.__adShifts),
+        }),
+        contentType: 'application/json',
+      })
+      const screenshot = info.outputPath('natural-fill.png')
+      await page.screenshot({ path: screenshot })
+      await info.attach('natural-fill', { path: screenshot, contentType: 'image/png' })
+    })
+  }
 }
