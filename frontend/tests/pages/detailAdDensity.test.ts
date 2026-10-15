@@ -85,8 +85,20 @@ describe('지하철 상세 광고 밀도', () => {
 
 describe('부동산 상세 광고 밀도', () => {
   const src = () => read('pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
-  it('AdBanner는 4개', () => {
-    expect(count(src(), /<AdBanner/g)).toBe(4)
+  it('모바일 헤더 슬롯 한 개와 기존 공통 본문 슬롯 네 개를 유지한다', () => {
+    const pageSource = src()
+    const all = [...pageSource.matchAll(/<AdBanner\b[^>]*>/g)].map((match) => match[0])
+    const added = all.filter((tag) => tag.includes('variant="mobile-banner-320x100"'))
+    const existing = all.filter((tag) => !tag.includes('variant="mobile-banner-320x100"'))
+    expect(added).toHaveLength(1)
+    expect(added[0]).toContain('only="mobile"')
+    expect(existing).toHaveLength(4)
+    expect(existing.map((tag) => tag.match(/class="([^"]*)"/)?.[1])).toEqual([
+      'estate-ad-slot estate-ad-slot--first order-3 md:order-3',
+      'estate-ad-slot order-5 md:order-6',
+      'estate-ad-slot order-7 md:order-8',
+      'estate-ad-slot order-12 md:order-12',
+    ])
   })
   it('로드뷰 이후 광고는 제거됐다', () => {
     expect(src()).not.toContain('Ad: 로드뷰 이후')

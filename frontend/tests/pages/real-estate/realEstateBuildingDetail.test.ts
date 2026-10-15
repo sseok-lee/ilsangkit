@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMounted, onUnmounted, type Component } from 'vue'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import type { DetailOverview } from '~/types/housingRedesign'
+
+const { default: AddressLine } = await vi.importActual<{ default: Component }>('~/components/common/AddressLine.vue')
 
 ;(globalThis as any).ref = ref
 ;(globalThis as any).computed = computed
@@ -43,6 +46,7 @@ const mockSetFilters = vi.fn()
 const mockGoToPage = vi.fn()
 const mockRefresh = vi.fn()
 const mockRefreshOverview = vi.fn()
+let mockDetailOverview: DetailOverview | null = null
 
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({
@@ -68,7 +72,7 @@ vi.mock('~/composables/useRealEstateDetail', async () => {
   const { ref } = await import('vue')
   return {
     useRealEstateDetail: () => ({
-      overview: ref(null),
+      overview: ref(mockDetailOverview),
       snapshot: ref({
         filters: {
           bjdCode: '1168010100',
@@ -150,6 +154,7 @@ vi.mock('~/utils/dataSource', () => ({
 }))
 
 beforeEach(() => {
+  mockDetailOverview = null
   mockSetBreadcrumbSchema.mockClear()
   mockSetItemListSchema.mockClear()
   mockSetBuildingPlaceSchema.mockClear()
@@ -199,11 +204,15 @@ async function mountSuspended(component: any, options?: any) {
     }),
     {
       global: {
+        components: { AddressLine },
         stubs: {
           NuxtLink: { template: '<a :href="to"><slot /></a>', props: ['to'] },
           Breadcrumb: { template: '<nav data-stub="breadcrumb" />' },
           SectionBlock: { template: '<section><slot /><slot name="heading" /><slot name="right" /></section>' },
-          AdBanner: { template: '<div />' },
+          AdBanner: {
+            props: ['variant', 'only'],
+            template: '<div data-ad-stub :data-variant="variant" :data-only="only" />',
+          },
           Pagination: { template: '<div />' },
           DataSourceSection: { template: '<div />' },
           RelatedGuides: { template: '<div />' },
@@ -223,6 +232,94 @@ async function mountSuspended(component: any, options?: any) {
 }
 
 describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — building detail', () => {
+  // Policy stub: verifies page placement/props, not the actual mobile ad render count.
+  describe.each([
+    {
+      label: '단일 주소',
+      addresses: [{ dongName: '반포동', jibun: '20-43', roadName: '반포대로 58' }],
+      expectedAddress: '서울 강남구 반포대로 58',
+      legacyGrouped: false,
+    },
+    {
+      label: '모바일 두 줄 길이의 긴 주소',
+      addresses: [{ dongName: '반포동', jibun: '20-43', roadName: '반포대로 58길 123 일상아파트 제101동 공동주택 주출입구' }],
+      expectedAddress: '서울 강남구 반포대로 58길 123 일상아파트 제101동 공동주택 주출입구',
+      legacyGrouped: false,
+    },
+    {
+      label: 'legacyGrouped 주소 후보',
+      addresses: [
+        { dongName: '반포동', jibun: '20-43', roadName: '반포대로 58' },
+        { dongName: '반포동', jibun: '20-44', roadName: '반포대로 60' },
+      ],
+      expectedAddress: '주소 후보 2건',
+      legacyGrouped: true,
+    },
+  ])('$label의 헤더 광고', ({ addresses, expectedAddress, legacyGrouped }) => {
+    it.each(['apt-sale', 'apt-rent', 'villa-sale', 'villa-rent', 'offitel-sale', 'offitel-rent'])(
+      '%s에서 주소 뒤·요약 앞에 모바일 전용 슬롯을 한 번 배치한다',
+      async (realEstateType) => {
+        const canonicalPath = `/real-estate/${realEstateType}/seoul/gangnam/${encodeURIComponent('반포자이')}`
+        vi.stubGlobal('useRoute', vi.fn().mockReturnValue({
+          params: { realEstateType, city: 'seoul', district: 'gangnam', buildingName: '반포자이' },
+          query: {},
+          path: canonicalPath,
+        }))
+        if (legacyGrouped) {
+          vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              mode: 'preserved',
+              type: realEstateType,
+              bjdCode: '1168010100',
+              buildingName: '반포자이',
+              canonicalPath,
+              redirect: false,
+              legacyGrouped: true,
+            },
+          }))
+        }
+        mockDetailOverview = {
+          identity: { bjdCode: '1168010100', buildingName: '반포자이', legacyGrouped },
+          latestSale: null,
+          buildYear: 2009,
+          minArea: '84.90',
+          maxArea: '84.90',
+          saleCount6m: 0,
+          window6m: { from: '2026-04-15', to: '2026-10-15' },
+          addresses,
+          location: null,
+          locationAmbiguous: legacyGrouped,
+          generatedAt: '2026-10-15T00:00:00.000Z',
+        }
+
+        const m = await vi.importActual<{ default: Component }>('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+        const wrapper = await mountSuspended(m.default)
+        try {
+          const slots = wrapper.findAll('[data-variant="mobile-banner-320x100"]')
+          expect(slots).toHaveLength(1)
+          const slot = slots[0]
+          const head = wrapper.get('.page-head')
+          const summary = head.get('.summary-row')
+          const address = head.get(legacyGrouped ? 'a[href="#reported-addresses"]' : 'p.mt-3')
+          expect(address.text()).toContain(expectedAddress)
+          expect(head.element.contains(slot.element)).toBe(true)
+          expect(slot.attributes('data-only')).toBe('mobile')
+          expect(slot.attributes('data-testid')).toBe('building-header-ad')
+          expect(slot.classes()).toContain('estate-header-mobile-ad')
+          expect(slot.classes()).not.toContain('estate-ad-slot')
+          expect(address.element.compareDocumentPosition(slot.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+          expect(slot.element.compareDocumentPosition(summary.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+          expect(summary.classes()).toContain('mt-[22px]')
+          expect(summary.classes()).toContain('md:mt-7')
+          expect(wrapper.findAll('[data-ad-stub]:not([data-variant])')).toHaveLength(4)
+        } finally {
+          wrapper.unmount()
+        }
+      },
+    )
+  })
+
   it('주소 suffix 라우트는 내부 buildingKey처럼 검증하지 않고 resolver로 넘긴다', async () => {
     vi.mocked((globalThis as any).useRoute).mockReturnValue({
       params: {

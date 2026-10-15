@@ -53,12 +53,13 @@ export function setupAdEnvironment(
   )
   const originalRect = HTMLElement.prototype.getBoundingClientRect
   const renderedHeights = new WeakMap<HTMLElement, number>()
+  const elementWidths = new WeakMap<HTMLElement, number>()
   Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
     configurable: true,
     value(this: HTMLElement) {
       const rect = originalRect.call(this)
       const height = renderedHeights.get(this)
-      return height === undefined ? rect : new DOMRect(rect.x, rect.y, rect.width, height)
+      return new DOMRect(rect.x, rect.y, elementWidths.get(this) ?? width, height ?? rect.height)
     },
   })
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
@@ -152,6 +153,9 @@ export function setupAdEnvironment(
     flush: flushAds,
     setWidth(value: number) {
       width = value
+    },
+    setElementWidth(element: HTMLElement, width: number) {
+      elementWidths.set(element, width)
     },
     setRenderedHeight(ins: HTMLElement, height: number) {
       renderedHeights.set(ins, height)
@@ -271,6 +275,7 @@ export async function mountRequestHarness(
     ready?: boolean
     allowed?: boolean
     resizeObserver?: boolean
+    minWidth?: number
   } = {}
 ) {
   const { h, shallowRef } = await import('vue')
@@ -292,6 +297,7 @@ export async function mountRequestHarness(
         sdkReady: () => ready.value,
         beforePush,
         onEvent: events,
+        minWidth: options.minWidth,
       })
       return () =>
         h('div', { ref: container }, [
