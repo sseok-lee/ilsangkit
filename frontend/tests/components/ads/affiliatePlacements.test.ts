@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 const pages: [string, number, number?][] = [
   ['pages/[category]/[id].vue', 4],
   ['pages/subway/[slug].vue', 2],
-  ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', 4, 2],
+  ['pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue', 5, 2],
   ['pages/real-estate/land/[city]/[district]/[dong].vue', 3, 2],
   ['pages/subscription/[id].vue', 4],
   ['pages/auction/item/[cltrMngNo].vue', 4],

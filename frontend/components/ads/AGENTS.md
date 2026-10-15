@@ -17,7 +17,7 @@ AdSense/디스플레이 광고 배너 래퍼. 앱의 초기 높이 예약 없이
 ## For AI Agents
 
 ### Working In This Directory
-- **초기 무예약**: 광고 높이·최소 높이·고정 높이·aspect-ratio를 예약하지 않는다.
+- **초기 무예약**: 광고 높이·최소 높이·고정 높이·aspect-ratio를 예약하지 않는다. 유일한 예외는 opt-in `mobile-banner-320x100`의 **실제 push 직전** 320×100 크기 지정이며, SSR·hydration·SDK 대기·ready만으로 높이를 예약하지 않는다. 기존 `default`/`compact-mobile`의 자연 높이 계약은 유지한다.
 - 기본 포맷은 데스크톱(≥768px) `horizontal`, 모바일(<768px) `auto`이며 명시적 `adFormat`이 우선한다.
 - `ins`의 실제 렌더 높이가 0이면 wrapper의 margin/padding/border만 제거한다. SDK ready·filled 이전에도 양수 높이를 허용하고 pending 광고를 숨기거나 자르지 않는다.
 - 요청한 요소의 slot/format/full-width 속성은 최초 push 전에 고정하며, SDK의 inline 높이를 덮어쓰지 않는다.
@@ -38,6 +38,7 @@ AdSense/디스플레이 광고 배너 래퍼. 앱의 초기 높이 예약 없이
 - `<AdBanner />`는 본문 폭 100%와 viewport 기본 포맷을 사용한다.
 - 상세 첫 슬롯은 `<AdBanner full-width-responsive="false" />`로 확장을 끈다.
 - `variant="compact-mobile"`은 모바일 max-width 336px·full-width=false를 적용하며 높이는 예약하지 않는다.
+- `variant="mobile-banner-320x100"`은 `only` 생략 시에도 모바일(<768px) 전용이다. 본문 사용 가능 폭 320px 미만에서는 `ins`를 생성하지 않고 폭 관측용 host만 자연 높이 0으로 유지한다. 실제 push 직전에 중앙 정렬 320×100을 적용하고 format/full-width 속성을 생략한다. 요청 후 SDK 스타일 쓰기를 재렌더로 덮지 않으며, desktop/폭 부족 전환 시 `ins`를 제거하고 재진입은 새 요소로 요청한다.
 - `ad-banner--empty`는 간격만 지우고, `ad-banner--collapsed`는 명시적 unfilled/loader-error/외부 display:none에만 적용한다.
 
 ## Dependencies

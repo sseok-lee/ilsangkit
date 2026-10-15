@@ -4,18 +4,21 @@
     ref="container"
     :class="[
       'ad-banner',
-      `ad-banner--${attributes.format}`,
-      attributes.compact ? 'ad-banner--compact-mobile' : 'ad-banner--default',
+      attributes.format && `ad-banner--${attributes.format}`,
+      isFixedMobile
+        ? 'ad-banner--mobile-banner-320x100'
+        : attributes.compact ? 'ad-banner--compact-mobile' : 'ad-banner--default',
       'my-3 w-full',
       { 'ad-banner--collapsed': collapseReason, 'ad-banner--empty': renderedHeight <= 0 },
     ]"
   >
     <ClientOnly>
       <ins
+        v-if="shouldRenderIns"
         :key="adKey"
         ref="insRef"
         class="adsbygoogle"
-        :style="attributes.style"
+        :style="isFixedMobile ? undefined : attributes.style"
         :data-ad-client="AD_CLIENT"
         :data-ad-slot="attributes.slot"
         :data-ad-format="attributes.format"
@@ -34,7 +37,7 @@ let nextInstanceId = 0
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
+import { measureAdContentWidth, useDeferredAdSenseRequest } from './useDeferredAdSenseRequest'
 import { useAdsPolicy } from '~/composables/useAdsPolicy'
 import {
   useAdSenseRuntime,
@@ -46,13 +49,14 @@ import {
 const AD_CLIENT = 'ca-pub-2088264360250020'
 const adTest = import.meta.dev ? 'on' : undefined
 const MIN_NAV_INTERVAL_MS = 1500
+const INITIAL_AD_STYLE = 'display: block; width: 100%;'
 const props = withDefaults(
   defineProps<{
     adSlot?: string
     adFormat?: 'auto' | 'rectangle' | 'horizontal' | 'vertical'
     fullWidthResponsive?: 'true' | 'false'
     only?: 'mobile' | 'desktop'
-    variant?: 'default' | 'compact-mobile'
+    variant?: 'default' | 'compact-mobile' | 'mobile-banner-320x100'
   }>(),
   { fullWidthResponsive: 'true', variant: 'default' }
 )
@@ -65,11 +69,17 @@ const insRef = shallowRef<HTMLElement | null>(null)
 const adKey = ref(0)
 const isDesktop = ref(false)
 const viewportKnown = ref(false)
+// ClientOnly normalizes bound styles when cloning its child. Fixed mode uses
+// CSS initially, leaving inline styles entirely to beforePush and the SDK.
+const isFixedMobile = computed(() => props.variant === 'mobile-banner-320x100')
+const fixedWidthEligible = ref(false)
+const shouldRenderIns = computed(() => !isFixedMobile.value || fixedWidthEligible.value)
 let mq: MediaQueryList | null = null
 let lastNavAt = 0
 const shouldShow = computed(
   () =>
     shouldServeAds.value &&
+    (!isFixedMobile.value || (viewportKnown.value && !isDesktop.value && props.only !== 'desktop')) &&
     (!props.only || (viewportKnown.value && (props.only === 'desktop') === isDesktop.value))
 )
 const adStatus = ref('')
@@ -82,20 +92,29 @@ const collapseReason = computed<AdCollapseReason>(() => {
   return null
 })
 
-const proposedAttributes = computed(() => {
+type AdAttributes = {
+  slot: string
+  format: 'auto' | 'rectangle' | 'horizontal' | 'vertical' | undefined
+  fullWidth: 'true' | 'false' | undefined
+  style: string
+  compact: boolean
+}
+const proposedAttributes = computed<AdAttributes>(() => {
   const compact = props.variant === 'compact-mobile' && !isDesktop.value
-  const format = props.adFormat ?? (compact || isDesktop.value ? 'horizontal' : 'auto')
+  const format = isFixedMobile.value
+    ? undefined
+    : props.adFormat ?? (compact || isDesktop.value ? 'horizontal' : 'auto')
   return {
     slot: props.adSlot ?? (isDesktop.value ? AD_SLOT_DESKTOP : AD_SLOT_MOBILE),
     format,
-    fullWidth: compact ? 'false' : props.fullWidthResponsive,
+    fullWidth: isFixedMobile.value ? undefined : compact ? 'false' : props.fullWidthResponsive,
     style: compact
       ? 'display: block; width: 100%; max-width: 336px; margin-inline: auto;'
-      : 'display: block; width: 100%;',
+      : INITIAL_AD_STYLE,
     compact,
   }
 })
-const lockedAttributes = shallowRef<typeof proposedAttributes.value | null>(null)
+const lockedAttributes = shallowRef<AdAttributes | null>(null)
 const attributes = computed(() => lockedAttributes.value ?? proposedAttributes.value)
 
 function pageType(): AdPageType {
@@ -128,20 +147,59 @@ const request = useDeferredAdSenseRequest(
   () => shouldShow.value && !collapseReason.value,
   {
     element: insRef,
+    minWidth: isFixedMobile.value ? 320 : undefined,
     sdkReady: () => runtime.loader.value.phase === 'ready',
     beforePush(ins) {
+      if (isFixedMobile.value) {
+        ins.removeAttribute('data-ad-format')
+        ins.removeAttribute('data-full-width-responsive')
+        Object.assign(ins.style, {
+          display: 'block',
+          width: '320px',
+          height: '100px',
+          marginInline: 'auto',
+        })
+      }
       lockedAttributes.value = {
         ...attributes.value,
-        slot: ins.getAttribute('data-ad-slot')!,
-        format: ins.getAttribute('data-ad-format') as typeof attributes.value.format,
-        fullWidth: ins.getAttribute('data-full-width-responsive')!,
-        style: ins.getAttribute('style')!,
+        slot: ins.getAttribute('data-ad-slot') ?? attributes.value.slot,
+        format: (ins.getAttribute('data-ad-format') ?? undefined) as AdAttributes['format'],
+        fullWidth: (ins.getAttribute('data-full-width-responsive') ?? undefined) as
+          AdAttributes['fullWidth'],
+        style: ins.getAttribute('style') ?? '',
       }
     },
     onEvent(kind, errorKind) {
       record({ kind, ...(errorKind ? { errorKind } : {}) })
     },
   }
+)
+
+// Host observation outlives an ins removed for insufficient content width.
+let stopObservingHost = () => {}
+watch(
+  container,
+  (host) => {
+    if (!import.meta.client) return
+    stopObservingHost()
+    fixedWidthEligible.value = false
+    if (!isFixedMobile.value || !host) return
+    let active = true
+    const read = () => {
+      if (!active || host !== container.value || !host.isConnected) return
+      fixedWidthEligible.value = measureAdContentWidth(host) >= 320
+    }
+    const resize = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(read) : null
+    resize?.observe(host)
+    if (!resize) window.addEventListener('resize', read)
+    stopObservingHost = () => {
+      active = false
+      resize?.disconnect()
+      if (!resize) window.removeEventListener('resize', read)
+    }
+    read()
+  },
+  { flush: 'post' }
 )
 
 let stopObserving = () => {}
@@ -217,6 +275,7 @@ watch(
   { flush: 'pre' }
 )
 onBeforeUnmount(() => {
+  stopObservingHost()
   stopObserving()
   mq?.removeEventListener('change', applyViewport)
 })
@@ -231,6 +290,13 @@ onBeforeUnmount(() => {
   margin-block: 0 !important;
   padding: 0 !important;
   border: 0 !important;
+}
+.ad-banner--mobile-banner-320x100 {
+  min-width: 0;
+}
+.ad-banner--mobile-banner-320x100 > ins.adsbygoogle {
+  display: block;
+  width: 100%;
 }
 .ad-banner--collapsed {
   height: 0 !important;
