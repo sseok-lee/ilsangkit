@@ -12,6 +12,7 @@ module.exports = {
       max_memory_restart: '500M',
       env_production: {
         NODE_ENV: 'production',
+        TZ: 'Asia/Seoul',
         HOST: '127.0.0.1',
         PORT: '8000',
         AFFILIATE_BANNER_CLEANUP_ENABLED: 'true',
@@ -28,6 +29,7 @@ module.exports = {
       max_memory_restart: '850M',
       env_production: {
         NODE_ENV: 'production',
+        TZ: 'Asia/Seoul',
         HOST: '127.0.0.1',
         NITRO_HOST: '127.0.0.1',
         PORT: '3000',
