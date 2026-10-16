@@ -160,3 +160,36 @@ test('deployment and scheduled workflow YAML parses', () => {
     assert.equal(result.status, 0, `${file}: ${result.stderr}`)
   }
 })
+
+test('every server SSH/SCP step accepts key auth with password fallback', () => {
+  const steps = [deploy, sync, regen].flatMap((workflow) =>
+    workflow.match(/uses: appleboy\/(?:ssh|scp)-action@[^\n]+\n\s+with:\n(?:\s+[a-z_]+:.*\n)+/g) ?? [])
+  assert.equal(steps.length, 5)
+  for (const step of steps) {
+    assert.match(step, /password: \$\{\{ secrets\.SERVER_PASSWORD \}\}\n\s+key: \$\{\{ secrets\.SERVER_SSH_KEY \}\}/)
+  }
+})
+
+test('deploy runner architecture is configurable and verified before any server mutation', () => {
+  assert.match(deploy, /runs-on: \$\{\{ vars\.DEPLOY_RUNNER \|\| 'ubuntu-latest' \}\}/)
+  assert.match(deploy, /uname -m > deploy-bundle\/BUILD_ARCH/)
+  assert.match(deploy, /sha256sum backend\.tgz frontend\.tgz BUILD_ARCH /)
+  const script = readFileSync('scripts/deploy/fixed-deploy.sh', 'utf8')
+  const checksum = script.indexOf('sha256sum -c SHA256SUMS')
+  const guard = script.indexOf('[ "$(cat BUILD_ARCH)" = "$(uname -m)" ]')
+  const firstMutation = script.indexOf('chmod 700 "$STAGE"')
+  assert.ok(checksum > 0 && guard > checksum, 'guard runs after checksum verification')
+  const marker = script.indexOf('test -f "$STAGE/BUILD_ARCH"')
+  assert.ok(marker > 0 && marker < firstMutation, 'marker presence checked before mutation')
+})
+
+test('architecture guard rejects a mismatched bundle', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'arch-guard-'))
+  try {
+    writeFileSync(join(dir, 'BUILD_ARCH'), 'not-a-real-arch\n')
+    const result = spawnSync('bash', ['-c', 'cd "$1" && [ "$(cat BUILD_ARCH)" = "$(uname -m)" ]', '_', dir])
+    assert.notEqual(result.status, 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
