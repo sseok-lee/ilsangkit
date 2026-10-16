@@ -160,3 +160,12 @@ test('deployment and scheduled workflow YAML parses', () => {
     assert.equal(result.status, 0, `${file}: ${result.stderr}`)
   }
 })
+
+test('every server SSH/SCP step accepts key auth with password fallback', () => {
+  const steps = [deploy, sync, regen].flatMap((workflow) =>
+    workflow.match(/uses: appleboy\/(?:ssh|scp)-action@[^\n]+\n\s+with:\n(?:\s+[a-z_]+:.*\n)+/g) ?? [])
+  assert.equal(steps.length, 5)
+  for (const step of steps) {
+    assert.match(step, /password: \$\{\{ secrets\.SERVER_PASSWORD \}\}\n\s+key: \$\{\{ secrets\.SERVER_SSH_KEY \}\}/)
+  }
+})

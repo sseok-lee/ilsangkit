@@ -70,6 +70,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           source: "deploy-bundle/*"
           target: "/home/project2/run/fixed-deploy/${{ env.DEPLOY_ID }}"
           strip_components: 1
@@ -80,6 +81,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 30m
           script: |
             set -euo pipefail
@@ -93,6 +95,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 20m
           script: |
             set -euo pipefail
