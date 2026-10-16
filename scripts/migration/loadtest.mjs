@@ -42,20 +42,42 @@ export function parseArgs(argv) {
   return { ip: out.ip, host: out.host, paths: out.paths, concurrency: out.concurrency, duration: out.duration, insecure: out.insecure }
 }
 
-function requestOnce(agent, args, path) {
+export function requestOnce(agent, args, path, transport = https) {
   const started = performance.now()
   return new Promise((resolve) => {
-    const req = https.request({
+    let done = false
+    let headersSent = false
+    const settlement = (sample) => {
+      if (!done) {
+        done = true
+        resolve(sample)
+      }
+    }
+    const opts = {
       agent, host: args.host, servername: args.host, path, method: 'GET',
       lookup: (_h, opts, cb) => (opts?.all ? cb(null, [{ address: args.ip, family: 4 }]) : cb(null, args.ip, 4)),
-      headers: { 'user-agent': 'ilsangkit-loadtest/1.0', 'accept-encoding': 'gzip' },
+      headers: { 'host': args.host, 'user-agent': 'ilsangkit-loadtest/1.0', 'accept-encoding': 'gzip' },
       timeout: 30_000,
-    }, (res) => {
+    }
+    if (args.port !== undefined) opts.port = args.port
+    const req = transport.request(opts, (res) => {
+      headersSent = true
       res.resume()
-      res.on('end', () => resolve({ ms: Math.round(performance.now() - started), status: res.statusCode }))
+      res.on('end', () => settlement({ ms: Math.round(performance.now() - started), status: res.statusCode }))
+      res.on('aborted', () => settlement({ ms: Math.round(performance.now() - started), error: 'ECONNRESET_MIDBODY' }))
+      res.on('error', (e) => settlement({ ms: Math.round(performance.now() - started), error: e.code ?? e.message }))
+      res.on('close', () => {
+        if (!done) settlement({ ms: Math.round(performance.now() - started), error: 'ECONNRESET_MIDBODY' })
+      })
     })
     req.on('timeout', () => req.destroy(new Error('ETIMEDOUT')))
-    req.on('error', (e) => resolve({ ms: Math.round(performance.now() - started), error: e.code ?? e.message }))
+    req.on('error', (e) => {
+      if (headersSent) {
+        settlement({ ms: Math.round(performance.now() - started), error: 'ECONNRESET_MIDBODY' })
+      } else {
+        settlement({ ms: Math.round(performance.now() - started), error: e.code ?? e.message })
+      }
+    })
     req.end()
   })
 }
