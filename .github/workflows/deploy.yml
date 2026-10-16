@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEPLOY_RUNNER || 'ubuntu-latest' }}
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
@@ -61,7 +61,8 @@ jobs:
           tar -czf deploy-bundle/frontend.tgz -C frontend .output
           cp scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh deploy-bundle/scripts/deploy/
           cp ecosystem.config.js deploy-bundle/
-          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh > SHA256SUMS)
+          uname -m > deploy-bundle/BUILD_ARCH
+          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz BUILD_ARCH ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh > SHA256SUMS)
           echo "DEPLOY_ID=${TESTED_SHA:0:12}" >> "$GITHUB_ENV"
 
       - name: Upload staged build

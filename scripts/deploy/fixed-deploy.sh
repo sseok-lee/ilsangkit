@@ -62,11 +62,13 @@ trap 'rollback $?' ERR
 test -f "$STAGE/SHA256SUMS" || fail "missing artifact checksums in $STAGE"
 test -f "$HELPER" || fail 'missing fixed runtime helper'
 test -f "$STAGE/ecosystem.config.js" || fail 'missing fixed PM2 config'
+test -f "$STAGE/BUILD_ARCH" || fail 'missing build architecture marker'
 chmod 700 "$STAGE"
 exec 9>"$ROOT/run/fixed-deploy.lock"
 flock -n 9 || fail 'another fixed deployment is running'
 cd "$STAGE"
 sha256sum -c SHA256SUMS
+[ "$(cat BUILD_ARCH)" = "$(uname -m)" ] || fail "artifact built for $(cat BUILD_ARCH) but server is $(uname -m)"
 cache_key_count="$(grep -Fc 'proxy_cache_key "$scheme$request_method$host$request_uri$ilsangkit_release";' "$NGINX_SITE" || true)"
 [ "$cache_key_count" -eq 2 ] || fail 'API and page cache keys must include the active deployment ID'
 
