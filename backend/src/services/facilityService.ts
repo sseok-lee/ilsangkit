@@ -437,6 +437,40 @@ function buildDepartmentFilter(category: string | undefined, departments?: strin
   };
 }
 
+// 좌표 사각형 안에서 id 순 앞 take 건. Prisma findMany(take) 는 ORDER BY id 를 붙이는데, 밀집 지역에서
+// 옵티마이저가 PRIMARY 를 id 순으로 훑어 넓은 행을 읽는다(병원 강남 1km 4.3만 행).
+// [lat, lng] 인덱스만으로 같은 id 집합·순서를 먼저 고르고 그 행만 읽는다. 반경이 넓으면 범위가 커져
+// 오히려 느려지므로(50km 실측) 기존 경로를 쓴다. 키워드·진료과목 조건이 붙어도 기존 경로.
+const BOUNDS_ID_FIRST_MAX_RADIUS = 5000;
+
+type CoordBounds = { lat: { gte: number; lte: number }; lng: { gte: number; lte: number } };
+
+async function findInBoundsByIdOrder(
+  cat: FacilityCategory,
+  bounds: CoordBounds,
+  take: number,
+  radius: number,
+  extraWhere: Record<string, unknown> = {},
+): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const model = CATEGORY_REGISTRY[cat].model();
+  const table = NAME_SORT_TABLES[cat];
+  if (!table || radius > BOUNDS_ID_FIRST_MAX_RADIUS || Object.keys(extraWhere).length > 0) {
+    return model.findMany({ where: { ...extraWhere, ...bounds }, select: buildListSelect(cat), take });
+  }
+  const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT id FROM ${table} FORCE INDEX (${table}_lat_lng_idx)
+     WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ?
+     ORDER BY id ASC LIMIT ?`,
+    bounds.lat.gte, bounds.lat.lte, bounds.lng.gte, bounds.lng.lte, take,
+  );
+  if (rows.length === 0) return [];
+  return model.findMany({
+    where: { id: { in: rows.map((row) => row.id) } },
+    select: buildListSelect(cat),
+    orderBy: { id: 'asc' },
+  });
+}
+
 // 그룹별 검색 응답 타입
 interface GroupedCategoryResult {
   category: FacilityCategory | 'trash';
@@ -542,11 +576,7 @@ export async function getNearbyFacilities(
         const groupResult = await wifiGroupSearch({ lat, lng, radius, page: 1, limit: 10 });
         return groupResult.items;
       }
-      const records = await CATEGORY_REGISTRY[cat].model().findMany({
-        where: approxBounds,
-        select: buildListSelect(cat),
-        take: 500,
-      });
+      const records = await findInBoundsByIdOrder(cat, approxBounds, 500, radius);
       return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
     }),
   );
@@ -945,12 +975,8 @@ export async function search(params: FacilitySearchInput): Promise<SearchResult>
           });
           return groupResult.items;
         }
-        const where = { ...keywordFilter, ...approxBounds, ...buildDepartmentFilter(cat, departments) };
-        const records = await CATEGORY_REGISTRY[cat].model().findMany({
-          where,
-          select: buildListSelect(cat),
-          take: 1000,
-        });
+        const extraWhere = { ...keywordFilter, ...buildDepartmentFilter(cat, departments) };
+        const records = await findInBoundsByIdOrder(cat, approxBounds, 1000, radius, extraWhere);
         return records.map((r: any) => toFacilityItem(r, cat)); // eslint-disable-line @typescript-eslint/no-explicit-any
       }),
     );
