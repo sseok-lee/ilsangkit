@@ -88,6 +88,37 @@ describe('real estate summary read-mode consumers', () => {
     expect(sqlAt(1)).not.toContain('COUNT(DISTINCT buildingKey)');
   });
 
+  it('forces the covering [type, buildingName] index for national list counts only', async () => {
+    queryRawUnsafeMock.mockResolvedValueOnce([]).mockResolvedValueOnce([{ total: 0n }]);
+
+    await getComplexList('villa-rent', undefined, undefined, undefined, 9641, 15);
+
+    expect(sqlAt(1)).toContain(
+      'FROM RealEstateBuildingSummaryV2 FORCE INDEX (RealEstateBuildingSummaryV2_type_buildingName_idx) WHERE',
+    );
+    expect(sqlAt(0)).not.toContain('FORCE INDEX');
+    expect(queryRawUnsafeMock.mock.calls[1]?.slice(1)).toEqual(['villa-rent']);
+  });
+
+  it('forces the covering index on the legacy table in compatibility mode', async () => {
+    process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
+    queryRawUnsafeMock.mockResolvedValueOnce([]).mockResolvedValueOnce([{ total: 0n }]);
+
+    await getComplexList('apt-sale', undefined, undefined, '래미안', 1, 15);
+
+    expect(sqlAt(1)).toContain(
+      'FROM RealEstateBuildingSummary FORCE INDEX (RealEstateBuildingSummary_type_buildingName_idx) WHERE',
+    );
+  });
+
+  it('leaves regional list counts to the optimizer', async () => {
+    queryRawUnsafeMock.mockResolvedValueOnce([]).mockResolvedValueOnce([{ total: 0n }]);
+
+    await getComplexList('apt-sale', '서울특별시', undefined, undefined, 1, 15);
+
+    expect(sqlAt(1)).not.toContain('FORCE INDEX');
+  });
+
   it('validates keyed detail identity from V2 even in compatibility mode', async () => {
     process.env.REAL_ESTATE_SUMMARY_MODE = 'compatibility';
     queryRawUnsafeMock.mockResolvedValueOnce([]);
