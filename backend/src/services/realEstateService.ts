@@ -453,7 +453,12 @@ interface SummaryRawRow {
   lng: string | null;
 }
 
-function buildSummarySearch(type: string, city?: string, district?: string, nameText?: string): { whereClause: string; params: unknown[] } {
+function buildSummarySearch(
+  type: string,
+  city?: string,
+  district?: string,
+  nameText?: string,
+): { whereClause: string; params: unknown[]; regionScoped: boolean } {
   const region = regionFilterToSql(buildRegionFilter(city, district));
   const conditions: string[] = ['type = ?', VALID_NAME_SQL, ...region.clauses];
   const params: unknown[] = [type, ...region.params];
@@ -461,7 +466,14 @@ function buildSummarySearch(type: string, city?: string, district?: string, name
     conditions.push('buildingName LIKE CONCAT(?, \'%\')');
     params.push(nameText);
   }
-  return { whereClause: conditions.join(' AND '), params };
+  return { whereClause: conditions.join(' AND '), params, regionScoped: region.clauses.length > 0 };
+}
+
+// 지역 조건 없는 COUNT 는 옵티마이저가 [type, buildingKey] 로 행마다 본 테이블을 읽는다.
+// VALID_NAME 조건이 buildingName 만 보므로 [type, buildingName] 커버링 인덱스로 세면 결과는 같고
+// 인덱스(V2 기준 29MB)만 읽는다. 지역 조건이 있으면 지역 인덱스가 더 좁으므로 옵티마이저에 맡긴다.
+function summaryCountIndexHint(table: SummaryTable, regionScoped: boolean): string {
+  return regionScoped ? '' : ` FORCE INDEX (${table}_type_buildingName_idx)`;
 }
 
 const SUMMARY_RECENT_ORDER_SQL = 'latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC';
@@ -585,7 +597,7 @@ export async function getComplexList(
 ): Promise<ComplexListResult> {
   if (!TABLE_NAME_MAP[type]) throw new Error(`Unknown real estate type: ${type}`);
 
-  const { whereClause, params } = buildSummarySearch(type, city, district, buildingName);
+  const { whereClause, params, regionScoped } = buildSummarySearch(type, city, district, buildingName);
   const offset = (page - 1) * limit;
   const summaryTable = listSummaryTable();
 
@@ -601,7 +613,7 @@ export async function getComplexList(
       offset,
     ),
     prisma.$queryRawUnsafe<[{ total: bigint }]>(
-      `SELECT COUNT(*) AS total FROM ${summaryTable} WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM ${summaryTable}${summaryCountIndexHint(summaryTable, regionScoped)} WHERE ${whereClause}`,
       ...params,
     ),
   ]);
