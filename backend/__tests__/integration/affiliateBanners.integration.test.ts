@@ -591,20 +591,20 @@ describe('affiliate banner real API and storage integration', () => {
         externalImageUrl: null,
         targetUrl: 'https://example.com/go?a=%2B&a=2+b',
         altText: 'integration upload banner',
-        endDate: '2026-10-16',
+        endDate: '2099-12-31',
       });
     expect(createRes.status).toBe(201);
     const bannerId = String(createRes.body.data.id);
     trackBanner(bannerId);
     expect(createRes.body.data.isEnabled).toBe(false);
-    expect(createRes.body.data.endDate).toBe('2026-10-16');
+    expect(createRes.body.data.endDate).toBe('2099-12-31');
     expect(createRes.body.data.isExpired).toBe(false);
     expect(createRes.body.data.imageUrl).toBe(first.imageUrl);
 
     const readRes = await request(app).get(`/api/admin/affiliate-banners/${bannerId}`);
     expect(readRes.status).toBe(200);
     expect(readRes.body.data.targetUrl).toBe('https://example.com/go?a=%2B&a=2+b');
-    expect(readRes.body.data.endDate).toBe('2026-10-16');
+    expect(readRes.body.data.endDate).toBe('2099-12-31');
     expect(readRes.body.data).toMatchObject({
       disclosureOverride: null,
       disclosureText: null,
@@ -612,7 +612,7 @@ describe('affiliate banner real API and storage integration', () => {
     });
 
     const createdRow = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } });
-    expect(createdRow.expiresAt?.toISOString()).toBe('2026-10-16T15:00:00.000Z');
+    expect(createdRow.expiresAt?.toISOString()).toBe('2099-12-31T15:00:00.000Z');
     expect(createdRow.isEnabled).toBe(false);
     expect(createdRow.imageAssetId).toBe(first.imageAssetId);
 
@@ -624,7 +624,7 @@ describe('affiliate banner real API and storage integration', () => {
       .send({ isEnabled: true });
     expect(enableRes.status).toBe(200);
     expect(enableRes.body.data.isEnabled).toBe(true);
-    expect(enableRes.body.data.endDate).toBe('2026-10-16');
+    expect(enableRes.body.data.endDate).toBe('2099-12-31');
     expect(enableRes.body.data).toMatchObject({
       disclosureOverride: null,
       disclosureText: '통합 테스트 기본 문구',
@@ -632,7 +632,7 @@ describe('affiliate banner real API and storage integration', () => {
     });
 
     const afterEnableRow = await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } });
-    expect(afterEnableRow.expiresAt?.toISOString()).toBe('2026-10-16T15:00:00.000Z');
+    expect(afterEnableRow.expiresAt?.toISOString()).toBe('2099-12-31T15:00:00.000Z');
 
     const second = await postUpload(webpBytes);
     const replaceRes = await request(app)
@@ -645,7 +645,7 @@ describe('affiliate banner real API and storage integration', () => {
       });
     expect(replaceRes.status).toBe(200);
     expect(replaceRes.body.data.imageAssetId).toBe(second.imageAssetId);
-    expect(replaceRes.body.data.endDate).toBe('2026-10-16');
+    expect(replaceRes.body.data.endDate).toBe('2099-12-31');
 
     const previous = await prisma.affiliateBannerAsset.findUnique({ where: { id: first.imageAssetId } });
     const replacement = await prisma.affiliateBannerAsset.findUnique({ where: { id: second.imageAssetId } });
@@ -668,16 +668,16 @@ describe('affiliate banner real API and storage integration', () => {
     expect(afterRollback.status).toBe(200);
     expect(afterRollback.body.data.imageAssetId).toBe(second.imageAssetId);
     expect(afterRollback.body.data.imageUrl).toBe(second.imageUrl);
-    expect(afterRollback.body.data.endDate).toBe('2026-10-16');
+    expect(afterRollback.body.data.endDate).toBe('2099-12-31');
 
     const renameRes = await request(app)
       .patch(`/api/admin/affiliate-banners/${bannerId}`)
       .set('Origin', ORIGIN)
       .send({ name: 'integration renamed banner' });
     expect(renameRes.status).toBe(200);
-    expect(renameRes.body.data.endDate).toBe('2026-10-16');
+    expect(renameRes.body.data.endDate).toBe('2099-12-31');
     expect((await prisma.affiliateBanner.findUniqueOrThrow({ where: { id: bannerId } })).expiresAt?.toISOString())
-      .toBe('2026-10-16T15:00:00.000Z');
+      .toBe('2099-12-31T15:00:00.000Z');
 
     const clearEndDateRes = await request(app)
       .patch(`/api/admin/affiliate-banners/${bannerId}`)
