@@ -820,6 +820,9 @@ model SyncHistory {
   errorMessage   String?    @db.Text
   startedAt      DateTime   @default(now())
   completedAt    DateTime?
+
+  // 카테고리별 최신 성공 시각(getSyncStatus·getCategoryLastSync) — 카테고리마다 마지막 1건만 읽는다
+  @@index([status, category, completedAt])
 }
 
 // 가이드 콘텐츠 테이블
@@ -1563,6 +1566,8 @@ model AptRentTransaction {
   @@index([city, district, dealYear, dealMonth])
   @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
+  // 인근 단지 전세/월세 필터(getNearbyByBjd raw) — rentType 까지 인덱스로 좁히고 TRIM(dongName) 은 ICP 로 거른다
+  @@index([bjdCode, rentType, dongName])
   @@index([syncedAt])
 }
 
@@ -1609,6 +1614,8 @@ model VillaRentTransaction {
   @@index([city, district, dealYear, dealMonth])
   @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
+  // 인근 단지 전세/월세 필터(getNearbyByBjd raw) — rentType 까지 인덱스로 좁히고 TRIM(dongName) 은 ICP 로 거른다
+  @@index([bjdCode, rentType, dongName])
   @@index([syncedAt])
 }
 
@@ -1654,6 +1661,8 @@ model OffitelRentTransaction {
   @@index([city, district, dealYear, dealMonth])
   @@index([city, district, buildingName, bjdCode])
   @@index([rentType])
+  // 인근 단지 전세/월세 필터(getNearbyByBjd raw) — rentType 까지 인덱스로 좁히고 TRIM(dongName) 은 ICP 로 거른다
+  @@index([bjdCode, rentType, dongName])
   @@index([syncedAt])
 }
 

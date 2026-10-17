@@ -1340,7 +1340,8 @@ export async function getNearbyByBjd(
 
   // Rent + 전세/월세 필터: summary 가 rentType 을 구분하지 않으므로 transaction 테이블 raw SQL.
   // ROW_NUMBER() 윈도우 함수로 단지별 실제 최신 행을 추출하여 정확한 거래일/가격 반환.
-  // 이 경로는 사용자가 UI 에서 전세/월세를 고른 뒤에만 타므로 SSR·크롤러 노출이 없다.
+  // `?mode=jeonse|wolse` URL 을 SSR 할 때도 타므로 크롤러 노출이 있다(2026-10-17 OCI 부하 시험 DB CPU 1위).
+  // [bjdCode, rentType, dongName] 인덱스로 rentType 까지 좁히고 TRIM(dongName) 은 인덱스 조건 푸시다운으로 거른다.
   // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다.
   const rentEntries = await Promise.all(NEARBY_PROPERTY_KEYS.map(async (key) => {
     const tableName = RENT_TRANSACTION_TABLE[key];

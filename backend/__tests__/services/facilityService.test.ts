@@ -112,6 +112,8 @@ beforeEach(async () => {
   // 이전 테스트에서 남은 viewCount 버퍼 비우기
   await flushViewCounts();
   vi.clearAllMocks();
+  // clearAllMocks 는 mockImplementation 을 지우지 않는다 — 좌표 테스트의 SQL별 구현이 새지 않게 초기화
+  mockQueryRaw.mockReset();
   mockUpdate.mockResolvedValue({});
   mockExecuteRawUnsafe.mockResolvedValue(1);
   // fulltext 헬퍼 기본값
@@ -561,12 +563,20 @@ describe('search', () => {
 });
 
 describe('주변 시설 name+좌표 dedup', () => {
+  // 5km 이하 좌표 조회는 [lat, lng] 인덱스로 id 를 먼저 고른 뒤(raw) id 로 행을 읽는다(findMany).
+  // 첫 대상 테이블의 raw 결과만 ids 로 돌려주고 나머지 raw(다른 테이블·wifi 그룹)는 빈 배열.
+  function boundsIdsFor(table: string, ids: string[]): void {
+    mockQueryRaw.mockImplementation(async (sql: string) =>
+      sql.includes(`FROM ${table} FORCE INDEX (${table}_lat_lng_idx)`) ? ids.map((id) => ({ id })) : []);
+  }
+
   // 동일 시설이 서로 다른 id로 중복 유입되는 상황 (예: 온천초등학교 353m 2회)
   const twinA = { ...sampleRecord, id: 'twin-a', name: '온천초등학교', lat: 37.5, lng: 127.0 };
   const twinB = { ...sampleRecord, id: 'twin-b', name: '온천초등학교', lat: 37.5, lng: 127.0 };
 
   it('getNearbyFacilities()는 동일 name+좌표(다른 id) 2건을 1건으로 병합한다', async () => {
-    // toilet → CROSS_CATEGORY_MAP: [park, wifi]. 첫 카테고리에만 쌍둥이 2건, 나머지는 빈 배열.
+    // toilet → CROSS_CATEGORY_MAP: [park, wifi]. park 에만 쌍둥이 2건, wifi 그룹은 빈 배열.
+    boundsIdsFor('Park', ['twin-a', 'twin-b']);
     mockFindMany.mockResolvedValueOnce([twinA, twinB]).mockResolvedValue([]);
 
     const result = await getNearbyFacilities('toilet', 37.5, 127.0, 1000);
@@ -578,6 +588,7 @@ describe('주변 시설 name+좌표 dedup', () => {
   it('getNearbyFacilities()는 동명이지만 좌표가 다른 시설은 2건 유지한다 (과다 dedup 방지)', async () => {
     const near = { ...sampleRecord, id: 'near', name: '온천초등학교', lat: 37.5, lng: 127.0 };
     const far = { ...sampleRecord, id: 'far', name: '온천초등학교', lat: 37.501, lng: 127.001 };
+    boundsIdsFor('Park', ['near', 'far']);
     mockFindMany.mockResolvedValueOnce([near, far]).mockResolvedValue([]);
 
     const result = await getNearbyFacilities('toilet', 37.5, 127.0, 5000);
@@ -586,6 +597,7 @@ describe('주변 시설 name+좌표 dedup', () => {
   });
 
   it('search() 좌표 경로는 items와 total을 dedup한다 (total/totalPages 재계산)', async () => {
+    boundsIdsFor('Toilet', ['twin-a', 'twin-b']);
     mockFindMany.mockResolvedValue([twinA, twinB]);
 
     const result = await search({ category: 'toilet', lat: 37.5, lng: 127.0, radius: 1000, page: 1, limit: 20 });
@@ -598,12 +610,75 @@ describe('주변 시설 name+좌표 dedup', () => {
   it('search() 좌표 경로는 동명이지만 좌표가 다른 시설은 2건 유지한다', async () => {
     const near = { ...sampleRecord, id: 'near', name: '온천초등학교', lat: 37.5, lng: 127.0 };
     const far = { ...sampleRecord, id: 'far', name: '온천초등학교', lat: 37.501, lng: 127.001 };
+    boundsIdsFor('Toilet', ['near', 'far']);
     mockFindMany.mockResolvedValue([near, far]);
 
     const result = await search({ category: 'toilet', lat: 37.5, lng: 127.0, radius: 5000, page: 1, limit: 20 });
 
     expect(result.items).toHaveLength(2);
     expect(result.total).toBe(2);
+  });
+});
+
+describe('좌표 범위 조회: [lat, lng] 인덱스로 id 먼저 선택', () => {
+  it('5km 이하 좌표 검색은 id 를 인덱스로 고른 뒤 같은 id 순으로 행을 읽는다', async () => {
+    mockQueryRaw.mockResolvedValueOnce([{ id: 'b-1' }, { id: 'c-2' }]);
+    mockFindMany.mockResolvedValueOnce([]);
+
+    await search({ category: 'hospital', lat: 37.5, lng: 127.0, radius: 1000, page: 1, limit: 10 });
+
+    const [sql, ...params] = mockQueryRaw.mock.calls[0] as [string, ...unknown[]];
+    expect(sql.replace(/\s+/g, ' ')).toContain(
+      'SELECT id FROM Hospital FORCE INDEX (Hospital_lat_lng_idx) WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ? ORDER BY id ASC LIMIT ?',
+    );
+    expect(params).toHaveLength(5);
+    expect(params[4]).toBe(1000);
+    expect(params[0]).toBeCloseTo(37.5 - 1 / 111, 10);
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: { in: ['b-1', 'c-2'] } },
+      orderBy: { id: 'asc' },
+    }));
+  });
+
+  it('범위 안에 시설이 없으면 행 조회를 하지 않는다', async () => {
+    mockQueryRaw.mockResolvedValueOnce([]);
+
+    const result = await search({ category: 'aed', lat: 37.5, lng: 127.0, radius: 1000, page: 1, limit: 10 });
+
+    expect(mockFindMany).not.toHaveBeenCalled();
+    expect(result.total).toBe(0);
+  });
+
+  it('주변 시설은 카테고리마다 500건 한도로 같은 방식을 쓴다', async () => {
+    mockQueryRaw.mockResolvedValue([]);
+
+    await getNearbyFacilities('hospital', 37.5, 127.0);
+
+    const sqls = mockQueryRaw.mock.calls.map((call) => String(call[0]).replace(/\s+/g, ' '));
+    expect(sqls.some((sql) => sql.includes('FROM Pharmacy FORCE INDEX (Pharmacy_lat_lng_idx)'))).toBe(true);
+    expect(sqls.some((sql) => sql.includes('FROM Aed FORCE INDEX (Aed_lat_lng_idx)'))).toBe(true);
+    expect(mockQueryRaw.mock.calls.every((call) => call[5] === 500)).toBe(true);
+  });
+
+  it('반경이 5km 를 넘으면 기존 범위 조회(take 1000)를 쓴다', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+
+    await search({ category: 'hospital', lat: 37.5, lng: 127.0, radius: 10000, page: 1, limit: 10 });
+
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ lat: expect.any(Object), lng: expect.any(Object) }),
+      take: 1000,
+    }));
+  });
+
+  it('키워드가 있으면 기존 범위 조회를 쓴다', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+
+    await search({ category: 'hospital', keyword: '내과', lat: 37.5, lng: 127.0, radius: 1000, page: 1, limit: 10 });
+
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({ take: 1000 }));
   });
 });
 
