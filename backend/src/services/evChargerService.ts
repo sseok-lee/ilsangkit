@@ -133,15 +133,30 @@ export async function evChargerStationSearch(params: {
 
   const whereClause = conditions.join(' AND ');
   const offset = (page - 1) * limit;
+  const isRadiusSearch = lat !== undefined && lng !== undefined && radius !== undefined;
 
-  // 서브쿼리 DISTINCT 형태 — COUNT(DISTINCT) 직접형은 옵티마이저가 [statId,...] 인덱스
-  // loose scan(99k행, ~0.5s)을 고집함. 이 형태가 [city, district, statId] index-only를 탐(~60ms).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const countResult: any[] = await prisma.$queryRawUnsafe(
-    `SELECT COUNT(*) as cnt FROM (SELECT DISTINCT statId FROM EvCharger WHERE ${whereClause}) t`,
-    ...values,
-  );
-  const total = Number(countResult[0]?.cnt || 0);
+  // 반경 검색은 아래에서 total 을 거리 필터 결과 수로 돌려주므로 COUNT 결과를 쓰지 않는다.
+  let total = 0;
+  if (!isRadiusSearch) {
+    // 서브쿼리 DISTINCT 형태 — COUNT(DISTINCT) 직접형은 옵티마이저가 [statId,...] 인덱스
+    // loose scan(99k행, ~0.5s)을 고집함. 이 형태가 [city, district, statId] index-only를 탐(~60ms).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const countResult: any[] = await prisma.$queryRawUnsafe(
+      `SELECT COUNT(*) as cnt FROM (SELECT DISTINCT statId FROM EvCharger WHERE ${whereClause}) t`,
+      ...values,
+    );
+    total = Number(countResult[0]?.cnt || 0);
+  }
+
+  // 조건 없는 전국 목록은 전 행(55만)을 묶어 정렬한 뒤 20개만 쓴다. 페이지에 들어갈 statId 를
+  // [statId, name] 인덱스만으로 먼저 고르고 그 충전소들만 집계한다. 정렬 키(name, statId)가
+  // 같고 statId 가 그룹 키라 순서가 완전히 정해지므로 결과는 단일 쿼리와 같다.
+  const isNationalList = conditions.length === 1;
+  const pageFilter = isNationalList
+    ? ` AND statId IN (SELECT statId FROM (SELECT statId, MIN(name) AS pageName FROM EvCharger WHERE ${whereClause}
+         GROUP BY statId ORDER BY pageName ASC, statId ASC LIMIT ? OFFSET ?) page)`
+    : '';
+  const pageClause = isNationalList ? '' : ' LIMIT ? OFFSET ?';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows: any[] = await prisma.$queryRawUnsafe(
@@ -150,8 +165,8 @@ export async function evChargerStationSearch(params: {
             COUNT(*) as totalChargers,
             SUM(CASE WHEN CAST(output AS DECIMAL) >= 50 THEN 1 ELSE 0 END) as rapidCount,
             SUM(CASE WHEN CAST(output AS DECIMAL) < 50 THEN 1 ELSE 0 END) as slowCount
-     FROM EvCharger WHERE ${whereClause}
-     GROUP BY statId ORDER BY name ASC, statId ASC LIMIT ? OFFSET ?`,
+     FROM EvCharger WHERE ${whereClause}${pageFilter}
+     GROUP BY statId ORDER BY name ASC, statId ASC${pageClause}`,
     ...values, limit, offset,
   );
 
@@ -173,7 +188,7 @@ export async function evChargerStationSearch(params: {
   }));
 
   // 좌표 검색 시 Haversine 거리 계산 + 거리순 정렬
-  if (lat !== undefined && lng !== undefined && radius !== undefined) {
+  if (isRadiusSearch) {
     items = items
       .map((item) => ({
         ...item,

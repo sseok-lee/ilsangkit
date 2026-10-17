@@ -706,6 +706,8 @@ model EvCharger {
   @@index([bjdCode])
   @@index([chgerType])
   @@index([statId])
+  // 전국 충전소 목록 페이지 선택(evChargerStationSearch) — 행 대신 인덱스만 읽어 statId·이름 정렬
+  @@index([statId, name])
   @@index([statId, city, district])
   // 지역 필터 선두 → COUNT(DISTINCT statId) 인덱스-only (지역 검색 512ms → ms단위)
   @@index([city, district, statId])
