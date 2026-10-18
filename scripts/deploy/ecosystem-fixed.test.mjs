@@ -11,3 +11,18 @@ test('fixed PM2 apps pin Asia/Seoul so server OS timezone cannot shift dates', (
     assert.equal(app.env_production.TZ, 'Asia/Seoul', app.name)
   }
 })
+
+const toMb = (value) => {
+  const match = /^(\d+)([MG])$/.exec(value)
+  assert.ok(match, `unexpected memory format: ${value}`)
+  return Number(match[1]) * (match[2] === 'G' ? 1024 : 1)
+}
+
+test('frontend restarts gracefully on RSS before the V8 heap cap can abort it', () => {
+  const frontend = apps.find((app) => app.name === 'ilsangkit-frontend')
+  const rssLimit = toMb(frontend.max_memory_restart)
+  const heapCap = Number(/--max-old-space-size=(\d+)/.exec(frontend.node_args)?.[1])
+  // OCI(12GB)에서 사이트맵 재생성이 850M 를 넘겨 재시작했다(2026-10-18). 1.5G 아래로 내리지 않는다.
+  assert.ok(rssLimit >= 1536, `frontend max_memory_restart ${rssLimit}M`)
+  assert.ok(heapCap > rssLimit, `heap cap ${heapCap}M must exceed RSS limit ${rssLimit}M`)
+})
