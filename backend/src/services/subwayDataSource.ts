@@ -187,12 +187,42 @@ function buildTransferLines(row: SubwayCsvRow): string | null {
 export interface TransformContext {
   takenSlugs: Set<string>;
   takenSourceIds: Set<string>;
+  /** DB 에 이미 있는 역의 sourceId → nameSlug. 이 역들은 slug 를 새로 만들지 않는다. */
+  existingSlugs: Map<string, string>;
+  /** 역번호 앞자리 0 을 뗀 키 → DB 의 sourceId. 원본이 역번호 자릿수를 바꿔도 같은 역으로 본다. */
+  existingSourceIdByKey: Map<string, string>;
 }
 
-export function createTransformContext(): TransformContext {
+// 역번호 앞자리 0 만 다른 코드는 같은 역이다. KRIC 2026-06 원본이 대전 1호선을
+// 0101~0122 → 101~122 로 바꿔, 그대로 두면 22개 역이 새 행·새 URL 로 중복 생성된다.
+function stationKey(sourceId: string): string {
+  const dash = sourceId.indexOf('-');
+  if (dash < 0) return sourceId;
+  return sourceId.slice(0, dash).replace(/^0+(?=.)/, '') + sourceId.slice(dash);
+}
+
+/**
+ * slug 는 CSV 에서 먼저 나온 역이 기본형(예: sinsa)을 차지하는 방식이라 CSV 줄 순서가
+ * 바뀌면 같은 역의 slug 가 바뀐다. 2026-06 KRIC CSV 에서 신분당선 신사가 3호선 신사보다
+ * 앞에 오면서 'sinsa' 유니크 충돌로 sync 전체가 실패했다(2026-10-18).
+ * 기존 역은 DB slug 를 그대로 쓰고(URL 고정), 새 역만 기존 slug 전부를 피해 새로 만든다.
+ */
+export function createTransformContext(existingSlugs: Map<string, string> = new Map()): TransformContext {
+  const existingSourceIdByKey = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const sourceId of existingSlugs.keys()) {
+    const key = stationKey(sourceId);
+    if (existingSourceIdByKey.has(key)) ambiguous.add(key);
+    else existingSourceIdByKey.set(key, sourceId);
+  }
+  // 앞자리 0 만 다른 기존 역이 둘 이상이면 어느 쪽인지 모르므로 별칭을 쓰지 않는다.
+  for (const key of ambiguous) existingSourceIdByKey.delete(key);
+
   return {
-    takenSlugs: new Set(),
+    takenSlugs: new Set(existingSlugs.values()),
     takenSourceIds: new Set(),
+    existingSlugs,
+    existingSourceIdByKey,
   };
 }
 
@@ -221,11 +251,14 @@ export function transformSubwayRow(
   if (lat < KOREA_BOUNDS.LAT_MIN || lat > KOREA_BOUNDS.LAT_MAX) return null;
   if (lng < KOREA_BOUNDS.LNG_MIN || lng > KOREA_BOUNDS.LNG_MAX) return null;
 
-  const sourceId = compositeSourceId(stationCode, lineCode);
+  const rawSourceId = compositeSourceId(stationCode, lineCode);
+  const sourceId = ctx.existingSlugs.has(rawSourceId)
+    ? rawSourceId
+    : ctx.existingSourceIdByKey.get(stationKey(rawSourceId)) ?? rawSourceId;
   if (ctx.takenSourceIds.has(sourceId)) return null;
   ctx.takenSourceIds.add(sourceId);
 
-  const nameSlug = slugifyStation({
+  const nameSlug = ctx.existingSlugs.get(sourceId) ?? slugifyStation({
     englishName,
     koreanName,
     lineName,
@@ -263,11 +296,11 @@ export function transformSubwayRow(
   };
 }
 
-export function transformAll(rows: SubwayCsvRow[]): {
+export function transformAll(rows: SubwayCsvRow[], existingSlugs?: Map<string, string>): {
   stations: TransformedSubwayStation[];
   skipped: number;
 } {
-  const ctx = createTransformContext();
+  const ctx = createTransformContext(existingSlugs);
   const stations: TransformedSubwayStation[] = [];
   let skipped = 0;
 
