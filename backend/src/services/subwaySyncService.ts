@@ -11,6 +11,7 @@ import {
   parseSubwayCSV,
   transformAll,
 } from './subwayDataSource.js';
+import prisma from '../lib/prisma.js';
 
 export async function syncSubwayStations(csvPath: string): Promise<SyncStats> {
   return runSync('subway', async (stats) => {
@@ -19,7 +20,11 @@ export async function syncSubwayStations(csvPath: string): Promise<SyncStats> {
     stats.totalRecords = rows.length;
     console.info(`Parsed ${rows.length} CSV rows`);
 
-    const { stations, skipped } = transformAll(rows);
+    // 기존 역의 slug(=상세 URL)를 유지한다. CSV 줄 순서가 바뀌어도 slug 가 바뀌지 않게.
+    const existing = await prisma.subwayStation.findMany({ select: { sourceId: true, nameSlug: true } });
+    const existingSlugs = new Map(existing.map((e) => [e.sourceId, e.nameSlug]));
+
+    const { stations, skipped } = transformAll(rows, existingSlugs);
     stats.skippedRecords += skipped;
     console.info(`Transformed ${stations.length} unique stations (skipped ${skipped})`);
 
