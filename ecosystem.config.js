@@ -5,11 +5,11 @@ module.exports = {
       name: 'ilsangkit-backend',
       cwd: '/home/project2/backend',
       script: 'dist/server.js',
-      node_args: '--env-file=/home/project2/backend/.env',
+      node_args: '--env-file=/home/project2/backend/.env --max-old-space-size=1536',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
-      max_memory_restart: '500M',
+      max_memory_restart: '1024M',
       env_production: {
         NODE_ENV: 'production',
         TZ: 'Asia/Seoul',
