@@ -22,11 +22,11 @@ module.exports = {
       name: 'ilsangkit-frontend',
       cwd: '/home/project2/frontend',
       script: '.output/server/index.mjs',
-      node_args: '--env-file=/home/project2/frontend/.env --max-old-space-size=1024',
+      node_args: '--env-file=/home/project2/frontend/.env --max-old-space-size=2048',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
-      max_memory_restart: '850M',
+      max_memory_restart: '1536M',
       env_production: {
         NODE_ENV: 'production',
         TZ: 'Asia/Seoul',
