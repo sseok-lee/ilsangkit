@@ -1,0 +1,35 @@
+name: Sync Real Estate Check
+
+# 운영 서버 cron 이 03:00 KST 에 돌린 부동산 동기화(scripts/ops/sync-real-estate.sh)의 결과를
+# 확인한다. 오늘 실행 기록이 없거나 실패면 이 워크플로가 실패해 GitHub 실패 메일이 경보가 된다.
+# 동기화는 보통 04:30 전에 끝나고, GitHub 예약이 몇 시간 늦어도 확인에는 지장이 없다.
+on:
+  schedule:
+    - cron: '23 1 * * *' # 10:23 KST
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check last server sync result
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -u
+            STATUS=/home/project2/run/real-estate-sync.status
+            LOG="/home/project2/logs/real-estate-sync/$(date +%F).log"
+            cat "$STATUS" 2>/dev/null || echo "[error] $STATUS 없음"
+            started="$(sed -n 's/^started=//p' "$STATUS" 2>/dev/null | cut -c1-10)"
+            code="$(sed -n 's/^exit=//p' "$STATUS" 2>/dev/null)"
+            if [ "$started" != "$(date +%F)" ] || [ "$code" != "0" ]; then
+              echo "[error] 오늘($(date +%F)) 부동산 동기화가 성공하지 않았다: started=$started exit=$code"
+              grep -E '^\[(warn|error)\]|\[step:' "$LOG" 2>/dev/null | tail -40
+              exit 1
+            fi
+            grep -E '^\[warn\]' "$LOG" 2>/dev/null | tail -20
+            echo "[ok] 오늘 동기화 성공"

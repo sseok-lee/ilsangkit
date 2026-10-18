@@ -8,6 +8,9 @@ import test from 'node:test'
 const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8')
 const sync = readFileSync('.github/workflows/sync-real-estate.yml', 'utf8')
 const regen = readFileSync('.github/workflows/regen-sitemaps.yml', 'utf8')
+const syncScript = readFileSync('scripts/ops/sync-real-estate.sh', 'utf8')
+const syncCheckPath = '.github/workflows/sync-real-estate-check.yml'
+const syncCheck = existsSync(syncCheckPath) ? readFileSync(syncCheckPath, 'utf8') : ''
 
 test('tested main SHA is packaged and deployed into the canonical backend/frontend paths', () => {
   assert.match(deploy, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/)
@@ -19,7 +22,7 @@ test('tested main SHA is packaged and deployed into the canonical backend/fronte
 })
 
 test('scheduled jobs run from the canonical backend even while rollback symlinks exist', () => {
-  for (const workflow of [sync, regen]) {
+  for (const workflow of [syncScript, regen]) {
     assert.match(workflow, /ACTIVE_BACKEND_DIR="\/home\/project2\/backend"/)
     assert.doesNotMatch(workflow, /if \[ -L \/home\/project2\/current-backend \]/)
     assert.match(workflow, /REAL_ESTATE_WRITE_LOCK_DIR|SITEMAP_DIR/)
@@ -162,9 +165,9 @@ test('deployment and scheduled workflow YAML parses', () => {
 })
 
 test('every server SSH/SCP step accepts key auth with password fallback', () => {
-  const steps = [deploy, sync, regen].flatMap((workflow) =>
+  const steps = [deploy, sync, regen, syncCheck].flatMap((workflow) =>
     workflow.match(/uses: appleboy\/(?:ssh|scp)-action@[^\n]+\n\s+with:\n(?:\s+[a-z_]+:.*\n)+/g) ?? [])
-  assert.equal(steps.length, 5)
+  assert.equal(steps.length, 6)
   for (const step of steps) {
     assert.match(step, /password: \$\{\{ secrets\.SERVER_PASSWORD \}\}\n\s+key: \$\{\{ secrets\.SERVER_SSH_KEY \}\}/)
   }
@@ -192,4 +195,36 @@ test('architecture guard rejects a mismatched bundle', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('daily real-estate sync runs from server cron, not a delayed GitHub schedule', () => {
+  // GitHub '0 18 * * *' 예약이 매일 2~6시간 늦게 시작했다(2026-10 실측). 서버 cron 이 실행한다.
+  assert.doesNotMatch(sync, /^\s*schedule:/m)
+  assert.match(sync, /workflow_dispatch/)
+  assert.match(sync, /bash \/home\/project2\/ops\/sync-real-estate\.sh/)
+  for (const step of ['syncAptSale', 'syncAuction', 'geocodeRealEstate.js', 'geocodeAuction.js',
+    'refreshRealEstateSummary.js', 'syncSubscription.js', 'syncPublicRental.js', 'generateSitemaps.js',
+    'geocodeSubscriptions.js']) {
+    assert.ok(syncScript.includes(step), `ops script keeps ${step}`)
+  }
+  assert.match(syncScript, /flock -n 8/)
+  assert.match(syncScript, /real-estate-sync\.status/)
+  const syntax = spawnSync('bash', ['-n', 'scripts/ops/sync-real-estate.sh'])
+  assert.equal(syntax.status, 0, String(syntax.stderr))
+})
+
+test('deploy ships the sync script and refuses to swap backend while a sync is running', () => {
+  assert.match(deploy, /scripts\/ops\/sync-real-estate\.sh deploy-bundle\/scripts\/ops\//)
+  assert.match(deploy, /sha256sum [^\n]*scripts\/ops\/sync-real-estate\.sh/)
+  const script = readFileSync('scripts/deploy/fixed-deploy.sh', 'utf8')
+  const syncGuard = script.indexOf('real-estate-sync.lock')
+  const firstInstall = script.indexOf('INSTALL_STARTED=1')
+  assert.ok(syncGuard > 0 && syncGuard < firstInstall, 'sync lock checked before replacing backend')
+  assert.match(script, /move_into_place ops/)
+})
+
+test('a daily check fails loudly when the server sync did not succeed today', () => {
+  assert.match(syncCheck, /schedule:/)
+  assert.match(syncCheck, /real-estate-sync\.status/)
+  assert.match(syncCheck, /exit 1/)
 })

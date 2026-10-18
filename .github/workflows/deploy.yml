@@ -56,13 +56,14 @@ jobs:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          mkdir -p deploy-bundle/scripts/deploy
+          mkdir -p deploy-bundle/scripts/deploy deploy-bundle/scripts/ops
           tar -czf deploy-bundle/backend.tgz -C backend dist package.json package-lock.json prisma
           tar -czf deploy-bundle/frontend.tgz -C frontend .output
           cp scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh deploy-bundle/scripts/deploy/
+          cp scripts/ops/sync-real-estate.sh deploy-bundle/scripts/ops/
           cp ecosystem.config.js deploy-bundle/
           uname -m > deploy-bundle/BUILD_ARCH
-          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz BUILD_ARCH ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh > SHA256SUMS)
+          (cd deploy-bundle && sha256sum backend.tgz frontend.tgz BUILD_ARCH ecosystem.config.js scripts/deploy/fixed-deploy.sh scripts/deploy/fixed-runtime.mjs scripts/deploy/retire-release-processes.sh scripts/ops/sync-real-estate.sh > SHA256SUMS)
           echo "DEPLOY_ID=${TESTED_SHA:0:12}" >> "$GITHUB_ENV"
 
       - name: Upload staged build
