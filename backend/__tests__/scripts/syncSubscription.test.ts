@@ -225,3 +225,22 @@ describe('transformSubscription — PRIVATE_RENT 의 YYYYMMDD 날짜 처리 (reg
     expect(r.winnerDate!.toISOString().slice(0, 10)).toBe('2026-05-08');
   });
 });
+
+describe('countPages (odcloud 페이지 수)', () => {
+  it('필터 결과 건수(matchCount)로 페이지를 센다 — totalCount 는 필터 전 전체 건수', async () => {
+    const { countPages } = await import('../../src/scripts/syncSubscription.js');
+    // cond[HOUSE_MANAGE_NO::EQ] 조회 실측(2026-10-19): matchCount 11, totalCount 14869
+    expect(countPages({ matchCount: 11, totalCount: 14869 }, 1000)).toBe(1);
+  });
+
+  it('필터 없는 조회는 matchCount 와 totalCount 가 같다', async () => {
+    const { countPages } = await import('../../src/scripts/syncSubscription.js');
+    expect(countPages({ matchCount: 2907, totalCount: 2907 }, 1000)).toBe(3);
+  });
+
+  it('matchCount 가 없으면 totalCount 로 센다', async () => {
+    const { countPages } = await import('../../src/scripts/syncSubscription.js');
+    expect(countPages({ totalCount: 1500 }, 1000)).toBe(2);
+    expect(countPages({}, 1000)).toBe(0);
+  });
+});
