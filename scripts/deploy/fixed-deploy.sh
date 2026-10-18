@@ -63,9 +63,15 @@ test -f "$STAGE/SHA256SUMS" || fail "missing artifact checksums in $STAGE"
 test -f "$HELPER" || fail 'missing fixed runtime helper'
 test -f "$STAGE/ecosystem.config.js" || fail 'missing fixed PM2 config'
 test -f "$STAGE/BUILD_ARCH" || fail 'missing build architecture marker'
+test -f "$STAGE/scripts/ops/sync-real-estate.sh" || fail 'missing real-estate sync script'
 chmod 700 "$STAGE"
 exec 9>"$ROOT/run/fixed-deploy.lock"
 flock -n 9 || fail 'another fixed deployment is running'
+# 부동산 동기화(서버 cron)가 도는 중에 backend 를 갈아 끼우지 않는다. 잠금은 확인만 하고 놓는다 —
+# 쥐고 있으면 배포 중 시작한 동기화가 '이미 실행 중'으로 하루를 건너뛴다(동기화는 배포 잠금을 기다린다).
+exec 7>"$ROOT/run/real-estate-sync.lock"
+flock -n 7 || fail 'real-estate sync is running; redeploy after it finishes'
+exec 7>&-
 cd "$STAGE"
 sha256sum -c SHA256SUMS
 [ "$(cat BUILD_ARCH)" = "$(uname -m)" ] || fail "artifact built for $(cat BUILD_ARCH) but server is $(uname -m)"
@@ -110,6 +116,9 @@ FAILED="$ATTEMPT/failed"
 NEW="$ATTEMPT/new"
 mkdir -p "$NEW/backend" "$NEW/frontend" "$BACKUP/backend" "$BACKUP/frontend"
 cp -p "$STAGE/ecosystem.config.js" "$NEW/ecosystem.config.js"
+mkdir -p "$NEW/ops"
+cp -p "$STAGE/scripts/ops/sync-real-estate.sh" "$NEW/ops/sync-real-estate.sh"
+chmod 700 "$NEW/ops/sync-real-estate.sh"
 tar -xzf "$STAGE/backend.tgz" -C "$NEW/backend"
 tar -xzf "$STAGE/frontend.tgz" -C "$NEW/frontend"
 test -f "$NEW/backend/dist/server.js" || fail 'backend build missing'
@@ -169,6 +178,7 @@ for path in backend/dist backend/prisma backend/node_modules backend/package.jso
   move_into_place "$path"
 done
 move_into_place ecosystem.config.js
+move_into_place ops
 if [ "$MODE" = migration ]; then move_into_place sitemaps; fi
 
 pm2 start "$ROOT/ecosystem.config.js" --env production
