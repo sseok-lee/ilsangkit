@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildTrashRegionPath, CITY_SLUGS, CITY_SLUG_MAP, CITY_FULL_NAME_TO_SLUG, REGIONS } from '~/shared/regionSlugs'
+import {
+  buildTrashRegionPath, CITY_SLUGS, CITY_SLUG_MAP, CITY_FULL_NAME_TO_SLUG, DISTRICT_SLUG_MAP, REGIONS,
+  REAL_ESTATE_DISTRICT_SPLITS, REAL_ESTATE_REGIONS,
+} from '~/shared/regionSlugs'
 
 describe('전남광주통합특별시 slug/읽기맵 등록 (Task A4)', () => {
   it('CITY_SLUG_MAP[jeonnamgwangju]가 truthy여야 한다', () => {
@@ -97,5 +100,42 @@ describe('shared buildTrashRegionPath', () => {
   })
   it('정식 도명(경상북도) + 매핑된 district', () => {
     expect(buildTrashRegionPath('경상북도', '경주시')).toBe('/gyeongbuk/gyeongju/trash')
+  })
+})
+
+describe('REAL_ESTATE_REGIONS — 부동산·토지 전용 구 단위 목록', () => {
+  it('경기 부천시·화성시를 같은 자리에서 구 목록으로 치환한다(순서 유지)', () => {
+    const gyeonggi = REAL_ESTATE_REGIONS['경기']
+    const expected = REGIONS['경기'].flatMap((name) => REAL_ESTATE_DISTRICT_SPLITS['경기']?.[name] ?? [name])
+    expect(gyeonggi).toEqual(expected)
+    expect(gyeonggi).not.toContain('부천시')
+    expect(gyeonggi).not.toContain('화성시')
+    const bucheonAt = gyeonggi.indexOf('부천시 소사구')
+    expect(gyeonggi.slice(bucheonAt - 1, bucheonAt + 4)).toEqual([
+      '안양시 동안구', '부천시 소사구', '부천시 오정구', '부천시 원미구', '광명시',
+    ])
+    const hwaseongAt = gyeonggi.indexOf('화성시 동탄구')
+    expect(gyeonggi.slice(hwaseongAt - 1, hwaseongAt + 5)).toEqual([
+      '김포시', '화성시 동탄구', '화성시 만세구', '화성시 병점구', '화성시 효행구', '광주시',
+    ])
+  })
+
+  it('치환 대상이 아닌 시/도는 REGIONS 와 같다', () => {
+    expect(Object.keys(REAL_ESTATE_REGIONS)).toEqual(Object.keys(REGIONS))
+    for (const city of Object.keys(REGIONS)) {
+      if (city === '경기') continue
+      expect(REAL_ESTATE_REGIONS[city]).toEqual(REGIONS[city])
+    }
+  })
+
+  it('공용 REGIONS 는 시설용 시 단위 그대로 둔다', () => {
+    expect(REGIONS['경기']).toContain('부천시')
+    expect(REGIONS['경기']).toContain('화성시')
+  })
+
+  it('치환된 구는 모두 DISTRICT_SLUG_MAP 에 slug 가 있다', () => {
+    for (const parts of Object.values(REAL_ESTATE_DISTRICT_SPLITS['경기'])) {
+      for (const name of parts) expect(DISTRICT_SLUG_MAP[name]).toBeTruthy()
+    }
   })
 })

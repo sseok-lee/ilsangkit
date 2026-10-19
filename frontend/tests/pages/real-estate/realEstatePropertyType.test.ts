@@ -73,6 +73,7 @@ vi.mock('~/shared/regionSlugs', () => ({
   CITY_SLUG_MAP: { seoul: '서울', busan: '부산', daegu: '대구' },
   DISTRICT_SLUG_MAP: { 강남구: 'gangnam', 서초구: 'seocho' },
   REGIONS: {},
+  REAL_ESTATE_REGIONS: {},
   CITY_FULL_NAME_TO_SLUG: {},
   CITY_SLUGS_ARRAY: [],
 }))

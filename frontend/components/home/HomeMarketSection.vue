@@ -163,13 +163,13 @@ import { computed, ref, watch } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import { useHomeMarket } from '~/composables/useHomeMarket'
 import type { MarketCount, PropertyType, RecentBuilding } from '~/types/housingRedesign'
-import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
+import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
 const { region, data, pending, error, setRegion, refresh } = useHomeMarket()
 
-const cityOptions = Object.keys(REGIONS).map((label) => ({
+const cityOptions = Object.keys(REAL_ESTATE_REGIONS).map((label) => ({
   label,
   slug: CITY_SLUGS[label] ?? label,
 }))
@@ -180,7 +180,7 @@ const selectedDistrict = ref(region.value.district ?? '')
 const districtOptions = computed(() => {
   const cityLabel = selectedCity.value ? CITY_SLUG_MAP[selectedCity.value] : null
   return cityLabel
-    ? (REGIONS[cityLabel] ?? []).map((label) => ({ label, slug: DISTRICT_SLUG_MAP[label] ?? label }))
+    ? (REAL_ESTATE_REGIONS[cityLabel] ?? []).map((label) => ({ label, slug: DISTRICT_SLUG_MAP[label] ?? label }))
     : []
 })
 

@@ -80,6 +80,22 @@
       <template v-else>
         <SectionBlock variant="flat" heading="건물 목록">
           <EmptyState
+            v-if="childDistrictLinks.length > 0"
+            icon="apartment"
+            :title="`${districtName}는 구별로 나눠 보여드립니다`"
+            description="실거래 신고는 구 단위로 모아 보여드려요. 아래에서 구를 골라 주세요."
+          >
+            <div data-testid="parent-city-district-links" class="flex flex-wrap items-center justify-center gap-2">
+              <UiButton
+                v-for="child in childDistrictLinks"
+                :key="child.name"
+                variant="secondary"
+                :to="child.href"
+              >{{ child.name }}</UiButton>
+            </div>
+          </EmptyState>
+          <EmptyState
+            v-else
             icon="apartment"
             title="이 지역에는 아직 공개 가능한 단지가 없습니다"
             description="국토교통부 실거래 신고가 누적되면 순차적으로 노출됩니다."
@@ -117,7 +133,7 @@ import { UI_MESSAGES } from '~/utils/uiMessages'
 import EmptyState from '~/components/common/EmptyState.vue'
 import type { ComplexInfo, RealEstatePropertyType, TransactionMode } from '~/types/realEstate'
 import { KOREA_BOUNDS } from '~/types/realEstateMap'
-import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
 import {
   isRealEstateUrlType,
   toRealEstateUrl,
@@ -137,7 +153,7 @@ import { buildPageHref } from '~/utils/paginationHref'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { suppressAds } from '~/composables/useAdsPolicy'
 import { useRegions } from '~/composables/useRegions'
-import { explorationMapHref } from '~/utils/explorationNavigation'
+import { explorationListHref, explorationMapHref } from '~/utils/explorationNavigation'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import PageHead from '~/components/common/PageHead.vue'
 import UiButton from '~/components/common/UiButton.vue'
@@ -179,6 +195,16 @@ const districtName = computed(() => districtSlugToName[districtSlug.value])
 if (!districtName.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found' })
 }
+
+// 구가 있는 부모 시('안산시')는 실거래가 구 단위로만 저장되어 늘 빈 목록이다 — 빈 상태에서 각 구로 안내한다.
+const childDistrictLinks = computed(() =>
+  (REAL_ESTATE_REGIONS[cityName.value] ?? [])
+    .filter((name) => name.startsWith(`${districtName.value} `))
+    .map((name) => ({
+      name,
+      href: explorationListHref(realEstateType.value as RealEstateUrlType, { city: cityName.value, district: name }),
+    })),
+)
 
 const propertyType = propertyTypePart
 const tab = tabPart

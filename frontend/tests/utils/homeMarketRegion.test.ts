@@ -21,4 +21,13 @@ describe('normalizeMarketRegion', () => {
     expect(normalizeMarketRegion({ city: 'seoul' }))
       .toEqual({ city: 'seoul', district: null })
   })
+
+  it('부동산 구 단위 목록으로 정규화한다 — 부천시 구는 유지, 예전 시 단위 저장값(bucheon)은 기존 규칙대로 전국으로 떨어진다', () => {
+    expect(normalizeMarketRegion({ city: 'gyeonggi', district: 'bucheon-sosa' }))
+      .toEqual({ city: 'gyeonggi', district: 'bucheon-sosa' })
+    expect(normalizeMarketRegion({ city: '경기', district: '화성시 동탄구' }))
+      .toEqual({ city: 'gyeonggi', district: 'hwaseong-dongtan' })
+    expect(normalizeMarketRegion({ city: 'gyeonggi', district: 'bucheon' }))
+      .toEqual({ city: null, district: null })
+  })
 })
