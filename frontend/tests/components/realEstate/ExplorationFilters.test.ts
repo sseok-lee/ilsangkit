@@ -8,10 +8,10 @@ const navigateToMock = vi.fn().mockResolvedValue(undefined)
 
 const RegionDropdownStub = defineComponent({
   name: 'RegionCascadingDropdown',
-  props: ['city', 'district', 'variant'],
+  props: ['city', 'district', 'variant', 'excludeParentCities'],
   emits: ['update:city', 'update:district'],
   template: `
-    <div data-testid="region-dropdown" :data-city="city" :data-district="district" :data-variant="variant">
+    <div data-testid="region-dropdown" :data-city="city" :data-district="district" :data-variant="variant" :data-exclude-parent-cities="String(excludeParentCities)">
       <button data-testid="choose-busan" @click="$emit('update:city', '부산')">부산</button>
       <button data-testid="choose-seocho" @click="$emit('update:district', '서초구')">서초구</button>
       <button data-testid="choose-national" @click="$emit('update:city', '')">전국</button>
@@ -47,6 +47,11 @@ describe('ExplorationFilters', () => {
     expect(hrefs).toContain('/real-estate/apt-rent/seoul/gangnam')
     expect(hrefs).toContain('/real-estate/villa-rent/seoul/gangnam')
     expect(hrefs).toContain('/real-estate/offitel-rent/seoul/gangnam')
+  })
+
+  it('부동산 탐색 드롭다운은 구가 있는 부모 시를 뺀다(excludeParentCities)', () => {
+    const dropdown = mountIt().get('[data-testid="region-dropdown"]')
+    expect(dropdown.attributes('data-exclude-parent-cities')).toBe('true')
   })
 
   it('passes the restored region into RegionCascadingDropdown', () => {

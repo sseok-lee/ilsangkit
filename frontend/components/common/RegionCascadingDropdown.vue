@@ -39,8 +39,8 @@ import { computed, onMounted } from 'vue'
 import { useRegions } from '~/composables/useRegions'
 
 const props = withDefaults(
-  defineProps<{ city: string; district: string; cityValueMode?: 'short' | 'slug'; preserveCurrentSelection?: boolean; variant?: 'flat' }>(),
-  { cityValueMode: 'short', preserveCurrentSelection: false, variant: 'flat' },
+  defineProps<{ city: string; district: string; cityValueMode?: 'short' | 'slug'; preserveCurrentSelection?: boolean; excludeParentCities?: boolean; variant?: 'flat' }>(),
+  { cityValueMode: 'short', preserveCurrentSelection: false, excludeParentCities: false, variant: 'flat' },
 )
 const emit = defineEmits<{ 'update:city': [string]; 'update:district': [string] }>()
 
@@ -73,9 +73,14 @@ const selectedSlug = computed(() => {
   return found?.slug ?? ''
 })
 
-const districtOptions = computed(() =>
-  selectedSlug.value ? getDistrictsByCity(selectedSlug.value).map((d) => d.name) : [],
-)
+// excludeParentCities: 같은 시/도에 '{이름} ' 으로 시작하는 구가 있으면 부모 시('안산시')를 뺀다.
+// 부동산 실거래는 구 단위로만 저장되어 부모 시를 고르면 빈 목록이 된다.
+const districtOptions = computed(() => {
+  if (!selectedSlug.value) return []
+  const names = getDistrictsByCity(selectedSlug.value).map((d) => d.name)
+  if (!props.excludeParentCities) return names
+  return names.filter((name) => !names.some((other) => other.startsWith(`${name} `)))
+})
 
 const cityModel = computed({
   get: () => props.city,

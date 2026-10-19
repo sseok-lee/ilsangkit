@@ -405,6 +405,26 @@ export const REGIONS: Record<string, string[]> = {
 }
 
 /**
+ * 부동산·토지 전용 구 분할. 실거래 데이터는 구가 있는 시를 구 단위로만 저장한다
+ * ('부천시 소사구' 등, '부천시' 0건). 반면 시설 데이터는 '부천시'·'화성시' 시 단위로
+ * 저장되어 있어 공용 REGIONS(사이트맵 폴백·시설 페이지)는 그대로 두고 여기서만 나눈다.
+ */
+export const REAL_ESTATE_DISTRICT_SPLITS: Record<string, Record<string, string[]>> = {
+  경기: {
+    부천시: ['부천시 소사구', '부천시 오정구', '부천시 원미구'],
+    화성시: ['화성시 동탄구', '화성시 만세구', '화성시 병점구', '화성시 효행구'],
+  },
+}
+
+/** 부동산·토지 화면용 시/도별 구/군 목록 — REGIONS 에서 위 분할을 같은 자리에 펼친 결과 */
+export const REAL_ESTATE_REGIONS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(REGIONS).map(([city, districts]) => [
+    city,
+    districts.flatMap((name) => REAL_ESTATE_DISTRICT_SPLITS[city]?.[name] ?? [name]),
+  ]),
+)
+
+/**
  * 한글 구/군/시 이름 → slug 변환
  * DISTRICT_SLUG_MAP에 있으면 해당 값, 없으면 빈 문자열 방지용 fallback
  */

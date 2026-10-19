@@ -10,6 +10,8 @@ import {
   fetchRealEstateData,
   generateSourceId,
   getAllLawdCodes,
+  buildRegionMap,
+  toMolitLawdCode,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
 // IndexNow 제출 비활성화 (2026-09-01) — 아래 호출부 주석 참고.
@@ -212,7 +214,7 @@ async function syncVillaRent(options: { lawdCd?: string; dealYmd?: string; fromY
   }
 
   const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
-  const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
+  const regionMap = buildRegionMap(regions);
 
   await runSync(CATEGORY, async (stats) => {
     if (options.lawdCd && options.dealYmd) {
@@ -265,7 +267,8 @@ async function main(): Promise<void> {
   const fromIndex = args.indexOf('--from');
   const toIndex = args.indexOf('--to');
 
-  const lawdCd = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
+  const lawdCdRaw = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
+  const lawdCd = lawdCdRaw ? toMolitLawdCode(lawdCdRaw) : undefined;
   const dealYmd = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
   const fromYm = fromIndex !== -1 ? args[fromIndex + 1] : undefined;
   const toYm = toIndex !== -1 ? args[toIndex + 1] : undefined;

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CITY_SLUG_MAP, REGIONS, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
+import { CITY_SLUG_MAP, REAL_ESTATE_REGIONS, DISTRICT_SLUG_MAP } from '~/shared/regionSlugs'
 import { landRegionHref } from '~/utils/landRegionNavigation'
 import HardLink from '~/components/common/HardLink.vue'
 const props = defineProps<{ citySlug: string; districtSlug?: string }>()
-const districts = computed(() => REGIONS[CITY_SLUG_MAP[props.citySlug]] ?? [])
+const districts = computed(() => REAL_ESTATE_REGIONS[CITY_SLUG_MAP[props.citySlug]] ?? [])
 </script>
 
 <template>

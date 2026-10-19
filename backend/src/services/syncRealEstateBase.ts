@@ -3,6 +3,9 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { prisma } from '../lib/prisma.js';
+import { toMolitLawdCode } from '../lib/molitLawdCode.js';
+
+export { toMolitLawdCode };
 
 const BASE_URL = 'https://apis.data.go.kr/1613000';
 
@@ -115,14 +118,29 @@ export function buildApiUrl(
 }
 
 /**
- * Prisma Region 테이블에서 DISTINCT bjdCode 5자리 추출
+ * Prisma Region 테이블에서 DISTINCT bjdCode 5자리 추출 (국토부 별칭 적용 후 중복 제거)
  */
 export async function getAllLawdCodes(): Promise<string[]> {
   const rows = await prisma.region.findMany({
     select: { bjdCode: true },
     distinct: ['bjdCode'],
   });
-  return rows.map((r) => r.bjdCode);
+  return [...new Set(rows.map((r) => toMolitLawdCode(r.bjdCode)))];
+}
+
+/**
+ * lawdCd → 지역 이름 맵. Region bjdCode 키와 국토부 별칭 코드 키를 함께 등록한다
+ * (별칭 코드에 해당하는 Region 행이 따로 있으면 그 행을 우선한다).
+ */
+export function buildRegionMap(
+  regions: { bjdCode: string; city: string; district: string }[]
+): Map<string, { city: string; district: string }> {
+  const map = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
+  for (const r of regions) {
+    const alias = toMolitLawdCode(r.bjdCode);
+    if (!map.has(alias)) map.set(alias, { city: r.city, district: r.district });
+  }
+  return map;
 }
 
 /**
