@@ -285,7 +285,8 @@ describe('searchAll (파서 연동)', () => {
     const sql = distinctCall![0] as string;
     expect(sql).toContain('COUNT(DISTINCT buildingKey)');
     expect(sql).toContain('FROM RealEstateBuildingSummary');
-    expect(sql).toContain('buildingName NOT REGEXP');
+    expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(sql).not.toContain('NOT REGEXP');
     // type IN (?, ?) — apt 묶음 두 타입이 파라미터로 바인딩된다
     expect(sql).toContain('type IN (?, ?)');
     const aptParams = distinctCall!.slice(1);
@@ -299,7 +300,8 @@ describe('searchAll (파서 연동)', () => {
     await searchAll('잠실');
     const previewCall = mockQueryRawUnsafe.mock.calls.find((c) => String(c[0]).includes('SELECT buildingName'));
     const sql = String(previewCall?.[0] ?? '');
-    expect(sql).toContain('buildingName NOT REGEXP');
+    expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(sql).not.toContain('NOT REGEXP');
     expect(sql).toContain('ORDER BY latestDealYear DESC, latestDealMonth DESC, transactionCount DESC, buildingName ASC, bjdCode ASC');
   });
 

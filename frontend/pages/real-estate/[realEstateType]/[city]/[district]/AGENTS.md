@@ -17,7 +17,7 @@
 ### Working In This Directory
 - 전체 파라미터 조합: `realEstateType`, `city`, `district`, `buildingName`
 - URL 왕복 검증: `../../../../../utils/realEstateUrl.ts`의 `buildUrl`/`parseUrl` 사용
-- **Notepad 경고**: 빌라 경로는 `buildingName`이 지번 형태 — noindex 판별 적용
+- **noindex 규칙**: 빈값/1글자 buildingName만 noindex. 지번형 이름은 2026-10-19 운영자 결정으로 색인 대상
 - SEO: `useRealEstateMeta`로 타이틀/설명/FAQ/JSON-LD 일괄 설정
 
 ### Testing Requirements

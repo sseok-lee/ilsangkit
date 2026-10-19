@@ -737,26 +737,24 @@ describe('getComplexList', () => {
     expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(2);
   });
 
-  it('SELECT query includes valid-name REGEXP filter', async () => {
+  it('SELECT query includes valid-name filter (no jibun REGEXP)', async () => {
     setupMocks();
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
     const selectSql: string = mockQueryRawUnsafe.mock.calls[0][0];
     expect(selectSql).toContain('CHAR_LENGTH(buildingName) >= 2');
-    expect(selectSql).toContain("NOT REGEXP '^[[:space:]]*[(][0-9]'");
-    expect(selectSql).toContain("NOT REGEXP '^[0-9()[:space:]-]+$'");
+    expect(selectSql).not.toContain('NOT REGEXP');
   });
 
-  it('COUNT query includes valid-name REGEXP filter', async () => {
+  it('COUNT query includes valid-name filter (no jibun REGEXP)', async () => {
     setupMocks();
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
     const countSql: string = mockQueryRawUnsafe.mock.calls[1][0];
     expect(countSql).toContain('CHAR_LENGTH(buildingName) >= 2');
-    expect(countSql).toContain("NOT REGEXP '^[[:space:]]*[(][0-9]'");
-    expect(countSql).toContain("NOT REGEXP '^[0-9()[:space:]-]+$'");
+    expect(countSql).not.toContain('NOT REGEXP');
   });
 
   it('passes type, city, district as parameterised values', async () => {
@@ -836,18 +834,17 @@ describe('getComplexList', () => {
     expect(result.items[0].lng).toBeNull();
   });
 
-  it('invalid 지번-style name "(12-3)" would be filtered at DB level — SQL contains the REGEXP', async () => {
-    // The filtering happens in MySQL via REGEXP, so the mock returns only valid rows.
+  it('jibun-style names are no longer filtered at DB level (released 2026-10-19)', async () => {
+    // Only null/empty/1-char names are filtered in MySQL.
     // We verify the SQL contains the guard that would exclude e.g. "(12-3)", "123-4", "1".
     setupMocks([], 0);
 
     await getComplexList('apt-sale', '서울특별시', '강남구');
 
     const selectSql: string = mockQueryRawUnsafe.mock.calls[0][0];
-    // First REGEXP catches names starting with optional spaces then '(' followed by digit
-    expect(selectSql).toMatch(/NOT REGEXP.*\^\[\[:space:\]\]\*\[\(\]\[0-9\]/);
-    // Second REGEXP catches names composed entirely of digits, parens, spaces, hyphens
-    expect(selectSql).toMatch(/NOT REGEXP.*\^\[0-9\(\)\[:space:\]-\]\+\$/);
+    // 지번형 이름(2026-10-19 해제)은 더 이상 REGEXP로 제외하지 않는다
+    expect(selectSql).not.toContain('NOT REGEXP');
+    expect(selectSql).toContain('CHAR_LENGTH(buildingName) >= 2');
   });
 
   it('total=0 yields totalPages=0', async () => {
@@ -1065,7 +1062,8 @@ describe('searchAll', () => {
     const sql = String(distinctCalls[0][0]);
     expect(sql).toContain('COUNT(DISTINCT buildingKey)');
     expect(sql).toContain('FROM RealEstateBuildingSummary');
-    expect(sql).toContain('buildingName NOT REGEXP');
+    expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
+    expect(sql).not.toContain('NOT REGEXP');
     expect(sql).toContain('type IN (?, ?)');
     expect(distinctCalls[0]).toContain('apt-sale');
     expect(distinctCalls[0]).toContain('apt-rent');

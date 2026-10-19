@@ -431,8 +431,6 @@ const VALID_NAME_SQL = `
   buildingName IS NOT NULL
   AND buildingName != ''
   AND CHAR_LENGTH(buildingName) >= 2
-  AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-  AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
 `;
 
 interface SummaryRawRow {
