@@ -226,7 +226,22 @@ function parseAmount(s: string | null | undefined): number | null {
 // API fetch
 // ---------------------------------------------------------------------------
 
-async function fetchPage<T>(endpoint: string, page: number, params?: Record<string, string>, baseUrl = API_BASE): Promise<{ data: T[]; totalCount: number }> {
+interface PageCounts {
+  matchCount?: number;
+  totalCount?: number;
+}
+
+/**
+ * odcloud 응답의 totalCount 는 cond 필터 전 전체 건수, matchCount 가 필터 결과 건수다.
+ * totalCount 로 세면 주택형 조회(공고별 cond 필터)가 공고마다 1쪽이면 될 것을 15쪽씩
+ * 호출했다(APT 368공고 × 15). OCI 에서 API 왕복이 2배가 되자 청약 단계가 30분 예산을
+ * 넘겼다(2026-10-19).
+ */
+export function countPages(counts: PageCounts, perPage: number): number {
+  return Math.ceil((counts.matchCount ?? counts.totalCount ?? 0) / perPage);
+}
+
+async function fetchPage<T>(endpoint: string, page: number, params?: Record<string, string>, baseUrl = API_BASE): Promise<{ data: T[] } & PageCounts> {
   const serviceKey = process.env.OPENAPI_SERVICE_KEY;
   if (!serviceKey) throw new Error('OPENAPI_SERVICE_KEY not set');
 
@@ -246,14 +261,14 @@ async function fetchPage<T>(endpoint: string, page: number, params?: Record<stri
     const body = await res.text();
     throw new Error(`API error: ${res.status} ${res.statusText}\n${body}`);
   }
-  const json = await res.json() as { data: T[]; totalCount: number };
-  return { data: json.data ?? [], totalCount: json.totalCount ?? 0 };
+  const json = await res.json() as { data: T[] } & PageCounts;
+  return { data: json.data ?? [], matchCount: json.matchCount, totalCount: json.totalCount };
 }
 
 async function fetchAll<T>(endpoint: string, params?: Record<string, string>, baseUrl = API_BASE): Promise<T[]> {
   const first = await fetchPage<T>(endpoint, 1, params, baseUrl);
-  const totalPages = Math.ceil(first.totalCount / PER_PAGE);
-  console.log(`  총 ${first.totalCount}건, ${totalPages}페이지`);
+  const totalPages = countPages(first, PER_PAGE);
+  console.log(`  총 ${first.matchCount ?? first.totalCount ?? 0}건, ${totalPages}페이지`);
 
   const items = [...first.data];
   for (let page = 2; page <= totalPages; page++) {
