@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  INVALID_BUILDING_NAME,
   isValidBuildingName,
 } from '../../src/lib/realEstateBuildingName.js';
 
@@ -44,35 +43,36 @@ const LEGITIMATE: Fixture[] = [
   { name: '청담자이', valid: true },
 ];
 
+// 2026-10-19 운영자 결정: 지번형 이름도 유효(길이 2자 이상이면 통과). 1자/공백만 무효.
 const JIBUN_OR_THIN: Fixture[] = [
-  { name: '(535-3)', valid: false, note: 'GSC 색인된 대표 지번 패턴' },
-  { name: '(535)', valid: false },
-  { name: '(1)', valid: false },
-  { name: '(123-45)', valid: false },
-  { name: '(999-99)', valid: false },
-  { name: '  (535-3)', valid: false, note: '선행 공백' },
-  { name: '(535-3)  ', valid: false, note: '후행 공백' },
-  { name: '  (535-3)  ', valid: false, note: '양쪽 공백' },
-  { name: '123-456', valid: false, note: '숫자·하이픈만' },
-  { name: '000-0', valid: false },
-  { name: '123', valid: false, note: '순수 숫자' },
-  { name: '111-222-333', valid: false },
-  { name: '()', valid: false, note: '빈 괄호' },
-  { name: '( )', valid: false, note: '공백만' },
-  { name: '--', valid: false, note: '하이픈만' },
-  { name: '  --  ', valid: false },
-  { name: '(3-1)아파트', valid: false, note: '숫자 시작 괄호 접두사 + 글자' },
-  { name: '(101-1)힐스테이트', valid: false, note: '지번 접두 + 건물명' },
-  { name: ' (1)래미안', valid: false, note: '선행 공백 + 지번 접두사' },
-  { name: '(7)하이츠', valid: false },
-  { name: '(0-0)', valid: false },
-  { name: '12345678', valid: false },
-  { name: '(1-1)', valid: false },
-  { name: '-1-2', valid: false, note: '하이픈+숫자만' },
-  { name: '(  )', valid: false },
+  { name: '(535-3)', valid: true, note: 'GSC 색인된 대표 지번 패턴' },
+  { name: '(535)', valid: true },
+  { name: '(1)', valid: true },
+  { name: '(123-45)', valid: true },
+  { name: '(999-99)', valid: true },
+  { name: '  (535-3)', valid: true, note: '선행 공백' },
+  { name: '(535-3)  ', valid: true, note: '후행 공백' },
+  { name: '  (535-3)  ', valid: true, note: '양쪽 공백' },
+  { name: '123-456', valid: true, note: '숫자·하이픈만' },
+  { name: '000-0', valid: true },
+  { name: '123', valid: true, note: '순수 숫자' },
+  { name: '111-222-333', valid: true },
+  { name: '()', valid: true, note: '빈 괄호' },
+  { name: '( )', valid: true, note: '공백만' },
+  { name: '--', valid: true, note: '하이픈만' },
+  { name: '  --  ', valid: true },
+  { name: '(3-1)아파트', valid: true, note: '숫자 시작 괄호 접두사 + 글자' },
+  { name: '(101-1)힐스테이트', valid: true, note: '지번 접두 + 건물명' },
+  { name: ' (1)래미안', valid: true, note: '선행 공백 + 지번 접두사' },
+  { name: '(7)하이츠', valid: true },
+  { name: '(0-0)', valid: true },
+  { name: '12345678', valid: true },
+  { name: '(1-1)', valid: true },
+  { name: '-1-2', valid: true, note: '하이픈+숫자만' },
+  { name: '(  )', valid: true },
   { name: '0', valid: false, note: '한 자 (길이 제한 위반)' },
   { name: '1', valid: false },
-  { name: '(1', valid: false, note: '여는 괄호+숫자' },
+  { name: '(1', valid: true, note: '여는 괄호+숫자' },
   { name: '  ', valid: false, note: '공백 2자' },
   { name: '', valid: false },
 ];
@@ -92,24 +92,13 @@ const EDGE: Fixture[] = [
 
 const ALL_FIXTURES: Fixture[] = [...LEGITIMATE, ...JIBUN_OR_THIN, ...EDGE];
 
-describe('INVALID_BUILDING_NAME regex', () => {
-  it('matches pure jibun patterns', () => {
-    expect(INVALID_BUILDING_NAME.test('(535-3)')).toBe(true);
-    expect(INVALID_BUILDING_NAME.test('123-456')).toBe(true);
-    expect(INVALID_BUILDING_NAME.test('()')).toBe(true);
+describe('지번형 건물명 해제 (2026-10-19)', () => {
+  it.each(['(683-)', '(966)', '123-4', '(386-2)청구빌라'])('%s 는 유효', (name) => {
+    expect(isValidBuildingName(name)).toBe(true);
   });
 
-  it('matches digit-opener paren prefix', () => {
-    expect(INVALID_BUILDING_NAME.test('(3-1)아파트')).toBe(true);
-  });
-
-  it('does NOT match legitimate company-prefix names', () => {
-    expect(INVALID_BUILDING_NAME.test('(주)래미안타워')).toBe(false);
-    expect(INVALID_BUILDING_NAME.test('(사)OO아파트')).toBe(false);
-  });
-
-  it('does NOT match plain Korean names', () => {
-    expect(INVALID_BUILDING_NAME.test('래미안강남')).toBe(false);
+  it.each(['', '  ', 'a', '1'])('%j 는 무효', (name) => {
+    expect(isValidBuildingName(name)).toBe(false);
   });
 });
 
@@ -137,7 +126,7 @@ describe('isValidBuildingName — nullish + length guards', () => {
     expect(isValidBuildingName(' a ')).toBe(false);
   });
 
-  it('accepts exactly 2 trimmed chars that are not jibun', () => {
+  it('accepts exactly 2 trimmed chars', () => {
     expect(isValidBuildingName('ab')).toBe(true);
     expect(isValidBuildingName(' 가나 ')).toBe(true);
   });

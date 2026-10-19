@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import {
-  INVALID_BUILDING_NAME,
   isValidBuildingName,
 } from '../../utils/realEstateBuildingName'
 
@@ -18,32 +17,17 @@ const LEGIT = [
   '103동-1',
 ]
 
-const INVALID = [
-  '(535-3)',
-  '(535)',
-  '123-456',
-  '(3-1)아파트',
-  '()',
-  '  ',
-  '',
-  'a',
-  '-1-2',
-  '(1',
-]
+const INVALID = ['  ', '', 'a', '1']
 
-describe('INVALID_BUILDING_NAME regex (frontend)', () => {
-  it('matches jibun patterns', () => {
-    expect(INVALID_BUILDING_NAME.test('(535-3)')).toBe(true)
-    expect(INVALID_BUILDING_NAME.test('123-456')).toBe(true)
-  })
-
-  it('does not match company-prefix or plain names', () => {
-    expect(INVALID_BUILDING_NAME.test('(주)래미안타워')).toBe(false)
-    expect(INVALID_BUILDING_NAME.test('래미안강남')).toBe(false)
-  })
-})
+const JIBUN_NOW_VALID = ['(683-)', '(966)', '123-4', '(386-2)청구빌라', '(535-3)', '(3-1)아파트', '()']
 
 describe('isValidBuildingName (frontend)', () => {
+  for (const name of JIBUN_NOW_VALID) {
+    it(`accepts jibun-style ${JSON.stringify(name)} (2026-10-19 released)`, () => {
+      expect(isValidBuildingName(name)).toBe(true)
+    })
+  }
+
   for (const name of LEGIT) {
     it(`accepts "${name}"`, () => {
       expect(isValidBuildingName(name)).toBe(true)

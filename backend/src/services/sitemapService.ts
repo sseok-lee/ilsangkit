@@ -86,9 +86,7 @@ export async function getRealEstateBuildingCount(): Promise<number> {
         AND u.buildingKey = s.buildingKey
        WHERE s.buildingName IS NOT NULL
          AND s.buildingName != ''
-         AND CHAR_LENGTH(s.buildingName) >= 2
-         AND s.buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-         AND s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'`,
+         AND CHAR_LENGTH(s.buildingName) >= 2`,
     );
     return Number(result[0]?.cnt ?? 0);
   }
@@ -98,9 +96,7 @@ export async function getRealEstateBuildingCount(): Promise<number> {
      FROM ${table}
      WHERE buildingName IS NOT NULL
        AND buildingName != ''
-       AND CHAR_LENGTH(buildingName) >= 2
-       AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-       AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'`,
+       AND CHAR_LENGTH(buildingName) >= 2`,
   );
   return Number(result[0]?.cnt ?? 0);
 }
@@ -221,7 +217,7 @@ export async function getSubscriptionIds() {
  * - 같은 건물이 매매/전월세 두 줄로 방출되도록 6-way realEstateType UNION
  * - (city, district, buildingName, bjdCode) 튜플 기준 GROUP BY
  * - buildingName 품질 필터: frontend `isValidBuildingName` 과 동일 규칙
- *   (빈값/공백/순수 숫자-하이픈 / 숫자로 시작하는 괄호 접두사 제외)
+ *   (빈값/공백/1글자만 제외. 지번형 이름은 2026-10-19 운영자 결정으로 포함)
  * - 거래 건수 임계값 없음 — `shouldNoindexRealEstateDetail`이 buildingName 품질만 검사하므로
  *   같은 기준으로 sitemap에 포함. thin content 위험은 인근 단지 cross-property 섹션이 완화.
  * - city/district는 DB 원본 문자열 그대로 반환 → 프론트 사이트맵/IndexNow 단계에서 slug 변환
@@ -274,8 +270,6 @@ export async function getRealEstateBuildings(opts?: { page?: number; limit?: num
          WHERE s.buildingName IS NOT NULL
            AND s.buildingName != ''
            AND CHAR_LENGTH(s.buildingName) >= 2
-           AND s.buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-           AND s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
          GROUP BY u.pathHash
          ORDER BY lastDealKey DESC, u.pathHash ASC
          LIMIT ? OFFSET ?
@@ -297,8 +291,6 @@ export async function getRealEstateBuildings(opts?: { page?: number; limit?: num
      WHERE buildingName IS NOT NULL
        AND buildingName != ''
        AND CHAR_LENGTH(buildingName) >= 2
-       AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-       AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'
      ORDER BY id
      LIMIT ? OFFSET ?`,
     limit,
@@ -348,8 +340,6 @@ export async function getRealEstateCityDistrictHubs() {
      FROM ${table}
      WHERE buildingName IS NOT NULL
        AND buildingName != ''
-       AND CHAR_LENGTH(buildingName) >= 2
-       AND buildingName NOT REGEXP '^[[:space:]]*[(][0-9]'
-       AND buildingName NOT REGEXP '^[0-9()[:space:]-]+$'`,
+       AND CHAR_LENGTH(buildingName) >= 2`,
   );
 }

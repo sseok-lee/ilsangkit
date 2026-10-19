@@ -835,11 +835,12 @@ describe('real-estate-hub sitemap (US-009 city/district hub URLs)', () => {
   })
 })
 
-describe('real-estate sitemap — invalid building name filtering', () => {
+describe('real-estate sitemap — building name filtering (jibun names released 2026-10-19)', () => {
   const buildingData = [
     { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '래미안강남', bjdCode: '1168011700', buildingKey: 'a'.repeat(64), lastmod: '2026-06-15' },
     { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '(535-3)', bjdCode: '1168011701', lastmod: '2026-06-15' },
     { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: '123-4', bjdCode: '1168011702', lastmod: '2026-06-15' },
+    { realEstateType: 'apt-sale', city: '서울특별시', district: '강남구', buildingName: 'a', bjdCode: '1168011703', lastmod: '2026-06-15' },
     { realEstateType: 'villa-rent', city: '부산광역시', district: '해운대구', buildingName: '해운대빌라', bjdCode: '2635011700', lastmod: '2026-03-01' },
   ]
 
@@ -869,20 +870,21 @@ describe('real-estate sitemap — invalid building name filtering', () => {
     vi.mocked(ssrFetch).mockReset()
   })
 
-  it('유효하지 않은 건물명((숫자) 형태, 숫자-숫자 형태)은 사이트맵 URL에서 제외된다', async () => {
+  it('지번형 건물명은 포함되고 1글자 건물명만 사이트맵 URL에서 제외된다', async () => {
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
     const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
     expect(xml).toContain(encodeURIComponent('래미안강남'))
     expect(xml).toContain(encodeURIComponent('해운대빌라'))
-    expect(xml).not.toContain('535-3')
-    expect(xml).not.toContain('123-4')
+    expect(xml).toContain(encodeURIComponent('(535-3)'))
+    expect(xml).toContain('123-4')
+    expect(xml).not.toContain('/gangnam/a<')
   })
 
-  it('유효한 건물만 포함되어 URL 수가 유효 건물 수와 일치한다', async () => {
+  it('유효한 건물(지번형 포함)만 포함되어 URL 수가 유효 건물 수와 일치한다', async () => {
     const { default: chunkHandler } = await import('../../server/routes/sitemap/[...]')
     const xml = (await chunkHandler(createMockEvent('/sitemap/real-estate.xml') as never)) as string
     const urlCount = (xml.match(/<url>/g) ?? []).length
-    expect(urlCount).toBe(2)
+    expect(urlCount).toBe(4)
   })
 
   it('buildingKey가 있어도 부동산 상세 URL에는 해시 segment를 방출하지 않는다', async () => {

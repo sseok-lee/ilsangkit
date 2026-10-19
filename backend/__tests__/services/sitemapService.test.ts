@@ -191,8 +191,7 @@ describe('getRealEstateBuildings — RealEstateBuildingSummary 기반', () => {
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
     expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
-    expect(sql).toContain("'^[[:space:]]*[(][0-9]'");
-    expect(sql).toContain("'^[0-9()[:space:]-]+$'");
+    expect(sql).not.toContain('NOT REGEXP');
     expect(sql).toContain('buildingName IS NOT NULL');
     expect(sql).toContain("buildingName != ''");
   });
@@ -314,7 +313,8 @@ describe('getRealEstateBuildings — RealEstateBuildingSummary 기반', () => {
     expect(sql).toContain('u.type = s.type');
     expect(sql).toContain('u.buildingKey = s.buildingKey');
     expect(sql).toContain('s.buildingName IS NOT NULL');
-    expect(sql).toContain("s.buildingName NOT REGEXP '^[0-9()[:space:]-]+$'");
+    expect(sql).toContain('CHAR_LENGTH(s.buildingName) >= 2');
+    expect(sql).not.toContain('NOT REGEXP');
   });
 
   it('preserved URL mode pages unique canonical paths through internal pathHash groups ordered by newest grouped deal date', async () => {
@@ -403,7 +403,7 @@ describe('getRealEstateCityDistrictHubs — RealEstateBuildingSummary 기반', (
     await getRealEstateCityDistrictHubs();
 
     const sql = flattenSql(mockQueryRaw.mock.calls[0]);
-    expect(sql).toContain("'^[0-9()[:space:]-]+$'");
+    expect(sql).not.toContain('NOT REGEXP');
     expect(sql).toContain('CHAR_LENGTH(buildingName) >= 2');
   });
 
