@@ -4,7 +4,7 @@ import { TABLE_NAME_MAP, type RealEstateType } from '../services/realEstateServi
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 
-installRuntimeGuard({ maxMinutes: 30, name: 'refreshSummary', prisma });
+installRuntimeGuard({ maxMinutes: 60, name: 'refreshSummary', prisma });
 
 const start = Date.now();
 const mode = readSummaryMode(process.env);

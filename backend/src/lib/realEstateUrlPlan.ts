@@ -10,6 +10,9 @@ export interface RealEstateUrlCandidate {
   buildingName: string;
   dongName: string | null;
   jibun: string | null;
+  /** newGroupOwnerPolicy 판정용(요약 V2 의 거래 수·최신 거래일 YYYYMMDD). */
+  transactionCount?: number | null;
+  latestDealKey?: number | null;
 }
 
 export interface ExistingRealEstateUrlMapping {
@@ -64,7 +67,8 @@ export type RealEstateUrlPlanBlockerKind =
   | 'readable-suffix-clash'
   | 'canonical-path-clash'
   | 'unresolved-baseline-entry'
-  | 'incomplete-deferred-group';
+  | 'incomplete-deferred-group'
+  | 'ambiguous-new-owner';
 
 export interface RealEstateUrlPlanBlocker {
   kind: RealEstateUrlPlanBlockerKind;
@@ -76,6 +80,13 @@ export interface RealEstateUrlPlanBlocker {
 export interface RealEstateUrlPlanInput {
   resolveDeferred?: boolean;
   unresolvedPolicy?: 'block' | 'defer';
+  /**
+   * 요약 갱신의 자동 URL 추가 전용. 기존 URL·baseline 이 없는 같은 경로의 새 건물이 둘 이상일 때
+   * 거래 수 최다(동률이면 최신 거래일) 건물에 기본 경로를 주고 나머지는 동·지번 접미사를 준다.
+   * approved-fixed-owner-policy-v1 과 같은 기준이며, 이미 확정된 URL 은 재배정하지 않는다.
+   * 과거 거래 백필(2021~2022)로 동명 신규 그룹 594개가 한꺼번에 생겨 도입했다(2026-10-19).
+   */
+  newGroupOwnerPolicy?: 'most-transactions';
   existing: ExistingRealEstateUrlMapping[];
   current: RealEstateUrlCandidate[];
   legacyBaseline: LegacyRealEstateUrlBaselineEntry[];
@@ -181,7 +192,8 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
       basePath,
       pending,
       baselineByBase.get(baseKey) ?? [],
-      existingGroup
+      existingGroup,
+      input.newGroupOwnerPolicy
     );
     const eligibleReasons = new Set([
       'missing-legacy-owner',
@@ -237,7 +249,9 @@ export function planRealEstatePublicUrls(input: RealEstateUrlPlanInput): RealEst
         input,
         deferGroup
           ? { source: 'legacy-deferred', reasons }
-          : evidenceForAssignment(canonicalPath, basePath, baselineByBase.get(baseKey) ?? [])
+          : assignments.newGroupOwnerKey === candidateKey
+            ? { source: 'new-group-most-transactions' }
+            : evidenceForAssignment(canonicalPath, basePath, baselineByBase.get(baseKey) ?? [])
       );
       mappings.push(planned);
       toCreate.push(planned);
@@ -363,15 +377,20 @@ function assignGroup(
   basePath: string,
   candidates: RealEstateUrlCandidate[],
   baselines: LegacyRealEstateUrlBaselineEntry[],
-  existing: ExistingRealEstateUrlMapping[]
+  existing: ExistingRealEstateUrlMapping[],
+  newGroupOwnerPolicy?: RealEstateUrlPlanInput['newGroupOwnerPolicy']
 ): {
   paths: Array<[RealEstateUrlCandidate, string]>;
   blockers: RealEstateUrlPlanBlocker[];
+  newGroupOwnerKey?: string;
 } {
   const paths: Array<[RealEstateUrlCandidate, string]> = [];
   const existingBaseOwner = existing.find((row) => normalizePath(row.canonicalPath) === basePath);
   if (existingBaseOwner) {
     return assignSuffixes(basePath, candidates);
+  }
+  if (newGroupOwnerPolicy && candidates.length > 1 && baselines.length === 0 && existing.length === 0) {
+    return assignNewGroup(basePath, candidates);
   }
   if (candidates.length === 1) {
     if (baselines.length === 0) return { paths: [[candidates[0], basePath]], blockers: [] };
@@ -413,6 +432,45 @@ function assignGroup(
     candidates.filter((candidate) => candidate.buildingKey !== baseOwner.candidate.buildingKey)
   );
   return { paths: [...paths, ...suffixAssignments.paths], blockers: suffixAssignments.blockers };
+}
+
+// 새 동명 그룹은 전부 아니면 전무다: 대표를 못 정하거나 접미사 하나라도 못 만들면 그룹 전체를 보류한다.
+function assignNewGroup(
+  basePath: string,
+  candidates: RealEstateUrlCandidate[]
+): {
+  paths: Array<[RealEstateUrlCandidate, string]>;
+  blockers: RealEstateUrlPlanBlocker[];
+  newGroupOwnerKey?: string;
+} {
+  const allKeys = candidates.map((candidate) => mappingKey(candidate.type, candidate.buildingKey)).sort();
+  const rank = (candidate: RealEstateUrlCandidate): [number, number] => [
+    Number(candidate.transactionCount ?? 0),
+    Number(candidate.latestDealKey ?? 0),
+  ];
+  const sorted = [...candidates].sort((a, b) => {
+    const [ta, la] = rank(a);
+    const [tb, lb] = rank(b);
+    return tb - ta || lb - la;
+  });
+  const [first, second] = sorted;
+  const [t1, l1] = rank(first);
+  const [t2, l2] = rank(second);
+  if (t1 === t2 && l1 === l2) {
+    return { paths: [], blockers: [{ kind: 'ambiguous-new-owner', basePath, buildingKeys: allKeys }] };
+  }
+  const suffixes = assignSuffixes(basePath, sorted.slice(1));
+  if (suffixes.blockers.length > 0) {
+    return {
+      paths: [],
+      blockers: suffixes.blockers.map((blocker) => ({ ...blocker, buildingKeys: allKeys })),
+    };
+  }
+  return {
+    paths: [[first, basePath], ...suffixes.paths],
+    blockers: [],
+    newGroupOwnerKey: mappingKey(first.type, first.buildingKey),
+  };
 }
 
 function assignSuffixes(
