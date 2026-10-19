@@ -93,6 +93,9 @@
                 :to="child.href"
               >{{ child.name }}</UiButton>
             </div>
+            <div class="mt-3 flex items-center justify-center">
+              <UiButton variant="secondary" :to="`/${citySlug}/${districtSlug}`">지역 허브로</UiButton>
+            </div>
           </EmptyState>
           <EmptyState
             v-else

@@ -20,7 +20,7 @@ import { defineComponent, h, Suspense, ref, computed, watch, watchEffect, onMoun
 }
 
 // Mock useRoute with valid params
-;const routeParams = { realEstateType: 'apt-sale', city: 'gyeonggi', district: 'ansan' }
+const routeParams = { realEstateType: 'apt-sale', city: 'gyeonggi', district: 'ansan' }
 ;(globalThis as any).useRoute = vi.fn(() => ({ params: routeParams, query: {} }))
 
 // Mock useRouter
@@ -89,15 +89,6 @@ beforeEach(() => {
   })
 })
 
-// 전역 useAsyncData 목(tests/setup.ts)은 fetcher를 실제로 호출하지 않으므로 SSR
-// totalComplexes를 검증하는 테스트에서는 딱 1회만 진짜로 fetcher를 실행하도록 오버라이드한다.
-function mockAsyncDataOnceWithFetcher() {
-  ;(globalThis as any).useAsyncData.mockImplementationOnce(async (_key: string, fetcher: () => Promise<unknown>) => {
-    const value = await fetcher()
-    return { data: ref(value), status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
-  })
-}
-
 async function mountSuspended(component: any, options?: any) {
   const wrapper = mount(
     defineComponent({
@@ -144,6 +135,31 @@ describe('부모 시 빈 페이지 — 구 링크 안내', () => {
     expect(hrefs).toEqual([
       '/real-estate/apt-sale/gyeonggi/ansan-sangnok',
       '/real-estate/apt-sale/gyeonggi/ansan-danwon',
+    ])
+  })
+
+  it('부모 시 빈 페이지는 noindex(robots) 를 유지하고 지역 허브 링크를 남긴다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const useHeadMock = (globalThis as any).useHead as { mock: { calls: unknown[][] } }
+    const robotsCalls = useHeadMock.mock.calls.filter(([arg]) =>
+      Array.isArray((arg as any)?.meta) && (arg as any).meta.some((meta: any) => meta.name === 'robots'),
+    )
+    expect(robotsCalls.length).toBeGreaterThan(0)
+    const hub = wrapper.findAll('a').find((a) => a.text() === '지역 허브로')
+    expect(hub?.attributes('href')).toBe('/gyeonggi/ansan')
+  })
+
+  it('화성시는 부동산 전용 4개 구로 안내한다', async () => {
+    routeParams.district = 'hwaseong'
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/index.vue')
+    const wrapper = await mountSuspended(m.default)
+    const hrefs = wrapper.findAll('[data-testid="parent-city-district-links"] a').map((a) => a.attributes('href'))
+    expect(hrefs).toEqual([
+      '/real-estate/apt-sale/gyeonggi/hwaseong-dongtan',
+      '/real-estate/apt-sale/gyeonggi/hwaseong-manse',
+      '/real-estate/apt-sale/gyeonggi/hwaseong-byeongjeom',
+      '/real-estate/apt-sale/gyeonggi/hwaseong-hyohaeng',
     ])
   })
 
