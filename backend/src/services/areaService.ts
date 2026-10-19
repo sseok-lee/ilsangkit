@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { toMolitLawdCode } from '../lib/molitLawdCode.js';
 import { getStatsByDistrict, getDistrictStatsByCity, CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './facilityService.js';
 
 // 인메모리 캐시 (TTL 기반)
@@ -28,7 +29,9 @@ export function setCache(key: string, data: unknown): void {
  * 부동산 6개 모델 집계 헬퍼
  * bjdCodes: startsWith 매칭할 bjdCode 배열 (OR 조건)
  */
-export async function aggregateRealEstate(bjdCodes: string[]) {
+export async function aggregateRealEstate(regionBjdCodes: string[]) {
+  // 거래 bjdCode 는 국토부 코드로 저장된다(세종 Region 36111 → 거래 36110).
+  const bjdCodes = [...new Set(regionBjdCodes.map(toMolitLawdCode))];
   if (bjdCodes.length === 0) {
     return {
       apt: { sale: { avg: 0, count: 0 }, rent: { avg: 0, count: 0 } },

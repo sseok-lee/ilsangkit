@@ -3,6 +3,9 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { prisma } from '../lib/prisma.js';
+import { toMolitLawdCode } from '../lib/molitLawdCode.js';
+
+export { toMolitLawdCode };
 
 const BASE_URL = 'https://apis.data.go.kr/1613000';
 
@@ -112,17 +115,6 @@ export function buildApiUrl(
     url.searchParams.append(key, String(value));
   }
   return url.toString();
-}
-
-/**
- * Region 표 bjdCode → 국토부 실거래 API LAWD_CD 별칭.
- * Region 표의 세종 코드 36111 은 국토부 실거래 API 가 데이터를 주지 않고 36110 만 응답한다
- * (2026-10-20 실측: 2026-09 아파트매매 36110 → 519건, 36111 → 0건).
- */
-const MOLIT_LAWD_CODE_ALIASES: Record<string, string> = { '36111': '36110' };
-
-export function toMolitLawdCode(bjdCode: string): string {
-  return MOLIT_LAWD_CODE_ALIASES[bjdCode] ?? bjdCode;
 }
 
 /**
