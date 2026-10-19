@@ -112,7 +112,9 @@ npx tsx src/scripts/realEstateUrls.ts --apply --resolve-deferred \
 2026-10-19 594그룹) `newGroupOwnerPolicy: 'most-transactions'` 로 등록 시점에 한 번 정한다.
 
 1. 그룹 안에서 거래 수가 가장 많은 건물이 `/{건물명}` 을 갖는다. 근거는 `new-group-most-transactions`.
-2. 거래 수가 같으면 최신 거래일이 늦은 건물. 그것도 같으면 정하지 않는다(`ambiguous-new-owner`).
+2. 거래 수가 같으면 최신 거래일이 늦은 건물. 그것도 같으면 지번(본번, 부번 숫자) 작은 건물, 그다음 동 이름 순.
+   지번을 숫자로 비교할 수 없으면 정하지 않는다(`ambiguous-new-owner`). 지번 기준은 같은 시공사 신축이
+   같은 날 같은 세대수로 팔려 거래 수·최신일이 구조적으로 같은 그룹(2026-10-19 5그룹) 때문에 추가했다.
 3. 나머지는 동·지번 접미사. 하나라도 주소가 없거나 겹치면 그룹 전체를 보류한다.
 
 보류된 건물은 그 배치의 `RealEstateBuildingSummaryV2` 에서만 빠진다(모든 V2 행은 매핑을 가져야 하므로).

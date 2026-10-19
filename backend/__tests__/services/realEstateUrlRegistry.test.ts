@@ -499,8 +499,8 @@ describe('appendRealEstateUrlsForSummaryBatch', () => {
   it('drops only an unresolvable new group from the batch summary and keeps the batch', async () => {
     process.env.REAL_ESTATE_URL_MODE = 'preserved';
     const tx = newGroupTx([
-      { key: 'a', dong: '역삼동', jibun: '1', tx: 5, latest: 20220101 },
-      { key: 'b', dong: '삼성동', jibun: '2', tx: 5, latest: 20220101 },
+      { key: 'a', dong: '역삼동', jibun: '산', tx: 5, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '산', tx: 5, latest: 20220101 },
     ]);
 
     const result = await appendRealEstateUrlsForSummaryBatch(tx, 'villa-sale', '서울특별시');
