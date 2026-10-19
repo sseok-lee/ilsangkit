@@ -444,19 +444,25 @@ function assignNewGroup(
   newGroupOwnerKey?: string;
 } {
   const allKeys = candidates.map((candidate) => mappingKey(candidate.type, candidate.buildingKey)).sort();
-  const rank = (candidate: RealEstateUrlCandidate): [number, number] => [
-    Number(candidate.transactionCount ?? 0),
-    Number(candidate.latestDealKey ?? 0),
-  ];
-  const sorted = [...candidates].sort((a, b) => {
-    const [ta, la] = rank(a);
-    const [tb, lb] = rank(b);
-    return tb - ta || lb - la;
-  });
+  // 거래 수 최다 → 최신 거래일 → 지번(본번·부번 숫자) 작은 순 → 동 이름. 같은 시공사 신축이 같은 날
+  // 같은 세대수로 팔린 그룹(2026-10-19 5그룹)은 앞의 둘이 구조적으로 같아 지번으로 정한다.
+  const jibunNumbers = (candidate: RealEstateUrlCandidate): [number, number] | null => {
+    const match = /^(\d+)(?:-(\d+))?$/.exec(candidate.jibun?.trim() ?? '');
+    return match ? [Number(match[1]), Number(match[2] ?? 0)] : null;
+  };
+  const compare = (a: RealEstateUrlCandidate, b: RealEstateUrlCandidate): number => {
+    const byCount = Number(b.transactionCount ?? 0) - Number(a.transactionCount ?? 0);
+    if (byCount !== 0) return byCount;
+    const byLatest = Number(b.latestDealKey ?? 0) - Number(a.latestDealKey ?? 0);
+    if (byLatest !== 0) return byLatest;
+    const ja = jibunNumbers(a);
+    const jb = jibunNumbers(b);
+    if (!ja || !jb) return 0;
+    return ja[0] - jb[0] || ja[1] - jb[1] || (a.dongName ?? '').localeCompare(b.dongName ?? '', 'ko');
+  };
+  const sorted = [...candidates].sort(compare);
   const [first, second] = sorted;
-  const [t1, l1] = rank(first);
-  const [t2, l2] = rank(second);
-  if (t1 === t2 && l1 === l2) {
+  if (compare(first, second) === 0) {
     return { paths: [], blockers: [{ kind: 'ambiguous-new-owner', basePath, buildingKeys: allKeys }] };
   }
   const suffixes = assignSuffixes(basePath, sorted.slice(1));

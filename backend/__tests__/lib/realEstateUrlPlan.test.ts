@@ -793,14 +793,40 @@ describe('new same-name groups (summary append)', () => {
     expect(pathOf(result, 'b')).toBe(`${base}/${encodeURIComponent('삼성동-2')}`);
   });
 
-  it('holds the whole group when count and latest date both tie', () => {
+  it('breaks a full count/date tie by the smaller jibun (numeric, not lexical)', () => {
+    // 2026-10-19 운영: 같은 시공사 신축 빌라 두 동이 같은 날 8세대씩 팔려 거래 수·최신일이 같았다.
     const result = planRealEstatePublicUrls(newGroupInput([
-      { key: 'a', dong: '역삼동', jibun: '1', tx: 5, latest: 20220101 },
-      { key: 'b', dong: '삼성동', jibun: '2', tx: 5, latest: 20220101 },
+      { key: 'a', dong: '읍내동', jibun: '673-1', tx: 8, latest: 20211118 },
+      { key: 'b', dong: '읍내동', jibun: '671-1', tx: 8, latest: 20211118 },
+      { key: 'c', dong: '읍내동', jibun: '99', tx: 8, latest: 20211118 },
+    ]));
+    expect(result.blockers).toEqual([]);
+    expect(pathOf(result, 'c')).toBe(base);
+    expect(pathOf(result, 'b')).toBe(`${base}/${encodeURIComponent('읍내동-671-1')}`);
+    expect(pathOf(result, 'a')).toBe(`${base}/${encodeURIComponent('읍내동-673-1')}`);
+  });
+
+  it('compares the sub-number when the main jibun ties, then the dong name', () => {
+    const sub = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '읍내동', jibun: '671-14', tx: 8, latest: 20211118 },
+      { key: 'b', dong: '읍내동', jibun: '671-4', tx: 8, latest: 20211118 },
+    ]));
+    expect(pathOf(sub, 'b')).toBe(base);
+
+    const dong = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '월피동', jibun: '501-11', tx: 8, latest: 20210510 },
+      { key: 'b', dong: '본오동', jibun: '501-11', tx: 8, latest: 20210510 },
+    ]));
+    expect(pathOf(dong, 'b')).toBe(base);
+  });
+
+  it('still holds the group when the jibun cannot be compared', () => {
+    const result = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '산', tx: 5, latest: 20220101 },
+      { key: 'b', dong: '역삼동', jibun: '산', tx: 5, latest: 20220101 },
     ]));
     expect(result.toCreate).toEqual([]);
     expect(result.blockers).toEqual([expect.objectContaining({ kind: 'ambiguous-new-owner', basePath: base })]);
-    expect(result.blockers[0].buildingKeys).toHaveLength(2);
   });
 
   it('holds the whole group (owner included) when a non-owner has no readable address', () => {
