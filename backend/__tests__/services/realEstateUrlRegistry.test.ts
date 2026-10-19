@@ -457,42 +457,58 @@ describe('appendRealEstateUrlsForSummaryBatch', () => {
     expect(params).toEqual(['apt-sale', '서울특별시', '1168010100', '1168010200']);
   });
 
-  it('throws for a new ambiguous base so the summary city transaction can roll back', async () => {
-    process.env.REAL_ESTATE_URL_MODE = 'preserved';
-    const tx = {
+  function newGroupTx(rows: Array<{ key: string; dong: string; jibun: string; tx: number; latest: number }>) {
+    return {
       $queryRawUnsafe: vi.fn()
         .mockResolvedValueOnce([
           { status: 'ready', sourceFingerprint: 'f'.repeat(64), baselineProvenance: 'production-snapshot', validatedAt: new Date() },
         ])
-        .mockResolvedValueOnce([
-          {
-            type: 'villa-sale',
-            buildingKey: 'a',
-            bjdCode: '1168010100',
-            city: '서울특별시',
-            district: '강남구',
-            buildingName: '새빌라',
-            dongName: '역삼동',
-            jibun: '1',
-          },
-          {
-            type: 'villa-sale',
-            buildingKey: 'b',
-            bjdCode: '1168010200',
-            city: '서울특별시',
-            district: '강남구',
-            buildingName: '새빌라',
-            dongName: '삼성동',
-            jibun: '2',
-          },
-        ])
+        .mockResolvedValueOnce(rows.map((row) => ({
+          type: 'villa-sale',
+          buildingKey: row.key,
+          bjdCode: '11680',
+          city: '서울특별시',
+          district: '강남구',
+          buildingName: '새빌라',
+          dongName: row.dong,
+          jibun: row.jibun,
+          transactionCount: row.tx,
+          latestDealKey: row.latest,
+        })))
         .mockResolvedValueOnce([]),
       $executeRawUnsafe: vi.fn(),
     };
+  }
 
-    await expect(
-      appendRealEstateUrlsForSummaryBatch(tx, 'villa-sale', '서울특별시')
-    ).rejects.toThrow(/unresolved URL blockers/);
-    expect(tx.$executeRawUnsafe).not.toHaveBeenCalled();
+  it('assigns a new same-name group by transaction count instead of rolling back the summary batch', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    const tx = newGroupTx([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 2, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 7, latest: 20210101 },
+    ]);
+
+    const result = await appendRealEstateUrlsForSummaryBatch(tx, 'villa-sale', '서울특별시');
+
+    expect(result).toMatchObject({ scanned: 2, inserted: 2, blockers: [] });
+    expect(tx.$executeRawUnsafe).toHaveBeenCalledTimes(1);
+    expect(String(tx.$executeRawUnsafe.mock.calls[0][0])).toContain('INSERT INTO `RealEstatePublicUrl`');
+    const [candidateSql] = tx.$queryRawUnsafe.mock.calls[1];
+    expect(String(candidateSql)).toContain('s.transactionCount');
+  });
+
+  it('drops only an unresolvable new group from the batch summary and keeps the batch', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    const tx = newGroupTx([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 5, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 5, latest: 20220101 },
+    ]);
+
+    const result = await appendRealEstateUrlsForSummaryBatch(tx, 'villa-sale', '서울특별시');
+
+    expect(result.inserted).toBe(0);
+    expect(result.blockers).toEqual([expect.objectContaining({ kind: 'ambiguous-new-owner' })]);
+    const deletes = tx.$executeRawUnsafe.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE FROM RealEstateBuildingSummaryV2'));
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].slice(1)).toEqual(['villa-sale', 'a', 'b']);
   });
 });

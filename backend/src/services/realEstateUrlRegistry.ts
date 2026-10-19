@@ -164,7 +164,9 @@ export async function appendRealEstateUrlsForSummaryBatch(
   const scopedBjdCodes = options.bjdCodes ?? [];
   const bjdPredicate = scopedBjdCodes.length > 0 ? ` AND s.bjdCode IN (${scopedBjdCodes.map(() => '?').join(', ')})` : '';
   const current = await tx.$queryRawUnsafe<RealEstateUrlCandidate[]>(
-    `SELECT s.type, s.buildingKey, s.bjdCode, s.city, s.district, s.buildingName, s.dongName, s.jibun
+    `SELECT s.type, s.buildingKey, s.bjdCode, s.city, s.district, s.buildingName, s.dongName, s.jibun,
+            s.transactionCount,
+            s.latestDealYear * 10000 + s.latestDealMonth * 100 + COALESCE(s.latestDealDay, 1) AS latestDealKey
        FROM RealEstateBuildingSummaryV2 s
        LEFT JOIN RealEstatePublicUrl u
          ON u.type = s.type AND u.buildingKey = s.buildingKey
@@ -185,15 +187,36 @@ export async function appendRealEstateUrlsForSummaryBatch(
     existing,
     current,
     legacyBaseline: [],
+    newGroupOwnerPolicy: 'most-transactions',
     sourceFingerprint: state.sourceFingerprint,
     baselineProvenance: state.baselineProvenance,
     generatedAt: new Date(),
   });
-  if (plan.blockers.length > 0) {
-    throw new Error(`Cannot append real estate public URLs with ${plan.blockers.length} unresolved URL blockers`);
-  }
   await insertMappings(tx, plan.toCreate);
-  return { scanned: current.length, inserted: plan.toCreate.length, blockers: [] };
+  if (plan.blockers.length > 0) {
+    // V2 의 모든 행은 공개 URL 을 가져야 한다(readiness 가 검사). 주소를 정하지 못한 건물만 이 배치의
+    // V2 에서 빼고 나머지는 갱신한다 — 종전엔 배치 전체를 롤백해 그 지역 요약이 매일 멈췄다.
+    // 원본 거래는 그대로이므로 규칙으로 풀리면 다음 갱신에서 다시 들어온다.
+    const blockedKeys = [...new Set(plan.blockers.flatMap((blocker) => blocker.buildingKeys))]
+      .map((key) => key.split('\x1f')[1])
+      .filter((key): key is string => Boolean(key));
+    for (const keys of chunks(blockedKeys, 500)) {
+      await tx.$executeRawUnsafe(
+        `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND buildingKey IN (${keys.map(() => '?').join(', ')})`,
+        type,
+        ...keys,
+      );
+    }
+    const kinds = [...new Set(plan.blockers.map((blocker) => blocker.kind))].join(',');
+    console.warn(
+      `[url-registry] ${type}/${city} 보류 ${plan.blockers.length}그룹·${blockedKeys.length}건물 (${kinds}) — 요약에서 제외`,
+    );
+  }
+  return {
+    scanned: current.length,
+    inserted: plan.toCreate.length,
+    blockers: plan.blockers.map(({ kind, basePath, buildingKeys }) => ({ kind, basePath, buildingKeys })),
+  };
 }
 
 async function assertReadyWithDb(db: Pick<RegistryDb, '$queryRawUnsafe'>, checkMissingMappings: boolean): Promise<{

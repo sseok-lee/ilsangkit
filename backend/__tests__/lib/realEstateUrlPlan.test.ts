@@ -742,3 +742,85 @@ describe('planRealEstatePublicUrls', () => {
     expect(result.toCreate).toEqual([]);
   });
 });
+
+describe('new same-name groups (summary append)', () => {
+  const base = `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('새빌라')}`;
+  function newGroupInput(
+    rows: Array<{ key: string; dong: string; jibun: string | null; tx: number; latest: number }>,
+  ): RealEstateUrlPlanInput {
+    return {
+      generatedAt,
+      sourceFingerprint: 'f'.repeat(64),
+      baselineProvenance: 'snapshot',
+      existing: [],
+      legacyBaseline: [],
+      newGroupOwnerPolicy: 'most-transactions',
+      current: rows.map((row) => ({
+        type: 'villa-sale',
+        buildingKey: row.key.repeat(64),
+        bjdCode: '11680',
+        city: '서울특별시',
+        district: '강남구',
+        buildingName: '새빌라',
+        dongName: row.dong,
+        jibun: row.jibun,
+        transactionCount: row.tx,
+        latestDealKey: row.latest,
+      })),
+    };
+  }
+  const pathOf = (result: ReturnType<typeof planRealEstatePublicUrls>, key: string) =>
+    result.toCreate.find((row) => row.buildingKey === key.repeat(64))?.canonicalPath;
+
+  it('gives the base path to the building with the most transactions and suffixes the rest', () => {
+    const result = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 3, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 9, latest: 20210101 },
+    ]));
+    expect(result.blockers).toEqual([]);
+    expect(pathOf(result, 'b')).toBe(base);
+    expect(pathOf(result, 'a')).toBe(`${base}/${encodeURIComponent('역삼동-1')}`);
+    expect(result.toCreate.find((row) => row.buildingKey === 'b'.repeat(64))?.evidence)
+      .toMatchObject({ source: 'new-group-most-transactions' });
+  });
+
+  it('breaks a transaction-count tie by the latest deal date', () => {
+    const result = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 5, latest: 20220301 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 5, latest: 20220101 },
+    ]));
+    expect(pathOf(result, 'a')).toBe(base);
+    expect(pathOf(result, 'b')).toBe(`${base}/${encodeURIComponent('삼성동-2')}`);
+  });
+
+  it('holds the whole group when count and latest date both tie', () => {
+    const result = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 5, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 5, latest: 20220101 },
+    ]));
+    expect(result.toCreate).toEqual([]);
+    expect(result.blockers).toEqual([expect.objectContaining({ kind: 'ambiguous-new-owner', basePath: base })]);
+    expect(result.blockers[0].buildingKeys).toHaveLength(2);
+  });
+
+  it('holds the whole group (owner included) when a non-owner has no readable address', () => {
+    const result = planRealEstatePublicUrls(newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 9, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: null, tx: 1, latest: 20220101 },
+    ]));
+    expect(result.toCreate).toEqual([]);
+    const blocked = new Set(result.blockers.flatMap((row) => row.buildingKeys));
+    expect(blocked).toEqual(new Set(['villa-sale\x1f' + 'a'.repeat(64), 'villa-sale\x1f' + 'b'.repeat(64)]));
+  });
+
+  it('keeps blocking new same-name groups when the policy is not requested', () => {
+    const input = newGroupInput([
+      { key: 'a', dong: '역삼동', jibun: '1', tx: 3, latest: 20220101 },
+      { key: 'b', dong: '삼성동', jibun: '2', tx: 9, latest: 20210101 },
+    ]);
+    delete input.newGroupOwnerPolicy;
+    expect(planRealEstatePublicUrls(input).blockers).toEqual([
+      expect.objectContaining({ kind: 'missing-legacy-owner' }),
+    ]);
+  });
+});
