@@ -115,14 +115,40 @@ export function buildApiUrl(
 }
 
 /**
- * Prisma Region 테이블에서 DISTINCT bjdCode 5자리 추출
+ * Region 표 bjdCode → 국토부 실거래 API LAWD_CD 별칭.
+ * Region 표의 세종 코드 36111 은 국토부 실거래 API 가 데이터를 주지 않고 36110 만 응답한다
+ * (2026-10-20 실측: 2026-09 아파트매매 36110 → 519건, 36111 → 0건).
+ */
+const MOLIT_LAWD_CODE_ALIASES: Record<string, string> = { '36111': '36110' };
+
+export function toMolitLawdCode(bjdCode: string): string {
+  return MOLIT_LAWD_CODE_ALIASES[bjdCode] ?? bjdCode;
+}
+
+/**
+ * Prisma Region 테이블에서 DISTINCT bjdCode 5자리 추출 (국토부 별칭 적용 후 중복 제거)
  */
 export async function getAllLawdCodes(): Promise<string[]> {
   const rows = await prisma.region.findMany({
     select: { bjdCode: true },
     distinct: ['bjdCode'],
   });
-  return rows.map((r) => r.bjdCode);
+  return [...new Set(rows.map((r) => toMolitLawdCode(r.bjdCode)))];
+}
+
+/**
+ * lawdCd → 지역 이름 맵. Region bjdCode 키와 국토부 별칭 코드 키를 함께 등록한다
+ * (별칭 코드에 해당하는 Region 행이 따로 있으면 그 행을 우선한다).
+ */
+export function buildRegionMap(
+  regions: { bjdCode: string; city: string; district: string }[]
+): Map<string, { city: string; district: string }> {
+  const map = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
+  for (const r of regions) {
+    const alias = toMolitLawdCode(r.bjdCode);
+    if (!map.has(alias)) map.set(alias, { city: r.city, district: r.district });
+  }
+  return map;
 }
 
 /**

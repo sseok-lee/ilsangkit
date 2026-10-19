@@ -5,6 +5,8 @@ import {
   buildApiUrl,
   getAllLawdCodes,
   fetchRealEstateData,
+  toMolitLawdCode,
+  buildRegionMap,
 } from '../../src/services/syncRealEstateBase';
 
 // Mock Prisma
@@ -313,6 +315,36 @@ describe('getAllLawdCodes', () => {
         distinct: expect.arrayContaining(['bjdCode']),
       })
     );
+  });
+});
+
+describe('세종 실거래 수집 코드 별칭', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('toMolitLawdCode: Region 세종 코드 36111 은 국토부 코드 36110 으로, 나머지는 그대로', () => {
+    expect(toMolitLawdCode('36111')).toBe('36110');
+    expect(toMolitLawdCode('36110')).toBe('36110');
+    expect(toMolitLawdCode('11680')).toBe('11680');
+  });
+
+  it('getAllLawdCodes: 별칭을 적용하고 중복을 제거한다', async () => {
+    const { prisma } = await import('../../src/lib/prisma');
+    vi.mocked(prisma.region.findMany).mockResolvedValue(
+      [{ bjdCode: '11680' }, { bjdCode: '36111' }, { bjdCode: '36110' }] as Awaited<ReturnType<typeof prisma.region.findMany>>,
+    );
+    expect(await getAllLawdCodes()).toEqual(['11680', '36110']);
+  });
+
+  it('buildRegionMap: bjdCode 키와 별칭 코드 키 둘 다 같은 지역으로 등록한다', () => {
+    const map = buildRegionMap([
+      { bjdCode: '36111', city: '세종특별자치시', district: '세종시' },
+      { bjdCode: '11680', city: '서울특별시', district: '강남구' },
+    ]);
+    expect(map.get('36111')).toEqual({ city: '세종특별자치시', district: '세종시' });
+    expect(map.get('36110')).toEqual({ city: '세종특별자치시', district: '세종시' });
+    expect(map.get('11680')).toEqual({ city: '서울특별시', district: '강남구' });
   });
 });
 
