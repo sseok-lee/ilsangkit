@@ -509,6 +509,34 @@ describe('appendRealEstateUrlsForSummaryBatch', () => {
     expect(result.blockers).toEqual([expect.objectContaining({ kind: 'ambiguous-new-owner' })]);
     const deletes = tx.$executeRawUnsafe.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE FROM RealEstateBuildingSummaryV2'));
     expect(deletes).toHaveLength(1);
-    expect(deletes[0].slice(1)).toEqual(['villa-sale', 'a', 'b']);
+    expect(deletes[0].slice(1)).toEqual(['villa-sale', '서울특별시', 'a', 'b']);
+  });
+
+  it('never deletes the summary row of an existing URL owner named in a path-clash blocker', async () => {
+    process.env.REAL_ESTATE_URL_MODE = 'preserved';
+    const base = `/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('새빌라')}`;
+    const tx = {
+      $queryRawUnsafe: vi.fn()
+        .mockResolvedValueOnce([
+          { status: 'ready', sourceFingerprint: 'f'.repeat(64), baselineProvenance: 'production-snapshot', validatedAt: new Date() },
+        ])
+        .mockResolvedValueOnce([{
+          type: 'villa-sale', buildingKey: 'new', bjdCode: '11680', city: '서울특별시', district: '강남구',
+          buildingName: '새빌라', dongName: '역삼동', jibun: '1', transactionCount: 1, latestDealKey: 20220101,
+        }])
+        .mockResolvedValueOnce([
+          { type: 'villa-sale', buildingKey: 'owner', bjdCode: '11680', buildingName: '새빌라', canonicalPath: base, basePath: base, dongName: '삼성동', jibun: '9', evidence: null },
+          { type: 'villa-sale', buildingKey: 'held', bjdCode: '11680', buildingName: '새빌라', canonicalPath: `${base}/${encodeURIComponent('역삼동-1')}`, basePath: base, dongName: '역삼동', jibun: '1', evidence: null },
+        ]),
+      $executeRawUnsafe: vi.fn(),
+    };
+
+    const result = await appendRealEstateUrlsForSummaryBatch(tx, 'villa-sale', '서울특별시', process.env, { bjdCodes: ['11680'] });
+
+    expect(result.blockers).toEqual([expect.objectContaining({ kind: 'canonical-path-clash' })]);
+    const deletes = tx.$executeRawUnsafe.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE FROM RealEstateBuildingSummaryV2'));
+    expect(deletes).toHaveLength(1);
+    expect(String(deletes[0][0])).toContain('bjdCode IN (?)');
+    expect(deletes[0].slice(1)).toEqual(['villa-sale', '서울특별시', '11680', 'new']);
   });
 });

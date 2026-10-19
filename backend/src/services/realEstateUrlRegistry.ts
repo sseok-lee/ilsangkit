@@ -197,19 +197,25 @@ export async function appendRealEstateUrlsForSummaryBatch(
     // V2 의 모든 행은 공개 URL 을 가져야 한다(readiness 가 검사). 주소를 정하지 못한 건물만 이 배치의
     // V2 에서 빼고 나머지는 갱신한다 — 종전엔 배치 전체를 롤백해 그 지역 요약이 매일 멈췄다.
     // 원본 거래는 그대로이므로 규칙으로 풀리면 다음 갱신에서 다시 들어온다.
+    // 경로 충돌 blocker 는 기존 소유자 키도 담는다 — 이번에 매핑을 못 받은(미매핑) 후보만 지운다.
+    const unmappedKeys = new Set(current.map((candidate) => candidate.buildingKey));
+    const createdKeys = new Set(plan.toCreate.map((row) => row.buildingKey));
     const blockedKeys = [...new Set(plan.blockers.flatMap((blocker) => blocker.buildingKeys))]
       .map((key) => key.split('\x1f')[1])
-      .filter((key): key is string => Boolean(key));
+      .filter((key): key is string => Boolean(key) && unmappedKeys.has(key) && !createdKeys.has(key));
     for (const keys of chunks(blockedKeys, 500)) {
       await tx.$executeRawUnsafe(
-        `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND buildingKey IN (${keys.map(() => '?').join(', ')})`,
+        `DELETE FROM RealEstateBuildingSummaryV2 WHERE type = ? AND city = ?${bjdPredicate.replace('s.bjdCode', 'bjdCode')} AND buildingKey IN (${keys.map(() => '?').join(', ')})`,
         type,
+        city,
+        ...scopedBjdCodes,
         ...keys,
       );
     }
     const kinds = [...new Set(plan.blockers.map((blocker) => blocker.kind))].join(',');
+    const samples = plan.blockers.slice(0, 3).map((blocker) => decodeURIComponent(blocker.basePath)).join(' | ');
     console.warn(
-      `[url-registry] ${type}/${city} 보류 ${plan.blockers.length}그룹·${blockedKeys.length}건물 (${kinds}) — 요약에서 제외`,
+      `[url-registry] ${type}/${city} 보류 ${plan.blockers.length}그룹·${blockedKeys.length}건물 (${kinds}) — 요약에서 제외: ${samples}`,
     );
   }
   return {
