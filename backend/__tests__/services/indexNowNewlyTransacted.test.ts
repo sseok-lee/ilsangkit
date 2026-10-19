@@ -76,9 +76,20 @@ describe('submitNewlyTransactedBuildings', () => {
     expect(decodeURIComponent(body.urlList[0])).toBe('https://ilsangkit.co.kr/real-estate/apt-sale/seoul/gangnam/은마');
   });
 
-  it('지번 패턴 buildingName 은 제출하지 않는다', async () => {
+  it('지번형 buildingName 도 일반 이름처럼 제출한다 (2026-10-19 해제)', async () => {
     const { delegate } = makeDelegate([
       { buildingName: '123-4', city: '서울특별시', district: '강남구' },
+    ]);
+
+    const result = await submitNewlyTransactedBuildings(delegate, 'villa-sale', 'villaSale', SINCE);
+
+    expect(result.submitted).toBe(1);
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it('1글자 buildingName 은 제출하지 않는다', async () => {
+    const { delegate } = makeDelegate([
+      { buildingName: 'a', city: '서울특별시', district: '강남구' },
     ]);
 
     const result = await submitNewlyTransactedBuildings(delegate, 'villa-sale', 'villaSale', SINCE);

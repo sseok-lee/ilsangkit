@@ -2,9 +2,17 @@ import { describe, it, expect } from 'vitest'
 import { shouldNoindexRealEstateDetail } from '~/utils/realEstateNoindex'
 
 describe('shouldNoindexRealEstateDetail', () => {
-  it('지번 패턴 buildingName은 noindex', () => {
+  it.each(['(683-)', '123-4', '(386-2)청구빌라', '123-45'])('지번형 buildingName %s 은 noindex 아님', (buildingName) => {
     expect(shouldNoindexRealEstateDetail({
-      buildingName: '123-45',
+      buildingName,
+      loaded: true,
+      hasBuildingInfo: true,
+    })).toBe(false)
+  })
+
+  it.each(['', '  ', 'a'])('빈값/1글자 buildingName %j 은 noindex', (buildingName) => {
+    expect(shouldNoindexRealEstateDetail({
+      buildingName,
       loaded: true,
       hasBuildingInfo: true,
     })).toBe(true)
@@ -43,9 +51,9 @@ describe('shouldNoindexRealEstateDetail', () => {
     })).toBe(false)
   })
 
-  it('fetchFailed=true 라도 지번 패턴이면 noindex(적극 증거 우선)', () => {
+  it('fetchFailed=true 라도 빈 buildingName이면 noindex(적극 증거 우선)', () => {
     expect(shouldNoindexRealEstateDetail({
-      buildingName: '123-45',
+      buildingName: '',
       loaded: true,
       hasBuildingInfo: false,
       fetchFailed: true,

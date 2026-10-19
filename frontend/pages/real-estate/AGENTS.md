@@ -22,7 +22,7 @@
 ### Working In This Directory
 - **부동산 slug 주의**: `offitel` (오피스텔) — `officetel` 아님
 - **URL 리다이렉트**: 레거시 경로는 `server/middleware/real-estate-redirect.ts`가 301 리다이렉트
-- **Notepad 메모**: 부동산 색인 위기 — 빌라 buildingName이 지번 형태. noindex 판별 `../../utils/realEstateNoindex.ts` 적용
+- **noindex 규칙**: 빈값/1글자 buildingName만 noindex (`../../utils/realEstateNoindex.ts`). 지번형 이름은 2026-10-19 운영자 결정으로 색인 대상
 - URL 생성/파싱은 `../../utils/realEstateUrl.ts`
 
 ### Testing Requirements

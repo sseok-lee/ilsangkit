@@ -15,7 +15,7 @@
 
 ### Working In This Directory
 - URL 왕복 (build → parse → match) 검증
-- 빌라 `buildingName`이 지번 형태일 때 noindex 메타 삽입 검증 (Notepad 메모: 색인 위기 대응)
+- 빈값/1글자 `buildingName`만 noindex, 지번형 이름은 색인 대상임을 검증 (2026-10-19 운영자 결정으로 지번형 해제)
 - Mock 거래 fixture는 수량/거래/전월세 모두 커버
 
 ### Testing Requirements

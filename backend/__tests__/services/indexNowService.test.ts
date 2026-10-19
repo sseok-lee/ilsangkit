@@ -82,7 +82,7 @@ describe('buildRealEstateUrlsV2 — new URL format (US-008)', () => {
     ]);
   });
 
-  it('filters jibun patterns even in new format', () => {
+  it('includes jibun-style names in new format (released 2026-10-19), still drops 1-char names', () => {
     const urls = buildRealEstateUrlsV2([
       {
         realEstateType: 'villa-sale',
@@ -96,8 +96,14 @@ describe('buildRealEstateUrlsV2 — new URL format (US-008)', () => {
         district: '관악구',
         buildingName: 'ABC빌라',
       },
+      {
+        realEstateType: 'villa-sale',
+        city: '서울특별시',
+        district: '관악구',
+        buildingName: 'a',
+      },
     ]);
-    expect(urls.length).toBe(1);
+    expect(urls.length).toBe(2);
     expect(urls[0]).toContain('/real-estate/villa-sale/seoul/gwanak/');
   });
 
