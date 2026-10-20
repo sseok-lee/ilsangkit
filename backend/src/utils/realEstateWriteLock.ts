@@ -5,6 +5,7 @@ import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { readFileSync, rmSync } from 'node:fs';
 
 interface LockOwner {
   hostname: string;
@@ -96,6 +97,32 @@ async function inheritedTokenOwnsLiveLock(path: string, token: string | undefine
   return (await ownerProcessIsLive(owner)) === true;
 }
 
+// installRuntimeGuard(watchdog·SIGTERM)는 process.exit() 으로 끝내 finally 가 돌지 않는다.
+// 그러면 잠금이 남아 다음 writer(요약 갱신 등)가 'lock busy' 로 실패한다(2026-10-20 geocode 45분 초과).
+// exit 이벤트에서 이 프로세스가 잡은 잠금만 동기로 지운다. SIGKILL 은 여전히 recover 스크립트가 필요하다.
+const heldLocks = new Map<string, string>();
+let exitHookInstalled = false;
+
+function releaseHeldLocksOnExit(): void {
+  for (const [path, token] of heldLocks) {
+    try {
+      const owner = JSON.parse(readFileSync(join(path, 'owner.json'), 'utf8')) as Partial<LockOwner>;
+      if (owner.token === token) rmSync(path, { recursive: true, force: true });
+    } catch {
+      // owner.json 이 없거나 이미 지워졌으면 할 일이 없다
+    }
+  }
+  heldLocks.clear();
+}
+
+function trackHeldLock(path: string, token: string): void {
+  heldLocks.set(path, token);
+  if (!exitHookInstalled) {
+    process.on('exit', releaseHeldLocksOnExit);
+    exitHookInstalled = true;
+  }
+}
+
 async function cleanupOwnedLock(path: string, token: string): Promise<void> {
   const owner = await readOwner(path);
   if (!owner || owner.token === token) {
@@ -127,6 +154,7 @@ export async function withRealEstateWriteLock<T>(label: string, run: () => Promi
     const tmp = join(path, `owner.${process.pid}.${token}.tmp`);
     await writeFile(tmp, `${JSON.stringify(owner)}\n`, { flag: 'wx' });
     await rename(tmp, join(path, 'owner.json'));
+    trackHeldLock(path, token);
 
     const previous = process.env[TOKEN_ENV];
     process.env[TOKEN_ENV] = token;
@@ -144,6 +172,7 @@ export async function withRealEstateWriteLock<T>(label: string, run: () => Promi
   } finally {
     if (acquired) {
       await cleanupOwnedLock(path, token);
+      heldLocks.delete(path);
     }
   }
 }

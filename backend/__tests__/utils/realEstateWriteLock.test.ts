@@ -55,6 +55,43 @@ describe('withRealEstateWriteLock', () => {
     }
   });
 
+  it('releases its own lock when the holder exits through process.exit (runtime guard watchdog/SIGTERM)', async () => {
+    const lockDir = mkdtempSync(join(tmpdir(), 'real-estate-lock-'));
+    const script = `
+      import { withRealEstateWriteLock } from './src/utils/realEstateWriteLock.ts';
+      await withRealEstateWriteLock('child', async () => {
+        console.log('entered');
+        process.exit(124);
+      });
+    `;
+    try {
+      const result = await execFileAsync(
+        process.execPath,
+        ['--import', 'tsx', '--input-type=module', '-e', script],
+        { cwd: process.cwd(), env: { ...process.env, REAL_ESTATE_WRITE_LOCK_DIR: lockDir } },
+      ).catch((error: { stdout?: string; code?: number }) => ({ stdout: error.stdout ?? '', code: error.code }));
+      expect(result.stdout).toContain('entered');
+      const next = await runLockChild(lockDir, 10);
+      expect(next.stdout).toContain('entered');
+    } finally {
+      rmSync(lockDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not remove a lock owned by another process on exit', async () => {
+    const lockDir = mkdtempSync(join(tmpdir(), 'real-estate-lock-'));
+    const foreign = join(lockDir, 'real-estate-write.lock');
+    mkdirSync(foreign);
+    writeFileSync(join(foreign, 'owner.json'), JSON.stringify({ hostname: hostname(), pid: 1, startedAt: 'x', token: 'other', label: 'other' }));
+    try {
+      const result = await runLockChild(lockDir, 10);
+      expect(result.stderr).toContain('Real estate write lock busy');
+      expect(JSON.parse(readFileSync(join(foreign, 'owner.json'), 'utf8')).token).toBe('other');
+    } finally {
+      rmSync(lockDir, { recursive: true, force: true });
+    }
+  });
+
   it('permits nested calls in the same async owner while rejecting unrelated same-process callers', async () => {
     const lockDir = mkdtempSync(join(tmpdir(), 'real-estate-lock-'));
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
