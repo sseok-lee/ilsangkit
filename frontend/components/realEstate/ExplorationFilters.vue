@@ -11,6 +11,7 @@
     <div class="min-w-0 sm:col-span-2 lg:col-span-1">
       <RegionCascadingDropdown
         variant="flat"
+        :exclude-parent-cities="true"
         :city="city ?? ''"
         :district="district ?? ''"
         @update:city="changeCity"

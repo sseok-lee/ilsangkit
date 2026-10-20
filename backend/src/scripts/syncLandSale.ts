@@ -8,6 +8,8 @@ import { installRuntimeGuard } from './_runtimeGuard.js';
 import {
   fetchRealEstateData,
   getAllLawdCodes,
+  buildRegionMap,
+  toMolitLawdCode,
 } from '../services/syncRealEstateBase.js';
 import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncStats } from '../services/baseSyncService.js';
 
@@ -240,13 +242,14 @@ async function main(): Promise<void> {
   const ymIndex = args.indexOf('--ym');
   const fromIndex = args.indexOf('--from');
   const toIndex = args.indexOf('--to');
-  const lawdCdArg = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
+  const lawdCdRaw = lawdIndex !== -1 ? args[lawdIndex + 1] : undefined;
+  const lawdCdArg = lawdCdRaw ? toMolitLawdCode(lawdCdRaw) : undefined;
   const dealYmdArg = ymIndex !== -1 ? args[ymIndex + 1] : undefined;
   const fromArg = fromIndex !== -1 ? args[fromIndex + 1] : undefined;
   const toArg = toIndex !== -1 ? args[toIndex + 1] : undefined;
 
   const regions = await prisma.region.findMany({ select: { bjdCode: true, city: true, district: true } });
-  const regionMap = new Map(regions.map((r) => [r.bjdCode, { city: r.city, district: r.district }]));
+  const regionMap = buildRegionMap(regions);
 
   await runSync(CATEGORY, async (stats) => {
     const lawdCodes = lawdCdArg ? [lawdCdArg] : await getAllLawdCodes();

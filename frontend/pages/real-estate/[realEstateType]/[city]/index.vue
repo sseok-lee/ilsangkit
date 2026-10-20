@@ -80,7 +80,7 @@
 
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
-import { CITY_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
+import { CITY_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
 import { isRealEstateUrlType, toCitySlug, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { PROPERTY_TYPE_META, buildReCityDescription } from '~/utils/realEstateMeta'
 import type { RealEstatePropertyType, TransactionMode, RealEstateType, ComplexInfo } from '~/types/realEstate'
@@ -126,7 +126,7 @@ const typeLabel = tabPart === 'sale'
 const heroTitle = `${cityName} ${typeLabel} 실거래가`
 const typeHubPath = `/real-estate/${realEstateTypeParam}`
 const districts = computed(() =>
-  (REGIONS[cityName] ?? []).map((name) => ({
+  (REAL_ESTATE_REGIONS[cityName] ?? []).map((name) => ({
     name,
     url: explorationListHref(realEstateTypeParam as RealEstateUrlType, { city: cityName, district: name }),
   })),

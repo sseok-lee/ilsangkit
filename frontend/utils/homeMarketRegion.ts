@@ -1,4 +1,4 @@
-import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REGIONS } from '~/shared/regionSlugs'
+import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
 
 export interface NormalizedMarketRegion {
   city: string | null
@@ -11,7 +11,7 @@ const CITY_SLUG_BY_NAME = new Map<string, string>(
 )
 
 const DISTRICT_NAME_BY_SLUG_BY_CITY = new Map<string, Map<string, string>>(
-  Object.entries(REGIONS).map(([cityName, districts]) => [
+  Object.entries(REAL_ESTATE_REGIONS).map(([cityName, districts]) => [
     CITY_SLUG_BY_NAME.get(cityName) ?? cityName,
     new Map(districts.map((district) => [DISTRICT_SLUG_MAP[district] ?? district.toLowerCase(), district])),
   ])
@@ -31,7 +31,7 @@ function normalizeDistrict(citySlug: string | null, value: unknown): string | nu
   if (!trimmed) return null
 
   const cityName = CITY_NAME_BY_SLUG[citySlug]
-  const districtNames = cityName ? REGIONS[cityName] : undefined
+  const districtNames = cityName ? REAL_ESTATE_REGIONS[cityName] : undefined
   if (!districtNames) return null
 
   if (districtNames.includes(trimmed)) {

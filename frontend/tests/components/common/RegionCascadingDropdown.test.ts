@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
       { slug: 'gangnam', name: '강남구', lat: 37.5172, lng: 127.0473, bjdCode: '11680' },
       { slug: 'seocho', name: '서초구', lat: 37.4837, lng: 127.0324, bjdCode: '11650' },
     ] },
+    { slug: 'gyeonggi', name: '경기', districts: [
+      { slug: 'ansan', name: '안산시', lat: 37.3, lng: 126.8, bjdCode: '41270' },
+      { slug: 'ansan-sangnok', name: '안산시 상록구', lat: 37.3, lng: 126.8, bjdCode: '41271' },
+      { slug: 'ansan-danwon', name: '안산시 단원구', lat: 37.3, lng: 126.8, bjdCode: '41273' },
+      { slug: 'ansung', name: '안성시', lat: 37.0, lng: 127.2, bjdCode: '41550' },
+      { slug: 'gwangmyeong', name: '광명시', lat: 37.4, lng: 126.8, bjdCode: '41210' },
+    ] },
     { slug: 'busan', name: '부산', districts: [
       { slug: 'haeundae', name: '해운대구', lat: 35.1631, lng: 129.1636, bjdCode: '26350' },
     ] },
@@ -98,4 +105,24 @@ it('opt-in preserves URL selection before its region dictionary is available', (
   expect((wrapper.findAll('select')[1].element as HTMLSelectElement).value).toBe('선택구')
   const defaultWrapper = mountIt({ city: '선택시', district: '선택구' })
   expect(defaultWrapper.find('option[value="선택시"]').exists()).toBe(false)
+})
+
+describe('RegionCascadingDropdown excludeParentCities', () => {
+  const districtValues = (w: ReturnType<typeof mountIt>) =>
+    w.findAll('select')[1].findAll('option').map((o) => o.attributes('value'))
+
+  it('기본(꺼짐)이면 구가 있는 부모 시도 옵션에 남는다', () => {
+    expect(districtValues(mountIt({ city: '경기' }))).toContain('안산시')
+  })
+
+  it('켜면 같은 시/도에 "{이름} " 으로 시작하는 구가 있는 부모 시만 뺀다', () => {
+    const values = districtValues(mountIt({ city: '경기', excludeParentCities: true }))
+    expect(values).not.toContain('안산시')
+    expect(values).toEqual(expect.arrayContaining(['안산시 상록구', '안산시 단원구', '안성시', '광명시']))
+  })
+
+  it('켜도 현재 선택값 보존(preserveCurrentSelection)은 그대로 동작한다', () => {
+    const w = mountIt({ city: '경기', district: '안산시', excludeParentCities: true, preserveCurrentSelection: true })
+    expect((w.findAll('select')[1].element as HTMLSelectElement).value).toBe('안산시')
+  })
 })
