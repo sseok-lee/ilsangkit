@@ -76,49 +76,46 @@ export const SQL_TABLE_NAME: Record<RealEstateTable, string> = {
   offitelRentTransaction: 'OffitelRentTransaction',
 };
 
+/**
+ * 좌표 판정 단위 = 요약(RealEstateBuildingSummaryV2)·상세 위치와 같은 "주소 건물".
+ * 요약은 (buildingName, bjdCode, TRIM(dongName), jibun) 으로 나누므로, (bjdCode, buildingName) 만으로 묶으면
+ * 같은 법정동의 동명 빌라 중 한 곳에 좌표가 있다는 이유로 다른 지번이 영영 좌표를 못 받는다
+ * (2026-10-20 운영: 빌라 매매에서 이런 지번 624곳).
+ */
 export interface BuildingKey {
   bjdCode: string;
   buildingName: string;
+  dongName: string;
+  jibun: string;
 }
 
-/**
- * 좌표가 필요한 건물키만 조회.
- *
- * Prisma 의 `distinct` 는 MySQL 에서 SQL 로 내려가지 않고 앱 메모리에서 수행된다.
- * findMany 로 뽑으면 조건에 맞는 행을 전부 힙에 적재한 뒤 JS 로 줄이므로,
- * 290만 행짜리 테이블에서 수 GB 를 요구해 서버를 OOM 으로 몰았다(2026-07-16).
- * 반드시 SQL DISTINCT 로 유지할 것.
- *
- * 키 2개만 뽑으면 <table>_bjdCode_buildingName_idx 를 순서대로 훑어 정렬·중복
- * 제거가 공짜다(EXPLAIN type=index, 로컬 실측 5초). 주소 컬럼을 얹는 순간 그
- * 인덱스가 무용해져 풀스캔+filesort 로 떨어진다(EXPLAIN type=ALL, key=NULL).
- * 커버링 인덱스는 아니다 — lat 이 인덱스에 없어 행 조회가 뒤따른다.
- */
-export async function getBuildingsNeedingCoords(
-  prisma: PrismaClient,
-  table: RealEstateTable,
-  retryCutoff?: Date,
-): Promise<BuildingKey[]> {
-  const sqlTable = SQL_TABLE_NAME[table];
-  if (retryCutoff) {
-    return prisma.$queryRawUnsafe<BuildingKey[]>(
-      `SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\`
-       WHERE lat IS NULL AND (geocodedAt IS NULL OR geocodedAt < ?)`,
-      retryCutoff,
-    );
-  }
-  return prisma.$queryRawUnsafe<BuildingKey[]>(
-    `SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\` WHERE lat IS NULL`,
-  );
+const ADDRESS_COLUMNS = `bjdCode, buildingName, COALESCE(TRIM(dongName), '') AS dongName, COALESCE(TRIM(jibun), '') AS jibun`;
+
+function addressMatch(alias = ''): string {
+  const a = alias ? `${alias}.` : '';
+  return `${a}bjdCode = ? AND ${a}buildingName = ? AND COALESCE(TRIM(${a}dongName), '') = ? AND COALESCE(TRIM(${a}jibun), '') = ?`;
+}
+
+function addressParams(key: BuildingKey): string[] {
+  return [key.bjdCode, key.buildingName, key.dongName, key.jibun];
+}
+
+export function toBuildingKey(row: { bjdCode: string; buildingName: string; dongName?: string | null; jibun?: string | null }): BuildingKey {
+  return {
+    bjdCode: row.bjdCode,
+    buildingName: row.buildingName,
+    dongName: (row.dongName ?? '').trim(),
+    jibun: (row.jibun ?? '').trim(),
+  };
 }
 
 /**
  * 행 단위 좌표 복사 범위.
  *
  * 거래 행 좌표를 행마다 쓰는 곳은 지도 동 단위 집계(realEstateMapService, 최근 3개월·당월 포함)뿐이다.
- * 요약·상세·검증은 건물마다 "좌표 있는 행 하나"만 있으면 된다. 그래서 행 복사는 최근 4개월(1개월 여유)로
+ * 요약·상세·검증은 주소 건물마다 "좌표 있는 행 하나"만 있으면 된다. 그래서 행 복사는 최근 4개월(1개월 여유)로
  * 한정한다 — 과거 행까지 채우면 2021·2022 백필 후 하루 280만 행 UPDATE 로 45분 watchdog 을 넘겼다(2026-10-20).
- * 좌표가 하나도 없는 건물은 날짜와 무관하게 별도 단계(짝 테이블 복사 → 카카오)에서 채운다.
+ * 좌표가 하나도 없는 주소 건물은 날짜와 무관하게 별도 단계(짝 테이블 복사 → 카카오)에서 채운다.
  */
 export const ROW_COPY_RECENT_MONTHS = 4;
 
@@ -139,7 +136,10 @@ function recentCondition(since: DealYearMonth): { sql: string; params: number[] 
   };
 }
 
-/** 최근 거래 행 중 lat 이 빈 건물키 — 행 복사 대상 */
+/**
+ * 최근 거래 행 중 lat 이 빈 주소 건물 — 행 복사 대상.
+ * Prisma distinct 는 앱 메모리에서 돈다(2026-07-16 OOM) — 반드시 SQL DISTINCT.
+ */
 export async function getRecentBuildingsNeedingCoords(
   prisma: PrismaClient,
   table: RealEstateTable,
@@ -148,15 +148,15 @@ export async function getRecentBuildingsNeedingCoords(
   const sqlTable = SQL_TABLE_NAME[table];
   const recent = recentCondition(since);
   return prisma.$queryRawUnsafe<BuildingKey[]>(
-    `SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\` WHERE lat IS NULL AND ${recent.sql}`,
+    `SELECT DISTINCT ${ADDRESS_COLUMNS} FROM \`${sqlTable}\` WHERE lat IS NULL AND ${recent.sql}`,
     ...recent.params,
   );
 }
 
 /**
- * 이 테이블에 좌표 있는 행이 하나도 없는 건물키(날짜 무관).
+ * 이 테이블에 좌표 있는 행이 하나도 없는 주소 건물(날짜 무관).
  * 과거 거래만 있는 건물도 여기서 잡힌다 — 요약은 유형별로 자기 테이블에서만 좌표를 가져가므로
- * 이런 건물이 빠지면 요약 좌표가 비게 된다.
+ * 이런 건물이 빠지면 요약 좌표가 비게 된다. 운영 실측: 아파트 전월세 549만 행 17초.
  */
 export async function getBuildingsWithoutAnyCoords(
   prisma: PrismaClient,
@@ -166,11 +166,13 @@ export async function getBuildingsWithoutAnyCoords(
   const sqlTable = SQL_TABLE_NAME[table];
   const retry = retryCutoff ? ' AND (geocodedAt IS NULL OR geocodedAt < ?)' : '';
   return prisma.$queryRawUnsafe<BuildingKey[]>(
-    `SELECT n.bjdCode, n.buildingName
-     FROM (SELECT DISTINCT bjdCode, buildingName FROM \`${sqlTable}\` WHERE lat IS NULL${retry}) n
+    `SELECT n.bjdCode, n.buildingName, n.dongName, n.jibun
+     FROM (SELECT DISTINCT ${ADDRESS_COLUMNS} FROM \`${sqlTable}\` WHERE lat IS NULL${retry}) n
      WHERE NOT EXISTS (
        SELECT 1 FROM \`${sqlTable}\` c
-       WHERE c.bjdCode = n.bjdCode AND c.buildingName = n.buildingName AND c.lat IS NOT NULL
+       WHERE c.bjdCode = n.bjdCode AND c.buildingName = n.buildingName
+         AND COALESCE(TRIM(c.dongName), '') = n.dongName AND COALESCE(TRIM(c.jibun), '') = n.jibun
+         AND c.lat IS NOT NULL
      )`,
     ...(retryCutoff ? [retryCutoff] : []),
   );
@@ -314,44 +316,34 @@ async function geocodeBuilding(
 }
 
 /**
- * 좌표 보강 대상 건물 목록.
- *
- * 2단계 조회:
- *  1) SELECT DISTINCT bjdCode, buildingName — 인덱스 순서 스캔(실측 5초).
- *  2) 건물별 findFirst 로 주소 필드를 **한 행에서** 읽는다.
- *
- * 주소를 1)에 합치면 인덱스가 무용해져 풀스캔+filesort 가 되고(EXPLAIN
- * type=ALL), MIN()/ANY_VALUE() 로 뽑으면 서로 다른 행의 roadName 과 jibun 이
+ * 카카오 조회 대상 — 좌표 있는 행이 하나도 없는 주소 건물(최근 실패 건 제외).
+ * 주소 상세(시·구·도로명)는 조회 직전에 건물별로 한 행에서 읽는다(loadBuildingAddress) —
+ * 미리 수만 건을 읽으면 그 시간이 테이블당 카카오 시간 상한 밖에서 흘러간다.
+ */
+export async function getGeocodeTargets(
+  prisma: PrismaClient,
+  table: RealEstateTable,
+  now: Date = new Date(),
+): Promise<BuildingKey[]> {
+  const retryCutoff = new Date(now.getTime() - GEOCODE_RETRY_DAYS * 24 * 60 * 60 * 1000);
+  return getBuildingsWithoutAnyCoords(prisma, table, retryCutoff);
+}
+
+/**
+ * 주소 필드를 **한 행에서** 읽는다. MIN()/ANY_VALUE() 로 뽑으면 서로 다른 행의 roadName 과 jibun 이
  * 섞여 존재하지 않는 주소가 만들어진다.
  */
-export async function getUniqueBuildings(
+export async function loadBuildingAddress(
   prisma: PrismaClient,
-  table: RealEstateTable
-): Promise<UniqueBuilding[]> {
-  const retryCutoff = new Date(Date.now() - GEOCODE_RETRY_DAYS * 24 * 60 * 60 * 1000);
-  // 카카오는 좌표 있는 행이 하나도 없는 건물만 — 좌표 있는 건물의 과거 빈 행은 쓰는 곳이 없다.
-  const targets = await getBuildingsWithoutAnyCoords(prisma, table, retryCutoff);
-  if (targets.length === 0) return [];
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-  const buildings: UniqueBuilding[] = [];
-  for (const target of targets) {
-    const row = await model.findFirst({
-      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: null },
-      select: {
-        buildingName: true,
-        bjdCode: true,
-        city: true,
-        district: true,
-        dongName: true,
-        roadName: true,
-        jibun: true,
-      },
-    });
-    if (row) buildings.push(row as UniqueBuilding);
-  }
-  return buildings;
+  table: RealEstateTable,
+  key: BuildingKey,
+): Promise<UniqueBuilding | null> {
+  const rows = await prisma.$queryRawUnsafe<UniqueBuilding[]>(
+    `SELECT buildingName, bjdCode, city, district, dongName, roadName, jibun
+     FROM \`${SQL_TABLE_NAME[table]}\` WHERE ${addressMatch()} AND lat IS NULL LIMIT 1`,
+    ...addressParams(key),
+  );
+  return rows[0] ?? null;
 }
 
 export async function updateBuildingCoordinates(
@@ -361,14 +353,11 @@ export async function updateBuildingCoordinates(
   coords: Coordinates
 ): Promise<number> {
   return withRealEstateWriteLock('updateBuildingCoordinates', async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-  const result = await model.updateMany({
-    where: { buildingName: building.buildingName, bjdCode: building.bjdCode, lat: null },
-    data: { lat: coords.lat, lng: coords.lng, geocodedAt: new Date() },
-  });
-  return result.count;
-
+  return prisma.$executeRawUnsafe(
+    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = NOW(3)
+     WHERE ${addressMatch()} AND lat IS NULL`,
+    coords.lat, coords.lng, ...addressParams(toBuildingKey(building)),
+  );
   });
 }
 
@@ -381,18 +370,15 @@ export async function markGeocodeAttempted(
   building: UniqueBuilding,
 ): Promise<void> {
   return withRealEstateWriteLock('markGeocodeAttempted', async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-  await model.updateMany({
-    where: { buildingName: building.buildingName, bjdCode: building.bjdCode, lat: null },
-    data: { geocodedAt: new Date() },
-  });
-
+  await prisma.$executeRawUnsafe(
+    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET geocodedAt = NOW(3) WHERE ${addressMatch()} AND lat IS NULL`,
+    ...addressParams(toBuildingKey(building)),
+  );
   });
 }
 
 /**
- * 대상 건물들의 좌표를 seedTable 에서 찾아 채운다.
+ * 대상 주소 건물들의 좌표를 seedTable 의 같은 주소 건물에서 찾아 채운다. since 가 있으면 최근 거래 행만.
  *
  * 구동 방향에 주의: 반드시 '좌표가 없는 건물'(수천 건)에서 출발한다.
  * '좌표가 있는 행'(수백만)에서 출발하면 힙이 터진다.
@@ -404,34 +390,28 @@ async function copyCoordsFor(
   targets: BuildingKey[],
   since?: DealYearMonth,
 ): Promise<number> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (prisma as any)[table];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const seedModel = (prisma as any)[seedTable];
-  const recentOnly = since
-    ? { OR: [{ dealYear: since.year, dealMonth: { gte: since.month } }, { dealYear: { gt: since.year } }] }
-    : {};
-
+  const recent = since ? recentCondition(since) : null;
   let totalCopied = 0;
   for (const target of targets) {
-    const seed = await seedModel.findFirst({
-      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: { not: null } },
-      select: { lat: true, lng: true },
-    });
+    const seeds = await prisma.$queryRawUnsafe<Array<{ lat: unknown; lng: unknown }>>(
+      `SELECT lat, lng FROM \`${SQL_TABLE_NAME[seedTable]}\`
+       WHERE ${addressMatch()} AND lat IS NOT NULL AND lng IS NOT NULL LIMIT 1`,
+      ...addressParams(target),
+    );
+    const seed = seeds[0];
     if (!seed) continue;
 
-    const res = await model.updateMany({
-      where: { bjdCode: target.bjdCode, buildingName: target.buildingName, lat: null, ...recentOnly },
-      data: { lat: seed.lat, lng: seed.lng, geocodedAt: new Date() },
-    });
-    totalCopied += res.count;
+    totalCopied += await prisma.$executeRawUnsafe(
+      `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = NOW(3)
+       WHERE ${addressMatch()} AND lat IS NULL${recent ? ` AND ${recent.sql}` : ''}`,
+      seed.lat, seed.lng, ...addressParams(target), ...(recent?.params ?? []),
+    );
   }
   return totalCopied;
 }
 
 /**
- * 같은 테이블 내에서 이미 좌표가 있는 건물의 좌표를 복사해 null row 채우기
- * — 카카오 API 호출 없이 '알려진 건물' 해결
+ * 같은 테이블 안에서 같은 주소 건물의 좌표를 최근 거래 빈 행에 복사 — 카카오 호출 없이 '알려진 건물' 해결
  */
 export async function copyCoordsWithinTable(
   prisma: PrismaClient,
@@ -442,13 +422,11 @@ export async function copyCoordsWithinTable(
   const targets = await getRecentBuildingsNeedingCoords(prisma, table, since);
   if (targets.length === 0) return 0;
   return copyCoordsFor(prisma, table, table, targets, since);
-
   });
 }
 
 /**
- * 쌍 테이블 (매매 ↔ 전월세) 에서 좌표 복사
- * 예: aptSale 에서 "래미안강남" 좌표 있으면 aptRent 의 같은 건물 null row에 채움
+ * 쌍 테이블 (매매 ↔ 전월세) 에서 같은 주소 건물 좌표를 최근 거래 빈 행에 복사
  */
 export async function copyCoordsFromSibling(
   prisma: PrismaClient,
@@ -462,12 +440,11 @@ export async function copyCoordsFromSibling(
   const targets = await getRecentBuildingsNeedingCoords(prisma, table, since);
   if (targets.length === 0) return 0;
   return copyCoordsFor(prisma, table, sibling, targets, since);
-
   });
 }
 
 /**
- * 이 테이블에 좌표가 하나도 없는 건물(예: 전월세는 2021년 거래뿐, 매매에는 좌표 있음)에
+ * 이 테이블에 좌표가 하나도 없는 주소 건물(예: 전월세는 2021년 거래뿐, 매매에는 좌표 있음)에
  * 짝 테이블 좌표를 날짜와 무관하게 그 건물 빈 행 전부에 복사한다. 카카오 조회 전 단계.
  */
 export async function copyCoordsFromSiblingForUncoordinated(
@@ -481,7 +458,6 @@ export async function copyCoordsFromSiblingForUncoordinated(
   const targets = await getBuildingsWithoutAnyCoords(prisma, table);
   if (targets.length === 0) return 0;
   return copyCoordsFor(prisma, table, sibling, targets);
-
   });
 }
 
@@ -513,13 +489,14 @@ export async function processTable(
 ): Promise<void> {
   const now = options.now ?? Date.now;
   const kakaoBudgetMs = options.kakaoBudgetMs ?? KAKAO_BUDGET_PER_TABLE_MS;
+  const since = recentRowCopySince(new Date(now()));
   return withRealEstateWriteLock('processTable', async () => {
   // 0) 사전 복사 단계 — 카카오 호출 없이 '알려진 건물' 좌표 채우기
-  console.info(`\n[${table}] 같은 테이블 좌표 복사 중...`);
-  const copiedSame = await copyCoordsWithinTable(prisma, table);
+  console.info(`\n[${table}] 같은 테이블 좌표 복사 중... (최근 거래 ${since.year}-${String(since.month).padStart(2, '0')}~)`);
+  const copiedSame = await copyCoordsWithinTable(prisma, table, since);
   console.info(`[${table}] 같은 테이블에서 ${copiedSame}건 복사 완료`);
 
-  const copiedSibling = await copyCoordsFromSibling(prisma, table);
+  const copiedSibling = await copyCoordsFromSibling(prisma, table, since);
   if (copiedSibling > 0) {
     console.info(`[${table}] 쌍 테이블(${SIBLING_TABLE[table]})에서 ${copiedSibling}건 복사 완료`);
   }
@@ -529,44 +506,45 @@ export async function processTable(
     console.info(`[${table}] 좌표 없는 건물: 쌍 테이블에서 ${copiedUncoordinated}건 복사 완료`);
   }
 
-  // 1) 남은 null row 중 지오코딩 시도 대상 추출 (최근 시도 건 제외)
+  // 1) 카카오 — 대상 목록 조회 시간까지 상한에 포함한다
+  const kakaoDeadline = now() + kakaoBudgetMs;
   console.info(`[${table}] 좌표 없는 건물 추출 중...`);
-  const buildings = await getUniqueBuildings(prisma, table);
+  const targets = await getGeocodeTargets(prisma, table, new Date(now()));
 
-  if (buildings.length === 0) {
+  if (targets.length === 0) {
     console.info(`[${table}] 지오코딩 대상 없음`);
     return;
   }
 
-  console.info(`[${table}] ${buildings.length}개 건물 좌표 보강 시작`);
+  console.info(`[${table}] ${targets.length}개 건물 좌표 보강 시작`);
   let successCount = 0;
   let failCount = 0;
-  const kakaoDeadline = now() + kakaoBudgetMs;
 
-  for (let i = 0; i < buildings.length; i++) {
+  for (let i = 0; i < targets.length; i++) {
     if (now() >= kakaoDeadline) {
-      console.info(`[${table}] 카카오 조회 시간 상한(${Math.round(kakaoBudgetMs / 60_000)}분) 도달 — 남은 ${buildings.length - i}개 건물은 다음 실행에서 이어서 한다`);
+      console.info(`[${table}] 카카오 조회 시간 상한(${Math.round(kakaoBudgetMs / 60_000)}분) 도달 — 남은 ${targets.length - i}개 건물은 다음 실행에서 이어서 한다`);
       break;
     }
-    const building = buildings[i];
+    const building = await loadBuildingAddress(prisma, table, targets[i]);
+    if (!building) continue;
     const coords = await geocodeBuilding(building, table);
 
     if (coords) {
       const cnt = await updateBuildingCoordinates(prisma, table, building, coords);
-      console.info(`[${table}] (${i + 1}/${buildings.length}) ✓ ${building.buildingName} → ${coords.lat},${coords.lng} (${cnt}건)`);
+      console.info(`[${table}] (${i + 1}/${targets.length}) ✓ ${building.buildingName} → ${coords.lat},${coords.lng} (${cnt}건)`);
       successCount++;
     } else {
       await markGeocodeAttempted(prisma, table, building);
-      console.warn(`[${table}] (${i + 1}/${buildings.length}) ✗ ${building.buildingName} [${building.dongName} ${building.jibun ?? ''}]`);
+      console.warn(`[${table}] (${i + 1}/${targets.length}) ✗ ${building.buildingName} [${building.dongName} ${building.jibun ?? ''}]`);
       failCount++;
     }
 
-    if (i < buildings.length - 1) await sleep(150);
+    if (i < targets.length - 1) await sleep(150);
   }
 
-  const rate = buildings.length > 0 ? ((successCount / buildings.length) * 100).toFixed(1) : '0';
-  console.info(`[${table}] 완료 — 성공: ${successCount}, 실패: ${failCount} (${rate}%)`);
-
+  const processed = successCount + failCount;
+  const rate = processed > 0 ? ((successCount / processed) * 100).toFixed(1) : '0';
+  console.info(`[${table}] 완료 — 성공: ${successCount}, 실패: ${failCount} (${rate}%), 남음: ${targets.length - processed}`);
   });
 }
 

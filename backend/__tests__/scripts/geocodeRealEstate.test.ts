@@ -18,6 +18,7 @@ const mockFindMany = vi.fn();
 const mockUpdateMany = vi.fn();
 const mockFindFirst = vi.fn();
 const mockQueryRawUnsafe = vi.fn();
+const mockExecuteRawUnsafe = vi.fn();
 let lockDir: string;
 
 beforeEach(() => {
@@ -46,6 +47,8 @@ vi.mock('@prisma/client', () => {
       offitelSaleTransaction: model(),
       offitelRentTransaction: model(),
       $queryRawUnsafe: mockQueryRawUnsafe,
+    $executeRawUnsafe: mockExecuteRawUnsafe,
+      $executeRawUnsafe: mockExecuteRawUnsafe,
       $disconnect: vi.fn(),
     };
   }
@@ -57,9 +60,11 @@ import {
   parseKakaoCoordinates,
   geocodeAddress,
   cleanBuildingName,
-  getUniqueBuildings,
   updateBuildingCoordinates,
-  getBuildingsNeedingCoords,
+  markGeocodeAttempted,
+  getGeocodeTargets,
+  loadBuildingAddress,
+  toBuildingKey,
   SQL_TABLE_NAME,
   copyCoordsWithinTable,
   copyCoordsFromSibling,
@@ -250,6 +255,7 @@ function makePrisma() {
     offitelSaleTransaction: model(),
     offitelRentTransaction: model(),
     $queryRawUnsafe: mockQueryRawUnsafe,
+    $executeRawUnsafe: mockExecuteRawUnsafe,
     $disconnect: vi.fn(),
   } as unknown as import('@prisma/client').PrismaClient;
 }
@@ -265,303 +271,51 @@ describe('SQL_TABLE_NAME', () => {
   });
 });
 
-describe('getBuildingsNeedingCoords', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+const KEY = { bjdCode: '1168010800', buildingName: '현대빌라', dongName: '역삼동', jibun: '12-3' };
+const ADDR = [KEY.bjdCode, KEY.buildingName, KEY.dongName, KEY.jibun];
+const SINCE = { year: 2026, month: 7 };
 
-  it('lat IS NULL 인 건물키를 SQL DISTINCT 로 조회한다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '래미안아파트' },
-    ]);
-
-    const rows = await getBuildingsNeedingCoords(makePrisma(), 'aptSaleTransaction');
-
-    expect(rows).toEqual([{ bjdCode: '1168010800', buildingName: '래미안아파트' }]);
-    const sql = mockQueryRawUnsafe.mock.calls[0][0] as string;
-    expect(sql).toContain('SELECT DISTINCT');
-    expect(sql).toContain('AptSaleTransaction');
-    expect(sql).toContain('lat IS NULL');
-    // 주소 컬럼을 DISTINCT 에 얹으면 EXPLAIN 이 type=ALL + filesort 로 무너진다.
-    // 2단계 조회를 1단계로 "최적화"하려는 시도를 CI 에서 막는다.
-    expect(sql).not.toMatch(/roadName|jibun|dongName|city|district/);
-  });
-
-  it('retryCutoff 를 주면 geocodedAt 조건과 파라미터가 붙는다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-    const cutoff = new Date('2026-06-16T00:00:00Z');
-
-    await getBuildingsNeedingCoords(makePrisma(), 'aptRentTransaction', cutoff);
-
-    const [sql, param] = mockQueryRawUnsafe.mock.calls[0];
-    expect(sql).toContain('geocodedAt IS NULL OR geocodedAt <');
-    expect(param).toBe(cutoff);
-  });
-
-  it('retryCutoff 가 없으면 geocodedAt 조건이 없다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    await getBuildingsNeedingCoords(makePrisma(), 'aptRentTransaction');
-
-    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
-    expect(sql).not.toContain('geocodedAt');
-    expect(params).toEqual([]);
-  });
-
-  it('절대로 findMany 를 쓰지 않는다 (605만 행 적재 회귀 방지)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    await getBuildingsNeedingCoords(makePrisma(), 'aptRentTransaction');
-
-    expect(mockFindMany).not.toHaveBeenCalled();
-  });
-});
-
-describe('getUniqueBuildings', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('대상 건물키를 SQL DISTINCT 로 뽑고 건물별 주소를 한 행에서 읽는다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '래미안아파트' },
-      { bjdCode: '1168010900', buildingName: '현대아파트' },
-    ]);
-    mockFindFirst
-      .mockResolvedValueOnce({ buildingName: '래미안아파트', bjdCode: '1168010800', city: '서울특별시', district: '강남구', dongName: '역삼동', roadName: '강남대로 123', jibun: '123-4' })
-      .mockResolvedValueOnce({ buildingName: '현대아파트', bjdCode: '1168010900', city: '서울특별시', district: '강남구', dongName: '삼성동', roadName: null, jibun: null });
-
-    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    expect(buildings).toHaveLength(2);
-    expect(buildings[0].buildingName).toBe('래미안아파트');
-    expect(buildings[1].dongName).toBe('삼성동');
-    expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: null },
-      select: { buildingName: true, bjdCode: true, city: true, district: true, dongName: true, roadName: true, jibun: true },
-    });
-  });
-
-  it('GEOCODE_RETRY_DAYS(30일) 컷오프를 SQL 파라미터로 넘긴다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-    const before = Date.now();
-
-    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    const [sql, cutoff] = mockQueryRawUnsafe.mock.calls[0];
-    expect(sql).toContain('geocodedAt IS NULL OR geocodedAt <');
-    const expected = before - 30 * 24 * 60 * 60 * 1000;
-    expect(Math.abs((cutoff as Date).getTime() - expected)).toBeLessThan(5000);
-  });
-
-  it('결과가 없으면 빈 배열 반환', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    expect(buildings).toEqual([]);
-    expect(mockFindFirst).not.toHaveBeenCalled();
-  });
-
-  it('행이 사라진 건물은 결과에서 제외한다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '사라진건물' },
-    ]);
-    mockFindFirst.mockResolvedValue(null);
-
-    const buildings = await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    expect(buildings).toEqual([]);
-  });
-
-  it('절대로 findMany 를 쓰지 않는다 (인메모리 distinct 회귀 방지)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    expect(mockFindMany).not.toHaveBeenCalled();
-  });
-});
-
-describe('updateBuildingCoordinates', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUpdateMany.mockResolvedValue({ count: 5 });
-  });
-
-  it('buildingName + bjdCode 조건으로 lat/lng 일괄 업데이트', async () => {
-    const prisma = makePrisma();
-
-    const building: UniqueBuilding = {
-      buildingName: '래미안아파트',
-      bjdCode: '1168010800',
-      city: '서울특별시',
-      district: '강남구',
-      dongName: '역삼동',
-      roadName: '강남대로 123',
-      jibun: '123-4',
-    };
-    const coords = { lat: 37.498, lng: 127.0276 };
-
-    const count = await updateBuildingCoordinates(prisma, 'aptSaleTransaction', building, coords);
-    expect(count).toBe(5);
-    expect(mockUpdateMany).toHaveBeenCalledWith({
-      where: {
-        buildingName: '래미안아파트',
-        bjdCode: '1168010800',
-        lat: null,
-      },
-      data: {
-        lat: 37.498,
-        lng: 127.0276,
-        geocodedAt: expect.any(Date),
-      },
-    });
-  });
-});
-
-describe('copyCoordsWithinTable', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('좌표 필요 행이 없으면 소스 테이블을 조회조차 하지 않는다 (OOM 회귀 방지)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    const copied = await copyCoordsWithinTable(makePrisma(), 'aptRentTransaction');
-
-    expect(copied).toBe(0);
-    expect(mockFindMany).not.toHaveBeenCalled();
-    expect(mockFindFirst).not.toHaveBeenCalled();
-    expect(mockUpdateMany).not.toHaveBeenCalled();
-  });
-
-  it('대상 건물의 seed 좌표를 같은 테이블에서 찾아 복사한다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '래미안아파트' },
-    ]);
-    mockFindFirst.mockResolvedValue({ lat: 37.498, lng: 127.0276 });
-    mockUpdateMany.mockResolvedValue({ count: 3 });
-
-    const copied = await copyCoordsWithinTable(makePrisma(), 'aptSaleTransaction', { year: 2026, month: 7 });
-
-    expect(copied).toBe(3);
-    expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: { not: null } },
-      select: { lat: true, lng: true },
-    });
-    // 최근 거래 행만 채운다 — 과거 행까지 채우면 백필 수백만 행 UPDATE 로 45분 watchdog 초과(2026-10-20)
-    expect(mockUpdateMany).toHaveBeenCalledWith({
-      where: {
-        bjdCode: '1168010800',
-        buildingName: '래미안아파트',
-        lat: null,
-        OR: [{ dealYear: 2026, dealMonth: { gte: 7 } }, { dealYear: { gt: 2026 } }],
-      },
-      data: { lat: 37.498, lng: 127.0276, geocodedAt: expect.any(Date) },
-    });
-    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
-    expect(sql).toContain('dealYear = ? AND dealMonth >= ?');
-    expect(params).toEqual([2026, 7, 2026]);
-  });
-
-  it('seed 가 없는 건물은 건너뛰고 업데이트하지 않는다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '좌표없는빌라' },
-    ]);
-    mockFindFirst.mockResolvedValue(null);
-
-    const copied = await copyCoordsWithinTable(makePrisma(), 'villaSaleTransaction');
-
-    expect(copied).toBe(0);
-    expect(mockUpdateMany).not.toHaveBeenCalled();
-  });
-
-  it('절대로 findMany 를 쓰지 않는다 (319만 행 적재 회귀 방지)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '래미안아파트' },
-    ]);
-    mockFindFirst.mockResolvedValue({ lat: 37.498, lng: 127.0276 });
-    mockUpdateMany.mockResolvedValue({ count: 1 });
-
-    await copyCoordsWithinTable(makePrisma(), 'aptRentTransaction');
-
-    expect(mockFindMany).not.toHaveBeenCalled();
-  });
-});
-
-describe('copyCoordsFromSibling', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('형제 테이블이 없으면 0 을 반환하고 아무것도 조회하지 않는다', async () => {
-    const copied = await copyCoordsFromSibling(makePrisma(), 'landSaleTransaction' as never);
-
-    expect(copied).toBe(0);
-    expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
-  });
-
-  it('좌표 필요 행이 없으면 형제 테이블을 조회조차 하지 않는다 (OOM 회귀 방지)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    const copied = await copyCoordsFromSibling(makePrisma(), 'aptRentTransaction');
-
-    expect(copied).toBe(0);
-    expect(mockFindMany).not.toHaveBeenCalled();
-    expect(mockFindFirst).not.toHaveBeenCalled();
-  });
-
-  it('대상 건물 목록은 대상 테이블 기준, seed 는 형제 테이블에서 읽는다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: '래미안아파트' },
-    ]);
-    mockFindFirst.mockResolvedValue({ lat: 37.498, lng: 127.0276 });
-    mockUpdateMany.mockResolvedValue({ count: 2 });
-
-    const copied = await copyCoordsFromSibling(makePrisma(), 'aptRentTransaction');
-
-    expect(copied).toBe(2);
-    // 대상 건물 조회 SQL 은 대상 테이블(AptRentTransaction) 기준
-    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('AptRentTransaction');
-    expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: { not: null } },
-      select: { lat: true, lng: true },
-    });
+describe('toBuildingKey', () => {
+  it('동·지번을 trim 하고 null 은 빈 문자열로 — 요약의 COALESCE(TRIM()) 과 같은 키', () => {
+    expect(toBuildingKey({ bjdCode: '1', buildingName: 'A', dongName: ' 역삼동 ', jibun: null }))
+      .toEqual({ bjdCode: '1', buildingName: 'A', dongName: '역삼동', jibun: '' });
   });
 });
 
 describe('getRecentBuildingsNeedingCoords', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it('최근 거래 행 중 lat IS NULL 인 건물키만 sargable 조건으로 조회한다', async () => {
+  it('최근 거래 빈 행의 주소 건물을 SQL DISTINCT + sargable 조건으로 조회한다', async () => {
     mockQueryRawUnsafe.mockResolvedValue([]);
 
     await getRecentBuildingsNeedingCoords(makePrisma(), 'villaRentTransaction', { year: 2025, month: 11 });
 
     const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
-    expect(sql).toContain('SELECT DISTINCT bjdCode, buildingName FROM `VillaRentTransaction`');
+    expect(sql).toContain('SELECT DISTINCT');
+    expect(sql).toContain('`VillaRentTransaction`');
+    expect(sql).toContain("COALESCE(TRIM(dongName), '') AS dongName");
+    expect(sql).toContain("COALESCE(TRIM(jibun), '') AS jibun");
     expect(sql).toContain('lat IS NULL');
     expect(sql).toContain('((dealYear = ? AND dealMonth >= ?) OR dealYear > ?)');
     expect(params).toEqual([2025, 11, 2025]);
+    expect(mockFindMany).not.toHaveBeenCalled();
   });
 });
 
 describe('getBuildingsWithoutAnyCoords', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it('좌표 있는 행이 하나도 없는 건물만 고른다 (과거 거래만 있는 건물 포함, 날짜 조건 없음)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '3611010100', buildingName: '옛빌라' }]);
+  it('같은 주소(동·지번)에 좌표 행이 하나도 없는 건물만, 날짜 조건 없이 고른다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([KEY]);
 
     const rows = await getBuildingsWithoutAnyCoords(makePrisma(), 'villaSaleTransaction');
 
-    expect(rows).toEqual([{ bjdCode: '3611010100', buildingName: '옛빌라' }]);
+    expect(rows).toEqual([KEY]);
     const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
     expect(sql).toContain('NOT EXISTS');
+    // 이름만으로 묶으면 같은 법정동 동명 빌라의 다른 지번이 좌표를 영영 못 받는다
+    expect(sql).toContain("COALESCE(TRIM(c.dongName), '') = n.dongName");
+    expect(sql).toContain("COALESCE(TRIM(c.jibun), '') = n.jibun");
     expect(sql).toContain('c.lat IS NOT NULL');
     expect(sql).not.toContain('dealYear');
     expect(params).toEqual([]);
@@ -579,79 +333,211 @@ describe('getBuildingsWithoutAnyCoords', () => {
   });
 });
 
-describe('copyCoordsFromSiblingForUncoordinated', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('getGeocodeTargets', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('카카오 대상 = 좌표 행이 하나도 없는 주소 건물, 30일 재시도 컷오프', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+    const now = new Date('2026-10-20T00:00:00Z');
+
+    await getGeocodeTargets(makePrisma(), 'aptSaleTransaction', now);
+
+    const [sql, cutoff] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('geocodedAt IS NULL OR geocodedAt <');
+    expect((cutoff as Date).toISOString()).toBe('2026-09-20T00:00:00.000Z');
+  });
+});
+
+describe('loadBuildingAddress', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('주소 필드를 같은 주소 건물의 한 행에서 읽는다', async () => {
+    const row = { buildingName: '현대빌라', bjdCode: KEY.bjdCode, city: '서울', district: '강남구', dongName: '역삼동', roadName: null, jibun: '12-3' };
+    mockQueryRawUnsafe.mockResolvedValue([row]);
+
+    const building = await loadBuildingAddress(makePrisma(), 'villaSaleTransaction', KEY);
+
+    expect(building).toEqual(row);
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('LIMIT 1');
+    expect(params).toEqual(ADDR);
   });
 
-  it('이 테이블에 좌표가 전혀 없는 건물은 짝 테이블 좌표를 날짜와 무관하게 그 건물 빈 행 전부에 복사한다', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '1168010800', buildingName: '전세만옛날빌라' }]);
-    mockFindFirst.mockResolvedValue({ lat: 37.5, lng: 127.0 });
-    mockUpdateMany.mockResolvedValue({ count: 4 });
+  it('행이 사라졌으면 null', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+    expect(await loadBuildingAddress(makePrisma(), 'villaSaleTransaction', KEY)).toBeNull();
+  });
+});
+
+describe('updateBuildingCoordinates / markGeocodeAttempted', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const building: UniqueBuilding = {
+    buildingName: '현대빌라', bjdCode: KEY.bjdCode, city: '서울', district: '강남구',
+    dongName: ' 역삼동', roadName: null, jibun: '12-3 ',
+  };
+
+  it('같은 주소 건물의 빈 행에만 좌표를 쓴다 (이름이 같은 다른 지번은 건드리지 않음)', async () => {
+    mockExecuteRawUnsafe.mockResolvedValue(5);
+
+    const count = await updateBuildingCoordinates(makePrisma(), 'aptSaleTransaction', building, { lat: 37.498, lng: 127.0276 });
+
+    expect(count).toBe(5);
+    const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
+    expect(sql).toContain('UPDATE `AptSaleTransaction` SET lat = ?, lng = ?, geocodedAt = NOW(3)');
+    expect(sql).toContain("COALESCE(TRIM(jibun), '') = ?");
+    expect(sql).toContain('lat IS NULL');
+    expect(params).toEqual([37.498, 127.0276, ...ADDR]);
+  });
+
+  it('실패 기록도 같은 주소 건물 빈 행에만', async () => {
+    mockExecuteRawUnsafe.mockResolvedValue(2);
+
+    await markGeocodeAttempted(makePrisma(), 'aptSaleTransaction', building);
+
+    const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
+    expect(sql).toContain('SET geocodedAt = NOW(3)');
+    expect(params).toEqual(ADDR);
+  });
+});
+
+describe('copyCoordsWithinTable', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('대상이 없으면 seed 조회·UPDATE 를 하지 않는다 (OOM 회귀 방지)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+
+    expect(await copyCoordsWithinTable(makePrisma(), 'aptRentTransaction', SINCE)).toBe(0);
+    expect(mockQueryRawUnsafe).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRawUnsafe).not.toHaveBeenCalled();
+    expect(mockFindMany).not.toHaveBeenCalled();
+  });
+
+  it('같은 주소 건물 seed 좌표를 최근 거래 빈 행에만 복사한다', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([KEY])
+      .mockResolvedValueOnce([{ lat: 37.498, lng: 127.0276 }]);
+    mockExecuteRawUnsafe.mockResolvedValue(3);
+
+    const copied = await copyCoordsWithinTable(makePrisma(), 'aptSaleTransaction', SINCE);
+
+    expect(copied).toBe(3);
+    const [seedSql, ...seedParams] = mockQueryRawUnsafe.mock.calls[1];
+    expect(seedSql).toContain('FROM `AptSaleTransaction`');
+    expect(seedSql).toContain('lat IS NOT NULL');
+    expect(seedParams).toEqual(ADDR);
+    // 과거 행까지 채우면 백필 수백만 행 UPDATE 로 45분 watchdog 초과(2026-10-20)
+    const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
+    expect(sql).toContain('((dealYear = ? AND dealMonth >= ?) OR dealYear > ?)');
+    expect(params).toEqual([37.498, 127.0276, ...ADDR, 2026, 7, 2026]);
+  });
+
+  it('seed 가 없으면 UPDATE 하지 않는다', async () => {
+    mockQueryRawUnsafe.mockResolvedValueOnce([KEY]).mockResolvedValueOnce([]);
+
+    expect(await copyCoordsWithinTable(makePrisma(), 'villaSaleTransaction', SINCE)).toBe(0);
+    expect(mockExecuteRawUnsafe).not.toHaveBeenCalled();
+  });
+});
+
+describe('copyCoordsFromSibling', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('형제 테이블이 없으면 0 을 반환하고 아무것도 조회하지 않는다', async () => {
+    expect(await copyCoordsFromSibling(makePrisma(), 'landSaleTransaction' as never, SINCE)).toBe(0);
+    expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it('대상 목록은 대상 테이블, seed 는 형제 테이블에서 읽고 최근 행만 채운다', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([KEY])
+      .mockResolvedValueOnce([{ lat: 37.5, lng: 127.0 }]);
+    mockExecuteRawUnsafe.mockResolvedValue(2);
+
+    const copied = await copyCoordsFromSibling(makePrisma(), 'aptRentTransaction', SINCE);
+
+    expect(copied).toBe(2);
+    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('`AptRentTransaction`');
+    expect(mockQueryRawUnsafe.mock.calls[1][0]).toContain('`AptSaleTransaction`');
+    expect(mockExecuteRawUnsafe.mock.calls[0][0]).toContain('UPDATE `AptRentTransaction`');
+    expect(mockExecuteRawUnsafe.mock.calls[0][0]).toContain('dealYear');
+  });
+});
+
+describe('copyCoordsFromSiblingForUncoordinated', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('이 테이블에 좌표가 전혀 없는 주소 건물은 짝 테이블 좌표를 날짜와 무관하게 빈 행 전부에 복사한다', async () => {
+    mockQueryRawUnsafe
+      .mockResolvedValueOnce([KEY])
+      .mockResolvedValueOnce([{ lat: 37.5, lng: 127.0 }]);
+    mockExecuteRawUnsafe.mockResolvedValue(4);
 
     const copied = await copyCoordsFromSiblingForUncoordinated(makePrisma(), 'villaRentTransaction');
 
     expect(copied).toBe(4);
-    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('VillaRentTransaction');
     expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('NOT EXISTS');
-    expect(mockUpdateMany).toHaveBeenCalledWith({
-      where: { bjdCode: '1168010800', buildingName: '전세만옛날빌라', lat: null },
-      data: { lat: 37.5, lng: 127.0, geocodedAt: expect.any(Date) },
-    });
+    expect(mockQueryRawUnsafe.mock.calls[1][0]).toContain('`VillaSaleTransaction`');
+    const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
+    expect(sql).toContain('UPDATE `VillaRentTransaction`');
+    expect(sql).not.toContain('dealYear');
+    expect(params).toEqual([37.5, 127.0, ...ADDR]);
   });
 
   it('짝 테이블에도 좌표가 없으면 아무것도 바꾸지 않는다(카카오 단계로 넘김)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '1168010800', buildingName: '처음빌라' }]);
-    mockFindFirst.mockResolvedValue(null);
+    mockQueryRawUnsafe.mockResolvedValueOnce([KEY]).mockResolvedValueOnce([]);
 
-    const copied = await copyCoordsFromSiblingForUncoordinated(makePrisma(), 'villaRentTransaction');
-
-    expect(copied).toBe(0);
-    expect(mockUpdateMany).not.toHaveBeenCalled();
-  });
-});
-
-describe('getUniqueBuildings — 카카오 대상', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('좌표 있는 행이 하나라도 있는 건물은 카카오 대상이 아니다 (NOT EXISTS 조건)', async () => {
-    mockQueryRawUnsafe.mockResolvedValue([]);
-
-    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
-
-    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('NOT EXISTS');
+    expect(await copyCoordsFromSiblingForUncoordinated(makePrisma(), 'villaRentTransaction')).toBe(0);
+    expect(mockExecuteRawUnsafe).not.toHaveBeenCalled();
   });
 });
 
 describe('processTable — 테이블당 카카오 시간 상한', () => {
+  const targets = [
+    { ...KEY, buildingName: 'A빌라' },
+    { ...KEY, buildingName: 'B빌라' },
+    { ...KEY, buildingName: 'C빌라' },
+  ];
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockQueryRawUnsafe.mockResolvedValue([
-      { bjdCode: '1168010800', buildingName: 'A빌라' },
-      { bjdCode: '1168010800', buildingName: 'B빌라' },
-    ]);
-    // seed 조회(select lat)는 좌표 없음, 주소 조회는 건물 행 반환
-    mockFindFirst.mockImplementation(async (args: { select: Record<string, boolean>; where: { buildingName: string } }) =>
-      args.select.lat
-        ? null
-        : { buildingName: args.where.buildingName, bjdCode: '1168010800', city: '서울', district: '강남구', dongName: '역삼동', roadName: null, jibun: null });
-    mockUpdateMany.mockResolvedValue({ count: 1 });
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+    mockQueryRawUnsafe.mockImplementation(async (sql: string, ...params: unknown[]) => {
+      if (sql.includes('NOT EXISTS') && sql.includes('geocodedAt')) return targets; // 카카오 대상
+      if (sql.includes('LIMIT 1') && sql.includes('city')) {
+        return [{ buildingName: params[1], bjdCode: KEY.bjdCode, city: '서울', district: '강남구', dongName: '역삼동', roadName: null, jibun: '12-3' }];
+      }
+      return []; // 복사 단계 대상 없음
+    });
   });
 
-  it('상한이 지나면 남은 건물은 조회하지 않고 다음 테이블로 넘어간다', async () => {
-    await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 0 });
+  function markCalls(): number {
+    return mockExecuteRawUnsafe.mock.calls.filter(([sql]) => String(sql).includes('SET geocodedAt = NOW(3)')).length;
+  }
 
-    // markGeocodeAttempted(updateMany) 가 한 번도 불리지 않았다 = 카카오 단계에 들어가지 않음
-    expect(mockUpdateMany).not.toHaveBeenCalled();
+  it('상한이 0 이면 카카오 단계에 들어가지 않는다', async () => {
+    await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 0 });
+    expect(markCalls()).toBe(0);
+  });
+
+  it('처리 도중 상한에 닿으면 거기서 멈춘다', async () => {
+    let t = 0;
+    // 대상 조회 전 시작(0) → 첫 건물 확인(0) 통과 → 이후 확인부터 상한 초과
+    const now = () => {
+      const v = t;
+      t += 400;
+      return v;
+    };
+    await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 1_000, now });
+    expect(markCalls()).toBeGreaterThanOrEqual(1);
+    expect(markCalls()).toBeLessThan(targets.length);
   });
 
   it('상한 안이면 대상 건물을 모두 처리한다', async () => {
     await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 60_000 });
-
-    // API 키가 없어 좌표 실패 → 건물마다 markGeocodeAttempted 1회
-    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
+    // API 키가 없어 좌표 실패 → 건물마다 실패 기록 1회
+    expect(markCalls()).toBe(targets.length);
   });
 });
 
