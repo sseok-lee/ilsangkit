@@ -350,13 +350,14 @@ export async function updateBuildingCoordinates(
   prisma: PrismaClient,
   table: RealEstateTable,
   building: UniqueBuilding,
-  coords: Coordinates
+  coords: Coordinates,
+  key?: BuildingKey,
 ): Promise<number> {
   return withRealEstateWriteLock('updateBuildingCoordinates', async () => {
   return prisma.$executeRawUnsafe(
-    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = NOW(3)
+    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = ?
      WHERE ${addressMatch()} AND lat IS NULL`,
-    coords.lat, coords.lng, ...addressParams(toBuildingKey(building)),
+    coords.lat, coords.lng, new Date(), ...addressParams(key ?? toBuildingKey(building)),
   );
   });
 }
@@ -368,11 +369,12 @@ export async function markGeocodeAttempted(
   prisma: PrismaClient,
   table: RealEstateTable,
   building: UniqueBuilding,
+  key?: BuildingKey,
 ): Promise<void> {
   return withRealEstateWriteLock('markGeocodeAttempted', async () => {
   await prisma.$executeRawUnsafe(
-    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET geocodedAt = NOW(3) WHERE ${addressMatch()} AND lat IS NULL`,
-    ...addressParams(toBuildingKey(building)),
+    `UPDATE \`${SQL_TABLE_NAME[table]}\` SET geocodedAt = ? WHERE ${addressMatch()} AND lat IS NULL`,
+    new Date(), ...addressParams(key ?? toBuildingKey(building)),
   );
   });
 }
@@ -402,9 +404,9 @@ async function copyCoordsFor(
     if (!seed) continue;
 
     totalCopied += await prisma.$executeRawUnsafe(
-      `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = NOW(3)
+      `UPDATE \`${SQL_TABLE_NAME[table]}\` SET lat = ?, lng = ?, geocodedAt = ?
        WHERE ${addressMatch()} AND lat IS NULL${recent ? ` AND ${recent.sql}` : ''}`,
-      seed.lat, seed.lng, ...addressParams(target), ...(recent?.params ?? []),
+      seed.lat, seed.lng, new Date(), ...addressParams(target), ...(recent?.params ?? []),
     );
   }
   return totalCopied;
@@ -530,11 +532,12 @@ export async function processTable(
     const coords = await geocodeBuilding(building, table);
 
     if (coords) {
-      const cnt = await updateBuildingCoordinates(prisma, table, building, coords);
+      // 키는 SQL 이 만든 원래 값을 쓴다 — JS trim() 과 MySQL TRIM() 의 공백 범위가 달라 0행 갱신될 수 있다
+      const cnt = await updateBuildingCoordinates(prisma, table, building, coords, targets[i]);
       console.info(`[${table}] (${i + 1}/${targets.length}) ✓ ${building.buildingName} → ${coords.lat},${coords.lng} (${cnt}건)`);
       successCount++;
     } else {
-      await markGeocodeAttempted(prisma, table, building);
+      await markGeocodeAttempted(prisma, table, building, targets[i]);
       console.warn(`[${table}] (${i + 1}/${targets.length}) ✗ ${building.buildingName} [${building.dongName} ${building.jibun ?? ''}]`);
       failCount++;
     }

@@ -385,10 +385,19 @@ describe('updateBuildingCoordinates / markGeocodeAttempted', () => {
 
     expect(count).toBe(5);
     const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
-    expect(sql).toContain('UPDATE `AptSaleTransaction` SET lat = ?, lng = ?, geocodedAt = NOW(3)');
+    expect(sql).toContain('UPDATE `AptSaleTransaction` SET lat = ?, lng = ?, geocodedAt = ?');
     expect(sql).toContain("COALESCE(TRIM(jibun), '') = ?");
     expect(sql).toContain('lat IS NULL');
-    expect(params).toEqual([37.498, 127.0276, ...ADDR]);
+    expect(params).toEqual([37.498, 127.0276, expect.any(Date), ...ADDR]);
+  });
+
+  it('SQL 이 만든 키를 넘기면 그 키를 그대로 쓴다', async () => {
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+    const rawKey = { ...KEY, dongName: '역삼동\u3000' };
+
+    await updateBuildingCoordinates(makePrisma(), 'aptSaleTransaction', building, { lat: 1, lng: 2 }, rawKey);
+
+    expect(mockExecuteRawUnsafe.mock.calls[0].slice(4)).toEqual([KEY.bjdCode, KEY.buildingName, '역삼동\u3000', KEY.jibun]);
   });
 
   it('실패 기록도 같은 주소 건물 빈 행에만', async () => {
@@ -397,8 +406,8 @@ describe('updateBuildingCoordinates / markGeocodeAttempted', () => {
     await markGeocodeAttempted(makePrisma(), 'aptSaleTransaction', building);
 
     const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
-    expect(sql).toContain('SET geocodedAt = NOW(3)');
-    expect(params).toEqual(ADDR);
+    expect(sql).toContain('SET geocodedAt = ?');
+    expect(params).toEqual([expect.any(Date), ...ADDR]);
   });
 });
 
@@ -430,7 +439,7 @@ describe('copyCoordsWithinTable', () => {
     // 과거 행까지 채우면 백필 수백만 행 UPDATE 로 45분 watchdog 초과(2026-10-20)
     const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
     expect(sql).toContain('((dealYear = ? AND dealMonth >= ?) OR dealYear > ?)');
-    expect(params).toEqual([37.498, 127.0276, ...ADDR, 2026, 7, 2026]);
+    expect(params).toEqual([37.498, 127.0276, expect.any(Date), ...ADDR, 2026, 7, 2026]);
   });
 
   it('seed 가 없으면 UPDATE 하지 않는다', async () => {
@@ -482,7 +491,7 @@ describe('copyCoordsFromSiblingForUncoordinated', () => {
     const [sql, ...params] = mockExecuteRawUnsafe.mock.calls[0];
     expect(sql).toContain('UPDATE `VillaRentTransaction`');
     expect(sql).not.toContain('dealYear');
-    expect(params).toEqual([37.5, 127.0, ...ADDR]);
+    expect(params).toEqual([37.5, 127.0, expect.any(Date), ...ADDR]);
   });
 
   it('짝 테이블에도 좌표가 없으면 아무것도 바꾸지 않는다(카카오 단계로 넘김)', async () => {
@@ -513,7 +522,7 @@ describe('processTable — 테이블당 카카오 시간 상한', () => {
   });
 
   function markCalls(): number {
-    return mockExecuteRawUnsafe.mock.calls.filter(([sql]) => String(sql).includes('SET geocodedAt = NOW(3)')).length;
+    return mockExecuteRawUnsafe.mock.calls.filter(([sql]) => String(sql).includes('SET geocodedAt = ?')).length;
   }
 
   it('상한이 0 이면 카카오 단계에 들어가지 않는다', async () => {
@@ -523,15 +532,14 @@ describe('processTable — 테이블당 카카오 시간 상한', () => {
 
   it('처리 도중 상한에 닿으면 거기서 멈춘다', async () => {
     let t = 0;
-    // 대상 조회 전 시작(0) → 첫 건물 확인(0) 통과 → 이후 확인부터 상한 초과
+    // now() 호출: since(0) → 마감 계산(400, 마감 1400) → 대상 조회(800) → 첫 건물(1200 통과) → 둘째(1600 중단)
     const now = () => {
       const v = t;
       t += 400;
       return v;
     };
     await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 1_000, now });
-    expect(markCalls()).toBeGreaterThanOrEqual(1);
-    expect(markCalls()).toBeLessThan(targets.length);
+    expect(markCalls()).toBe(1);
   });
 
   it('상한 안이면 대상 건물을 모두 처리한다', async () => {
