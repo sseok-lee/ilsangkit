@@ -63,6 +63,10 @@ import {
   SQL_TABLE_NAME,
   copyCoordsWithinTable,
   copyCoordsFromSibling,
+  copyCoordsFromSiblingForUncoordinated,
+  getBuildingsWithoutAnyCoords,
+  getRecentBuildingsNeedingCoords,
+  processTable,
   type UniqueBuilding,
   type KakaoAddressResult,
 } from '../../src/scripts/geocodeRealEstate.js';
@@ -439,17 +443,26 @@ describe('copyCoordsWithinTable', () => {
     mockFindFirst.mockResolvedValue({ lat: 37.498, lng: 127.0276 });
     mockUpdateMany.mockResolvedValue({ count: 3 });
 
-    const copied = await copyCoordsWithinTable(makePrisma(), 'aptSaleTransaction');
+    const copied = await copyCoordsWithinTable(makePrisma(), 'aptSaleTransaction', { year: 2026, month: 7 });
 
     expect(copied).toBe(3);
     expect(mockFindFirst).toHaveBeenCalledWith({
       where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: { not: null } },
       select: { lat: true, lng: true },
     });
+    // 최근 거래 행만 채운다 — 과거 행까지 채우면 백필 수백만 행 UPDATE 로 45분 watchdog 초과(2026-10-20)
     expect(mockUpdateMany).toHaveBeenCalledWith({
-      where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: null },
+      where: {
+        bjdCode: '1168010800',
+        buildingName: '래미안아파트',
+        lat: null,
+        OR: [{ dealYear: 2026, dealMonth: { gte: 7 } }, { dealYear: { gt: 2026 } }],
+      },
       data: { lat: 37.498, lng: 127.0276, geocodedAt: expect.any(Date) },
     });
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('dealYear = ? AND dealMonth >= ?');
+    expect(params).toEqual([2026, 7, 2026]);
   });
 
   it('seed 가 없는 건물은 건너뛰고 업데이트하지 않는다', async () => {
@@ -515,6 +528,130 @@ describe('copyCoordsFromSibling', () => {
       where: { bjdCode: '1168010800', buildingName: '래미안아파트', lat: { not: null } },
       select: { lat: true, lng: true },
     });
+  });
+});
+
+describe('getRecentBuildingsNeedingCoords', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('최근 거래 행 중 lat IS NULL 인 건물키만 sargable 조건으로 조회한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+
+    await getRecentBuildingsNeedingCoords(makePrisma(), 'villaRentTransaction', { year: 2025, month: 11 });
+
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('SELECT DISTINCT bjdCode, buildingName FROM `VillaRentTransaction`');
+    expect(sql).toContain('lat IS NULL');
+    expect(sql).toContain('((dealYear = ? AND dealMonth >= ?) OR dealYear > ?)');
+    expect(params).toEqual([2025, 11, 2025]);
+  });
+});
+
+describe('getBuildingsWithoutAnyCoords', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('좌표 있는 행이 하나도 없는 건물만 고른다 (과거 거래만 있는 건물 포함, 날짜 조건 없음)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '3611010100', buildingName: '옛빌라' }]);
+
+    const rows = await getBuildingsWithoutAnyCoords(makePrisma(), 'villaSaleTransaction');
+
+    expect(rows).toEqual([{ bjdCode: '3611010100', buildingName: '옛빌라' }]);
+    const [sql, ...params] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('c.lat IS NOT NULL');
+    expect(sql).not.toContain('dealYear');
+    expect(params).toEqual([]);
+  });
+
+  it('retryCutoff 를 주면 geocodedAt 조건이 붙는다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+    const cutoff = new Date('2026-09-20T00:00:00Z');
+
+    await getBuildingsWithoutAnyCoords(makePrisma(), 'aptSaleTransaction', cutoff);
+
+    const [sql, param] = mockQueryRawUnsafe.mock.calls[0];
+    expect(sql).toContain('geocodedAt IS NULL OR geocodedAt <');
+    expect(param).toBe(cutoff);
+  });
+});
+
+describe('copyCoordsFromSiblingForUncoordinated', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('이 테이블에 좌표가 전혀 없는 건물은 짝 테이블 좌표를 날짜와 무관하게 그 건물 빈 행 전부에 복사한다', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '1168010800', buildingName: '전세만옛날빌라' }]);
+    mockFindFirst.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+    mockUpdateMany.mockResolvedValue({ count: 4 });
+
+    const copied = await copyCoordsFromSiblingForUncoordinated(makePrisma(), 'villaRentTransaction');
+
+    expect(copied).toBe(4);
+    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('VillaRentTransaction');
+    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('NOT EXISTS');
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { bjdCode: '1168010800', buildingName: '전세만옛날빌라', lat: null },
+      data: { lat: 37.5, lng: 127.0, geocodedAt: expect.any(Date) },
+    });
+  });
+
+  it('짝 테이블에도 좌표가 없으면 아무것도 바꾸지 않는다(카카오 단계로 넘김)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([{ bjdCode: '1168010800', buildingName: '처음빌라' }]);
+    mockFindFirst.mockResolvedValue(null);
+
+    const copied = await copyCoordsFromSiblingForUncoordinated(makePrisma(), 'villaRentTransaction');
+
+    expect(copied).toBe(0);
+    expect(mockUpdateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('getUniqueBuildings — 카카오 대상', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('좌표 있는 행이 하나라도 있는 건물은 카카오 대상이 아니다 (NOT EXISTS 조건)', async () => {
+    mockQueryRawUnsafe.mockResolvedValue([]);
+
+    await getUniqueBuildings(makePrisma(), 'aptSaleTransaction');
+
+    expect(mockQueryRawUnsafe.mock.calls[0][0]).toContain('NOT EXISTS');
+  });
+});
+
+describe('processTable — 테이블당 카카오 시간 상한', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockQueryRawUnsafe.mockResolvedValue([
+      { bjdCode: '1168010800', buildingName: 'A빌라' },
+      { bjdCode: '1168010800', buildingName: 'B빌라' },
+    ]);
+    // seed 조회(select lat)는 좌표 없음, 주소 조회는 건물 행 반환
+    mockFindFirst.mockImplementation(async (args: { select: Record<string, boolean>; where: { buildingName: string } }) =>
+      args.select.lat
+        ? null
+        : { buildingName: args.where.buildingName, bjdCode: '1168010800', city: '서울', district: '강남구', dongName: '역삼동', roadName: null, jibun: null });
+    mockUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  it('상한이 지나면 남은 건물은 조회하지 않고 다음 테이블로 넘어간다', async () => {
+    await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 0 });
+
+    // markGeocodeAttempted(updateMany) 가 한 번도 불리지 않았다 = 카카오 단계에 들어가지 않음
+    expect(mockUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('상한 안이면 대상 건물을 모두 처리한다', async () => {
+    await processTable(makePrisma(), 'villaSaleTransaction', { kakaoBudgetMs: 60_000 });
+
+    // API 키가 없어 좌표 실패 → 건물마다 markGeocodeAttempted 1회
+    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
   });
 });
 
