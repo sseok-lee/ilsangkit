@@ -13,7 +13,7 @@ const { mockPrisma } = vi.hoisted(() => ({
 }));
 vi.mock('../../src/lib/prisma.js', () => ({ prisma: mockPrisma, default: mockPrisma }));
 
-import { getItems, getItemDetail, getRanking } from '../../src/services/auctionService.js';
+import { getItems, getItemDetail, getRanking, getSitemapEntries } from '../../src/services/auctionService.js';
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -161,4 +161,17 @@ it('ranking filters all server regions before sorting and limiting', async () =>
   mockPrisma.auctionAreaSummary.findMany.mockResolvedValue([]);
   await getRanking({ keyword: '강남', usage: 'land', order: 'count', limit: 50 });
   expect(mockPrisma.auctionAreaSummary.findMany).toHaveBeenCalledWith({ where: { isIndexable: true, soldCount: { gte: 3 }, avgBidRate: { not: null }, usageGroup: 'land', OR: [{ city: { contains: '강남' } }, { district: { contains: '강남' } }] }, orderBy: { soldCount: 'desc' }, take: 50 });
+});
+
+describe('getSitemapEntries', () => {
+  it('수의계약(negotiable)은 지금도 살 수 있는 물건이라 사이트맵에 포함하고, 결과 미상 마감·취소는 뺀다', async () => {
+    mockPrisma.auctionAreaSummary.findMany.mockResolvedValue([]);
+    mockPrisma.auctionItem.findMany.mockResolvedValue([{ cltrMngNo: 'N1' }]);
+    const r = await getSitemapEntries();
+    expect(r.items).toEqual(['N1']);
+    const statuses = mockPrisma.auctionItem.findMany.mock.calls[0][0].where.status.in;
+    expect(statuses).toEqual(expect.arrayContaining(['ongoing', 'scheduled', 'negotiable', 'sold', 'failed']));
+    expect(statuses).not.toContain('closed');
+    expect(statuses).not.toContain('cancelled');
+  });
 });
