@@ -24,6 +24,16 @@ export interface CountGuardResult {
 }
 
 /**
+ * 파일별 임계 완화. 공매는 입찰 마감이 몰리는 날 진행·예정 물건이 한꺼번에 마감으로 빠져
+ * 정상적으로 크게 준다(2026-10-22: 하루 마감 3,298건으로 7500→4481, -40%). 기본 임계로 막으면
+ * 직전 생성본이 이월되고, 이월본의 개수가 다시 기준이 돼 매일 이월이 반복된다.
+ * upstream 실패(빈 응답)는 라우트가 503 으로 돌려 자식 이월 경로가 따로 막는다.
+ */
+export const FILE_DROP_THRESHOLDS: Record<string, number> = {
+  'sitemap/auction.xml': 0.5,
+}
+
+/**
  * 직전 생성본(old) 대비 새 생성본(next)이 특정 파일에서 threshold 이상 급감하거나
  * old에 있던 파일이 사라지면 거부한다. old에 없던 신규 파일은 통과.
  */
@@ -35,7 +45,8 @@ export function evaluateCountGuard(
   const regressions: { file: string; old: number; next: number }[] = []
   for (const [file, old] of Object.entries(oldCounts)) {
     const next = nextCounts[file] ?? 0
-    if (next < old * (1 - threshold)) {
+    const limit = Math.max(threshold, FILE_DROP_THRESHOLDS[file] ?? 0)
+    if (next < old * (1 - limit)) {
       regressions.push({ file, old, next })
     }
   }

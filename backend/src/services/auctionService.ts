@@ -275,8 +275,10 @@ export async function getSitemapEntries() {
   const indexable = await prisma.auctionAreaSummary.findMany({
     where: { isIndexable: true }, select: { city: true, district: true, bjdCode: true, usageGroup: true },
   });
+  // 수의계약(negotiable)은 유찰 누적 뒤 협의매각 중인 — 지금도 살 수 있는 — 물건이라 포함한다.
+  // 결과 미상 마감(closed)·취소(cancelled)는 뺀다(취소는 상세도 noindex).
   const items = await prisma.auctionItem.findMany({
-    where: { status: { in: ['ongoing', 'scheduled', 'sold', 'failed'] } }, select: { cltrMngNo: true }, take: 50000,
+    where: { status: { in: ['ongoing', 'scheduled', 'negotiable', 'sold', 'failed'] } }, select: { cltrMngNo: true }, take: 50000,
   });
   return { regions: indexable, items: items.map((i) => i.cltrMngNo) };
 }

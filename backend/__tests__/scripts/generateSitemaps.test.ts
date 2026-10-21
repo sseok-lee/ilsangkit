@@ -67,6 +67,15 @@ describe('evaluateCountGuard', () => {
     const r = evaluateCountGuard({}, { 'sitemap/new.xml': 5 }, threshold)
     expect(r.ok).toBe(true)
   })
+  it('공매는 입찰 마감이 몰리는 날 정상적으로 크게 줄어 완화된 임계를 쓴다', () => {
+    // 2026-10-22: 하루 입찰 마감 3,298건으로 7500→4481(-40%) 정상 감소가 이월됐다
+    const r = evaluateCountGuard({ 'sitemap/auction.xml': 7500 }, { 'sitemap/auction.xml': 4481 }, threshold)
+    expect(r.ok).toBe(true)
+  })
+  it('공매도 절반 넘게 줄면 거부', () => {
+    const r = evaluateCountGuard({ 'sitemap/auction.xml': 7500 }, { 'sitemap/auction.xml': 3000 }, threshold)
+    expect(r.ok).toBe(false)
+  })
 })
 
 describe('runGeneration', () => {
