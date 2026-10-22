@@ -3,8 +3,9 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h, Suspense } from 'vue'
 import AboutPage from '~/pages/about.vue'
 
+const { setMeta } = vi.hoisted(() => ({ setMeta: vi.fn() }))
 vi.mock('~/composables/useFacilityMeta', () => ({
-  useFacilityMeta: () => ({ setMeta: vi.fn(), setHomeMeta: vi.fn() }),
+  useFacilityMeta: () => ({ setMeta, setHomeMeta: vi.fn() }),
 }))
 vi.mock('~/composables/useStructuredData', () => ({
   useStructuredData: () => ({ setBreadcrumbSchema: vi.fn() }),
@@ -32,7 +33,15 @@ const FACILITY_LABELS = [
 describe('About Page', () => {
   it('renders the page title via PageHead', async () => {
     const wrapper = await mountSuspended(AboutPage)
-    expect(wrapper.find('h1').text()).toContain('일상킷 소개')
+    expect(wrapper.find('h1').text()).toContain('서비스 소개')
+  })
+
+  // 네이버 '일상킷' 브랜드 검색 대표결과가 홈 대신 /about 으로 잡힌다(7월·10월).
+  // 소개 페이지 title·h1 이 브랜드명으로 시작하면 바 브랜드 쿼리 관련성이 홈보다 높아진다.
+  it('title·h1 을 브랜드명으로 시작하지 않는다(브랜드 검색 대표결과는 홈)', async () => {
+    const wrapper = await mountSuspended(AboutPage)
+    expect(wrapper.find('h1').text().startsWith('일상킷')).toBe(false)
+    expect(setMeta).toHaveBeenCalledWith(expect.objectContaining({ title: '서비스 소개', path: '/about' }))
   })
 
   it('lists all 15 facility categories', async () => {
