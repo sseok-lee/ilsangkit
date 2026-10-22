@@ -228,3 +228,37 @@ test('a daily check fails loudly when the server sync did not succeed today', ()
   assert.match(syncCheck, /real-estate-sync\.status/)
   assert.match(syncCheck, /exit 1/)
 })
+
+test('local release checks retry a cold-start timeout before rolling back', () => {
+  // 2026-10-22: 새 프로세스가 뜨자마자 봇 요청이 몰려 /real-estate/apt-sale/gyeongnam 이
+  // 30초를 넘겨 한 번의 curl timeout(28)으로 롤백됐다. 재실행은 그대로 통과했다.
+  const script = readFileSync('scripts/deploy/fixed-deploy.sh', 'utf8')
+  const start = script.indexOf('fetch_local_with_retry() {')
+  const end = script.indexOf('\n}\n', start)
+  assert.ok(start >= 0 && end > start)
+  assert.doesNotMatch(script, /curl -fsS -m 30 -D "\$ATTEMPT\/fixed-(frontend|sitemap)\.headers"/)
+  const fn = script.slice(start, end + 2)
+  const dir = mkdtempSync(join(tmpdir(), 'ilsangkit-local-probe-'))
+  const harness = [
+    'set -euo pipefail',
+    'probe_count=0',
+    'curl() { probe_count=$((probe_count + 1)); if ((probe_count < OK_AT)); then return 28; fi; return 0; }',
+    'sleep() { :; }',
+    'fail() { echo "probe_count=$probe_count $*" >&2; return 2; }',
+    fn,
+    'fetch_local_with_retry page http://127.0.0.1:3000/x "$PROBE_HEADERS" "$PROBE_BODY"',
+    'echo "probe_count=$probe_count"',
+  ].join('\n')
+  try {
+    for (const [okAt, expectedStatus, expectedCount] of [[1, 0, 1], [3, 0, 3], [99, 2, 6]]) {
+      const result = spawnSync('bash', ['-c', harness], {
+        encoding: 'utf8',
+        env: { ...process.env, OK_AT: String(okAt), PROBE_HEADERS: join(dir, 'h'), PROBE_BODY: join(dir, 'b') },
+      })
+      assert.equal(result.status, expectedStatus, result.stderr)
+      assert.match(`${result.stdout}\n${result.stderr}`, new RegExp(`probe_count=${expectedCount}\\b`))
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
