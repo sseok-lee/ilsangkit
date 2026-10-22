@@ -194,11 +194,25 @@ if (!r.ready || r.releaseId !== process.argv[3] || r.summary?.mode !== 'address'
   throw new Error('fixed backend readiness differs from the live source')
 }
 NODE
-curl -fsS -m 30 -D "$ATTEMPT/fixed-frontend.headers" 'http://127.0.0.1:3000/real-estate/apt-sale/gyeongnam' -o "$ATTEMPT/fixed-frontend.html"
+# 새 프로세스는 캐시가 비어 있고 봇 요청이 곧바로 몰려 첫 SSR 이 30초를 넘길 수 있다
+# (2026-10-22 curl 28 로 롤백 → 재실행은 통과). 한 번의 timeout 으로 롤백하지 않고 재시도한다.
+fetch_local_with_retry() {
+  local label="$1" url="$2" headers="$3" body="$4" attempt
+  for attempt in $(seq 1 6); do
+    if curl -fsS -m 30 -D "$headers" "$url" -o "$body"; then
+      echo "[fixed-deploy] local $label ok after $attempt attempt(s)"
+      return 0
+    fi
+    sleep 5
+  done
+  fail "local $label did not respond after 6 attempts"
+}
+
+fetch_local_with_retry page 'http://127.0.0.1:3000/real-estate/apt-sale/gyeongnam' "$ATTEMPT/fixed-frontend.headers" "$ATTEMPT/fixed-frontend.html"
 grep -q '<h1' "$ATTEMPT/fixed-frontend.html"
 grep -q '경남' "$ATTEMPT/fixed-frontend.html"
 grep -iq "^x-ilsangkit-release-id: $FIXED_ID" "$ATTEMPT/fixed-frontend.headers"
-curl -fsS -m 30 -D "$ATTEMPT/fixed-sitemap.headers" 'http://127.0.0.1:3000/sitemap.xml' -o "$ATTEMPT/fixed-sitemap.xml"
+fetch_local_with_retry sitemap 'http://127.0.0.1:3000/sitemap.xml' "$ATTEMPT/fixed-sitemap.headers" "$ATTEMPT/fixed-sitemap.xml"
 grep -q '<loc>' "$ATTEMPT/fixed-sitemap.xml"
 grep -iq '^x-sitemap-source: static' "$ATTEMPT/fixed-sitemap.headers"
 

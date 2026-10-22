@@ -4,7 +4,9 @@ import { getStatsByDistrict, getDistrictStatsByCity, CITY_SLUG_TO_FULL, CITY_SLU
 
 // 인메모리 캐시 (TTL 기반)
 const areaCache = new Map<string, { data: unknown; expiresAt: number }>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
+// 6시간: 부동산 집계가 6개 거래 테이블을 전체 기간으로 훑어(경기 아파트 전월세 286만 건) 무겁다.
+// 거래·시설은 하루 한 번만 바뀌므로 10분 TTL 은 봇 크롤마다 재계산만 불렀다(2026-10-22 배포 직후 /gyeonggi 17초).
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CACHE_SIZE = 500;
 
 export function getCached<T>(key: string): T | null {

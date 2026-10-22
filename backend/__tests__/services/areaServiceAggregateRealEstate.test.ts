@@ -46,3 +46,21 @@ describe('aggregateRealEstate 세종 코드 별칭', () => {
     });
   });
 });
+
+describe('area cache TTL', () => {
+  // 지역 허브 집계는 6개 거래 테이블을 전체 기간으로 훑는다(경기 아파트 전월세 286만 건).
+  // 거래는 하루 한 번(03:00)만 바뀌므로 10분 캐시는 봇 크롤마다 재계산만 부른다.
+  it('6시간 안에는 캐시를 유지하고 그 뒤에는 버린다', async () => {
+    vi.useFakeTimers();
+    try {
+      const { setCache, getCached } = await import('../../src/services/areaService');
+      setCache('ttl-probe', { v: 1 });
+      vi.advanceTimersByTime(3 * 60 * 60 * 1000);
+      expect(getCached('ttl-probe')).toEqual({ v: 1 });
+      vi.advanceTimersByTime(3 * 60 * 60 * 1000 + 1);
+      expect(getCached('ttl-probe')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
