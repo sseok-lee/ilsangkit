@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          command_timeout: 25m
+          command_timeout: 45m
           script: |
             set -euo pipefail
             ACTIVE_BACKEND_DIR="/home/project2/backend"
@@ -50,5 +50,5 @@ jobs:
               echo "[regen] FORCE swap 활성화 — count-drop 가드 우회"
             fi
             # 동적 Nitro 라우트를 크롤해 디스크 정적본 재생성 (source-agnostic).
-            run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/generateSitemaps.js"
+            run_backend_node_timed 40m "$ACTIVE_BACKEND_DIR/dist/scripts/generateSitemaps.js"
             echo "[regen] 사이트맵 정적 생성 완료"

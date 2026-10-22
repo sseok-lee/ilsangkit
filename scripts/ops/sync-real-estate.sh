@@ -107,15 +107,17 @@ echo "[step:geocode-auction-end]"
 
 # Summary 테이블 갱신 (MySQL MAX_EXECUTION_TIME=60s 가 내부에서 강제).
 # 60m: 2021~2022 거래 백필(2026-10-19)로 거래가 1.5배가 되자 6종 합계가 16분 → 약 35~40분으로
-# 늘었다(그 전 25m 은 8/8·8/9 에 뒤쪽 타입이 조용히 스킵된 뒤 잡은 값). 스크립트 자체 watchdog(60분)이 먼저 걸리도록 바깥은 65m.
+# 늘었다(그 전 25m 은 8/8·8/9 에 뒤쪽 타입이 조용히 스킵된 뒤 잡은 값).
+# 85m: 2016~2020 거래 백필(2026-10-21~22)로 수동 갱신이 47분까지 늘어 60분 예산 여유가 13분뿐이었다.
+# 스크립트 자체 watchdog(85분)이 먼저 걸리도록 바깥은 90m.
 # 0=6종 완주 / 4=일부 타입 실패 / 124·137=timeout 이 죽임(뒤 타입 미실행) / 그 외=예외
 echo "[step:summary-start]"
 SUMMARY_EXIT=0
-run_backend_node_timed 65m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRealEstateSummary.js" || SUMMARY_EXIT=$?
+run_backend_node_timed 90m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRealEstateSummary.js" || SUMMARY_EXIT=$?
 case "$SUMMARY_EXIT" in
   0) echo "[sync] Summary 갱신 완료" ;;
   4) echo "[warn] Summary 일부 타입 실패 — 위 로그의 '실패한 타입' 확인. 그 타입은 어제 값이 남는다."; REAL_ESTATE_SYNC_EXIT=4 ;;
-  124|137) echo "[warn] Summary 가 60분 예산(바깥 65m)을 초과해 강제 종료됐다(exit=$SUMMARY_EXIT). 위 로그의 '완료 N/6' 확인."; REAL_ESTATE_SYNC_EXIT=4 ;;
+  124|137) echo "[warn] Summary 가 85분 예산(바깥 90m)을 초과해 강제 종료됐다(exit=$SUMMARY_EXIT). 위 로그의 '완료 N/6' 확인."; REAL_ESTATE_SYNC_EXIT=4 ;;
   *) echo "[warn] Summary 갱신 실패 (exit=$SUMMARY_EXIT) — 전 타입이 어제 값으로 남는다."; REAL_ESTATE_SYNC_EXIT=4 ;;
 esac
 echo "[step:summary-end]"
@@ -134,6 +136,7 @@ echo "[step:public-rental-end]"
 
 # 사이트맵 정적 파일 재생성. 실패/가드거부 시 기존 파일 유지.
 # 0=완전 갱신 / 4=부분 갱신(일부 이월) / 2=거부·실패 / 3=예외 / 1=env 누락
+# 40m: 자식 98개를 순차로 받는데 부동산 URL 이 늘며 941s→1,119s 로 길어지다 2026-10-22 에 20m 을 넘겼다.
 echo "[step:sitemap-gen-start]"
 export SITEMAP_DIR="${SITEMAP_DIR:-$ROOT/sitemaps}"
 export SITEMAP_REGEN_BASE="${SITEMAP_REGEN_BASE:-http://127.0.0.1:3000}"
@@ -142,7 +145,7 @@ SITEMAP_REGEN_TOKEN="$(grep -m1 '^SITEMAP_REGEN_TOKEN=' "$FRONTEND_ENV_FILE" | c
 export SITEMAP_REGEN_TOKEN
 set -x
 SITEMAP_EXIT=0
-run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/generateSitemaps.js" || SITEMAP_EXIT=$?
+run_backend_node_timed 40m "$ACTIVE_BACKEND_DIR/dist/scripts/generateSitemaps.js" || SITEMAP_EXIT=$?
 case "$SITEMAP_EXIT" in
   0) echo "[sync] 사이트맵 갱신 완료" ;;
   4) echo "[warn] 사이트맵 부분 갱신 — 일부 파일이 직전 생성본으로 이월됐다." ;;
