@@ -1,13 +1,13 @@
 <template>
   <div class="bg-white text-ink">
   <div class="page-container pt-4 pb-12 md:pt-6">
-    <PageHead title="일상킷 소개" description="부동산 실거래가와 내 주변 생활시설을 한곳에서." />
+    <PageHead title="서비스 소개" description="부동산 실거래가와 내 주변 생활시설을 한곳에서." />
 
     <div class="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
     <div class="min-w-0 space-y-10 text-muted text-sm md:text-base leading-relaxed">
       <section class="border-b border-line pb-8">
         <h2 class="text-lg font-semibold text-strong mb-3">
-          서비스 소개
+          서비스 개요
         </h2>
         <p class="mb-3">
           일상킷은 부동산 실거래가와 내 주변 생활시설 정보를 한곳에서 찾을 수 있는 서비스입니다.
@@ -212,9 +212,10 @@ function sourceLabel(url: string): string {
 const { setMeta } = useFacilityMeta()
 const { setBreadcrumbSchema } = useStructuredData()
 
+// 브랜드명으로 시작하면 '일상킷' 브랜드 검색 대표결과를 홈 대신 이 페이지가 가져간다.
 setMeta({
-  title: '일상킷 소개',
-  description: '일상킷 서비스 소개와 제공 정보, 데이터 출처를 확인하세요.',
+  title: '서비스 소개',
+  description: '부동산 실거래가·청약·생활정보 서비스 소개와 제공 정보, 데이터 출처를 확인하세요.',
   path: '/about',
 })
 
