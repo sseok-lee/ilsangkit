@@ -534,6 +534,7 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import PageHead from '~/components/common/PageHead.vue'
 import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
+import { resolveDefaultRepresentative } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
@@ -848,6 +849,10 @@ const detailOverview = ref<DetailOverview | null>(null)
 const areaLabelMap = computed<Record<string, string>>(() =>
   Object.fromEntries((detailOverview.value?.areaGroups ?? []).map(group => [group.key, group.label]))
 )
+// meta·JSON-LD 는 사용자가 고른 칩이 아닌 기본 그룹의 대표 시세만 쓴다(헤더 기본 상태와 같은 함수).
+const defaultRepresentative = computed(() =>
+  detailOverview.value ? resolveDefaultRepresentative(detailOverview.value) : null
+)
 const recentDealForDisplay = computed(() => resolveLatestSaleDeal(detailOverview.value))
 
 const detailMeta = computed(() => {
@@ -884,7 +889,9 @@ const detailMeta = computed(() => {
     },
     propertyType: propertyTypeParam,
     transactionMode: mode,
-    summary: summary.value ? { totalCount, recentDeal, recentSale } : null,
+    summary: summary.value
+      ? { totalCount, recentDeal, recentSale, representative: defaultRepresentative.value ?? undefined }
+      : null,
     buildYear: buildYearVal,
     areaRange,
     facilitySummary: facilitySummary.value,
@@ -1740,8 +1747,8 @@ setRealEstateListingSchema(() => {
     lat: info?.lat ?? null,
     lng: info?.lng ?? null,
     image: buildOgImage(info),
-    // summary.recentAvg는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달
-    recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
+    // 대표 시세는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달. 없으면 속성 생략.
+    recentAvg: defaultRepresentative.value ? defaultRepresentative.value.amount * 10_000 : undefined,
     latestDealDate,
   }
 })

@@ -39,6 +39,8 @@ export interface DetailMetaInput {
     recentDeal?: { amount: number; dealDate: string; monthlyRent?: number | null }
     /** 전월세 URL에서 독립 최신 매매를 보증금/월세로 오표기하지 않기 위한 별도 값. */
     recentSale?: { amount: number; dealDate: string }
+    /** 대표 시세(헤더와 같은 함수 출력). 있으면 최근 거래 가격 절보다 우선한다. */
+    representative?: { amount: number; areaLabel: string; mode: 'sale' | 'jeonse' }
   } | null
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
@@ -143,11 +145,15 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
   const salePriceText = recentSale?.amount != null && recentSale.amount > 0
     ? `매매 ${formatKoreanPrice(recentSale.amount)}`
     : ''
-  const priceClause = priceText
+  const representative = input.summary?.representative
+  const representativeClause = representative && Number.isFinite(representative.amount) && representative.amount > 0
+    ? `, ${representative.areaLabel}㎡ ${representative.mode === 'jeonse' ? '전세' : '매매'} 시세 약 ${formatKoreanPrice(representative.amount)}`
+    : ''
+  const priceClause = representativeClause || (priceText
     ? `, 최근 ${priceText}(${recentDeal!.dealDate})`
     : salePriceText
       ? `, 최근 ${salePriceText}(${recentSale!.dealDate})`
-      : ''
+      : '')
   const lead = totalCount > 0
     ? `${head} 실거래 ${totalCount.toLocaleString()}건${priceClause}.`
     : `${head} 실거래가.`

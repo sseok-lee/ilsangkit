@@ -59,7 +59,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
-import type { AreaGroup, DetailOverview, ExcludedDeal, PriceBasis } from '~/types/housingRedesign'
+import { resolveHeroBasis } from '~/utils/realEstateDetailPrice'
+import type { AreaGroup, DetailOverview, ExcludedDeal } from '~/types/housingRedesign'
 
 const props = withDefaults(defineProps<{
   overview: DetailOverview
@@ -72,26 +73,6 @@ const emit = defineEmits<{
 }>()
 
 const VISIBLE_CHIP_LIMIT = 6
-
-interface HeroBasis {
-  groupKey: string | null
-  basis: PriceBasis | null
-  /** 전월세 URL 에서 같은 그룹 매매 대표 시세(있을 때만) */
-  saleRepresentative: number | null
-}
-
-// 어떤 면적 그룹·어떤 기준(매매/전세)을 보여줄지 한 곳에서 정한다.
-// Task 8 의 resolveDefaultRepresentative 로 옮기기 쉽게 순수 함수로 둔다.
-function resolveHeroBasis(overview: DetailOverview, selectedArea: string | null): HeroBasis {
-  const keys = new Set((overview.areaGroups ?? []).map(group => group.key))
-  const groupKey = selectedArea && keys.has(selectedArea) ? selectedArea : overview.defaultAreaGroup
-  if (!groupKey) return { groupKey: null, basis: null, saleRepresentative: null }
-  const source = overview.basisMode === 'jeonse' ? overview.jeonseBasis : overview.saleBasis
-  const saleRepresentative = overview.basisMode === 'jeonse'
-    ? overview.saleBasis?.[groupKey]?.representative ?? null
-    : null
-  return { groupKey, basis: source?.[groupKey] ?? null, saleRepresentative }
-}
 
 const hero = computed(() => resolveHeroBasis(props.overview, props.selectedArea))
 const activeKey = computed(() => hero.value.groupKey)
