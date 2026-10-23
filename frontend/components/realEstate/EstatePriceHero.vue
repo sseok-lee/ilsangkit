@@ -101,8 +101,7 @@
             </th>
             <td v-for="(cell, index) in row.cells" :key="index">
               <template v-if="cell">
-                <span class="estate-price-hero__table-value estate-price-hero__table-value--full">{{ cell.value }}</span>
-                <span class="estate-price-hero__table-value estate-price-hero__table-value--compact">{{ cell.compact }}</span>
+                <span class="estate-price-hero__table-value">{{ cell.value }}</span>
                 <span class="estate-price-hero__table-date">{{ cell.month }}</span>
               </template>
               <template v-else>
@@ -118,7 +117,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { formatCompactPrice, formatCompactWolsePrice, formatKoreanPrice, formatWolsePrice } from '~/utils/formatters'
+import { formatKoreanPrice, formatWolsePrice } from '~/utils/formatters'
 import { resolveHeroBasis } from '~/utils/realEstateDetailPrice'
 import type { AreaGroup, DetailOverview } from '~/types/housingRedesign'
 
@@ -230,8 +229,6 @@ const cells = computed<HeroCell[]>(() => {
 
 interface TableCell {
   value: string
-  /** 모바일 표 칸용 짧은 표기(4.5억). 칸이 좁아 전체 표기가 두 줄로 꺾인다. */
-  compact: string
   month: string
 }
 
@@ -243,18 +240,10 @@ const areaRows = computed(() =>
     const jeonse = props.overview.jeonseBasis?.[group.key]?.latestAny ?? null
     const wolse = props.overview.wolseLatest?.[group.key] ?? null
     const cells: Array<TableCell | null> = [
-      sale
-        ? { value: formatKoreanPrice(sale.amount), compact: formatCompactPrice(sale.amount), month: shortMonth(sale.date) }
-        : null,
-      jeonse
-        ? { value: formatKoreanPrice(jeonse.amount), compact: formatCompactPrice(jeonse.amount), month: shortMonth(jeonse.date) }
-        : null,
+      sale ? { value: formatKoreanPrice(sale.amount), month: shortMonth(sale.date) } : null,
+      jeonse ? { value: formatKoreanPrice(jeonse.amount), month: shortMonth(jeonse.date) } : null,
       wolse
-        ? {
-            value: formatWolsePrice(wolse.deposit, wolse.monthlyRent),
-            compact: formatCompactWolsePrice(wolse.deposit, wolse.monthlyRent),
-            month: shortMonth(wolse.date),
-          }
+        ? { value: formatWolsePrice(wolse.deposit, wolse.monthlyRent), month: shortMonth(wolse.date) }
         : null,
     ]
     return { key: group.key, label: group.label, pyeong: group.pyeong, selectable: groupCount(group) > 0, cells }
@@ -485,11 +474,6 @@ const areaRows = computed(() =>
   display: block;
 }
 
-/* 모바일은 짧은 표기(4.5억)만, 데스크톱(768px~)은 전체 표기만 — SSR 에 둘 다 싣고 CSS 로 고른다 */
-.estate-price-hero__table-value--full {
-  display: none;
-}
-
 .estate-price-hero__table-date {
   margin-top: 2px;
   color: rgb(var(--faint-rgb));
@@ -507,14 +491,6 @@ const areaRows = computed(() =>
 @media (min-width: 768px) {
   .estate-price-hero {
     padding-top: 22px;
-  }
-
-  .estate-price-hero__table-value--full {
-    display: block;
-  }
-
-  .estate-price-hero__table-value--compact {
-    display: none;
   }
 
   .estate-price-hero__chips {
