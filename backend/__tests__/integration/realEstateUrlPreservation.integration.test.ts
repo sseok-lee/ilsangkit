@@ -460,7 +460,7 @@ describe('real estate URL preservation integration', () => {
       legacyGrouped: true,
       mode: 'sale',
       months: 6,
-      area: '59.50',
+      area: '60',
     }));
     expect(snapshot.filters.buildingKey).toBeUndefined();
     expect(snapshot.points.map((point) => point.id).sort((a, b) => a - b)).toEqual([1, 2]);
@@ -543,7 +543,7 @@ describe('real estate URL preservation integration', () => {
       jibun: '100-1',
       mode: 'sale',
       months: 6,
-      area: '59.50',
+      area: '60',
     }));
     expect(snapshot.points.map((point) => point.id)).toEqual([1]);
     expect(snapshot.table.total).toBe(1);

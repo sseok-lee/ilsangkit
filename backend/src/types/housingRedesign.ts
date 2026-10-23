@@ -38,10 +38,21 @@ export interface DealPoint {
   area: string;
   floor: number | null;
   deposit: number | null;
+  /** 이상거래 판정(같은 면적 그룹·거래 유형 기준). 월세는 항상 'normal'. */
+  flag: DealFlag;
+}
+
+export interface AreaOption {
+  /** 면적 그룹 키 = ROUND(전용면적) */
+  key: string;
+  /** 그룹 내 최다 빈도 전용면적의 소수 버림 */
+  label: string;
+  /** 현재 모드의 최근 36개월 거래 수 */
+  count: number;
 }
 
 export interface DetailOptions {
-  areas: string[];
+  areas: AreaOption[];
   deposits: Array<{ amount: number; count: number }>;
 }
 

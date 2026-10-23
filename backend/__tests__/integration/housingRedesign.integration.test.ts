@@ -277,7 +277,7 @@ async function seedNineModeFixtures(): Promise<void> {
     await model.create({ data: factory(`${PREFIX}${key}-future`, buildingName, 84.90, 2026, 5, 11, 990003n) });
     await model.create({ data: { ...factory(`${PREFIX}${key}-cancelled`, buildingName, 84.90, 2026, 5, 9, 990004n), cancelDealDay: '20260510' } });
     await model.create({ data: factory(`${PREFIX}${key}-a2`, `${buildingName}2`, 84.90, 2026, 5, 10, 990005n) });
-    await model.create({ data: factory(`${PREFIX}${key}-area`, buildingName, 84.91, 2026, 5, 10, 990006n) });
+    await model.create({ data: factory(`${PREFIX}${key}-area`, buildingName, 59.91, 2026, 5, 10, 990006n) });
     if (key === 'apt-sale-sale') {
       const address = await prisma.aptSaleTransaction.create({
         data: {
@@ -314,7 +314,7 @@ async function seedNineModeFixtures(): Promise<void> {
       await model.create({ data: factory(`${PREFIX}${type}-${mode}-invalid-day`, buildingName, rentType, 0n, mode === 'wolse' ? 991 : null, 2026, 4, 31, 84.90) });
       await model.create({ data: factory(`${PREFIX}${type}-${mode}-future`, buildingName, rentType, 0n, mode === 'wolse' ? 992 : null, 2026, 5, 11, 84.90) });
       await model.create({ data: factory(`${PREFIX}${type}-${mode}-a2`, `${buildingName}2`, rentType, 0n, mode === 'wolse' ? 993 : null, 2026, 5, 10, 84.90) });
-      await model.create({ data: factory(`${PREFIX}${type}-${mode}-area`, buildingName, rentType, 0n, mode === 'wolse' ? 994 : null, 2026, 5, 10, 84.91) });
+      await model.create({ data: factory(`${PREFIX}${type}-${mode}-area`, buildingName, rentType, 0n, mode === 'wolse' ? 994 : null, 2026, 5, 10, 59.91) });
       if (mode === 'wolse') {
         await model.create({ data: factory(`${PREFIX}${type}-${mode}-deposit`, buildingName, rentType, 10000n, 995, 2026, 5, 10, 84.90) });
       }

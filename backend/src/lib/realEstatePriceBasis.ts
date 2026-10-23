@@ -157,7 +157,8 @@ function neighborMedians(group: BasisDeal[]): Map<number, number | null> {
   return result;
 }
 
-function groupByArea(deals: BasisDeal[]): Map<string, BasisDeal[]> {
+/** 면적 그룹 키별로 거래를 묶는다(입력 순서 유지). */
+export function groupByArea(deals: BasisDeal[]): Map<string, BasisDeal[]> {
   const groups = new Map<string, BasisDeal[]>();
   for (const d of deals) {
     const key = areaGroupKey(d.area);

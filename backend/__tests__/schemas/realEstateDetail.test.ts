@@ -18,9 +18,18 @@ describe('DetailQuerySchema', () => {
   it('월세 보증금 0은 허용하고 소수 셋째 자리 면적은 거부한다', () => {
     const parsed = DetailQuerySchema.parse(baseQuery);
     expect(parsed.deposit).toBe(0);
-    expect(parsed.area).toBe('84.90');
+    expect(parsed.area).toBe('85');
     expect(DetailQuerySchema.safeParse({ ...baseQuery, area: '84.901' }).success).toBe(false);
     expect(DetailQuerySchema.safeParse({ ...baseQuery, mode: 'sale' }).success).toBe(false);
+  });
+
+  it('면적은 그룹 키(정수)와 기존 소수 둘 다 받아 그룹 키로 바꾼다', () => {
+    expect(DetailQuerySchema.parse({ ...baseQuery, area: '85' }).area).toBe('85');
+    expect(DetailQuerySchema.parse({ ...baseQuery, area: '84.97' }).area).toBe('85');
+    expect(DetailQuerySchema.parse({ ...baseQuery, area: '59.5' }).area).toBe('60');
+    expect(DetailPageQuerySchema.parse({ ...baseQuery, area: '84.97', page: '1' }).area).toBe('85');
+    expect(DetailQuerySchema.safeParse({ ...baseQuery, area: 'abc' }).success).toBe(false);
+    expect(DetailQuerySchema.safeParse({ ...baseQuery, area: '0' }).success).toBe(false);
   });
 
   it('5자리 또는 10자리 법정동 코드와 허용 기간만 받는다', () => {
