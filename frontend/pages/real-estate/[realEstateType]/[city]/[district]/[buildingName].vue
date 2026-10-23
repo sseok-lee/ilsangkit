@@ -1221,12 +1221,18 @@ const overviewSaleCount6mLabel = computed(() => {
   return Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT
 })
 
-// 머리 보조 줄 — 건축연도·거래된 면적·최근 6개월 매매 수(값 없는 항목은 뺀다)
+// 머리 보조 줄 — 건축연도·거래된 면적·최근 6개월 매매 수(값 없는 항목은 뺀다).
+// 6개월 매매 수는 매매 기준 화면에서 1건 이상일 때만(전월세 URL 의 '매매 0건'은 혼란만 준다).
 const overviewFactsLine = computed(() => {
   const parts: string[] = []
   if (overviewBuildYearLabel.value !== EMPTY_FIELD_TEXT) parts.push(`${overviewBuildYearLabel.value} 준공`)
   if (overviewAreaRangeLabel.value !== EMPTY_FIELD_TEXT) parts.push(`거래된 전용면적 ${overviewAreaRangeLabel.value}`)
-  if (overviewSaleCount6mLabel.value !== EMPTY_FIELD_TEXT) parts.push(`6개월 매매 ${overviewSaleCount6mLabel.value}`)
+  const saleCount6m = Number(detailOverview.value?.saleCount6m ?? 0)
+  if (
+    detailOverview.value?.basisMode !== 'jeonse'
+    && saleCount6m > 0
+    && overviewSaleCount6mLabel.value !== EMPTY_FIELD_TEXT
+  ) parts.push(`6개월 매매 ${overviewSaleCount6mLabel.value}`)
   return parts.join(' · ')
 })
 

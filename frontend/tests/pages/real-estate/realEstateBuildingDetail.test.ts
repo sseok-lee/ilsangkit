@@ -672,6 +672,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
           representative: 94000,
           sampleCount: 5,
           latest: { id: 2, date: '2026-10-19', amount: 91000, floor: 20 },
+          latestAny: { id: 2, date: '2026-10-19', amount: 91000, floor: 20, direct: false },
           max12m: 103000,
           yearAgo: null,
           changeRate: null,
@@ -690,11 +691,41 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     // 단건 최근 매매(직거래 5.2억)가 머리 대표 가격으로 나오지 않는다.
     expect(hero.text()).not.toContain('5억 2,000만')
     expect(wrapper.text()).toContain('2009년 준공')
+    expect(wrapper.text()).toContain('6개월 매매 12건')
 
     const chip = hero.findAll('button[aria-pressed]').find(b => b.text().includes('59㎡'))!
     await chip.trigger('click')
     await flushPromises()
     expect(mockSetFilters).toHaveBeenCalledWith({ area: '60' })
+  })
+
+  it.each([
+    ['jeonse', 7],
+    ['sale', 0],
+  ] as const)('머리 보조 줄은 basisMode=%s·6개월 매매 %s건이면 매매 수를 뺀다', async (basisMode, saleCount6m) => {
+    mockDetailOverview = {
+      identity: { bjdCode: '1168010100', buildingName: '반포자이' },
+      latestSale: null,
+      buildYear: 2009,
+      minArea: '84.90',
+      maxArea: '84.90',
+      saleCount6m,
+      window6m: { from: '2026-04-23', to: '2026-10-23' },
+      addresses: [{ dongName: '반포동', jibun: '20-43', roadName: '반포대로 58' }],
+      location: null,
+      locationAmbiguous: false,
+      basisMode,
+      defaultAreaGroup: '85',
+      areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 3, jeonseCount36m: 3 }],
+      saleBasis: {},
+      jeonseBasis: {},
+      generatedAt: '2026-10-23T00:00:00.000Z',
+    } as DetailOverview
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.text()).toContain('2009년 준공')
+    expect(wrapper.text()).not.toContain('6개월 매매')
   })
 
   it('상단 요약은 승인된 overview 필드와 flat section anchor를 사용한다', () => {
