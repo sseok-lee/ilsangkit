@@ -554,7 +554,7 @@ describe('TransactionTable', () => {
       expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(false)
     })
 
-    it('거래 목록이 바뀌면(페이지 이동) 다시 10건만 보인다', async () => {
+    it('한 번 펼치면 페이지를 옮겨도 펼친 상태를 유지한다', async () => {
       const wrapper = mount(TransactionTable, {
         props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
       })
@@ -562,8 +562,19 @@ describe('TransactionTable', () => {
 
       await wrapper.setProps({ transactions: manySales.map((tx) => ({ ...tx, id: tx.id + 1000 })) })
 
-      expect(hiddenRowCount(wrapper)).toBe(5)
-      expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(true)
+      expect(hiddenRowCount(wrapper)).toBe(0)
+      expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(false)
+    })
+
+    it('더보기를 누르면 mobile-expand 를 알린다(페이지 번호 노출용)', async () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+      expect(wrapper.emitted('mobile-expand')).toBeUndefined()
+
+      await wrapper.get('[data-testid="mobile-show-more-transactions"]').trigger('click')
+
+      expect(wrapper.emitted('mobile-expand')).toHaveLength(1)
     })
 
     it('거래가 limit 이하이거나 limit이 없으면 숨김·버튼이 없다', () => {

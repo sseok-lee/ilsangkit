@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildYearLabel, formatKoreanPrice, formatKstDate } from '../../utils/formatters'
+import { buildYearLabel, formatCompactPrice, formatCompactWolsePrice, formatKoreanPrice, formatKstDate } from '../../utils/formatters'
 
 describe('formatKoreanPrice', () => {
   it('rounds decimal 만원 values before rendering', () => {
@@ -69,5 +69,29 @@ describe('buildYearLabel', () => {
   it('buildYear 없으면 null', () => {
     expect(buildYearLabel(null, 2026)).toBeNull()
     expect(buildYearLabel(undefined, 2026)).toBeNull()
+  })
+})
+
+describe('formatCompactPrice', () => {
+  it('억 단위는 소수 첫째 자리까지 반올림하고 .0 은 뗀다', () => {
+    expect(formatCompactPrice(45000)).toBe('4.5억')
+    expect(formatCompactPrice(45150)).toBe('4.5억')
+    expect(formatCompactPrice(92500)).toBe('9.3억')
+    expect(formatCompactPrice(90000)).toBe('9억')
+    expect(formatCompactPrice(99960)).toBe('10억')
+    expect(formatCompactPrice(125000)).toBe('12.5억')
+  })
+
+  it('1억 미만은 만 단위로 쓴다', () => {
+    expect(formatCompactPrice(9480)).toBe('9,480만')
+    expect(formatCompactPrice(0)).toBe('0만')
+  })
+})
+
+describe('formatCompactWolsePrice', () => {
+  it('보증금/월세를 짧게 쓴다', () => {
+    expect(formatCompactWolsePrice(31000, 80)).toBe('3.1억/80만')
+    expect(formatCompactWolsePrice(5000, 140)).toBe('5,000만/140만')
+    expect(formatCompactWolsePrice(30000, 0)).toBe('3억/0만')
   })
 })
