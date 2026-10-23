@@ -29,9 +29,9 @@ const canvasContext = {
 }
 
 const points: DealPoint[] = [
-  { id: 1, date: '2026-09-12', amount: 84500, area: '84.90', floor: 0, deposit: 0 },
-  { id: 2, date: '2026-09-12', amount: 84500, area: '84.90', floor: null, deposit: 0 },
-  { id: 3, date: '2026-08-20', amount: 120, area: '84.90', floor: 10, deposit: 5000 },
+  { id: 1, date: '2026-09-12', amount: 84500, area: '84.90', floor: 0, deposit: 0, flag: 'normal' },
+  { id: 2, date: '2026-09-12', amount: 84500, area: '84.90', floor: null, deposit: 0, flag: 'normal' },
+  { id: 3, date: '2026-08-20', amount: 120, area: '84.90', floor: 10, deposit: 5000, flag: 'normal' },
 ]
 
 beforeEach(() => {

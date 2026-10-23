@@ -82,7 +82,7 @@ vi.mock('~/composables/useRealEstateDetail', async () => {
           area: '84.90',
           deposit: null,
         },
-        options: { areas: ['84.90'], deposits: [] },
+        options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
         points: [],
         window: { from: '2026-04-01', to: '2026-09-29' },
         table: { items: [], total: 0, page: 1, totalPages: 0 },

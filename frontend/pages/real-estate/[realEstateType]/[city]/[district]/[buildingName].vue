@@ -227,6 +227,7 @@
           class="estate-exact-filters"
           :filters="snapshot.filters"
           :options="snapshot.options"
+          :area-labels="areaLabelMap"
           :pending="pending"
           @patch="handleExactFilterPatch"
         />
@@ -825,6 +826,9 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 const detailOverview = ref<DetailOverview | null>(null)
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
+const areaLabelMap = computed<Record<string, string>>(() =>
+  Object.fromEntries((detailOverview.value?.areaGroups ?? []).map(group => [group.key, group.label]))
+)
 const recentDealForDisplay = computed(() => resolveLatestSaleDeal(detailOverview.value))
 
 const detailMeta = computed(() => {
