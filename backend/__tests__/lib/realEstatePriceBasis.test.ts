@@ -7,6 +7,7 @@ import {
   buildAreaGroups,
   chooseDefaultAreaGroup,
   classifyDeals,
+  classifyDealsDetailed,
   computePriceBasis,
   exclusivePyeong,
   median,
@@ -146,5 +147,90 @@ describe('realEstatePriceBasis', () => {
     expect(areaGroupLabel(['84.97', '84.97', '85.2'])).toBe('84');
     expect(areaGroupLabel(['84.97', '85.2'])).toBe('84');
     expect(areaGroupPyeong(['84.97', '84.97', '85.2'])).toBe(26);
+  });
+
+  describe('near-linear neighbor selection', () => {
+    // 이전(Task 2) 구현을 그대로 옮긴 기준 구현 — 결과 동일성 검증용.
+    const DAY = 86_400_000;
+    const utc = (date: string): number => {
+      const [y, m, d] = date.split('-').map(Number);
+      return Date.UTC(y, m - 1, d);
+    };
+    const diff = (a: string, b: string): number => Math.abs(utc(a) - utc(b)) / DAY;
+    const refMedian = (target: BasisDeal, group: BasisDeal[]): number | null => {
+      const c = group
+        .filter((d) => d.id !== target.id && !d.direct && diff(d.date, target.date) <= 183)
+        .sort((a, b) => diff(a.date, target.date) - diff(b.date, target.date) || a.id - b.id)
+        .slice(0, 10);
+      return c.length < 5 ? null : median(c.map((d) => d.amount));
+    };
+    const refClassify = (deals: BasisDeal[]): Map<number, string> => {
+      const flags = new Map<number, string>();
+      for (const d of deals) {
+        const group = deals.filter((x) => areaGroupKey(x.area) === areaGroupKey(d.area));
+        if (d.direct) {
+          flags.set(d.id, 'direct');
+          continue;
+        }
+        const med = refMedian(d, group);
+        flags.set(d.id, med !== null && Math.abs(d.amount / med - 1) >= 0.4 ? 'outlier' : 'normal');
+      }
+      return flags;
+    };
+
+    let seed = 12345;
+    const rand = (): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const randomDeals = (n: number): BasisDeal[] => {
+      const ids = Array.from({ length: n }, (_, i) => i + 1).sort(() => rand() - 0.5);
+      return ids.map((id) => {
+        const day = Math.floor(rand() * 500); // 같은 날짜·같은 거리 동률이 많이 생기도록 좁은 범위
+        const date = new Date(Date.UTC(2025, 0, 1) + day * DAY).toISOString().slice(0, 10);
+        const amount = rand() < 0.15 ? Math.round(30000 + rand() * 150000) : Math.round(85000 + rand() * 20000);
+        const area = rand() < 0.7 ? '84.97' : '59.89';
+        return mk(id, date, amount, area, 5, rand() < 0.2);
+      });
+    };
+
+    it('matches the reference classification on random data with heavy ties', () => {
+      for (const n of [3, 12, 40, 150, 400]) {
+        const deals = randomDeals(n);
+        const ref = refClassify(deals);
+        const flags = classifyDeals(deals);
+        for (const d of deals) expect(flags.get(d.id)).toBe(ref.get(d.id));
+      }
+    });
+
+    it('exposes raw deviation for classified deals', () => {
+      const { flags, deviations } = classifyDealsDetailed(oct);
+      expect(flags.get(5)).toBe('outlier');
+      // 53000 vs 이웃 10건 중간값 93250
+      expect(deviations.get(5)).toBeCloseTo(53000 / 93250 - 1, 10);
+      expect(deviations.has(1)).toBe(true);
+    });
+
+    it('computePriceBasis reuses supplied deviations', () => {
+      const { flags, deviations } = classifyDealsDetailed(oct);
+      const forced = new Map(deviations);
+      forced.set(5, -0.5);
+      const basis = computePriceBasis(oct, flags, TODAY, 5, forced);
+      expect(basis.excluded[0]).toMatchObject({ id: 5, deviation: -0.5 });
+    });
+
+    it('classifies 5,000 deals in one group under 200 ms', () => {
+      const deals: BasisDeal[] = [];
+      for (let i = 0; i < 5000; i++) {
+        const day = i % 1095;
+        const date = new Date(Date.UTC(2023, 9, 1) + day * DAY).toISOString().slice(0, 10);
+        deals.push(mk(i + 1, date, 80000 + ((i * 7919) % 30000), '84.97', 5, i % 13 === 0));
+      }
+      const start = performance.now();
+      const flags = classifyDeals(deals);
+      const elapsed = performance.now() - start;
+      expect(flags.size).toBe(5000);
+      expect(elapsed).toBeLessThan(200);
+    });
   });
 });
