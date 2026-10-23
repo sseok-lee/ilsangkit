@@ -86,10 +86,11 @@ function countLabel(group: AreaGroup): string {
   return `${prefix} ${groupCount(group).toLocaleString()}건`
 }
 
+// 현재 모드(매매/전세) 거래가 없는 그룹은 칩으로 내지 않는다(누르면 아래 필터가 area-reset 된다). 선택된 그룹만 예외.
 const sortedGroups = computed(() =>
-  [...(props.overview.areaGroups ?? [])].sort((a, b) =>
-    groupCount(b) - groupCount(a) || Number(a.key) - Number(b.key),
-  ),
+  [...(props.overview.areaGroups ?? [])]
+    .filter(group => groupCount(group) > 0 || group.key === activeKey.value)
+    .sort((a, b) => groupCount(b) - groupCount(a) || Number(a.key) - Number(b.key)),
 )
 
 const expanded = ref(false)
@@ -110,10 +111,28 @@ function shortDate(date: string): string {
   return [year?.slice(2), month, day].filter(Boolean).join('.')
 }
 
-function dealLine(deal: { date: string; floor: number | null }): string {
+function dealLine(deal: { date: string; floor: number | null; direct?: boolean }): string {
   const parts = [shortDate(deal.date)]
   if (deal.floor != null) parts.push(`${deal.floor}층`)
+  if (deal.direct) parts.push('직거래')
   return parts.join(' · ')
+}
+
+/** 오버뷰 latestSale(면적 무관 최근 매매) → 히어로 셀. 그룹에 읽은 거래가 하나도 없을 때만 쓴다. */
+function latestSaleCell(): HeroCell | null {
+  const sale = props.overview.latestSale
+  if (!sale) return null
+  const date = [String(sale.year).slice(2), String(sale.month).padStart(2, '0')]
+  if (sale.day != null) date.push(String(sale.day).padStart(2, '0'))
+  const parts = [date.join('.')]
+  if (sale.area) parts.push(`전용 ${sale.area}㎡`)
+  if (sale.floor != null) parts.push(`${sale.floor}층`)
+  return {
+    label: props.overview.basisMode === 'jeonse' ? '최근 매매' : '최근 거래',
+    value: formatKoreanPrice(sale.amount),
+    note: parts.join(' · '),
+    lead: true,
+  }
 }
 
 interface HeroCell {
@@ -134,15 +153,19 @@ function changeLine(rate: number | null): HeroCell['change'] {
 
 const cells = computed<HeroCell[]>(() => {
   const { basis, saleRepresentative } = hero.value
-  if (!basis) return []
   const jeonse = props.overview.basisMode === 'jeonse'
 
-  if (basis.representative == null) {
-    if (!basis.latest) return []
+  // 대표 시세가 없으면 '시세' 단어 없이 최근 거래 1건만: 정상 거래 → 직거래 포함 최근 거래 → 오버뷰 최근 매매.
+  if (basis?.representative == null) {
+    const latest = basis?.latest ?? basis?.latestAny ?? null
+    if (!latest) {
+      const fallback = latestSaleCell()
+      return fallback ? [fallback] : []
+    }
     return [{
       label: '최근 거래',
-      value: formatKoreanPrice(basis.latest.amount),
-      note: dealLine(basis.latest),
+      value: formatKoreanPrice(latest.amount),
+      note: dealLine(latest),
       lead: true,
     }]
   }
@@ -179,9 +202,13 @@ const excludedNotice = computed(() => {
   if (!basis || basis.excluded.length === 0) return null
   const [first] = basis.excluded
   // 대표 시세가 없으면 화면 어디에도 '시세' 를 쓰지 않는다 — 최근 거래 선택에서 뺀 것으로 안내한다.
+  // 정상 거래가 아예 없어 직거래·이상거래를 최근 거래로 보여 주는 중이면 '뺀' 대신 정상 거래가 아니라고만 알린다.
+  const n = basis.excluded.length
   const head = basis.representative != null
-    ? `시세 계산에서 뺀 거래 ${basis.excluded.length}건`
-    : `최근 거래에서 뺀 거래 ${basis.excluded.length}건`
+    ? `시세 계산에서 뺀 거래 ${n}건`
+    : basis.latest
+      ? `최근 거래에서 뺀 거래 ${n}건`
+      : `정상 거래가 아닌 거래 ${n}건`
   return `${head} · ${shortDate(first.date)} ${formatKoreanPrice(first.amount)}(${reasonLabel(first)})`
 })
 </script>

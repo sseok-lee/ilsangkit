@@ -8,6 +8,7 @@ function basis(partial: Partial<PriceBasis> = {}): PriceBasis {
     representative: null,
     sampleCount: 0,
     latest: null,
+    latestAny: null,
     max12m: null,
     yearAgo: null,
     changeRate: null,
@@ -230,5 +231,106 @@ describe('EstatePriceHero', () => {
     const chips = wrapper.findAll('button[aria-pressed]')
     expect(chips[0].text()).toContain('84㎡')
     expect(chips[1].text()).toContain('59㎡')
+  })
+
+  describe('정상 거래가 없을 때 최근 거래', () => {
+    it('shows latestAny as 최근 거래 · 직거래 when no normal deal exists', () => {
+      const overview = makeOverview({
+        saleBasis: {
+          '85': basis({
+            latestAny: { id: 31, date: '2026-05-02', amount: 30500, floor: 4, direct: true },
+            excluded: [{ id: 31, date: '2026-05-02', amount: 30500, floor: 4, reason: 'direct', deviation: null }],
+          }),
+        },
+      })
+      const wrapper = mountHero(overview)
+      const body = wrapper.get('[data-testid="estate-price-body"]').text()
+      expect(body).toContain('최근 거래')
+      expect(body).toContain('3억 500만')
+      expect(body).toContain('26.05.02 · 4층 · 직거래')
+      expect(wrapper.text()).not.toContain('시세')
+      expect(wrapper.text()).toContain('정상 거래가 아닌 거래 1건')
+      expect(wrapper.text()).not.toContain('뺀 거래')
+    })
+
+    it('shows latestAny without direct tag when it is a brokered deal', () => {
+      const overview = makeOverview({
+        saleBasis: {
+          '85': basis({ latestAny: { id: 32, date: '2024-02-01', amount: 41000, floor: null, direct: false } }),
+        },
+      })
+      const body = mountHero(overview).get('[data-testid="estate-price-body"]').text()
+      expect(body).toContain('4억 1,000만')
+      expect(body).toContain('24.02.01')
+      expect(body).not.toContain('직거래')
+    })
+
+    it('falls back to overview.latestSale when the group has no deal in the loaded window', () => {
+      const overview = makeOverview({
+        saleBasis: {},
+        latestSale: { id: 9, amount: 27000, year: 2021, month: 3, day: 5, area: '84.43', floor: 2 },
+      })
+      const wrapper = mountHero(overview)
+      const body = wrapper.get('[data-testid="estate-price-body"]').text()
+      expect(body).toContain('최근 거래')
+      expect(body).toContain('2억 7,000만')
+      expect(body).toContain('21.03.05')
+      expect(body).toContain('전용 84.43㎡')
+      expect(wrapper.text()).not.toContain('시세')
+    })
+
+    it('falls back to latestSale when basis exists but has no deal at all', () => {
+      const overview = makeOverview({
+        saleBasis: { '85': basis() },
+        latestSale: { id: 9, amount: 27000, year: 2021, month: 3, day: null, area: null, floor: null },
+      })
+      const body = mountHero(overview).get('[data-testid="estate-price-body"]').text()
+      expect(body).toContain('2억 7,000만')
+      expect(body).toContain('21.03')
+    })
+
+    it('rent URL fallback labels the sale deal as 최근 매매', () => {
+      const overview = makeOverview({
+        basisMode: 'jeonse',
+        saleBasis: {},
+        jeonseBasis: {},
+        latestSale: { id: 9, amount: 27000, year: 2021, month: 3, day: 5, area: '84.43', floor: 2 },
+      })
+      const wrapper = mountHero(overview)
+      expect(wrapper.text()).toContain('최근 매매')
+      expect(wrapper.text()).not.toContain('시세')
+    })
+  })
+
+  describe('현재 모드 거래가 없는 면적 칩', () => {
+    const mixed: AreaGroup[] = [
+      { key: '60', label: '59', pyeong: 18, saleCount36m: 0, jeonseCount36m: 12 },
+      { key: '85', label: '84', pyeong: 26, saleCount36m: 30, jeonseCount36m: 4 },
+    ]
+
+    it('hides chips with zero count for the basis mode', () => {
+      const wrapper = mountHero(makeOverview({ areaGroups: mixed }))
+      const chips = wrapper.findAll('button[aria-pressed]')
+      expect(chips).toHaveLength(1)
+      expect(chips[0].text()).toContain('84㎡')
+      expect(wrapper.text()).not.toContain('매매 0건')
+    })
+
+    it('keeps the active group even with zero count', () => {
+      const wrapper = mountHero(makeOverview({ areaGroups: mixed }), '60')
+      const chips = wrapper.findAll('button[aria-pressed]')
+      expect(chips).toHaveLength(2)
+      expect(wrapper.get('button[aria-pressed="true"]').text()).toContain('59㎡')
+    })
+
+    it('rent URL hides groups without jeonse deals', () => {
+      const groups: AreaGroup[] = [
+        { key: '60', label: '59', pyeong: 18, saleCount36m: 9, jeonseCount36m: 0 },
+        { key: '85', label: '84', pyeong: 26, saleCount36m: 30, jeonseCount36m: 4 },
+      ]
+      const wrapper = mountHero(makeOverview({ basisMode: 'jeonse', areaGroups: groups, jeonseBasis: {} }))
+      expect(wrapper.findAll('button[aria-pressed]')).toHaveLength(1)
+      expect(wrapper.text()).not.toContain('전세 0건')
+    })
   })
 })
