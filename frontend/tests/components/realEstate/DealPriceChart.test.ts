@@ -93,7 +93,7 @@ async function mountFlow(data = flowPoints) {
 
 
 describe('DealPriceChart', () => {
-  it.each(['sale', 'jeonse', 'wolse'] as const)('%s에서 기존 월 표시만 평균으로 바꾼다', async mode => {
+  it.each(['sale', 'jeonse', 'wolse'] as const)('%s에서 기존 월 표시만 중간값으로 바꾼다', async mode => {
     const wrapper = mount(DealPriceChart, {
       props: {
         points: [100, 101, 101].map((amount, index) => ({
@@ -106,7 +106,7 @@ describe('DealPriceChart', () => {
     expect(wrapper.get<HTMLSelectElement>('select[name="deal-date"]').element.value).toBe('2026-08-03')
     await wrapper.get('select[name="deal-month"]').setValue('2026-08')
     expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('101만원')
-    expect(wrapper.text()).toContain('월별 평균')
+    expect(wrapper.text()).toContain('월별 중간값')
     expect(wrapper.text()).not.toContain('중앙값')
     expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(3)
     wrapper.unmount()
@@ -193,7 +193,7 @@ describe('DealPriceChart', () => {
         window: { from: '2026-08-01', to: '2026-10-31' }, mode: 'sale', loading: false,
       },
     })
-    expect(wrapper.text()).toContain('월별 평균')
+    expect(wrapper.text()).toContain('월별 중간값')
     await wrapper.get('select[name="deal-month"]').setValue('2026-08')
     expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('4억')
     expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(2)
@@ -307,5 +307,25 @@ describe('DealPriceChart', () => {
     })
     await error.get('button').trigger('click')
     expect(error.emitted('retry')).toHaveLength(1)
+  })
+
+  it('DealPriceChart lists excluded deal with tag', async () => {
+    const data: DealPoint[] = [
+      { ...points[0], id: 21, date: '2026-10-02', amount: 90000, flag: 'normal' },
+      { ...points[0], id: 22, date: '2026-10-03', amount: 53000, flag: 'outlier' },
+      { ...points[0], id: 23, date: '2026-10-04', amount: 91000, flag: 'direct' },
+    ]
+    const wrapper = mount(DealPriceChart, {
+      props: { points: data, window: { from: '2026-10-01', to: '2026-10-31' }, mode: 'sale', loading: false },
+    })
+    await nextTick()
+    await wrapper.get('select[name="deal-month"]').setValue('2026-10')
+    const rows = wrapper.findAll('[data-testid="deal-point-row"]')
+    expect(rows).toHaveLength(3)
+    const text = (id: number) => rows.find(row => row.attributes('data-deal-id') === String(id))!.text()
+    expect(text(22)).toContain('시세 제외')
+    expect(text(23)).toContain('직거래')
+    expect(text(21)).not.toContain('시세 제외')
+    expect(text(21)).not.toContain('직거래')
   })
 })

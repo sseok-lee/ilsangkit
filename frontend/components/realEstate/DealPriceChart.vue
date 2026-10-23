@@ -31,7 +31,7 @@
         <div class="mb-3 flex flex-wrap items-center gap-4 text-sm text-muted">
           <span class="inline-flex items-center gap-2 font-medium text-strong">
             <span class="h-0.5 w-5 bg-primary" />
-            월별 평균
+            월별 중간값
           </span>
           <span>{{ window.from }}–{{ window.to }}</span>
           <span>{{ modeUnitLabel }}</span>
@@ -70,7 +70,7 @@
             <span class="absolute translate-x-1/2" :style="{ right: `${plotPadding.right}px` }">{{ dateTicks[1].label }}</span>
           </div>
         </div>
-        <p class="mt-3 text-xs text-muted">조회기간 내 월별 평균 · 거래 없는 달은 앞뒤 거래월을 이어 표시합니다.</p>
+        <p class="mt-3 text-xs text-muted">조회기간 내 월별 중간값 · 거래 없는 달은 앞뒤 거래월을 이어 표시합니다.</p>
       </div>
 
       <aside class="border-line lg:border-l lg:pl-5">
@@ -84,7 +84,7 @@
           </select>
         </label>
         <p v-if="activeMonth" data-testid="monthly-price-summary" class="mb-4 text-sm text-muted">
-          {{ formatDate(activeMonth.month) }} 평균
+          {{ formatDate(activeMonth.month) }} 중간값
           <strong v-if="activeMonth.amount !== null" class="mt-1 block text-xl font-semibold tabular-nums text-strong">{{ formatAmount(activeMonth.amount) }}</strong>
           <span v-else class="mt-1 block">이 달에는 거래가 없습니다</span>
         </p>
@@ -112,10 +112,18 @@
               v-for="point in visibleSelectedPoints"
               :key="point.id"
               data-testid="deal-point-row"
+              :data-deal-id="point.id"
               class="rounded-md border border-line p-3 text-sm"
             >
               <div class="flex items-baseline justify-between gap-3">
-                <strong class="tabular-nums text-strong">{{ formatAmount(point.amount) }}</strong>
+                <span class="flex items-baseline gap-2">
+                  <strong class="tabular-nums text-strong">{{ formatAmount(point.amount) }}</strong>
+                  <span
+                    v-if="point.flag === 'outlier' || point.flag === 'direct'"
+                    data-testid="deal-flag-tag"
+                    class="rounded border border-line px-1.5 py-0.5 text-xs text-muted"
+                  >{{ point.flag === 'outlier' ? '시세 제외' : '직거래' }}</span>
+                </span>
                 <span class="text-muted">전용 {{ point.area }}㎡</span>
               </div>
               <p class="mt-1 text-muted">

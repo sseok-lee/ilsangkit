@@ -521,6 +521,7 @@ import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
+import { summarizeNormalPoints } from '~/utils/realEstatePriceSummary'
 
 definePageMeta({
   path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
@@ -1230,30 +1231,24 @@ const selectedRentType = computed<'jeonse' | 'wolse'>(() =>
   snapshot.value?.filters.mode === 'wolse' ? 'wolse' : 'jeonse',
 )
 
-const exactAmounts = computed(() => snapshot.value?.points.map(point => point.amount) ?? [])
+const normalSummary = computed(() => summarizeNormalPoints(snapshot.value?.points ?? []))
 
-const exactAverage = computed(() => {
-  if (exactAmounts.value.length === 0) return null
-  return exactAmounts.value.reduce((sum, amount) => sum + amount, 0) / exactAmounts.value.length
-})
+const exactMedian = computed(() => normalSummary.value.median)
 
 const periodTradeLabel = computed(() => {
   const months = snapshot.value?.filters.months ?? 0
-  if (months === 0) return '전체 기간 거래'
-  if (months === 6) return '최근 6개월 거래'
-  if (months === 12) return '최근 1년 거래'
-  return '최근 3년 거래'
+  if (months === 0) return '전체 기간 정상 거래'
+  if (months === 6) return '최근 6개월 정상 거래'
+  if (months === 12) return '최근 1년 정상 거래'
+  return '최근 3년 정상 거래'
 })
 
-const periodTradeCount = computed(() => (snapshot.value?.points.length ?? 0).toLocaleString())
+const periodTradeCount = computed(() => normalSummary.value.count.toLocaleString())
 
-const periodPriceExtremes = computed(() => {
-  if (exactAmounts.value.length === 0) return { maxPrice: null, minPrice: null }
-  return {
-    maxPrice: Math.max(...exactAmounts.value),
-    minPrice: Math.min(...exactAmounts.value),
-  }
-})
+const periodPriceExtremes = computed(() => ({
+  maxPrice: normalSummary.value.max,
+  minPrice: normalSummary.value.min,
+}))
 
 const periodMaxPriceLabel = computed(() => {
   const price = periodPriceExtremes.value.maxPrice
@@ -1661,7 +1656,7 @@ watch(overviewFacilitySummary, (value) => {
 watch(snapshot, (value) => {
   const totalCount = value?.table.total ?? 0
   summary.value = {
-    recentAvg: exactAverage.value,
+    recentAvg: exactMedian.value,
     previousAvg: null,
     changeRate: null,
     totalCount,
