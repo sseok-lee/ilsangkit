@@ -68,24 +68,24 @@ async function expectRenderedDetailState(
     expect(url.pathname).toBe(buildingPath)
     expect(url.searchParams.has('mode')).toBe(false)
     await expect(page.getByLabel('거래 유형')).toHaveValue('sale')
-    await expect(page.getByText('적용 조건 · 매매 · 전용 84.90㎡ · 전체 기간')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 매매 · 전용 84㎡ · 전체 기간')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('8억 7,000만원')
-    await expect(page.getByTestId('detail-transaction-card').first()).toContainText('8억 7,000만원')
+    await expect(page.getByTestId('detail-transaction-row').first()).toContainText('8억 7,000만원')
   } else if (mode === 'jeonse') {
     expect(url.pathname).toBe(rentPath)
     expect(url.searchParams.get('mode')).toBe('jeonse')
     await expect(page.getByLabel('거래 유형')).toHaveValue('jeonse')
-    await expect(page.getByText('적용 조건 · 전세 · 전용 84.90㎡ · 전체 기간')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 전세 · 전용 84㎡ · 전체 기간')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('6억 1,000만원')
-    await expect(page.getByTestId('detail-transaction-card').first()).toContainText('6억 1,000만원')
+    await expect(page.getByTestId('detail-transaction-row').first()).toContainText('6억 1,000만원')
   } else {
     expect(url.pathname).toBe(rentPath)
     expect(url.searchParams.get('mode')).toBe('wolse')
     await expect(page.getByLabel('거래 유형')).toHaveValue('wolse')
-    await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
+    await expect(page.getByText('적용 조건 · 월세 · 전용 84㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
     await expect(page.getByTestId('deal-point-row').first()).toContainText('120만원')
     await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 1억')
-    await expect(page.getByTestId('detail-transaction-card').first()).toContainText('1억 / 120만원')
+    await expect(page.getByTestId('detail-transaction-row').first()).toContainText('1억 / 120만원')
   }
 }
 
@@ -109,7 +109,7 @@ test('preserved base stays 200 and an unpublished hash suffix is not accepted', 
   const canonical = await request.get(preservedSalePath)
   expect(canonical.status()).toBe(200)
   expect(await canonical.text()).toContain(`rel="canonical" href="https://ilsangkit.co.kr${preservedSalePath}"`)
-  const hashSuffix = await request.get(`${preservedSalePath}/${preservedKey}?area=84.90&months=12`, { maxRedirects: 0 })
+  const hashSuffix = await request.get(`${preservedSalePath}/${preservedKey}?area=85&months=12`, { maxRedirects: 0 })
   expect(hashSuffix.status()).toBe(404)
 })
 
@@ -179,7 +179,7 @@ test('initial mobile detail hydration does not emit Vue hydration mismatch while
 
   expect(hydrationMessages).toEqual([])
   await expectRenderedDetailState(page, 'sale')
-  await expectSsrPayloadContains(page, '8억 7,000만원')
+  await expectSsrPayloadContains(page, '8억 6,500만원')
 })
 
 test('sale to wolse preserves the internal buildingKey, URL mode, browser state, and API mode across reload and back', async ({
@@ -189,21 +189,21 @@ test('sale to wolse preserves the internal buildingKey, URL mode, browser state,
   await page.goto(buildingPath)
   await hydrated(page)
   await expectRenderedDetailState(page, 'sale')
-  await expectSsrPayloadContains(page, '8억 7,000만원')
+  await expectSsrPayloadContains(page, '8억 6,500만원')
 
-  await page.getByLabel('전용면적').selectOption('84.91')
+  await page.locator('select[name="area"]').selectOption('60')
   await page.getByLabel('조회 기간').selectOption('12')
   await page.getByLabel('거래 유형').selectOption('wolse')
   await expect(page).toHaveURL(`http://127.0.0.1:13000${rentPath}?mode=wolse`)
   await hydrated(page)
   await expect(page.getByLabel('거래 유형')).toHaveValue('wolse')
-  await expect(page.getByLabel('전용면적')).toHaveValue('84.90')
+  await expect(page.locator('select[name="area"]')).toHaveValue('85')
   await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   await latestDetailRequest(request, 'wolse')
-  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
+  await expect(page.getByText('적용 조건 · 월세 · 전용 84㎡ · 전체 기간 · 보증금 1억')).toBeVisible()
   await expect(page.getByTestId('deal-point-row').first()).toContainText('120만원')
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 1억')
-  await expect(page.getByTestId('detail-transaction-card').first()).toContainText('1억 / 120만원')
+  await expect(page.getByTestId('detail-transaction-row').first()).toContainText('1억 / 120만원')
 
   await page.reload()
   await hydrated(page)

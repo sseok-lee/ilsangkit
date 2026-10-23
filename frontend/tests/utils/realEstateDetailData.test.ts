@@ -87,7 +87,7 @@ describe('hasUsableRealEstateDetailData', () => {
             deposit: null,
           },
           window: { from: '2026-03-21', to: '2026-09-21' },
-          options: { areas: ['84.90'], deposits: [] },
+          options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
           points: [],
           table: { items: [], total: 0, page: 1, totalPages: 0 },
           generatedAt: '2026-09-21T00:00:00.000Z',

@@ -41,6 +41,8 @@ function sqlText(query: unknown): string {
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
+  // 대표 시세용 매매·전세 로드(6·7번째 쿼리)는 별도 지정이 없으면 빈 결과
+  mockQueryRaw.mockResolvedValue([]);
   mockGetBuildingInfo.mockReset();
   mockGetCanonicalPath.mockReset();
   mockGetCanonicalPath.mockResolvedValue(null);
@@ -52,6 +54,152 @@ beforeEach(() => {
     buildYear: 2010,
     minArea: 59.9,
     maxArea: 114.8,
+  });
+});
+
+const OCT_SALE: Array<[number, string, number, number]> = [
+  [1, '2026-10-19', 91000, 20],
+  [2, '2026-10-18', 88000, 5],
+  [3, '2026-10-17', 94000, 8],
+  [4, '2026-10-17', 95000, 9],
+  [5, '2026-10-14', 53000, 12],
+  [6, '2026-10-14', 97000, 20],
+  [7, '2026-10-12', 100000, 17],
+  [8, '2026-10-04', 91000, 8],
+  [9, '2026-10-02', 103000, 15],
+  [10, '2026-09-22', 92500, 10],
+  [11, '2026-09-10', 90000, 7],
+];
+
+const rawBasis = (id: number, date: string, amount: number, area: string, floor: number | null = 5, direct = 0n) => ({
+  id, date, amount: BigInt(amount), area, floor, direct,
+});
+
+const NOW = new Date('2026-10-23T03:00:00Z');
+
+function mockOverviewBase(): void {
+  mockQueryRaw
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([{ count: 0n }])
+    .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+    .mockResolvedValueOnce([{ dongName: '역삼동', jibun: '1', roadName: null }])
+    .mockResolvedValueOnce([]);
+}
+
+describe('getDetailOverview price basis', () => {
+  it('adds area groups and sale basis on sale URL', async () => {
+    mockOverviewBase();
+    mockQueryRaw
+      .mockResolvedValueOnce(OCT_SALE.map(([id, date, amount, floor]) => rawBasis(id, date, amount, '84.97', floor)))
+      .mockResolvedValueOnce([rawBasis(50, '2026-10-01', 40000, '59.89')]);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.basisMode).toBe('sale');
+    expect(overview?.defaultAreaGroup).toBe('85');
+    expect(overview?.areaGroups.map((g) => g.key)).toEqual(['60', '85']);
+    expect(overview?.saleBasis['85'].representative).toBe(94000);
+    expect(overview?.saleBasis['85'].excluded).toHaveLength(1);
+    expect(overview?.saleBasis['85'].excluded[0]).toMatchObject({ id: 5, reason: 'outlier', deviation: -0.43 });
+    expect(Object.keys(overview?.jeonseBasis ?? {})).toEqual(['60']);
+    expect(overview?.latestSale).toBeNull();
+  });
+
+  it('rent URL prefers jeonse', async () => {
+    mockOverviewBase();
+    mockQueryRaw
+      .mockResolvedValueOnce([
+        rawBasis(1, '2026-10-01', 90000, '84.97'),
+        rawBasis(2, '2026-09-01', 91000, '84.97'),
+      ])
+      .mockResolvedValueOnce([
+        rawBasis(10, '2026-10-05', 40000, '59.89'),
+        rawBasis(11, '2026-09-05', 41000, '59.89'),
+        rawBasis(12, '2026-08-05', 42000, '59.89'),
+        rawBasis(13, '2026-08-01', 60000, '84.97'),
+      ]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.basisMode).toBe('jeonse');
+    expect(overview?.defaultAreaGroup).toBe('60');
+    expect(overview?.jeonseBasis['60'].representative).toBe(41000);
+    expect(overview?.jeonseBasis['60'].sampleCount).toBe(3);
+    expect(sqlText(mockQueryRaw.mock.calls[5][0])).toContain('FROM AptSaleTransaction t');
+    expect(sqlText(mockQueryRaw.mock.calls[6][0])).toContain('FROM AptRentTransaction t');
+    expect((mockQueryRaw.mock.calls[6][0] as Prisma.Sql).values).toContain('전세');
+  });
+
+  it('sale URL with no sale deals', async () => {
+    mockOverviewBase();
+    mockQueryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        rawBasis(10, '2026-10-05', 40000, '59.89'),
+        rawBasis(11, '2026-09-05', 41000, '59.89'),
+      ]);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.basisMode).toBe('sale');
+    expect(overview?.areaGroups).toHaveLength(1);
+    expect(overview?.defaultAreaGroup).toBe('60');
+    expect(overview?.saleBasis).toEqual({});
+    expect(overview?.jeonseBasis['60'].representative).toBeNull();
+    expect(overview?.jeonseBasis['60'].latest?.id).toBe(10);
+  });
+
+  it('building without any deals has no area groups', async () => {
+    mockOverviewBase();
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.areaGroups).toEqual([]);
+    expect(overview?.defaultAreaGroup).toBeNull();
+    expect(overview?.saleBasis).toEqual({});
+    expect(overview?.jeonseBasis).toEqual({});
+  });
+
+  it('basis loader keeps address scope', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2', roadName: null }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await getDetailOverview('villa-sale', { bjdCode: '11680', buildingName: '스톤빌리지', buildingKey: 'a'.repeat(64) }, NOW);
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(8);
+    for (const index of [6, 7]) {
+      const sql = mockQueryRaw.mock.calls[index][0] as Prisma.Sql;
+      expect(sqlText(sql)).toContain('t.dongName');
+      expect(sqlText(sql)).toContain('t.jibun');
+      expect(sql.values).toContain('대치동');
+      expect(sql.values).toContain('934-2');
+    }
+    expect(sqlText(mockQueryRaw.mock.calls[6][0])).toContain('FROM VillaSaleTransaction t');
+    expect(sqlText(mockQueryRaw.mock.calls[7][0])).toContain('FROM VillaRentTransaction t');
+  });
+
+  it('basis loader excludes cancellations', async () => {
+    mockOverviewBase();
+
+    await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    const saleSql = sqlText(mockQueryRaw.mock.calls[5][0]);
+    expect(saleSql).toContain('cancelDealDay');
+    expect(saleSql).toContain('cancelDealType');
+    expect(saleSql).toContain('직거래');
+    expect(saleSql).toContain('dealAmount');
+    // 기준일 이전 42개월(36개월 + 판정 이웃 6개월)부터
+    expect((mockQueryRaw.mock.calls[5][0] as Prisma.Sql).values).toContain('2023-04-23');
+    const jeonseSql = sqlText(mockQueryRaw.mock.calls[6][0]);
+    expect(jeonseSql).toContain('t.deposit');
+    expect(jeonseSql).not.toContain('직거래');
   });
 });
 

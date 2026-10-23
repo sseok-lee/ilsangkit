@@ -8,6 +8,20 @@ import {
   validKnownDateThrough,
 } from '../lib/realEstateDealSql.js';
 import {
+  PRICE_BASIS,
+  areaGroupKey,
+  buildAreaGroups,
+  chooseDefaultAreaGroup,
+  classifyDeals,
+  classifyDealsDetailed,
+  computePriceBasis,
+  groupByArea,
+  labelAreaGroups,
+  monthsBefore,
+  type BasisDeal,
+  type DealClassification,
+} from '../lib/realEstatePriceBasis.js';
+import {
   getBuildingInfo,
   getTableName,
   serializeRow,
@@ -17,13 +31,15 @@ import {
 import {
   exactDealDateFilter,
   getDetailWindow,
-  normalizeExactArea,
+  normalizeAreaGroupParam,
 } from './realEstateExactFilter.js';
 import {
   getRealEstateCanonicalPath,
   isPreservedRealEstateUrlMode,
 } from './realEstateUrlRegistry.js';
 import type {
+  AreaOption,
+  DealFlag,
   DealMode,
   DealPoint,
   DetailIdentity,
@@ -33,13 +49,17 @@ import type {
   DetailSnapshot,
   LatestSale,
   PeriodMonths,
+  PriceBasis,
   SerializedTransaction,
 } from '../types/housingRedesign.js';
 
 const PAGE_SIZE = 20;
 const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-sale']);
 
-type QueryClient = Pick<typeof prisma, '$queryRaw'>;
+export type QueryClient = Pick<typeof prisma, '$queryRaw'>;
+
+/** 대표 시세 로드 범위: 기본 면적 창 36개월 + 이상거래 판정 이웃 6개월 */
+const BASIS_LOAD_MONTHS = PRICE_BASIS.defaultAreaMonths + 6;
 
 export interface RawDetailPoint {
   id: number;
@@ -62,12 +82,22 @@ interface NormalizedDetailFilter {
   identity: DetailIdentity;
   mode: DealMode;
   months: PeriodMonths;
+  /** 면적 그룹 키 */
   area: string;
   deposit: number | null;
 }
 
-interface RawAreaRow {
+interface RawAreaCountRow {
   area: string | Prisma.Decimal;
+  total: number | bigint;
+  recent: number | bigint | Prisma.Decimal | null;
+}
+
+interface AreaChoice {
+  options: AreaOption[];
+  defaultKey: string | null;
+  /** 매매·전세 모드에서 전 기간 거래를 판정한 플래그(그룹 단위 판정이라 그룹별로 다시 판정한 것과 같다). 월세는 null. */
+  flags: Map<number, DealFlag> | null;
 }
 
 interface RawDepositRow {
@@ -106,11 +136,20 @@ interface RawLocationRow {
   lng: string | number | Prisma.Decimal | null;
 }
 
+interface RawBasisDealRow {
+  id: number;
+  date: string | Date;
+  amount: number | bigint | Prisma.Decimal;
+  area: string | Prisma.Decimal;
+  floor: number | null;
+  direct: number | bigint | boolean | null;
+}
+
 interface RawWindowRow {
   fromDate: string | Date | null;
 }
 
-export function serializeDetailPoints(rows: RawDetailPoint[]): DealPoint[] {
+export function serializeDetailPoints(rows: RawDetailPoint[], flags?: Map<number, DealFlag>): DealPoint[] {
   return rows.map((row) => ({
     id: row.id,
     date: formatDateValue(row.date),
@@ -118,6 +157,7 @@ export function serializeDetailPoints(rows: RawDetailPoint[]): DealPoint[] {
     area: formatArea(row.area),
     floor: row.floor,
     deposit: row.deposit === null ? null : toNumber(row.deposit),
+    flag: flags?.get(row.id) ?? 'normal',
   }));
 }
 
@@ -134,10 +174,9 @@ export async function getDetailSnapshot(
   const identity = await resolveDetailIdentity(type, query);
 
   return prisma.$transaction(async (tx) => {
-    const areas = await getAreaOptions(tx, table, identity, mode, today);
-    const latestArea = await getLatestArea(tx, table, identity, mode, today);
-    const requestedArea = normalizeRequestedArea(query.area);
-    const area = chooseArea(areas, requestedArea, latestArea);
+    const { options: areas, defaultKey, flags: choiceFlags } = await getAreaChoice(tx, type, table, identity, mode, today);
+    const requestedArea = normalizeAreaGroupParam(query.area);
+    const area = chooseArea(areas, requestedArea, defaultKey);
     let adjustment: DetailSnapshot<SerializedTransaction>['adjustment'] =
       requestedArea !== null && area !== requestedArea ? 'area-reset' : null;
 
@@ -168,6 +207,8 @@ export async function getDetailSnapshot(
     const pointRows = await getPointRows(tx, normalized, window);
     const total = await countRows(tx, normalized, window);
     const tableRows = await getTableRows(tx, normalized, window, 1);
+    // 판정은 오버뷰와 같은 함수·같은 입력(그룹의 전 기간 거래)으로 한다. 월세는 판정하지 않는다.
+    const flags = choiceFlags ?? undefined;
 
     return {
       filters: {
@@ -179,7 +220,7 @@ export async function getDetailSnapshot(
       },
       window,
       options: { areas, deposits },
-      points: serializeDetailPoints(pointRows),
+      points: serializeDetailPoints(pointRows, flags),
       table: {
         items: tableRows.map((row) => serializeRow(row) as SerializedTransaction),
         total,
@@ -199,9 +240,9 @@ export async function getDetailPage(
 ): Promise<DetailPage<SerializedTransaction>> {
   const mode = validateMode(type, query.mode);
   const table = tableForMode(type, mode);
-  const area = normalizeRequestedArea(query.area);
+  const area = normalizeAreaGroupParam(query.area);
   if (!area) {
-    throw new Error('detail-page requires exact area');
+    throw new Error('detail-page requires area group');
   }
   let deposit: number | null = null;
   if (mode === 'wolse') {
@@ -254,13 +295,26 @@ export async function getDetailOverview(
   const generatedAt = now.toISOString();
   const today = window6m.to;
 
-  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows] = await Promise.all([
+  const basisFrom = monthsBefore(today, BASIS_LOAD_MONTHS);
+
+  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows, saleDeals, jeonseDeals] = await Promise.all([
     prisma.$queryRaw<RawLatestSaleRow[]>(latestSaleSql(saleTable, identity, today)),
     prisma.$queryRaw<RawCountRow[]>(overviewSaleCountSql(saleTable, identity, window6m)),
     prisma.$queryRaw<RawAreaBoundsRow[]>(overviewAreaBoundsSql(saleTable, rentTable, identity, today)),
     prisma.$queryRaw<RawAddressRow[]>(overviewAddressesSql(saleTable, rentTable, identity)),
     prisma.$queryRaw<RawLocationRow[]>(overviewLocationSql(saleTable, rentTable, identity)),
+    loadBasisDeals(prisma, type, identity, 'sale', today, basisFrom),
+    loadBasisDeals(prisma, type, identity, 'jeonse', today, basisFrom),
   ]);
+
+  const basisMode: 'sale' | 'jeonse' = SALE_TYPES.has(type) ? 'sale' : 'jeonse';
+  const saleClassified = classifyDealsDetailed(saleDeals);
+  const jeonseClassified = classifyDealsDetailed(jeonseDeals);
+  const areaGroups = buildAreaGroups(saleDeals, jeonseDeals, today);
+  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode, today, {
+    sale: saleClassified.flags,
+    jeonse: jeonseClassified.flags,
+  });
 
   const addresses = mergeReportedAddresses(rawAddresses);
   const locationAmbiguous = addresses.length > 1;
@@ -285,8 +339,64 @@ export async function getDetailOverview(
     addresses,
     location,
     locationAmbiguous,
+    basisMode,
+    defaultAreaGroup,
+    areaGroups,
+    saleBasis: priceBasisByGroup(saleDeals, saleClassified, today, PRICE_BASIS.saleSample),
+    jeonseBasis: priceBasisByGroup(jeonseDeals, jeonseClassified, today, PRICE_BASIS.jeonseSample),
     generatedAt,
   };
+}
+
+/** 대표 시세 계산용 거래(취소 제외·유효 계약일·주소 범위). 매매는 dealAmount, 전세는 deposit. */
+export async function loadBasisDeals(
+  client: QueryClient,
+  type: RealEstateType,
+  identity: DetailIdentity,
+  mode: 'sale' | 'jeonse',
+  today: string,
+  fromDate: string | null,
+): Promise<BasisDeal[]> {
+  const table = tableForMode(type, mode);
+  const fromFilter = fromDate === null
+    ? Prisma.empty
+    : Prisma.sql`AND ${exactDealDateFilter({ from: fromDate, to: today }, 't')}`;
+  const rows = await client.$queryRaw<RawBasisDealRow[]>(Prisma.sql`
+    SELECT
+      t.id,
+      DATE_FORMAT(${dealDateExpression('t')}, '%Y-%m-%d') AS date,
+      ${mode === 'sale' ? Prisma.sql`t.dealAmount` : Prisma.sql`t.deposit`} AS amount,
+      CAST(t.exclusiveArea AS CHAR) AS area,
+      t.floor,
+      ${mode === 'sale' ? Prisma.sql`(t.dealType = '직거래')` : Prisma.sql`0`} AS direct
+    FROM ${Prisma.raw(table.table)} t
+    WHERE ${baseWhere(table, identity, mode)}
+      AND ${validKnownDateThrough(today, 't')}
+      AND ${requiredValueWhere(table, mode)}
+      ${fromFilter}
+  `);
+  return rows.map((row) => ({
+    id: row.id,
+    date: formatDateValue(row.date),
+    amount: toNumber(row.amount),
+    area: formatArea(row.area),
+    floor: row.floor,
+    direct: Number(row.direct ?? 0) === 1,
+  }));
+}
+
+function priceBasisByGroup(
+  deals: BasisDeal[],
+  { flags, deviations }: DealClassification,
+  today: string,
+  sampleSize: number,
+): Record<string, PriceBasis> {
+  const groups = groupByArea(deals);
+  const result: Record<string, PriceBasis> = {};
+  for (const key of [...groups.keys()].sort((a, b) => Number(a) - Number(b))) {
+    result[key] = computePriceBasis(groups.get(key) ?? [], flags, today, sampleSize, deviations);
+  }
+  return result;
 }
 
 async function resolveDetailIdentity(type: RealEstateType, input: DetailIdentity, legacyBuilding?: BuildingInfo): Promise<DetailIdentity> {
@@ -372,15 +482,12 @@ function tableForMode(type: RealEstateType, mode: DealMode): TableConfig {
   return { type: tableType, table, property, isSale: mode === 'sale' };
 }
 
-function normalizeRequestedArea(area: string | undefined): string | null {
-  return area === undefined ? null : normalizeExactArea(area);
-}
-
-function chooseArea(areas: string[], requestedArea: string | null, latestArea: string | null): string | null {
+function chooseArea(areas: AreaOption[], requestedArea: string | null, defaultKey: string | null): string | null {
   if (areas.length === 0) return null;
-  if (requestedArea !== null && areas.includes(requestedArea)) return requestedArea;
-  if (latestArea !== null && areas.includes(latestArea)) return latestArea;
-  return areas[0] ?? null;
+  const keys = areas.map((option) => option.key);
+  if (requestedArea !== null && keys.includes(requestedArea)) return requestedArea;
+  if (defaultKey !== null && keys.includes(defaultKey)) return defaultKey;
+  return keys[0] ?? null;
 }
 
 function chooseDeposit(deposits: Array<{ amount: number; count: number }>, requestedDeposit: number | undefined): number | null {
@@ -397,7 +504,7 @@ function emptySnapshot(
   mode: DealMode,
   months: PeriodMonths,
   window: DetailSnapshot<SerializedTransaction>['window'],
-  areas: string[],
+  areas: AreaOption[],
   generatedAt: string,
   adjustment: DetailSnapshot<SerializedTransaction>['adjustment'],
   deposits: Array<{ amount: number; count: number }> = [],
@@ -414,41 +521,69 @@ function emptySnapshot(
   };
 }
 
-async function getAreaOptions(
+/**
+ * 면적 그룹 옵션과 기본 그룹.
+ * - 매매·전세: 전 기간 거래를 loadBasisDeals 로 읽어 옵션(라벨·36개월 수)을 만들고,
+ *   기본 그룹은 오버뷰와 같은 chooseDefaultAreaGroup(현재 모드 쪽만 채움)으로 고른다. 읽은 거래는 판정에 재사용.
+ * - 월세: 면적별 집계 1회, 기본 그룹은 36개월 거래 수 최대(동률이면 작은 키).
+ */
+async function getAreaChoice(
   client: QueryClient,
+  type: RealEstateType,
   table: TableConfig,
   identity: DetailIdentity,
   mode: DealMode,
   today: string,
-): Promise<string[]> {
-  const rows = await client.$queryRaw<RawAreaRow[]>(Prisma.sql`
-    SELECT DISTINCT t.exclusiveArea AS area
-    FROM ${Prisma.raw(table.table)} t
-    WHERE ${baseWhere(table, identity, mode)}
-      AND ${validKnownDateThrough(today, 't')}
-      AND ${requiredValueWhere(table, mode)}
-    ORDER BY area ASC
-  `);
-  return rows.map((row) => formatArea(row.area));
-}
+): Promise<AreaChoice> {
+  if (mode === 'sale' || mode === 'jeonse') {
+    const deals = await loadBasisDeals(client, type, identity, mode, today, null);
+    const sale = mode === 'sale' ? deals : [];
+    const jeonse = mode === 'jeonse' ? deals : [];
+    const groups = buildAreaGroups(sale, jeonse, today);
+    const options = groups.map((group) => ({
+      key: group.key,
+      label: group.label,
+      count: mode === 'sale' ? group.saleCount36m : group.jeonseCount36m,
+    }));
+    const flags = classifyDeals(deals);
+    return {
+      options,
+      defaultKey: chooseDefaultAreaGroup(groups, sale, jeonse, mode, today, { [mode]: flags }),
+      flags,
+    };
+  }
 
-async function getLatestArea(
-  client: QueryClient,
-  table: TableConfig,
-  identity: DetailIdentity,
-  mode: DealMode,
-  today: string,
-): Promise<string | null> {
-  const rows = await client.$queryRaw<RawAreaRow[]>(Prisma.sql`
-    SELECT CAST(t.exclusiveArea AS CHAR) AS area
+  const recentFrom = monthsBefore(today, PRICE_BASIS.defaultAreaMonths);
+  const rows = await client.$queryRaw<RawAreaCountRow[]>(Prisma.sql`
+    SELECT
+      CAST(t.exclusiveArea AS CHAR) AS area,
+      COUNT(*) AS total,
+      SUM(CASE WHEN ${dealDateExpression('t')} > ${recentFrom} THEN 1 ELSE 0 END) AS recent
     FROM ${Prisma.raw(table.table)} t
     WHERE ${baseWhere(table, identity, mode)}
       AND ${validKnownDateThrough(today, 't')}
       AND ${requiredValueWhere(table, mode)}
-    ORDER BY t.dealYear DESC, t.dealMonth DESC, t.dealDay DESC, t.id DESC
-    LIMIT 1
+    GROUP BY t.exclusiveArea
   `);
-  return rows[0] ? formatArea(rows[0].area) : null;
+  const acc = new Map<string, { areas: string[]; count: number }>();
+  for (const row of rows) {
+    const area = formatArea(row.area);
+    const key = areaGroupKey(area);
+    let group = acc.get(key);
+    if (!group) {
+      group = { areas: [], count: 0 };
+      acc.set(key, group);
+    }
+    // labelAreaGroups 는 빈도 기준이므로 행 수만큼 넣는다.
+    for (let i = 0; i < toNumber(row.total); i += 1) group.areas.push(area);
+    group.count += toNumber(row.recent ?? 0);
+  }
+  const labels = labelAreaGroups(new Map([...acc.entries()].map(([key, group]) => [key, group.areas])));
+  const options = [...acc.entries()]
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([key, group]) => ({ key, label: labels.get(key) ?? '', count: group.count }));
+  const defaultOption = [...options].sort((a, b) => b.count - a.count || Number(a.key) - Number(b.key))[0];
+  return { options, defaultKey: defaultOption?.key ?? null, flags: null };
 }
 
 async function getRetainedDetailWindow(
@@ -462,7 +597,7 @@ async function getRetainedDetailWindow(
 ): Promise<DetailSnapshot<SerializedTransaction>['window']> {
   const areaFilter = area === undefined
     ? Prisma.empty
-    : Prisma.sql`AND t.exclusiveArea = ${new Prisma.Decimal(area)}`;
+    : Prisma.sql`AND ${areaGroupWhere(area)}`;
   const depositFilter = mode === 'wolse' && deposit !== undefined && deposit !== null
     ? Prisma.sql`AND t.deposit = ${BigInt(deposit)}`
     : Prisma.empty;
@@ -494,7 +629,7 @@ async function getDepositOptions(
     FROM ${Prisma.raw(table.table)} t
     WHERE ${baseWhere(table, identity, 'wolse')}
       AND ${exactDealDateFilter(window, 't')}
-      AND t.exclusiveArea = ${new Prisma.Decimal(area)}
+      AND ${areaGroupWhere(area)}
       AND ${requiredValueWhere(table, 'wolse')}
     GROUP BY t.deposit
     ORDER BY t.deposit ASC
@@ -565,10 +700,15 @@ function exactFilterWhere(
   return Prisma.sql`
     ${baseWhere(filter.table, filter.identity, filter.mode)}
     AND ${exactDealDateFilter(window, 't')}
-    AND t.exclusiveArea = ${new Prisma.Decimal(filter.area)}
+    AND ${areaGroupWhere(filter.area)}
     AND ${requiredValueWhere(filter.table, filter.mode)}
     ${depositFilter}
   `;
+}
+
+/** 면적 그룹 조건: ROUND(전용면적) = 그룹 키 */
+function areaGroupWhere(key: string): Prisma.Sql {
+  return Prisma.sql`ROUND(t.exclusiveArea) = ${Number(key)}`;
 }
 
 function baseWhere(table: TableConfig, identity: DetailIdentity, mode: DealMode): Prisma.Sql {

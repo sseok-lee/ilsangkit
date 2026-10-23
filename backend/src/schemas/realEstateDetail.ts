@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ValidationError } from '../lib/errors.js';
-import { normalizeExactArea } from '../services/realEstateExactFilter.js';
+import { normalizeAreaGroupParam } from '../services/realEstateExactFilter.js';
 import type { RealEstateType } from '../services/realEstateService.js';
 
 const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-sale']);
@@ -31,7 +31,7 @@ const deposit = z.union([
 const area = z.string()
   .regex(/^\d{1,8}(\.\d{1,2})?$/)
   .refine((value) => Number(value) > 0)
-  .transform(normalizeExactArea)
+  .transform((value) => normalizeAreaGroupParam(value) as string)
   .optional();
 
 export const DetailOverviewQuerySchema = IdentitySchema;

@@ -307,3 +307,46 @@ describe('buildRealEstateDetailMeta - 전월세 거래 종류와 금액', () => 
     expect(description).toContain('보증금 4억·월세 215만원')
   })
 })
+
+describe('buildRealEstateDetailMeta - 대표 시세', () => {
+  it('description uses representative price when present', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...base,
+      summary: {
+        totalCount: 312,
+        recentDeal: { amount: 285000, dealDate: '2025.3' },
+        representative: { amount: 94000, areaLabel: '84', mode: 'sale' },
+      },
+    })
+    expect(description).toContain('84㎡ 매매 시세 약 9억 4,000만원')
+    expect(description).not.toContain('최근')
+    expect(description.length).toBeLessThanOrEqual(120)
+  })
+
+  it('rent URL description uses jeonse representative', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...base,
+      transactionMode: 'rent',
+      summary: {
+        totalCount: 40,
+        recentSale: { amount: 100000, dealDate: '2025.3' },
+        representative: { amount: 50000, areaLabel: '59', mode: 'jeonse' },
+      },
+    })
+    expect(description).toContain('59㎡ 전세 시세 약 5억')
+    expect(description).not.toContain('최근')
+  })
+
+  it('falls back to recent deal without representative', () => {
+    const { description } = buildRealEstateDetailMeta(base)
+    expect(description).toContain('최근 28억 5,000만원(2025.3)')
+  })
+
+  it('title 은 대표 시세와 무관하다', () => {
+    const withRep = buildRealEstateDetailMeta({
+      ...base,
+      summary: { totalCount: 312, representative: { amount: 94000, areaLabel: '84', mode: 'sale' } },
+    })
+    expect(withRep.title).toBe(buildRealEstateDetailMeta(base).title)
+  })
+})

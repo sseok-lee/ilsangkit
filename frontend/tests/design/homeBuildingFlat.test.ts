@@ -25,12 +25,13 @@ describe('단지 상세 흰색 평면형', () => {
     expect(deep).toEqual([])
   })
 
-  it('정렬 컨테이너·PageHead·SummaryRow lead 를 쓰고 자체 머리 CSS 가 없다', () => {
+  it('정렬 컨테이너·PageHead·EstatePriceHero 를 쓰고 자체 머리 CSS 가 없다', () => {
     const src = read(BUILDING)
     expect(src).toContain('page-container')
     expect(src).not.toContain('max-w-[1200px]')
     expect(src).toContain('<PageHead')
-    expect(src).toMatch(/<SummaryRow[\s\S]*?\blead\b[\s\S]*?aria-label="실거래 요약"|<SummaryRow[\s\S]*?aria-label="실거래 요약"[\s\S]*?\blead\b/)
+    expect(src).toContain('<EstatePriceHero')
+    expect(src).not.toContain('<SummaryRow')
     for (const cls of ['.estate-detail-head', '.estate-title', '.estate-summary', '.estate-share-button', '.estate-flat-section', '.estate-section-head']) {
       expect(styleOf(src)).not.toContain(cls)
     }

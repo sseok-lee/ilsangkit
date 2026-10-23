@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DEAL_PLOT_PADDING, groupDealPoints, projectDealPoints, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
+import { DEAL_PLOT_PADDING, groupDealPoints, monthlyTrendStatus, projectDealPoints, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
 import type { DealPoint } from '~/types/housingRedesign'
 
 const base = {
+  flag: 'normal' as const,
   date: '2026-09-12',
   amount: 120,
   area: '84.90',
@@ -11,7 +12,7 @@ const base = {
 }
 
 describe('realEstateDealPlot', () => {
-  it('월평균의 소수를 유지하고 유효한 0과 빈 달을 구분한다', () => {
+  it('월별 중간값의 소수를 유지하고 유효한 0과 빈 달을 구분한다', () => {
     const points: DealPoint[] = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-08-02', amount: 101 },
@@ -21,7 +22,7 @@ describe('realEstateDealPlot', () => {
     const trend = projectMonthlyDealTrend(
       points, { from: '2026-08-01', to: '2026-10-31' }, 400, 288
     )
-    expect(trend[0].amount).toBeCloseTo(302 / 3)
+    expect(trend[0].amount).toBe(101)
     expect(trend[1].amount).toBeNull()
     expect(trend[1].y).toBeNull()
     expect(trend[2].amount).toBe(0)
@@ -29,7 +30,7 @@ describe('realEstateDealPlot', () => {
     expect(points.map(point => point.amount)).toEqual([100, 101, 101, 0])
   })
 
-  it('중복 좌표의 거래도 개별 집계하여 월평균을 계산한다', () => {
+  it('중복 좌표의 거래도 개별 집계하여 월별 중간값을 계산한다', () => {
     const points = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-08-01', amount: 100 },
@@ -39,7 +40,7 @@ describe('realEstateDealPlot', () => {
     ]
     const trend = projectMonthlyDealTrend(points, { from: '2026-08-01', to: '2026-09-30' }, 400, 288)
     expect(trend.map(p => [p.month, p.amount, p.points.length])).toEqual([
-      ['2026-08', 200, 3], ['2026-09', 300, 2],
+      ['2026-08', 100, 3], ['2026-09', 300, 2],
     ])
     expect(points[0].id).toBe(1)
   })
@@ -59,7 +60,7 @@ describe('realEstateDealPlot', () => {
     }
   })
 
-  it('한 날짜만 조회해도 거래 점과 월평균의 좌표가 일치한다', () => {
+  it('한 날짜만 조회해도 거래 점과 월별 중간값의 좌표가 일치한다', () => {
     const points = [{ ...base, id: 1 }]
     const window = { from: base.date, to: base.date }
     const [trend] = projectMonthlyDealTrend(points, window, 320, 288)
@@ -111,5 +112,41 @@ describe('realEstateDealPlot', () => {
     expect(Number.isFinite(projected[0].x)).toBe(true)
     expect(Number.isFinite(projected[0].y)).toBe(true)
     expect(projected[0].points.map(point => point.id)).toEqual([1, 2])
+  })
+
+  it('monthly amount is median of normal points', () => {
+    const o = (id: number, date: string, amount: number, flag: DealPoint['flag'] = 'normal'): DealPoint =>
+      ({ ...base, id, date, amount, area: '84.97', flag })
+    const points = [
+      o(1, '2026-10-19', 91000), o(2, '2026-10-18', 88000), o(3, '2026-10-17', 94000),
+      o(4, '2026-10-17', 95000), o(5, '2026-10-14', 53000, 'outlier'), o(6, '2026-10-14', 97000),
+      o(7, '2026-10-12', 100000), o(8, '2026-10-04', 91000), o(9, '2026-10-02', 103000),
+    ]
+    const trend = projectMonthlyDealTrend(points, { from: '2026-10-01', to: '2026-10-31' }, 400, 288)
+    expect(trend[0].amount).toBe(94500)
+    expect(trend[0].points).toHaveLength(9)
+  })
+
+  it('month with only excluded points has null amount', () => {
+    const points: DealPoint[] = [
+      { ...base, id: 1, date: '2026-09-02', amount: 50000, flag: 'outlier' },
+      { ...base, id: 2, date: '2026-09-03', amount: 60000, flag: 'direct' },
+      { ...base, id: 3, date: '2026-10-03', amount: 70000 },
+    ]
+    const trend = projectMonthlyDealTrend(points, { from: '2026-09-01', to: '2026-10-31' }, 400, 288)
+    expect(trend[0].amount).toBeNull()
+    expect(trend[0].y).toBeNull()
+    expect(trend[0].points).toHaveLength(2)
+    expect(trend[1].amount).toBe(70000)
+  })
+
+  it('제외 거래만 있는 달은 거래 없음이 아니라 정상 거래 없음 · 제외 N건이다', () => {
+    const points: DealPoint[] = [
+      { ...base, id: 1, date: '2026-08-01', amount: 100 },
+      { ...base, id: 2, date: '2026-09-03', amount: 50, flag: 'direct' },
+      { ...base, id: 3, date: '2026-09-04', amount: 300, flag: 'outlier' },
+    ]
+    const trend = projectMonthlyDealTrend(points, { from: '2026-08-01', to: '2026-10-31' }, 400, 288)
+    expect(trend.map(monthlyTrendStatus)).toEqual([null, '정상 거래 없음 · 제외 2건', '거래 없음'])
   })
 })

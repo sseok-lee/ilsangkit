@@ -84,12 +84,12 @@ const snapshot = {
     buildingName: 'A',
     mode: 'wolse',
     months: 6,
-    area: '84.90',
+    area: '85',
     deposit: 0,
   },
   window: { from: '2026-03-21', to: '2026-09-21' },
-  options: { areas: ['84.90'], deposits: [{ amount: 0, count: 2 }] },
-  points: [{ id: 1, date: '2026-09-01', amount: 120, area: '84.90', floor: 7, deposit: 0 }],
+  options: { areas: [{ key: '85', label: '84', count: 2 }], deposits: [{ amount: 0, count: 2 }] },
+  points: [{ id: 1, date: '2026-09-01', amount: 120, area: '84.90', floor: 7, deposit: 0, flag: 'normal' }],
   table: { items: [{ id: 1, monthlyRent: 120, deposit: 0 }], total: 1, page: 1, totalPages: 1 },
   generatedAt: '2026-09-21T00:00:00.000Z',
   adjustment: null,
@@ -159,7 +159,7 @@ describe('real estate detail routes', () => {
       buildingName: 'A',
       mode: 'wolse',
       months: 6,
-      area: '84.90',
+      area: '85',
       deposit: 0,
     });
   });
@@ -204,7 +204,7 @@ describe('real estate detail routes', () => {
       buildingName: 'A',
       mode: 'wolse',
       months: 6,
-      area: '84.90',
+      area: '85',
       deposit: 0,
       page: 2,
     });

@@ -82,7 +82,7 @@ vi.mock('~/composables/useRealEstateDetail', async () => {
           area: '84.90',
           deposit: null,
         },
-        options: { areas: ['84.90'], deposits: [] },
+        options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
         points: [],
         window: { from: '2026-04-01', to: '2026-09-29' },
         table: { items: [], total: 0, page: 1, totalPages: 0 },
@@ -291,6 +291,11 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
           addresses,
           location: null,
           locationAmbiguous: legacyGrouped,
+          basisMode: realEstateType.endsWith('-rent') ? 'jeonse' : 'sale',
+          defaultAreaGroup: '85',
+          areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 3, jeonseCount36m: 2 }],
+          saleBasis: {},
+          jeonseBasis: {},
           generatedAt: '2026-10-15T00:00:00.000Z',
         }
 
@@ -301,7 +306,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
           expect(slots).toHaveLength(1)
           const slot = slots[0]
           const head = wrapper.get('.page-head')
-          const summary = head.get('.summary-row')
+          const summary = head.get('.estate-price-hero')
           const address = head.get(legacyGrouped ? 'a[href="#reported-addresses"]' : 'p.mt-3')
           expect(address.text()).toContain(expectedAddress)
           expect(head.element.contains(slot.element)).toBe(true)
@@ -515,9 +520,9 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const h1s = wrapper.findAll('h1')
     expect(h1s.length).toBe(1)
     expect(h1s.every(h => h.text() === '반포자이')).toBe(true)
-    const summary = wrapper.get('[aria-label="실거래 요약"]')
-    expect(summary.element.tagName).toBe('DL')
-    expect(summary.classes()).toContain('summary-row--lead')
+    // overview 가 아직 없고 오류도 없으면 같은 높이의 스켈레톤으로 자리를 잡는다.
+    expect(wrapper.find('[data-testid="estate-price-hero-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('.summary-row').exists()).toBe(false)
   })
 
   it('Breadcrumb이 viewport에 무관하게 단일 렌더 (hidden md:block 제거됨)', async () => {
@@ -644,6 +649,85 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
+  it('상단 가격 영역은 기본 면적 그룹 대표 시세를 보여주고 칩 선택 시 면적 필터를 바꾼다', async () => {
+    mockDetailOverview = {
+      identity: { bjdCode: '1168010100', buildingName: '반포자이' },
+      latestSale: { id: 1, amount: 52000, year: 2026, month: 10, day: 14, area: '84.90', floor: 12 },
+      buildYear: 2009,
+      minArea: '59.90',
+      maxArea: '84.90',
+      saleCount6m: 12,
+      window6m: { from: '2026-04-23', to: '2026-10-23' },
+      addresses: [{ dongName: '반포동', jibun: '20-43', roadName: '반포대로 58' }],
+      location: null,
+      locationAmbiguous: false,
+      basisMode: 'sale',
+      defaultAreaGroup: '85',
+      areaGroups: [
+        { key: '60', label: '59', pyeong: 18, saleCount36m: 40, jeonseCount36m: 0 },
+        { key: '85', label: '84', pyeong: 26, saleCount36m: 90, jeonseCount36m: 0 },
+      ],
+      saleBasis: {
+        '85': {
+          representative: 94000,
+          sampleCount: 5,
+          latest: { id: 2, date: '2026-10-19', amount: 91000, floor: 20 },
+          latestAny: { id: 2, date: '2026-10-19', amount: 91000, floor: 20, direct: false },
+          max12m: 103000,
+          yearAgo: null,
+          changeRate: null,
+          excluded: [],
+        },
+      },
+      jeonseBasis: {},
+      generatedAt: '2026-10-23T00:00:00.000Z',
+    } as DetailOverview
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    const hero = wrapper.get('.page-head').get('.estate-price-hero')
+    expect(hero.text()).toContain('대표 시세')
+    expect(hero.text()).toContain('9억 4,000만')
+    // 단건 최근 매매(직거래 5.2억)가 머리 대표 가격으로 나오지 않는다.
+    expect(hero.text()).not.toContain('5억 2,000만')
+    expect(wrapper.text()).toContain('2009년 준공')
+    expect(wrapper.text()).toContain('6개월 매매 12건')
+
+    const chip = hero.findAll('button[aria-pressed]').find(b => b.text().includes('59㎡'))!
+    await chip.trigger('click')
+    await flushPromises()
+    expect(mockSetFilters).toHaveBeenCalledWith({ area: '60' })
+  })
+
+  it.each([
+    ['jeonse', 7],
+    ['sale', 0],
+  ] as const)('머리 보조 줄은 basisMode=%s·6개월 매매 %s건이면 매매 수를 뺀다', async (basisMode, saleCount6m) => {
+    mockDetailOverview = {
+      identity: { bjdCode: '1168010100', buildingName: '반포자이' },
+      latestSale: null,
+      buildYear: 2009,
+      minArea: '84.90',
+      maxArea: '84.90',
+      saleCount6m,
+      window6m: { from: '2026-04-23', to: '2026-10-23' },
+      addresses: [{ dongName: '반포동', jibun: '20-43', roadName: '반포대로 58' }],
+      location: null,
+      locationAmbiguous: false,
+      basisMode,
+      defaultAreaGroup: '85',
+      areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 3, jeonseCount36m: 3 }],
+      saleBasis: {},
+      jeonseBasis: {},
+      generatedAt: '2026-10-23T00:00:00.000Z',
+    } as DetailOverview
+
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.text()).toContain('2009년 준공')
+    expect(wrapper.text()).not.toContain('6개월 매매')
+  })
+
   it('상단 요약은 승인된 overview 필드와 flat section anchor를 사용한다', () => {
     const targetPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
@@ -651,19 +735,22 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     )
     const src = readFileSync(targetPath, 'utf-8')
 
-    expect(src).toContain('latestSaleAmountLabel')
-    expect(src).toContain('latestSaleDetailLine')
+    expect(src).toContain('<EstatePriceHero')
+    expect(src).toContain('@select-area="handleHeroAreaSelect"')
+    expect(src).toContain('handleExactFilterPatch({ area: key })')
+    expect(src).not.toContain('latestSaleAmountLabel')
+    expect(src).not.toContain('latestSaleDetailLine')
+    expect(src).not.toContain('<SummaryRow')
     expect(src).toContain('overviewBuildYearLabel')
     expect(src).toContain('overviewAreaRangeLabel')
     expect(src).toContain('overviewSaleCount6mLabel')
-    expect(src).toContain('detailOverview.value?.latestSale')
     expect(src).toContain('<nav class="estate-section-nav"')
     expect(src).toContain('href="#transactions"')
     expect(src).not.toContain('heroStats')
     expect(src).not.toContain('MobileDetailHeader')
     expect(src).not.toContain('PageHero')
     expect(src).toContain('<PageHead')
-    expect(src).toContain('estateSummaryItems')
+    expect(src).not.toContain('estateSummaryItems')
     expect(src).not.toContain('estate-detail-head')
   })
 

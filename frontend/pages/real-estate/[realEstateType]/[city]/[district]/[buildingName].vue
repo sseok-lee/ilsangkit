@@ -67,6 +67,7 @@
         <p v-else class="mt-3 text-[13px] md:text-sm text-faint">
           <AddressLine :address="fullAddress" />
         </p>
+        <p v-if="overviewFactsLine" class="estate-facts">{{ overviewFactsLine }}</p>
 
         <AdBanner
           data-testid="building-header-ad"
@@ -74,7 +75,24 @@
           variant="mobile-banner-320x100"
           only="mobile"
         />
-        <SummaryRow lead class="mt-[22px] md:mt-7" aria-label="실거래 요약" :items="estateSummaryItems" />
+        <EstatePriceHero
+          v-if="detailOverview"
+          class="mt-[22px] md:mt-7"
+          :overview="detailOverview"
+          :selected-area="snapshot?.filters.area ?? detailOverview.defaultAreaGroup"
+          :pending="pending"
+          @select-area="handleHeroAreaSelect"
+        />
+        <div
+          v-else-if="!overviewError"
+          class="estate-price-hero-skeleton mt-[22px] md:mt-7"
+          data-testid="estate-price-hero-skeleton"
+          aria-hidden="true"
+        >
+          <span class="estate-price-hero-skeleton__chips" />
+          <span class="estate-price-hero-skeleton__value" />
+          <span class="estate-price-hero-skeleton__note" />
+        </div>
         <div v-if="overviewError" class="estate-inline-error" role="alert">
           <span>최근 매매 요약을 불러오지 못했습니다. 가격 흐름과 거래 내역은 마지막 성공 데이터를 유지합니다.</span>
           <button type="button" @click="refreshOverview">요약 다시 불러오기</button>
@@ -227,6 +245,7 @@
           class="estate-exact-filters"
           :filters="snapshot.filters"
           :options="snapshot.options"
+          :area-labels="areaLabelMap"
           :pending="pending"
           @patch="handleExactFilterPatch"
         />
@@ -514,12 +533,14 @@ import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import PageHead from '~/components/common/PageHead.vue'
-import SummaryRow, { type SummaryItem } from '~/components/common/SummaryRow.vue'
+import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
+import { resolveDefaultRepresentative } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
+import { summarizeNormalPoints } from '~/utils/realEstatePriceSummary'
 
 definePageMeta({
   path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
@@ -825,6 +846,13 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 const detailOverview = ref<DetailOverview | null>(null)
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
+const areaLabelMap = computed<Record<string, string>>(() =>
+  Object.fromEntries((detailOverview.value?.areaGroups ?? []).map(group => [group.key, group.label]))
+)
+// meta·JSON-LD 는 사용자가 고른 칩이 아닌 기본 그룹의 대표 시세만 쓴다(헤더 기본 상태와 같은 함수).
+const defaultRepresentative = computed(() =>
+  detailOverview.value ? resolveDefaultRepresentative(detailOverview.value) : null
+)
 const recentDealForDisplay = computed(() => resolveLatestSaleDeal(detailOverview.value))
 
 const detailMeta = computed(() => {
@@ -861,7 +889,9 @@ const detailMeta = computed(() => {
     },
     propertyType: propertyTypeParam,
     transactionMode: mode,
-    summary: summary.value ? { totalCount, recentDeal, recentSale } : null,
+    summary: summary.value
+      ? { totalCount, recentDeal, recentSale, representative: defaultRepresentative.value ?? undefined }
+      : null,
     buildYear: buildYearVal,
     areaRange,
     facilitySummary: facilitySummary.value,
@@ -1173,23 +1203,6 @@ const areaRange = computed(() => {
   return `${minArea ?? '?'}~${maxArea ?? '?'}㎡`
 })
 
-const latestSaleAmountLabel = computed(() => {
-  const sale = detailOverview.value?.latestSale
-  return sale?.amount != null && sale.amount > 0 ? formatKoreanPrice(sale.amount) : EMPTY_FIELD_TEXT
-})
-
-const latestSaleDetailLine = computed(() => {
-  const sale = detailOverview.value?.latestSale
-  if (!sale) return '최근 매매 신고 내역 없음'
-  const parts: string[] = []
-  if (sale.area) parts.push(`전용 ${sale.area}㎡`)
-  if (sale.floor !== null && sale.floor !== undefined) parts.push(`${sale.floor}층`)
-  const month = String(sale.month).padStart(2, '0')
-  const day = sale.day == null ? null : String(sale.day).padStart(2, '0')
-  parts.push(`${String(sale.year).slice(2)}.${month}${day ? `.${day}` : ''} 계약`)
-  return parts.join(' · ')
-})
-
 const overviewBuildYearLabel = computed(() => {
   const year = detailOverview.value?.buildYear ?? buildingInfo.value?.buildYear
   return year ? `${year}년` : EMPTY_FIELD_TEXT
@@ -1208,13 +1221,20 @@ const overviewSaleCount6mLabel = computed(() => {
   return Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT
 })
 
-// 머리 요약 줄 — 최근 매매를 강조하고 날짜·면적·층을 보조 줄로 단다
-const estateSummaryItems = computed<SummaryItem[]>(() => [
-  { label: '최근 매매', value: latestSaleAmountLabel.value, note: latestSaleDetailLine.value },
-  { label: '건축연도', value: overviewBuildYearLabel.value },
-  { label: '거래된 전용면적', value: overviewAreaRangeLabel.value },
-  { label: '6개월 매매 · 전체 면적', value: overviewSaleCount6mLabel.value },
-])
+// 머리 보조 줄 — 건축연도·거래된 면적·최근 6개월 매매 수(값 없는 항목은 뺀다).
+// 6개월 매매 수는 매매 기준 화면에서 1건 이상일 때만(전월세 URL 의 '매매 0건'은 혼란만 준다).
+const overviewFactsLine = computed(() => {
+  const parts: string[] = []
+  if (overviewBuildYearLabel.value !== EMPTY_FIELD_TEXT) parts.push(`${overviewBuildYearLabel.value} 준공`)
+  if (overviewAreaRangeLabel.value !== EMPTY_FIELD_TEXT) parts.push(`거래된 전용면적 ${overviewAreaRangeLabel.value}`)
+  const saleCount6m = Number(detailOverview.value?.saleCount6m ?? 0)
+  if (
+    detailOverview.value?.basisMode !== 'jeonse'
+    && saleCount6m > 0
+    && overviewSaleCount6mLabel.value !== EMPTY_FIELD_TEXT
+  ) parts.push(`6개월 매매 ${overviewSaleCount6mLabel.value}`)
+  return parts.join(' · ')
+})
 
 
 const rentRatioTotal = computed(
@@ -1226,30 +1246,24 @@ const selectedRentType = computed<'jeonse' | 'wolse'>(() =>
   snapshot.value?.filters.mode === 'wolse' ? 'wolse' : 'jeonse',
 )
 
-const exactAmounts = computed(() => snapshot.value?.points.map(point => point.amount) ?? [])
+const normalSummary = computed(() => summarizeNormalPoints(snapshot.value?.points ?? []))
 
-const exactAverage = computed(() => {
-  if (exactAmounts.value.length === 0) return null
-  return exactAmounts.value.reduce((sum, amount) => sum + amount, 0) / exactAmounts.value.length
-})
+const exactMedian = computed(() => normalSummary.value.median)
 
 const periodTradeLabel = computed(() => {
   const months = snapshot.value?.filters.months ?? 0
-  if (months === 0) return '전체 기간 거래'
-  if (months === 6) return '최근 6개월 거래'
-  if (months === 12) return '최근 1년 거래'
-  return '최근 3년 거래'
+  if (months === 0) return '전체 기간 정상 거래'
+  if (months === 6) return '최근 6개월 정상 거래'
+  if (months === 12) return '최근 1년 정상 거래'
+  return '최근 3년 정상 거래'
 })
 
-const periodTradeCount = computed(() => (snapshot.value?.points.length ?? 0).toLocaleString())
+const periodTradeCount = computed(() => normalSummary.value.count.toLocaleString())
 
-const periodPriceExtremes = computed(() => {
-  if (exactAmounts.value.length === 0) return { maxPrice: null, minPrice: null }
-  return {
-    maxPrice: Math.max(...exactAmounts.value),
-    minPrice: Math.min(...exactAmounts.value),
-  }
-})
+const periodPriceExtremes = computed(() => ({
+  maxPrice: normalSummary.value.max,
+  minPrice: normalSummary.value.min,
+}))
 
 const periodMaxPriceLabel = computed(() => {
   const price = periodPriceExtremes.value.maxPrice
@@ -1657,7 +1671,7 @@ watch(overviewFacilitySummary, (value) => {
 watch(snapshot, (value) => {
   const totalCount = value?.table.total ?? 0
   summary.value = {
-    recentAvg: exactAverage.value,
+    recentAvg: exactMedian.value,
     previousAvg: null,
     changeRate: null,
     totalCount,
@@ -1684,6 +1698,10 @@ async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
     }
   }
   await setFilters(patch)
+}
+
+async function handleHeroAreaSelect(key: string): Promise<void> {
+  await handleExactFilterPatch({ area: key })
 }
 
 async function goToExactPage(page: number): Promise<void> {
@@ -1735,8 +1753,8 @@ setRealEstateListingSchema(() => {
     lat: info?.lat ?? null,
     lng: info?.lng ?? null,
     image: buildOgImage(info),
-    // summary.recentAvg는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달
-    recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
+    // 대표 시세는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달. 없으면 속성 생략.
+    recentAvg: defaultRepresentative.value ? defaultRepresentative.value.amount * 10_000 : undefined,
     latestDealDate,
   }
 })
@@ -1798,6 +1816,42 @@ const hasNearby = computed(() =>
 <style scoped>
 .estate-header-mobile-ad {
   margin: 16px 0 0;
+}
+
+.estate-facts {
+  margin: 6px 0 0;
+  color: rgb(var(--faint-rgb));
+  font-size: 13px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.estate-price-hero-skeleton {
+  display: grid;
+  gap: 12px;
+  min-height: 196px;
+  border-top: 1px solid rgb(var(--border-rgb));
+  padding-top: 18px;
+}
+
+.estate-price-hero-skeleton span {
+  display: block;
+  border-radius: 6px;
+  background: rgb(var(--paper-rgb));
+}
+
+.estate-price-hero-skeleton__chips {
+  height: 48px;
+}
+
+.estate-price-hero-skeleton__value {
+  width: 60%;
+  height: 44px;
+}
+
+.estate-price-hero-skeleton__note {
+  width: 40%;
+  height: 16px;
 }
 
 .estate-record-note {
