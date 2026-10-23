@@ -117,7 +117,7 @@ export function groupByArea(deals: BasisDeal[]): Map<string, BasisDeal[]> {
   return groups;
 }
 
-/** 표시용 태그: 직거래는 'direct', 그 외는 'normal'. 대표 시세 계산에는 쓰지 않는다(모든 거래 포함). */
+/** 표시용 태그: 직거래는 'direct', 그 외는 'normal'. 중간값 계산에는 쓰지 않는다(모든 거래 포함). */
 export function classifyDeals(deals: BasisDeal[]): Map<number, DealFlag> {
   return new Map(deals.map((d) => [d.id, d.direct ? 'direct' : 'normal']));
 }
@@ -142,7 +142,7 @@ function latestAnyDeal(deals: BasisDeal[]): LatestAnyDeal | null {
 }
 
 /**
- * 대표 시세: 최근 12개월 모든 거래(직거래 포함, 취소 거래는 SQL 에서 이미 빠짐) 중 최신 sampleSize 건의 중간값.
+ * 중간값(representative, 화면 보조 줄): 최근 12개월 모든 거래(직거래 포함, 취소 거래는 SQL 에서 이미 빠짐) 중 최신 sampleSize 건의 중간값.
  * 3건 미만이면 null. 1년 전 값·12개월 최고가·최근 거래도 모든 거래 기준.
  */
 export function computePriceBasis(
