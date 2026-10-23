@@ -38,7 +38,7 @@ export interface DealPoint {
   area: string;
   floor: number | null;
   deposit: number | null;
-  /** 이상거래 판정(같은 면적 그룹·거래 유형 기준). 월세는 항상 'normal'. */
+  /** 직거래 표시 태그(매매만). 전세·월세는 항상 'normal'. */
   flag: DealFlag;
 }
 
@@ -181,7 +181,8 @@ export interface HomeMarket {
   recent: SectionResult<RecentBuilding[]>;
 }
 
-export type DealFlag = 'normal' | 'direct' | 'outlier';
+/** 표시용 태그. 대표 시세는 모든 거래로 계산한다. */
+export type DealFlag = 'normal' | 'direct';
 
 export interface AreaGroup {
   key: string;
@@ -198,23 +199,16 @@ export interface BasisDealRef {
   floor: number | null;
 }
 
-/** 판정과 무관한 가장 최근 거래(직거래·이상거래 포함). 정상 거래가 없을 때 상단 '최근 거래' 표시용. */
+/** 가장 최근 거래(직거래 포함). 상단 '최근 실거래'·'최근 거래' 표시용. */
 export interface LatestAnyDeal extends BasisDealRef {
   direct: boolean;
-}
-
-export interface ExcludedDeal extends BasisDealRef {
-  reason: 'direct' | 'outlier';
-  deviation: number | null;
 }
 
 export interface PriceBasis {
   representative: number | null;
   sampleCount: number;
-  latest: BasisDealRef | null;
   latestAny: LatestAnyDeal | null;
   max12m: number | null;
   yearAgo: number | null;
   changeRate: number | null;
-  excluded: ExcludedDeal[];
 }

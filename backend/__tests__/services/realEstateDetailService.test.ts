@@ -336,7 +336,7 @@ describe('getDetailSnapshot exact filters', () => {
     ]);
   });
 
-  it('points carry outlier flag', async () => {
+  it('points carry only the direct tag (no outlier flag)', async () => {
     const amounts = [100000, 101000, 99000, 100500, 200000, 99500, 100200, 100800, 99800, 100100];
     const basis = amounts.map((amount, index) => basisRow(index + 1, `2026-0${1 + Math.floor(index / 2)}-1${index % 2}`, amount, '84.90'));
     basis.push(basisRow(11, '2026-03-15', 50000, '84.90', 1));
@@ -359,11 +359,11 @@ describe('getDetailSnapshot exact filters', () => {
       area: '85',
     }, new Date('2026-09-21T03:00:00Z'));
 
-    expect(snapshot.points.find((point) => point.id === 5)?.flag).toBe('outlier');
+    expect(snapshot.points.find((point) => point.id === 5)?.flag).toBe('normal');
     expect(snapshot.points.find((point) => point.id === 4)?.flag).toBe('normal');
     expect(snapshot.points.find((point) => point.id === 11)?.flag).toBe('direct');
     expect(snapshot.points.find((point) => point.id === 99)?.flag).toBe('normal');
-    // 플래그 계산용 거래는 기간 제한 없이 읽는다
+    // 태그용 거래는 기간 제한 없이 읽는다
     const basisValues = sqlValues(mockQueryRaw.mock.calls[0][0]);
     expect(basisValues).not.toContain('2025-09-21');
   });
