@@ -7,6 +7,11 @@ export function formatKoreanPrice(amount: number): string {
   return `${roundedAmount.toLocaleString()}만원`
 }
 
+/** 월세 표기: 보증금/월세(만원 단위 입력). 예: 10000·120 → "1억/120만원" */
+export function formatWolsePrice(deposit: number, monthlyRent: number): string {
+  return `${formatKoreanPrice(deposit)}/${formatKoreanPrice(monthlyRent)}`
+}
+
 /**
  * 거리를 사람이 읽기 쉬운 문자열로 변환
  */

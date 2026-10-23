@@ -410,13 +410,36 @@ createServer(async (req, res) => {
       mode: url.searchParams.get('mode'),
       rentType: url.searchParams.get('rentType'),
       excludeBuildingName: url.searchParams.get('excludeBuildingName'),
+      type: url.searchParams.get('type'),
+      limitPerType: url.searchParams.get('limitPerType'),
+      dongName: url.searchParams.get('dongName'),
+      jibun: url.searchParams.get('jibun'),
     })
     const excluded = url.searchParams.get('excludeBuildingName')
-    if (excluded === '모호아파트') return ok(res, { apt: [], villa: [], offitel: [] })
+    if (excluded === '모호아파트') return ok(res, { apt: [], villa: [], offitel: [], targetArea: null })
+    const rentMode = url.searchParams.get('mode') === 'rent'
+    const wolse = rentMode && url.searchParams.get('rentType') === 'wolse'
+    const pageProperty = (url.searchParams.get('type') ?? 'apt-sale').split('-')[0]
+    // 같은 면적 최근가: 같은 유형은 비교 면적(84㎡), 이웃빌라는 대표 면적(59㎡)
+    const withAreaDeal = (row, property, representative = false) => ({
+      ...row,
+      recentCount3y: 21,
+      areaDeal: {
+        areaKey: representative ? '60' : '85',
+        areaLabel: representative ? '59' : '84',
+        isRepresentative: representative && property === pageProperty,
+        date: '2026-09-12',
+        floor: 7,
+        price: wolse ? 10000 : rentMode ? 49800 : 85000,
+        monthlyRent: wolse ? 120 : rentMode ? 0 : null,
+        exclusiveArea: representative ? 59.9 : 84.94,
+      },
+    })
     return ok(res, {
-      apt: [baseBuilding('apt-sale', excluded === '이웃아파트' ? '회복아파트' : '이웃아파트')],
-      villa: [baseBuilding('villa-sale', '이웃빌라')],
-      offitel: [baseBuilding('offitel-sale', '이웃오피스텔')],
+      apt: [withAreaDeal(baseBuilding('apt-sale', excluded === '이웃아파트' ? '회복아파트' : '이웃아파트'), 'apt')],
+      villa: [withAreaDeal(baseBuilding('villa-sale', '이웃빌라'), 'villa', true)],
+      offitel: [withAreaDeal(baseBuilding('offitel-sale', '이웃오피스텔'), 'offitel')],
+      targetArea: { key: '85', label: '84' },
     })
   }
 

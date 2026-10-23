@@ -64,6 +64,15 @@ async function expectRenderedDetailState(
   mode: 'sale' | 'jeonse' | 'wolse'
 ) {
   const url = new URL(page.url())
+  const nearbyHeading = { sale: '주변 아파트 매매가', jeonse: '주변 아파트 전세가', wolse: '주변 아파트 월세가' }[mode]
+  await expect(page.locator('#nearby h3')).toHaveText(nearbyHeading)
+  if (mode === 'wolse') {
+    // 월세는 보증금/월세, 평당가 생략
+    await expect(page.locator('#nearby [data-testid="nearby-row"]').first()).toContainText('1억/120만원')
+    await expect(page.locator('#nearby [data-testid="nearby-row"]').first()).not.toContainText('평당')
+  } else {
+    await expect(page.locator('#nearby [data-testid="nearby-row"]').first()).toContainText('84㎡ · 26.09.12 · 7층')
+  }
   if (mode === 'sale') {
     expect(url.pathname).toBe(buildingPath)
     expect(url.searchParams.has('mode')).toBe(false)
@@ -180,6 +189,16 @@ test('initial mobile detail hydration does not emit Vue hydration mismatch while
   expect(hydrationMessages).toEqual([])
   await expectRenderedDetailState(page, 'sale')
   await expectSsrPayloadContains(page, '84㎡ 최근 매매 8억 7,000만원(')
+
+  // 주변 단지 리스트(1열)도 360px 안에 들어온다
+  await page.locator('#nearby').scrollIntoViewIfNeeded()
+  const widths = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    nearbyRight: Math.ceil(document.querySelector('#nearby')?.getBoundingClientRect().right ?? 0),
+  }))
+  expect(widths.document).toBe(widths.viewport)
+  expect(widths.nearbyRight).toBeLessThanOrEqual(widths.viewport)
 })
 
 test('sale to wolse preserves the internal buildingKey, URL mode, browser state, and API mode across reload and back', async ({

@@ -77,7 +77,7 @@ export const FILES = [
   'pages/index.vue',
   'components/home/HomeMarketSection.vue',
   'components/subscription/HomeSubscriptionSection.vue',
-  'components/realEstate/NearbyComplexCard.vue',
+  'components/realEstate/NearbyComplexList.vue',
   'components/realEstate/RentRatioBar.vue',
   'components/realEstate/TransactionTable.vue',
   'components/realEstate/ExactDealFilters.vue',

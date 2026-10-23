@@ -25,6 +25,17 @@ describe('useRealEstate.getNearby', () => {
     expect(url).not.toContain('rentType')
   })
 
+  it('type·jibun 전달: 빈 지번도 jibun= 으로 보낸다(지번 없음), 미지정이면 생략', async () => {
+    const { getNearby } = useRealEstate()
+    await getNearby('1144012700', 'sale', { type: 'apt-sale', jibun: '' })
+    const [url] = mockFetch.mock.calls[0]
+    expect(url).toContain('type=apt-sale')
+    expect(url).toMatch(/[?&]jibun=(&|$)/)
+    mockFetch.mockClear()
+    await getNearby('1144012700', 'sale', { type: 'apt-sale' })
+    expect(mockFetch.mock.calls[0][0]).not.toContain('jibun')
+  })
+
   it('mode=rent + rentType=jeonse: rentType 포함', async () => {
     const { getNearby } = useRealEstate()
     await getNearby('1144012700', 'rent', { rentType: 'jeonse' })

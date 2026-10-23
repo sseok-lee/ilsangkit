@@ -293,6 +293,33 @@ export interface NearbyComplexItem {
   latestDealMonth: number | null
   lat: number | null
   lng: number | null
+  /** 최근 36개월 거래 수(모든 면적, 해당 모드·rentType). 구 응답(캐시)에는 없을 수 있다. */
+  recentCount3y?: number
+  /** 비교 면적(없으면 대표 면적)의 최근 36개월 최신 거래 1건. null = 36개월 거래 없음, undefined = 구 응답. */
+  areaDeal?: NearbyAreaDeal | null
+}
+
+export interface NearbyAreaDeal {
+  /** ROUND(전용면적) */
+  areaKey: string
+  /** 화면 라벨(정수 버림, 겹치면 소수 첫째 자리) */
+  areaLabel: string
+  /** true = 목표 면적이 그 단지에 없어 대표 면적을 씀(같은 유형 탭만) */
+  isRepresentative: boolean
+  /** YYYY-MM-DD */
+  date: string
+  floor: number | null
+  /** 매매가 또는 보증금(만원) */
+  price: number
+  /** 월세(만원). 매매 null, 전세 0. */
+  monthlyRent: number | null
+  /** 평당가 계산용 실제 전용면적 */
+  exclusiveArea: number
+}
+
+export interface NearbyTargetArea {
+  key: string
+  label: string
 }
 
 // 인근 단지 응답
@@ -300,4 +327,6 @@ export interface NearbyResponse {
   apt: NearbyComplexItem[]
   villa: NearbyComplexItem[]
   offitel: NearbyComplexItem[]
+  /** 현재 단지 비교 면적(상세 기본 면적과 같은 규칙). 구 응답에는 없을 수 있다. */
+  targetArea?: NearbyTargetArea | null
 }

@@ -117,7 +117,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { formatKoreanPrice } from '~/utils/formatters'
+import { formatKoreanPrice, formatWolsePrice } from '~/utils/formatters'
 import { resolveHeroBasis } from '~/utils/realEstateDetailPrice'
 import type { AreaGroup, DetailOverview } from '~/types/housingRedesign'
 
@@ -232,11 +232,6 @@ interface TableCell {
   month: string
 }
 
-/** 월세 칸: 보증금 0·월세 0 이어도 항상 '{보증금}/{월세}' 로 쓴다. */
-function wolsePrice(deposit: number, monthlyRent: number): string {
-  return `${formatKoreanPrice(deposit)}/${formatKoreanPrice(monthlyRent)}`
-}
-
 // 면적별 최근 거래가 표: 칩과 같은 순서·라벨, 그룹 전부(현재 모드 거래가 없는 그룹도 다른 모드 칸이 있을 수 있다).
 // 현재 모드 거래가 없는 행은 칩처럼 고를 수 없다(고르면 아래 필터가 area-reset 된다) — 보기 전용.
 const areaRows = computed(() =>
@@ -248,7 +243,7 @@ const areaRows = computed(() =>
       sale ? { value: formatKoreanPrice(sale.amount), month: shortMonth(sale.date) } : null,
       jeonse ? { value: formatKoreanPrice(jeonse.amount), month: shortMonth(jeonse.date) } : null,
       wolse
-        ? { value: wolsePrice(wolse.deposit, wolse.monthlyRent), month: shortMonth(wolse.date) }
+        ? { value: formatWolsePrice(wolse.deposit, wolse.monthlyRent), month: shortMonth(wolse.date) }
         : null,
     ]
     return { key: group.key, label: group.label, pyeong: group.pyeong, selectable: groupCount(group) > 0, cells }

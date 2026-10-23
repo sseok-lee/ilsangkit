@@ -44,7 +44,7 @@ describe('GET /api/real-estate/nearby', () => {
       .query({ bjdCode: TEST_BJD, mode: 'sale' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Object.keys(res.body.data).sort()).toEqual(['apt', 'offitel', 'villa']);
+    expect(Object.keys(res.body.data).sort()).toEqual(['apt', 'offitel', 'targetArea', 'villa']);
     expect(res.body.data.apt[0].buildingName).toBe('A아파트');
     expect(res.body.data.villa[0].buildingName).toBe('B빌라');
     expect(res.body.data.offitel).toEqual([]);

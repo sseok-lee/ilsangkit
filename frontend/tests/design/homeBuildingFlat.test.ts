@@ -38,10 +38,13 @@ describe('단지 상세 흰색 평면형', () => {
   })
 
   it('SectionBlock 은 모두 flat 이고 하위 공유 섹션도 flat 이다', () => {
+    // 주변 단지 3섹션은 NearbyComplexList 한 블록으로 합쳐졌다(2026-10) — 그 컴포넌트의 SectionBlock 도 함께 본다.
     const src = read(BUILDING)
-    const blocks = [...src.matchAll(/<SectionBlock\b[\s\S]*?>/g)].map((m) => m[0])
-    expect(blocks.length).toBeGreaterThanOrEqual(9)
+    const nearby = read('components/realEstate/NearbyComplexList.vue')
+    const blocks = [...(src + nearby).matchAll(/<SectionBlock\b[\s\S]*?>/g)].map((m) => m[0])
+    expect(blocks.length).toBeGreaterThanOrEqual(7)
     expect(blocks.filter((b) => !b.includes('variant="flat"'))).toEqual([])
+    expect(src).toMatch(/<NearbyComplexList\b/)
     expect(src).toMatch(/<RelatedGuides[^>]*variant="flat"/)
     expect(src).toMatch(/<BlogReviewSection[\s\S]*?variant="flat"[\s\S]*?\/>/)
     expect(src).toMatch(/<DataSourceSection[^>]*variant="flat"/)

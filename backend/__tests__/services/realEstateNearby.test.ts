@@ -55,7 +55,7 @@ describe('getNearbyByBjd', () => {
       { buildingName: 'C오피스텔', type: 'offitel-sale', latestPrice: 400_000_000 },
     ]);
     const result = await getNearbyByBjd(TEST_BJD, 'sale', {});
-    expect(Object.keys(result).sort()).toEqual(['apt', 'offitel', 'villa']);
+    expect(Object.keys(result).sort()).toEqual(['apt', 'offitel', 'targetArea', 'villa']);
     expect(result.apt[0].buildingName).toBe('A아파트');
     expect(result.apt[0].monthlyRent).toBeNull();
     expect(result.villa[0].buildingName).toBe('B빌라');
@@ -66,7 +66,7 @@ describe('getNearbyByBjd', () => {
     // rent path는 transaction 테이블 raw SQL — summary seed는 사용하지 않음.
     // transaction 테이블 시드는 컬럼이 많아 생략. 빈 응답으로도 구조 확인 가능.
     const result = await getNearbyByBjd(TEST_BJD, 'rent', { rentType: 'all' });
-    expect(Object.keys(result).sort()).toEqual(['apt', 'offitel', 'villa']);
+    expect(Object.keys(result).sort()).toEqual(['apt', 'offitel', 'targetArea', 'villa']);
     expect(result.apt).toEqual([]);
     expect(result.villa).toEqual([]);
     expect(result.offitel).toEqual([]);

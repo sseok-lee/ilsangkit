@@ -115,6 +115,12 @@ export const NearbyQuerySchema = z.object({
   dongName: z.string().max(50).optional(),
   excludeBuildingName: z.string().max(100).optional(),
   limitPerType: z.coerce.number().int().positive().max(20).default(4),
+  // 현재 상세 페이지 유형 — 주면 현재 단지 비교 면적(targetArea)과 같은 면적 최근가를 계산한다.
+  type: RealEstateTypeSchema.optional(),
+  // 현재 단지 지번 — overview 와 같은 주소 범위(동+지번)로 비교 면적을 고른다. '' = 지번 없음.
+  jibun: z.string().trim().max(50).optional(),
+  // 비교 면적 키(ROUND(전용면적)) — 주면 기본 면적 계산 대신 이 값을 쓴다.
+  areaKey: z.string().regex(/^\d{1,4}$/).optional(),
 });
 
 export type NearbyQuery = z.infer<typeof NearbyQuerySchema>;
