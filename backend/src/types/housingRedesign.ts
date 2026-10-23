@@ -198,6 +198,11 @@ export interface BasisDealRef {
   floor: number | null;
 }
 
+/** 판정과 무관한 가장 최근 거래(직거래·이상거래 포함). 정상 거래가 없을 때 상단 '최근 거래' 표시용. */
+export interface LatestAnyDeal extends BasisDealRef {
+  direct: boolean;
+}
+
 export interface ExcludedDeal extends BasisDealRef {
   reason: 'direct' | 'outlier';
   deviation: number | null;
@@ -207,6 +212,7 @@ export interface PriceBasis {
   representative: number | null;
   sampleCount: number;
   latest: BasisDealRef | null;
+  latestAny: LatestAnyDeal | null;
   max12m: number | null;
   yearAgo: number | null;
   changeRate: number | null;

@@ -417,6 +417,54 @@ describe('getDetailSnapshot exact filters', () => {
     expect(aggregateValues).toContain('2023-09-21');
   });
 
+  it('colliding group labels get one decimal in sale snapshot options', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([
+        basisRow(1, '2026-09-10', 90000, '84.43'),
+        basisRow(2, '2026-08-10', 91000, '84.43'),
+        basisRow(3, '2026-07-10', 92000, '84.97'),
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0n }])
+      .mockResolvedValueOnce([]);
+
+    const snapshot = await getDetailSnapshot('apt-sale', {
+      bjdCode: '11680',
+      buildingName: 'A',
+      mode: 'sale',
+      months: 6,
+    }, new Date('2026-09-21T03:00:00Z'));
+
+    expect(snapshot.options.areas).toEqual([
+      { key: '84', label: '84.4', count: 2 },
+      { key: '85', label: '84.9', count: 1 },
+    ]);
+  });
+
+  it('colliding group labels get one decimal in wolse snapshot options', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([
+        { area: '84.43', total: 2n, recent: 2n },
+        { area: '84.97', total: 3n, recent: 3n },
+      ])
+      .mockResolvedValueOnce([{ amount: 0n, count: 1n }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0n }])
+      .mockResolvedValueOnce([]);
+
+    const snapshot = await getDetailSnapshot('apt-rent', {
+      bjdCode: '11680',
+      buildingName: 'A',
+      mode: 'wolse',
+      months: 6,
+    }, new Date('2026-09-21T03:00:00Z'));
+
+    expect(snapshot.options.areas).toEqual([
+      { key: '84', label: '84.4', count: 2 },
+      { key: '85', label: '84.9', count: 3 },
+    ]);
+  });
+
   it('months=0 uses the earliest retained group-filter deal date instead of a 36-month cap', async () => {
     mockQueryRaw
       .mockResolvedValueOnce([basisRow(1, '2010-01-02', 1000)])

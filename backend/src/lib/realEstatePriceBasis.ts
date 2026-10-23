@@ -2,6 +2,7 @@ import type {
   AreaGroup,
   BasisDealRef,
   DealFlag,
+  LatestAnyDeal,
   ExcludedDeal,
   PriceBasis,
 } from '../types/housingRedesign.js';
@@ -85,6 +86,35 @@ export function areaGroupLabel(areas: string[]): string {
 
 export function areaGroupPyeong(areas: string[]): number {
   return exclusivePyeong(modalArea(areas));
+}
+
+/** 소수 첫째 자리 버림(부동소수 오차 없이: 84.3 → "84.3"). */
+function floorOneDecimal(value: number): string {
+  return (Math.floor(Math.round(value * 1000) / 100) / 10).toFixed(1);
+}
+
+/**
+ * 그룹 key → 화면 라벨. 기본은 areaGroupLabel(최다 빈도 면적의 정수 버림)이고,
+ * 서로 다른 그룹의 라벨이 겹치면(예: 84.4 → key 84, 84.9 → key 85 가 모두 "84") 겹친 그룹만
+ * 최다 빈도 면적의 소수 첫째 자리 버림("84.4", "84.9")으로 구분한다.
+ * 그룹 경계(x.5)가 소수 첫째 자리에 있으므로 한 자리면 항상 구분된다.
+ */
+export function labelAreaGroups(areasByKey: Map<string, string[]>): Map<string, string> {
+  const base = new Map<string, string>();
+  const seen = new Map<string, number>();
+  for (const [key, areas] of areasByKey) {
+    const label = areaGroupLabel(areas);
+    base.set(key, label);
+    seen.set(label, (seen.get(label) ?? 0) + 1);
+  }
+  const result = new Map<string, string>();
+  for (const [key, label] of base) {
+    result.set(
+      key,
+      (seen.get(label) ?? 0) > 1 ? floorOneDecimal(modalArea(areasByKey.get(key) ?? [])) : label,
+    );
+  }
+  return result;
 }
 
 export interface DealClassification {
@@ -205,6 +235,15 @@ const toRef = (d: BasisDeal): BasisDealRef => ({
   floor: d.floor,
 });
 
+/** 판정과 무관하게 가장 최근 거래 1건(직거래·이상거래 포함). */
+function latestAnyDeal(deals: BasisDeal[]): LatestAnyDeal | null {
+  let best: BasisDeal | null = null;
+  for (const d of deals) {
+    if (best === null || byDateDesc(d, best) < 0) best = d;
+  }
+  return best ? { ...toRef(best), direct: best.direct } : null;
+}
+
 export function computePriceBasis(
   deals: BasisDeal[],
   flags: Map<number, DealFlag>,
@@ -255,6 +294,7 @@ export function computePriceBasis(
     representative,
     sampleCount,
     latest: normalAll.length > 0 ? toRef(normalAll[0]) : null,
+    latestAny: latestAnyDeal(deals),
     max12m: normalWin.length > 0 ? Math.max(...normalWin.map((d) => d.amount)) : null,
     yearAgo,
     changeRate,
@@ -283,63 +323,89 @@ export function buildAreaGroups(
   };
   add(sale, 'sale');
   add(jeonse, 'jeonse');
+  const labels = labelAreaGroups(new Map([...acc.entries()].map(([key, g]) => [key, g.areas])));
   return [...acc.entries()]
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([key, g]) => ({
       key,
-      label: areaGroupLabel(g.areas),
+      label: labels.get(key) ?? areaGroupLabel(g.areas),
       pyeong: areaGroupPyeong(g.areas),
       saleCount36m: g.sale,
       jeonseCount36m: g.jeonse,
     }));
 }
 
-function latestDate(deals: BasisDeal[], key: string): string {
-  let best = '';
+interface SideStats {
+  count: Map<string, number>;
+  latest: Map<string, string>;
+}
+
+/** 36개월 창 안 거래를 그룹별로 센다. normalOnly 면 정상 거래만. */
+function sideStats(
+  deals: BasisDeal[],
+  flags: Map<number, DealFlag>,
+  today: string,
+  normalOnly: boolean,
+): SideStats {
+  const winStart = monthsBefore(today, PRICE_BASIS.defaultAreaMonths);
+  const count = new Map<string, number>();
+  const latest = new Map<string, string>();
   for (const d of deals) {
-    if (areaGroupKey(d.area) === key && d.date > best) best = d.date;
+    if (normalOnly && flags.get(d.id) !== 'normal') continue;
+    if (!(d.date > winStart && d.date <= today)) continue;
+    const key = areaGroupKey(d.area);
+    count.set(key, (count.get(key) ?? 0) + 1);
+    if (d.date > (latest.get(key) ?? '')) latest.set(key, d.date);
+  }
+  return { count, latest };
+}
+
+/** 거래 수 최대 → 동률이면 더 최근 거래 → 그래도 같으면 작은 key. */
+function pickByStats(groups: AreaGroup[], stats: SideStats): string | null {
+  let best: string | null = null;
+  for (const g of groups) {
+    const c = stats.count.get(g.key) ?? 0;
+    if (c <= 0) continue;
+    if (best === null) {
+      best = g.key;
+      continue;
+    }
+    const bc = stats.count.get(best) ?? 0;
+    const date = stats.latest.get(g.key) ?? '';
+    const bestDate = stats.latest.get(best) ?? '';
+    if (c > bc || (c === bc && (date > bestDate || (date === bestDate && Number(g.key) < Number(best))))) {
+      best = g.key;
+    }
   }
   return best;
 }
 
-function pickBySide(
-  groups: AreaGroup[],
-  deals: BasisDeal[],
-  count: (g: AreaGroup) => number,
-): string | null {
-  let best: AreaGroup | null = null;
-  let bestDate = '';
-  for (const g of groups) {
-    const c = count(g);
-    if (c <= 0) continue;
-    const date = latestDate(deals, g.key);
-    if (
-      best === null ||
-      c > count(best) ||
-      (c === count(best) && (date > bestDate || (date === bestDate && Number(g.key) < Number(best.key))))
-    ) {
-      best = g;
-      bestDate = date;
-    }
-  }
-  return best ? best.key : null;
-}
-
+/**
+ * 기본 면적(스펙 3장): 최근 36개월 **정상** 거래 수가 가장 많은 그룹, 동률이면 더 최근 정상 거래가 있는 그룹.
+ * prefer 쪽 → 반대쪽 순서. 양쪽 모두 정상 거래가 없으면(예: 전부 직거래) 같은 규칙을 전체 거래 수로,
+ * 그것도 없으면 가장 작은 key.
+ * flags 를 넘기지 않으면 여기서 판정한다(같은 거래 집합을 이미 판정했다면 넘겨서 재사용).
+ */
 export function chooseDefaultAreaGroup(
   groups: AreaGroup[],
   sale: BasisDeal[],
   jeonse: BasisDeal[],
   prefer: 'sale' | 'jeonse',
+  today: string,
+  flags: { sale?: Map<number, DealFlag>; jeonse?: Map<number, DealFlag> } = {},
 ): string | null {
-  const sides = {
-    sale: { deals: sale, count: (g: AreaGroup): number => g.saleCount36m },
-    jeonse: { deals: jeonse, count: (g: AreaGroup): number => g.jeonseCount36m },
+  const deals = { sale, jeonse };
+  const flagMaps = {
+    sale: flags.sale ?? classifyDeals(sale),
+    jeonse: flags.jeonse ?? classifyDeals(jeonse),
   };
   const other = prefer === 'sale' ? 'jeonse' : 'sale';
-  const picked =
-    pickBySide(groups, sides[prefer].deals, sides[prefer].count) ??
-    pickBySide(groups, sides[other].deals, sides[other].count);
-  if (picked !== null) return picked;
+  for (const normalOnly of [true, false]) {
+    for (const side of [prefer, other] as const) {
+      const picked = pickByStats(groups, sideStats(deals[side], flagMaps[side], today, normalOnly));
+      if (picked !== null) return picked;
+    }
+  }
   const keys = groups.map((g) => g.key).sort((x, y) => Number(x) - Number(y));
   return keys.length > 0 ? keys[0] : null;
 }

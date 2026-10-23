@@ -10,15 +10,16 @@ import {
 import {
   PRICE_BASIS,
   areaGroupKey,
-  areaGroupLabel,
   buildAreaGroups,
   chooseDefaultAreaGroup,
   classifyDeals,
   classifyDealsDetailed,
   computePriceBasis,
   groupByArea,
+  labelAreaGroups,
   monthsBefore,
   type BasisDeal,
+  type DealClassification,
 } from '../lib/realEstatePriceBasis.js';
 import {
   getBuildingInfo,
@@ -95,8 +96,8 @@ interface RawAreaCountRow {
 interface AreaChoice {
   options: AreaOption[];
   defaultKey: string | null;
-  /** 매매·전세 모드에서 읽은 전 기간 거래(판정 플래그용). 월세는 null. */
-  basisDeals: BasisDeal[] | null;
+  /** 매매·전세 모드에서 전 기간 거래를 판정한 플래그(그룹 단위 판정이라 그룹별로 다시 판정한 것과 같다). 월세는 null. */
+  flags: Map<number, DealFlag> | null;
 }
 
 interface RawDepositRow {
@@ -173,7 +174,7 @@ export async function getDetailSnapshot(
   const identity = await resolveDetailIdentity(type, query);
 
   return prisma.$transaction(async (tx) => {
-    const { options: areas, defaultKey, basisDeals } = await getAreaChoice(tx, type, table, identity, mode, today);
+    const { options: areas, defaultKey, flags: choiceFlags } = await getAreaChoice(tx, type, table, identity, mode, today);
     const requestedArea = normalizeAreaGroupParam(query.area);
     const area = chooseArea(areas, requestedArea, defaultKey);
     let adjustment: DetailSnapshot<SerializedTransaction>['adjustment'] =
@@ -207,9 +208,7 @@ export async function getDetailSnapshot(
     const total = await countRows(tx, normalized, window);
     const tableRows = await getTableRows(tx, normalized, window, 1);
     // 판정은 오버뷰와 같은 함수·같은 입력(그룹의 전 기간 거래)으로 한다. 월세는 판정하지 않는다.
-    const flags = basisDeals === null
-      ? undefined
-      : classifyDeals(groupByArea(basisDeals).get(area) ?? []);
+    const flags = choiceFlags ?? undefined;
 
     return {
       filters: {
@@ -309,8 +308,13 @@ export async function getDetailOverview(
   ]);
 
   const basisMode: 'sale' | 'jeonse' = SALE_TYPES.has(type) ? 'sale' : 'jeonse';
+  const saleClassified = classifyDealsDetailed(saleDeals);
+  const jeonseClassified = classifyDealsDetailed(jeonseDeals);
   const areaGroups = buildAreaGroups(saleDeals, jeonseDeals, today);
-  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode);
+  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode, today, {
+    sale: saleClassified.flags,
+    jeonse: jeonseClassified.flags,
+  });
 
   const addresses = mergeReportedAddresses(rawAddresses);
   const locationAmbiguous = addresses.length > 1;
@@ -338,8 +342,8 @@ export async function getDetailOverview(
     basisMode,
     defaultAreaGroup,
     areaGroups,
-    saleBasis: priceBasisByGroup(saleDeals, today, PRICE_BASIS.saleSample),
-    jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
+    saleBasis: priceBasisByGroup(saleDeals, saleClassified, today, PRICE_BASIS.saleSample),
+    jeonseBasis: priceBasisByGroup(jeonseDeals, jeonseClassified, today, PRICE_BASIS.jeonseSample),
     generatedAt,
   };
 }
@@ -381,8 +385,12 @@ export async function loadBasisDeals(
   }));
 }
 
-function priceBasisByGroup(deals: BasisDeal[], today: string, sampleSize: number): Record<string, PriceBasis> {
-  const { flags, deviations } = classifyDealsDetailed(deals);
+function priceBasisByGroup(
+  deals: BasisDeal[],
+  { flags, deviations }: DealClassification,
+  today: string,
+  sampleSize: number,
+): Record<string, PriceBasis> {
   const groups = groupByArea(deals);
   const result: Record<string, PriceBasis> = {};
   for (const key of [...groups.keys()].sort((a, b) => Number(a) - Number(b))) {
@@ -537,10 +545,11 @@ async function getAreaChoice(
       label: group.label,
       count: mode === 'sale' ? group.saleCount36m : group.jeonseCount36m,
     }));
+    const flags = classifyDeals(deals);
     return {
       options,
-      defaultKey: chooseDefaultAreaGroup(groups, sale, jeonse, mode),
-      basisDeals: deals,
+      defaultKey: chooseDefaultAreaGroup(groups, sale, jeonse, mode, today, { [mode]: flags }),
+      flags,
     };
   }
 
@@ -565,15 +574,16 @@ async function getAreaChoice(
       group = { areas: [], count: 0 };
       acc.set(key, group);
     }
-    // areaGroupLabel 은 빈도 기준이므로 행 수만큼 넣는다.
+    // labelAreaGroups 는 빈도 기준이므로 행 수만큼 넣는다.
     for (let i = 0; i < toNumber(row.total); i += 1) group.areas.push(area);
     group.count += toNumber(row.recent ?? 0);
   }
+  const labels = labelAreaGroups(new Map([...acc.entries()].map(([key, group]) => [key, group.areas])));
   const options = [...acc.entries()]
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([key, group]) => ({ key, label: areaGroupLabel(group.areas), count: group.count }));
+    .map(([key, group]) => ({ key, label: labels.get(key) ?? '', count: group.count }));
   const defaultOption = [...options].sort((a, b) => b.count - a.count || Number(a.key) - Number(b.key))[0];
-  return { options, defaultKey: defaultOption?.key ?? null, basisDeals: null };
+  return { options, defaultKey: defaultOption?.key ?? null, flags: null };
 }
 
 async function getRetainedDetailWindow(
