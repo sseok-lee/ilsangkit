@@ -112,7 +112,7 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('점 없이 거래가 있는 월평균을 빈 달 너머로 연결한다', async () => {
+  it('점 없이 거래가 있는 월별 중간값을 빈 달 너머로 연결한다', async () => {
     const wrapper = await mountFlow()
     const path = averagePaths.at(-1)!
     expect(path.map(command => command[0])).toEqual(['M', 'L', 'L'])
@@ -124,7 +124,7 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('여러 빈 달을 건너 연결해도 빈 달의 평균과 거래를 만들지 않는다', async () => {
+  it('여러 빈 달을 건너 연결해도 빈 달의 중간값과 거래를 만들지 않는다', async () => {
     const wrapper = await mountFlow([flowPoints[0], flowPoints[4]])
     expect(averagePaths.at(-1)!.map(command => command[0])).toEqual(['M', 'L'])
     await wrapper.get('select[name="deal-month"]').setValue('2026-09')
@@ -182,7 +182,7 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('월평균을 선택하면 같은 월의 거래를 모두 보여주고 날짜 선택으로 돌아간다', async () => {
+  it('월별 중간값을 선택하면 같은 월의 거래를 모두 보여주고 날짜 선택으로 돌아간다', async () => {
     const wrapper = mount(DealPriceChart, {
       props: {
         points: [
@@ -327,5 +327,23 @@ describe('DealPriceChart', () => {
     expect(text(23)).toContain('직거래')
     expect(text(21)).not.toContain('시세 제외')
     expect(text(21)).not.toContain('직거래')
+  })
+
+  it('제외 거래만 있는 달은 정상 거래 없음 · 제외 N건으로 안내하고 그 거래를 보여준다', async () => {
+    const data: DealPoint[] = [
+      { ...points[0], id: 31, date: '2026-09-02', amount: 90000, flag: 'normal' },
+      { ...points[0], id: 32, date: '2026-10-04', amount: 52000, flag: 'direct' },
+    ]
+    const wrapper = mount(DealPriceChart, {
+      props: { points: data, window: { from: '2026-09-01', to: '2026-10-31' }, mode: 'sale', loading: false },
+    })
+    await nextTick()
+    const option = wrapper.findAll('select[name="deal-month"] option').find(o => o.attributes('value') === '2026-10')!
+    expect(option.text()).toBe('2026.10 · 정상 거래 없음 · 제외 1건')
+    await wrapper.get('select[name="deal-month"]').setValue('2026-10')
+    const summary = wrapper.get('[data-testid="monthly-price-summary"]').text()
+    expect(summary).toContain('정상 거래 없음 · 제외 1건')
+    expect(summary).not.toContain('이 달에는 거래가 없습니다')
+    expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(1)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEAL_PLOT_PADDING, groupDealPoints, projectDealPoints, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
+import { DEAL_PLOT_PADDING, groupDealPoints, monthlyTrendStatus, projectDealPoints, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
 import type { DealPoint } from '~/types/housingRedesign'
 
 const base = {
@@ -12,7 +12,7 @@ const base = {
 }
 
 describe('realEstateDealPlot', () => {
-  it('월평균의 소수를 유지하고 유효한 0과 빈 달을 구분한다', () => {
+  it('월별 중간값의 소수를 유지하고 유효한 0과 빈 달을 구분한다', () => {
     const points: DealPoint[] = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-08-02', amount: 101 },
@@ -30,7 +30,7 @@ describe('realEstateDealPlot', () => {
     expect(points.map(point => point.amount)).toEqual([100, 101, 101, 0])
   })
 
-  it('중복 좌표의 거래도 개별 집계하여 월평균을 계산한다', () => {
+  it('중복 좌표의 거래도 개별 집계하여 월별 중간값을 계산한다', () => {
     const points = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-08-01', amount: 100 },
@@ -60,7 +60,7 @@ describe('realEstateDealPlot', () => {
     }
   })
 
-  it('한 날짜만 조회해도 거래 점과 월평균의 좌표가 일치한다', () => {
+  it('한 날짜만 조회해도 거래 점과 월별 중간값의 좌표가 일치한다', () => {
     const points = [{ ...base, id: 1 }]
     const window = { from: base.date, to: base.date }
     const [trend] = projectMonthlyDealTrend(points, window, 320, 288)
@@ -138,5 +138,15 @@ describe('realEstateDealPlot', () => {
     expect(trend[0].y).toBeNull()
     expect(trend[0].points).toHaveLength(2)
     expect(trend[1].amount).toBe(70000)
+  })
+
+  it('제외 거래만 있는 달은 거래 없음이 아니라 정상 거래 없음 · 제외 N건이다', () => {
+    const points: DealPoint[] = [
+      { ...base, id: 1, date: '2026-08-01', amount: 100 },
+      { ...base, id: 2, date: '2026-09-03', amount: 50, flag: 'direct' },
+      { ...base, id: 3, date: '2026-09-04', amount: 300, flag: 'outlier' },
+    ]
+    const trend = projectMonthlyDealTrend(points, { from: '2026-08-01', to: '2026-10-31' }, 400, 288)
+    expect(trend.map(monthlyTrendStatus)).toEqual([null, '정상 거래 없음 · 제외 2건', '거래 없음'])
   })
 })

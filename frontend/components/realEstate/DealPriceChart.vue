@@ -79,14 +79,15 @@
           <select v-model="selectedMonth" name="deal-month" class="min-h-11 rounded-md border border-line bg-white px-3 text-sm" @change="selectMonth">
             <option value="">월 선택</option>
             <option v-for="month in monthlyTrend" :key="month.month" :value="month.month">
-              {{ formatDate(month.month) }}{{ month.amount === null ? ' · 거래 없음' : '' }}
+              {{ formatDate(month.month) }}{{ monthlyTrendStatus(month) ? ` · ${monthlyTrendStatus(month)}` : '' }}
             </option>
           </select>
         </label>
         <p v-if="activeMonth" data-testid="monthly-price-summary" class="mb-4 text-sm text-muted">
           {{ formatDate(activeMonth.month) }} 중간값
           <strong v-if="activeMonth.amount !== null" class="mt-1 block text-xl font-semibold tabular-nums text-strong">{{ formatAmount(activeMonth.amount) }}</strong>
-          <span v-else class="mt-1 block">이 달에는 거래가 없습니다</span>
+          <span v-else-if="activeMonth.points.length === 0" class="mt-1 block">이 달에는 거래가 없습니다</span>
+          <span v-else class="mt-1 block">{{ monthlyTrendStatus(activeMonth) }}</span>
         </p>
         <label class="grid gap-1 text-sm font-medium text-strong">
           거래 날짜
@@ -154,7 +155,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { DateWindow, DealMode, DealPoint } from '~/types/housingRedesign'
 import { formatKoreanPrice } from '~/utils/formatters'
-import { DEAL_PLOT_PADDING, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
+import { DEAL_PLOT_PADDING, monthlyTrendStatus, projectMonthlyDealTrend } from '~/utils/realEstateDealPlot'
 import type { MonthlyDealTrend } from '~/utils/realEstateDealPlot'
 
 const props = withDefaults(defineProps<{

@@ -112,3 +112,13 @@ export function projectMonthlyDealTrend(
   }
   return result
 }
+
+/**
+ * 월 선택·요약에 붙일 상태 문구. 중간값이 있으면 null.
+ * 제외 거래(직거래·이상거래)만 있는 달을 '거래 없음'이라고 하면 아래 목록과 모순되므로 개수를 밝힌다.
+ */
+export function monthlyTrendStatus(month: Pick<MonthlyDealTrend, 'amount' | 'points'>): string | null {
+  if (month.amount !== null) return null
+  if (month.points.length === 0) return '거래 없음'
+  return `정상 거래 없음 · 제외 ${month.points.length}건`
+}
