@@ -333,16 +333,21 @@
           :hide-building="true"
           presentation="detail"
           :mobile-visible-limit="10"
+          :mobile-expanded="tableMobileExpanded"
+          @mobile-expand="tableMobileExpanded = true"
         />
         <div v-else class="estate-empty">
           {{ emptyFiltered('거래 내역') }}
         </div>
+        <!-- 모바일: 거래 더보기를 누르기 전엔 페이지 번호를 숨긴다(데스크톱은 항상). SSR HTML 에는 남겨 크롤러가 다음 페이지 링크를 본다. -->
         <Pagination
           v-if="table.totalPages > 1"
           :current-page="table.page"
           :total-pages="table.totalPages"
           @page-change="goToExactPage"
           class="mt-4"
+          :class="hidePaginationOnMobile ? 'max-md:hidden' : undefined"
+          data-testid="transaction-pagination"
         />
       </SectionBlock>
 
@@ -1634,6 +1639,10 @@ watch(snapshot, (value) => {
 type FilterPatch = Partial<Pick<DetailQuery, 'mode' | 'months' | 'area' | 'deposit'>>
 
 const lastRequestedTablePage = ref<number | null>(null)
+// 모바일 거래 내역 '더보기'를 눌렀는지 — 누른 뒤에만 페이지 번호를 보인다.
+const tableMobileExpanded = ref(false)
+// 숨긴 거래가 있을 때(10건 초과)만 페이지 번호를 숨긴다 — 마지막 페이지처럼 더보기 버튼이 없는 페이지에서 길이 막히지 않게.
+const hidePaginationOnMobile = computed(() => !tableMobileExpanded.value && table.value.items.length > 10)
 
 async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
   if (patch.mode) {

@@ -417,13 +417,13 @@
       type="button"
       data-testid="mobile-show-more-transactions"
       class="md:hidden mt-3 w-full rounded-lg border border-line py-3 text-sm font-semibold text-ink"
-      @click="mobileExpanded = true"
+      @click="expandMobile"
     >거래 {{ mobileHiddenCount }}건 더보기</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { SaleTransaction, RentTransaction } from '~/types/realEstate'
 import { emptyFiltered } from '~/utils/uiMessages'
 import { formatKoreanPrice } from '~/utils/formatters'
@@ -441,16 +441,25 @@ interface Props {
   presentation?: 'default' | 'detail'
   /** detail 표현 모바일 목록에서 처음 보일 거래 수. 나머지는 더보기로 펼친다. */
   mobileVisibleLimit?: number
+  /** 펼침 상태를 부모가 들고 있을 때(페이지 번호 노출과 맞추려고). 없으면 컴포넌트 안에서 기억한다. */
+  mobileExpanded?: boolean
 }
 
-const props = defineProps<Props>()
+// boolean prop 은 없으면 false 로 캐스팅되므로 기본값을 undefined 로 둬야 "부모가 안 줌"을 구분한다.
+const props = withDefaults(defineProps<Props>(), { mobileExpanded: undefined })
+const emit = defineEmits<{ 'mobile-expand': [] }>()
 
 const saleTransactions = computed(() => props.transactions as SaleTransaction[])
 const rentTransactions = computed(() => props.transactions as RentTransaction[])
 const isDetailPresentation = computed(() => props.presentation === 'detail')
 
-const mobileExpanded = ref(false)
-watch(() => props.transactions, () => { mobileExpanded.value = false })
+// 한 번 펼치면 페이지를 옮겨도 펼친 채로 둔다 — 페이지 번호는 펼친 뒤에만 보이므로(모바일) 다시 접히면 다음 페이지로 갈 길이 막힌다.
+const localExpanded = ref(false)
+const mobileExpanded = computed(() => props.mobileExpanded ?? localExpanded.value)
+function expandMobile(): void {
+  localExpanded.value = true
+  emit('mobile-expand')
+}
 const mobileHiddenCount = computed(() => {
   if (!isDetailPresentation.value || !props.mobileVisibleLimit || mobileExpanded.value) return 0
   return Math.max(0, props.transactions.length - props.mobileVisibleLimit)

@@ -65,6 +65,18 @@ function mountHero(overview: DetailOverview, selectedArea: string | null = null)
   return mount(EstatePriceHero, { props: { overview, selectedArea } })
 }
 
+
+// 표 칸: 데스크톱 전체 표기 + 날짜 / 모바일 짧은 표기
+const cellText = (td: { find: (s: string) => { exists: () => boolean; text: () => string }; text: () => string }): string => {
+  const full = td.find('.estate-price-hero__table-value--full')
+  if (!full.exists()) return td.text()
+  return full.text() + td.find('.estate-price-hero__table-date').text()
+}
+const compactText = (td: { find: (s: string) => { exists: () => boolean; text: () => string }; text: () => string }): string => {
+  const compact = td.find('.estate-price-hero__table-value--compact')
+  return compact.exists() ? compact.text() : td.text()
+}
+
 describe('EstatePriceHero', () => {
   it('leads with the latest deal and shows the median as a sub line', () => {
     const wrapper = mountHero(makeOverview())
@@ -265,13 +277,18 @@ describe('EstatePriceHero', () => {
       // 칩과 같은 순서(매매 거래 수 많은 순)·라벨
       expect(rows[0].get('th').text()).toBe('84㎡ · 26평')
       expect(rows[1].get('th').text()).toBe('59㎡ · 18평')
-      const cells85 = rows[0].findAll('td').map(td => td.text())
+      const cells85 = rows[0].findAll('td').map(cellText)
       expect(cells85[0]).toBe('9억 1,000만원26.10')
       expect(cells85[1]).toBe('4억 7,000만원26.10')
       expect(cells85[2]).toBe('-')
-      const cells60 = rows[1].findAll('td').map(td => td.text())
+      const cells60 = rows[1].findAll('td').map(cellText)
       expect(cells60[1]).toBe('-')
       expect(cells60[2]).toBe('1억/120만원26.09')
+      // 모바일 전용 짧은 표기(4.5억 형식) — 같은 칸에 함께 렌더하고 CSS 로 화면 폭에 따라 하나만 보인다
+      const compact85 = rows[0].findAll('td').map(compactText)
+      expect(compact85[0]).toBe('9.1억')
+      expect(compact85[1]).toBe('4.7억')
+      expect(rows[1].findAll('td').map(compactText)[2]).toBe('1억/120만')
       expect(table.text()).toContain('최근 3년 중 가장 최근 거래 · 출처 국토교통부 실거래가')
       expect(table.text()).not.toContain('시세')
     })
@@ -284,8 +301,9 @@ describe('EstatePriceHero', () => {
         },
       }))
       const rows = wrapper.get('[data-testid="estate-area-latest"]').findAll('tbody tr')
-      expect(rows[0].findAll('td')[2].text()).toBe('0만원/150만원26.08')
-      expect(rows[1].findAll('td')[2].text()).toBe('3억/0만원26.09')
+      expect(cellText(rows[0].findAll('td')[2])).toBe('0만원/150만원26.08')
+      expect(cellText(rows[1].findAll('td')[2])).toBe('3억/0만원26.09')
+      expect(compactText(rows[1].findAll('td')[2])).toBe('3억/0만')
     })
 
     it('rows without a deal in the current mode are display-only', async () => {
