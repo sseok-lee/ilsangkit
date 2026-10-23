@@ -577,6 +577,15 @@ describe('TransactionTable', () => {
       expect(wrapper.emitted('mobile-expand')).toHaveLength(1)
     })
 
+    it('부모가 mobileExpanded 를 주면 그 값을 따른다(다시 마운트돼도 같은 상태)', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10, mobileExpanded: true },
+      })
+
+      expect(hiddenRowCount(wrapper)).toBe(0)
+      expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(false)
+    })
+
     it('거래가 limit 이하이거나 limit이 없으면 숨김·버튼이 없다', () => {
       const few = mount(TransactionTable, {
         props: { transactions: manySales.slice(0, 10), type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },

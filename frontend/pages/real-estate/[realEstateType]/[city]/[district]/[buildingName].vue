@@ -333,6 +333,7 @@
           :hide-building="true"
           presentation="detail"
           :mobile-visible-limit="10"
+          :mobile-expanded="tableMobileExpanded"
           @mobile-expand="tableMobileExpanded = true"
         />
         <div v-else class="estate-empty">
