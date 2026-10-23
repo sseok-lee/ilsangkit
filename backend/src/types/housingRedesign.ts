@@ -120,6 +120,14 @@ export interface DetailOverview {
   addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>;
   location: { lat: number; lng: number } | null;
   locationAmbiguous: boolean;
+  /** 대표 시세 기준 거래 유형: 매매 URL 'sale', 전월세 URL 'jeonse' */
+  basisMode: 'sale' | 'jeonse';
+  defaultAreaGroup: string | null;
+  areaGroups: AreaGroup[];
+  /** 면적 그룹 key → 매매 기준 */
+  saleBasis: Record<string, PriceBasis>;
+  /** 면적 그룹 key → 전세 기준 */
+  jeonseBasis: Record<string, PriceBasis>;
   generatedAt: string;
 }
 

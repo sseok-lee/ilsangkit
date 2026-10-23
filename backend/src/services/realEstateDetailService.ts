@@ -8,6 +8,16 @@ import {
   validKnownDateThrough,
 } from '../lib/realEstateDealSql.js';
 import {
+  PRICE_BASIS,
+  areaGroupKey,
+  buildAreaGroups,
+  chooseDefaultAreaGroup,
+  classifyDealsDetailed,
+  computePriceBasis,
+  monthsBefore,
+  type BasisDeal,
+} from '../lib/realEstatePriceBasis.js';
+import {
   getBuildingInfo,
   getTableName,
   serializeRow,
@@ -33,13 +43,17 @@ import type {
   DetailSnapshot,
   LatestSale,
   PeriodMonths,
+  PriceBasis,
   SerializedTransaction,
 } from '../types/housingRedesign.js';
 
 const PAGE_SIZE = 20;
 const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-sale']);
 
-type QueryClient = Pick<typeof prisma, '$queryRaw'>;
+export type QueryClient = Pick<typeof prisma, '$queryRaw'>;
+
+/** 대표 시세 로드 범위: 기본 면적 창 36개월 + 이상거래 판정 이웃 6개월 */
+const BASIS_LOAD_MONTHS = PRICE_BASIS.defaultAreaMonths + 6;
 
 export interface RawDetailPoint {
   id: number;
@@ -104,6 +118,15 @@ interface RawAddressRow {
 interface RawLocationRow {
   lat: string | number | Prisma.Decimal | null;
   lng: string | number | Prisma.Decimal | null;
+}
+
+interface RawBasisDealRow {
+  id: number;
+  date: string | Date;
+  amount: number | bigint | Prisma.Decimal;
+  area: string | Prisma.Decimal;
+  floor: number | null;
+  direct: number | bigint | boolean | null;
 }
 
 interface RawWindowRow {
@@ -254,13 +277,21 @@ export async function getDetailOverview(
   const generatedAt = now.toISOString();
   const today = window6m.to;
 
-  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows] = await Promise.all([
+  const basisFrom = monthsBefore(today, BASIS_LOAD_MONTHS);
+
+  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows, saleDeals, jeonseDeals] = await Promise.all([
     prisma.$queryRaw<RawLatestSaleRow[]>(latestSaleSql(saleTable, identity, today)),
     prisma.$queryRaw<RawCountRow[]>(overviewSaleCountSql(saleTable, identity, window6m)),
     prisma.$queryRaw<RawAreaBoundsRow[]>(overviewAreaBoundsSql(saleTable, rentTable, identity, today)),
     prisma.$queryRaw<RawAddressRow[]>(overviewAddressesSql(saleTable, rentTable, identity)),
     prisma.$queryRaw<RawLocationRow[]>(overviewLocationSql(saleTable, rentTable, identity)),
+    loadBasisDeals(prisma, type, identity, 'sale', today, basisFrom),
+    loadBasisDeals(prisma, type, identity, 'jeonse', today, basisFrom),
   ]);
+
+  const basisMode: 'sale' | 'jeonse' = SALE_TYPES.has(type) ? 'sale' : 'jeonse';
+  const areaGroups = buildAreaGroups(saleDeals, jeonseDeals, today);
+  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode);
 
   const addresses = mergeReportedAddresses(rawAddresses);
   const locationAmbiguous = addresses.length > 1;
@@ -285,8 +316,66 @@ export async function getDetailOverview(
     addresses,
     location,
     locationAmbiguous,
+    basisMode,
+    defaultAreaGroup,
+    areaGroups,
+    saleBasis: priceBasisByGroup(saleDeals, today, PRICE_BASIS.saleSample),
+    jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
     generatedAt,
   };
+}
+
+/** 대표 시세 계산용 거래(취소 제외·유효 계약일·주소 범위). 매매는 dealAmount, 전세는 deposit. */
+export async function loadBasisDeals(
+  client: QueryClient,
+  type: RealEstateType,
+  identity: DetailIdentity,
+  mode: 'sale' | 'jeonse',
+  today: string,
+  fromDate: string | null,
+): Promise<BasisDeal[]> {
+  const table = tableForMode(type, mode);
+  const fromFilter = fromDate === null
+    ? Prisma.empty
+    : Prisma.sql`AND ${exactDealDateFilter({ from: fromDate, to: today }, 't')}`;
+  const rows = await client.$queryRaw<RawBasisDealRow[]>(Prisma.sql`
+    SELECT
+      t.id,
+      DATE_FORMAT(${dealDateExpression('t')}, '%Y-%m-%d') AS date,
+      ${mode === 'sale' ? Prisma.sql`t.dealAmount` : Prisma.sql`t.deposit`} AS amount,
+      CAST(t.exclusiveArea AS CHAR) AS area,
+      t.floor,
+      ${mode === 'sale' ? Prisma.sql`(t.dealType = '직거래')` : Prisma.sql`0`} AS direct
+    FROM ${Prisma.raw(table.table)} t
+    WHERE ${baseWhere(table, identity, mode)}
+      AND ${validKnownDateThrough(today, 't')}
+      AND ${requiredValueWhere(table, mode)}
+      ${fromFilter}
+  `);
+  return rows.map((row) => ({
+    id: row.id,
+    date: formatDateValue(row.date),
+    amount: toNumber(row.amount),
+    area: formatArea(row.area),
+    floor: row.floor,
+    direct: Number(row.direct ?? 0) === 1,
+  }));
+}
+
+function priceBasisByGroup(deals: BasisDeal[], today: string, sampleSize: number): Record<string, PriceBasis> {
+  const { flags, deviations } = classifyDealsDetailed(deals);
+  const groups = new Map<string, BasisDeal[]>();
+  for (const deal of deals) {
+    const key = areaGroupKey(deal.area);
+    const list = groups.get(key);
+    if (list) list.push(deal);
+    else groups.set(key, [deal]);
+  }
+  const result: Record<string, PriceBasis> = {};
+  for (const key of [...groups.keys()].sort((a, b) => Number(a) - Number(b))) {
+    result[key] = computePriceBasis(groups.get(key) ?? [], flags, today, sampleSize, deviations);
+  }
+  return result;
 }
 
 async function resolveDetailIdentity(type: RealEstateType, input: DetailIdentity, legacyBuilding?: BuildingInfo): Promise<DetailIdentity> {
