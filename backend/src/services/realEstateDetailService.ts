@@ -53,7 +53,7 @@ import type {
   SerializedTransaction,
 } from '../types/housingRedesign.js';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-sale']);
 
 export type QueryClient = Pick<typeof prisma, '$queryRaw'>;

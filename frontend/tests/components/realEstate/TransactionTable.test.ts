@@ -520,4 +520,74 @@ describe('TransactionTable', () => {
       expect(row.text()).not.toMatch(/[↑↓]/)
     })
   })
+
+  describe('상세 모바일 목록 일부만 보이기', () => {
+    const manySales = Array.from({ length: 15 }, (_, i) => ({ ...mockSaleTransactions[0], id: 100 + i }))
+    const manyRents = Array.from({ length: 15 }, (_, i) => ({ ...mockRentTransactions[0], id: 200 + i }))
+    const mobileRows = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.findAll('[data-testid="detail-transaction-row"]')
+    const hiddenRowCount = (wrapper: ReturnType<typeof mount>) =>
+      mobileRows(wrapper).filter((row) => row.classes().includes('hidden')).length
+
+    it('mobileVisibleLimit=10이면 15건 모두 렌더하되 11번째부터 숨기고 더보기 버튼을 보인다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+
+      expect(mobileRows(wrapper)).toHaveLength(15)
+      expect(hiddenRowCount(wrapper)).toBe(5)
+      expect(mobileRows(wrapper)[9].classes()).not.toContain('hidden')
+      expect(mobileRows(wrapper)[10].classes()).toContain('hidden')
+      const button = wrapper.get('[data-testid="mobile-show-more-transactions"]')
+      expect(button.text()).toBe('거래 5건 더보기')
+      expect(button.classes()).toContain('md:hidden')
+    })
+
+    it('더보기를 누르면 숨긴 거래가 모두 보이고 버튼이 사라진다', async () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manyRents, type: 'rent', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+
+      await wrapper.get('[data-testid="mobile-show-more-transactions"]').trigger('click')
+
+      expect(hiddenRowCount(wrapper)).toBe(0)
+      expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(false)
+    })
+
+    it('거래 목록이 바뀌면(페이지 이동) 다시 10건만 보인다', async () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+      await wrapper.get('[data-testid="mobile-show-more-transactions"]').trigger('click')
+
+      await wrapper.setProps({ transactions: manySales.map((tx) => ({ ...tx, id: tx.id + 1000 })) })
+
+      expect(hiddenRowCount(wrapper)).toBe(5)
+      expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(true)
+    })
+
+    it('거래가 limit 이하이거나 limit이 없으면 숨김·버튼이 없다', () => {
+      const few = mount(TransactionTable, {
+        props: { transactions: manySales.slice(0, 10), type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+      const noLimit = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail' },
+      })
+
+      for (const wrapper of [few, noLimit]) {
+        expect(hiddenRowCount(wrapper)).toBe(0)
+        expect(wrapper.find('[data-testid="mobile-show-more-transactions"]').exists()).toBe(false)
+      }
+    })
+
+    it('데스크톱 표는 limit과 무관하게 15건을 모두 보인다', () => {
+      const wrapper = mount(TransactionTable, {
+        props: { transactions: manySales, type: 'sale', loading: false, presentation: 'detail', mobileVisibleLimit: 10 },
+      })
+
+      const desktopRows = wrapper.findAll('table tbody tr')
+      expect(desktopRows).toHaveLength(15)
+      expect(desktopRows.filter((row) => row.classes().includes('hidden'))).toHaveLength(0)
+    })
+  })
 })

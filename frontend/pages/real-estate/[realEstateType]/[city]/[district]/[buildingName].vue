@@ -332,6 +332,7 @@
           :loading="tablePending || pending"
           :hide-building="true"
           presentation="detail"
+          :mobile-visible-limit="10"
         />
         <div v-else class="estate-empty">
           {{ emptyFiltered('거래 내역') }}

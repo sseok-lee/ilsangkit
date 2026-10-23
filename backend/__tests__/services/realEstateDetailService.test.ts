@@ -534,7 +534,7 @@ describe('getDetailPage exact filters', () => {
     expect(tableSql).toContain('ROUND(t.exclusiveArea) = ?');
     expect(tableSql).not.toContain('t.exclusiveArea = ?');
     expect(sqlValues(mockQueryRaw.mock.calls[0][0])).toContain(85);
-    expect(sqlValues(mockQueryRaw.mock.calls[1][0]).slice(-2)).toEqual([20, 20]);
+    expect(sqlValues(mockQueryRaw.mock.calls[1][0]).slice(-2)).toEqual([15, 15]);
     expect(page).toMatchObject({ total: 21, page: 2, totalPages: 2 });
   });
 

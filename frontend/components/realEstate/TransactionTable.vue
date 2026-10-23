@@ -185,10 +185,10 @@
       <!-- 상세 화면 모바일: 두 줄 목록(1줄 금액·날짜, 2줄 층·면적·평당가). 흔하지 않은 값만 태그. -->
       <ul v-else class="md:hidden border-t border-line" data-testid="detail-transaction-list">
         <li
-          v-for="tx in saleTransactions"
+          v-for="(tx, index) in saleTransactions"
           :key="tx.id"
           data-testid="detail-transaction-row"
-          :class="['border-b border-line px-0.5 py-3.5', tx.cancelDealDay ? 'opacity-60' : '']"
+          :class="['border-b border-line px-0.5 py-3.5', tx.cancelDealDay ? 'opacity-60' : '', { hidden: isMobileRowCollapsed(index) }]"
         >
           <div data-testid="tx-line1" class="flex items-baseline justify-between gap-3">
             <strong :class="['text-[17px] font-bold text-strong tabular-nums', tx.cancelDealDay ? 'line-through' : '']">
@@ -380,10 +380,10 @@
       <!-- 상세 화면 모바일: 두 줄 목록(1줄 금액·구분·날짜, 2줄 층·면적·계약기간·갱신·변동률). -->
       <ul v-else class="md:hidden border-t border-line" data-testid="detail-transaction-list">
         <li
-          v-for="tx in rentTransactions"
+          v-for="(tx, index) in rentTransactions"
           :key="tx.id"
           data-testid="detail-transaction-row"
-          class="border-b border-line px-0.5 py-3.5"
+          :class="['border-b border-line px-0.5 py-3.5', { hidden: isMobileRowCollapsed(index) }]"
         >
           <div data-testid="tx-line1" class="flex items-baseline justify-between gap-3">
             <span class="min-w-0">
@@ -411,11 +411,19 @@
         </li>
       </ul>
     </template>
+    <!-- 상세 화면 모바일: 페이지 거래 중 앞부분만 보이고 나머지는 더보기(SSR HTML에는 전부 포함) -->
+    <button
+      v-if="!loading && mobileHiddenCount > 0"
+      type="button"
+      data-testid="mobile-show-more-transactions"
+      class="md:hidden mt-3 w-full rounded-lg border border-line py-3 text-sm font-semibold text-ink"
+      @click="mobileExpanded = true"
+    >거래 {{ mobileHiddenCount }}건 더보기</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { SaleTransaction, RentTransaction } from '~/types/realEstate'
 import { emptyFiltered } from '~/utils/uiMessages'
 import { formatKoreanPrice } from '~/utils/formatters'
@@ -431,6 +439,8 @@ interface Props {
   loading: boolean
   hideBuilding?: boolean
   presentation?: 'default' | 'detail'
+  /** detail 표현 모바일 목록에서 처음 보일 거래 수. 나머지는 더보기로 펼친다. */
+  mobileVisibleLimit?: number
 }
 
 const props = defineProps<Props>()
@@ -438,6 +448,16 @@ const props = defineProps<Props>()
 const saleTransactions = computed(() => props.transactions as SaleTransaction[])
 const rentTransactions = computed(() => props.transactions as RentTransaction[])
 const isDetailPresentation = computed(() => props.presentation === 'detail')
+
+const mobileExpanded = ref(false)
+watch(() => props.transactions, () => { mobileExpanded.value = false })
+const mobileHiddenCount = computed(() => {
+  if (!isDetailPresentation.value || !props.mobileVisibleLimit || mobileExpanded.value) return 0
+  return Math.max(0, props.transactions.length - props.mobileVisibleLimit)
+})
+function isMobileRowCollapsed(index: number): boolean {
+  return mobileHiddenCount.value > 0 && index >= props.mobileVisibleLimit!
+}
 
 const saleColumnsAll: Column[] = [
   { key: 'date', label: '거래일' },
