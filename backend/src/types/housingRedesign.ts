@@ -211,4 +211,8 @@ export interface PriceBasis {
   max12m: number | null;
   yearAgo: number | null;
   changeRate: number | null;
+  /** @deprecated 구 클라이언트 호환(캐시된 페이지 JS 가 읽음) — 항상 []. 다음 릴리스에 제거. */
+  excluded: never[];
+  /** @deprecated 구 클라이언트 호환 — latestAny 에서 direct 를 뺀 값. 다음 릴리스에 제거. */
+  latest: BasisDealRef | null;
 }

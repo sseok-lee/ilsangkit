@@ -172,13 +172,16 @@ export function computePriceBasis(
       ? Math.round((representative / yearAgo - 1) * 1e4) / 1e4
       : null;
 
+  const latestAny = latestAnyDeal(deals);
   return {
     representative,
     sampleCount,
-    latestAny: latestAnyDeal(deals),
+    latestAny,
     max12m: inWindow.length > 0 ? Math.max(...inWindow.map((d) => d.amount)) : null,
     yearAgo,
     changeRate,
+    excluded: [],
+    latest: latestAny ? { id: latestAny.id, date: latestAny.date, amount: latestAny.amount, floor: latestAny.floor } : null,
   };
 }
 

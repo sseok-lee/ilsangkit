@@ -56,8 +56,9 @@ describe('realEstatePriceBasis', () => {
     expect(basis.sampleCount).toBe(5);
     expect(basis.latestAny?.id).toBe(1);
     expect(basis.max12m).toBe(103000);
-    expect(basis).not.toHaveProperty('excluded');
-    expect(basis).not.toHaveProperty('latest');
+    // 구 클라이언트 호환 필드(배포 전 캐시된 페이지의 JS 가 읽는다): 뺀 거래 없음, latest = 가장 최근 거래
+    expect(basis.excluded).toEqual([]);
+    expect(basis.latest).toEqual({ id: 1, date: basis.latestAny?.date, amount: basis.latestAny?.amount, floor: basis.latestAny?.floor });
   });
 
   it('a deal 50% below its neighbours is included in the representative', () => {

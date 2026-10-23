@@ -101,7 +101,7 @@ describe('getDetailOverview price basis', () => {
     expect(overview?.saleBasis['85'].representative).toBe(94000);
     expect(overview?.saleBasis['85'].sampleCount).toBe(5);
     expect(overview?.saleBasis['85'].latestAny).toMatchObject({ id: 1, direct: false });
-    expect(overview?.saleBasis['85']).not.toHaveProperty('excluded');
+    expect(overview?.saleBasis['85'].excluded).toEqual([]);
     expect(Object.keys(overview?.jeonseBasis ?? {})).toEqual(['60']);
     expect(overview?.latestSale).toBeNull();
   });
