@@ -179,7 +179,7 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
     ? `${input.facilitySummary} 등 주변 생활시설과 `
     : '주변 생활시설과 '
 
-  return `${lead}${factClause} ${facilityClause}면적별 최근 거래가를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
+  return `${lead}${factClause} ${facilityClause}면적별 거래가를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
 }
 
 // 길이 상한을 넘을 때 떨어뜨리는 순서 — 준공년도 → 주변 시설 상세 → 전용면적.

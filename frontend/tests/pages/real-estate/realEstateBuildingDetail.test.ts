@@ -699,7 +699,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.text()).toContain('2009년 준공')
     expect(wrapper.text()).toContain('6개월 매매 12건')
 
-    const chip = hero.findAll('button[aria-pressed]').find(b => b.text().includes('59㎡'))!
+    const chip = hero.findAll('.estate-price-hero__chips button[aria-pressed]').find(b => b.text().includes('59㎡'))!
     await chip.trigger('click')
     await flushPromises()
     expect(mockSetFilters).toHaveBeenCalledWith({ area: '60' })

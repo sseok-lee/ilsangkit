@@ -512,7 +512,7 @@ export function useStructuredData() {
       schema.mainEntityOfPage = options.url
       if (options.image) schema.image = options.image
       if (options.latestDealPrice != null) {
-        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'latestDealPrice', value: String(options.latestDealPrice) })
+        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'latestDealPrice', value: String(options.latestDealPrice), unitText: 'KRW' })
       }
       if (options.latestDealDate) schema.datePosted = options.latestDealDate
       return {

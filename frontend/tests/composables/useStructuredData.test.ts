@@ -474,6 +474,7 @@ describe('useStructuredData', () => {
       expect(priceProp).toBeDefined()
       expect(priceProp['@type']).toBe('PropertyValue')
       expect(priceProp.value).toBe('1500000000')
+      expect(priceProp.unitText).toBe('KRW')
     })
 
     it('latestDealDate → datePosted', () => {

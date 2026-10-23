@@ -73,9 +73,29 @@ describe('buildRealEstateDetailMeta - description', () => {
     expect(description).toContain('학교 4곳·병원 6곳 등 주변 생활시설')
   })
   // 준공년도는 같은 이름·같은 구의 두 단지를 가르는 실데이터 토큰이라 다시 싣는다.
-  // 120자 상한을 넘으면 준공년도가 먼저 빠지므로(DESCRIPTION_LADDER) 시설 요약 없이 확인한다.
   it('준공년도를 description 에 싣는다', () => {
-    expect(buildRealEstateDetailMeta({ ...base, facilitySummary: null }).description).toContain('2015년 준공')
+    expect(buildRealEstateDetailMeta(base).description).toContain('2015년 준공')
+  })
+  // 일반 단지(짧은 이름)에 최근 거래 절(YY.MM)·시설 요약·면적 범위가 다 있으면 준공년도까지 123자라
+  // 120자 상한에 걸려 사다리 첫 단계로 준공년도가 빠진다. 시설 요약·면적·최근 거래는 남는다.
+  it('최근 거래 절·시설 요약이 있는 일반 단지는 120자 상한 때문에 준공년도부터 뺀다', () => {
+    const input: DetailMetaInput = {
+      ...base,
+      buildingName: '크로바',
+      region: { city: '대전광역시', district: '서구', dong: '둔산동' },
+      summary: {
+        totalCount: 156,
+        latestDeal: { amount: 91000, date: '2026-10-19', areaLabel: '84', mode: 'sale' },
+      },
+      buildYear: 1992,
+      areaRange: { min: 84, max: 164 },
+      facilitySummary: '학교 4곳·병원 6곳',
+    }
+    const { description } = buildRealEstateDetailMeta(input)
+    expect(description).toBe('대전 서구 둔산동 크로바 아파트 매매 실거래 156건, 84㎡ 최근 매매 9억 1,000만원(26.10). 전용 84~164㎡. 학교 4곳·병원 6곳 등 주변 생활시설과 면적별 거래가를 함께 확인하세요.')
+    expect(description).not.toContain('1992년 준공')
+    // 시설 요약이 없으면 준공년도가 들어간다.
+    expect(buildRealEstateDetailMeta({ ...input, facilitySummary: null }).description).toContain('1992년 준공')
   })
   it('전체 길이 120자 이하', () => {
     expect(buildRealEstateDetailMeta(base).description.length).toBeLessThanOrEqual(120)
@@ -126,8 +146,6 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
   it('full payload — description has 실거래 count and recent price', () => {
     const { description } = buildRealEstateDetailMeta({
       ...legacyBase,
-      // 시설 요약까지 실으면 120자를 넘어 준공년도가 먼저 빠진다(DESCRIPTION_LADDER).
-      facilitySummary: null,
       summary: {
         totalCount: 30,
         recentDeal: { amount: 10700, dealDate: '2026년 5월' },
@@ -136,7 +154,10 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(description).toContain('광주 북구 용봉동 새한A 아파트 매매 실거래 30건')
     expect(description).toContain('1억 700만원(2026년 5월)')
     expect(description).toContain('전용 60㎡')
-    expect(description).toContain('1996년 준공')
+    // 준공년도까지 실으면 121자(끝 문구 '면적별 거래가' 가 예전 '면적별 시세' 보다 1자 길다) → 사다리가 준공년도를 뺀다.
+    expect(description).not.toContain('1996년 준공')
+    expect(description).toContain('학교 5곳, 병원 12곳 등 생활시설')
+    expect(description.length).toBeLessThanOrEqual(120)
   })
 
   it('totalCount 0 — description omits count clause', () => {
@@ -145,7 +166,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
       summary: { totalCount: 0 },
     })
     expect(description).not.toMatch(/실거래 \d+건/)
-    expect(description).toContain('면적별 최근 거래가를 함께 확인하세요')
+    expect(description).toContain('면적별 거래가를 함께 확인하세요')
   })
 
   it('buildYear null — description omits 준공', () => {
@@ -177,7 +198,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(description).toContain('주변 생활시설과')
   })
 
-  it('all optionals missing — minimal description has 면적별 최근 거래가', () => {
+  it('all optionals missing — minimal description has 면적별 거래가', () => {
     const { description } = buildRealEstateDetailMeta({
       buildingName: '새한A',
       region: { city: '광주', district: '북구' },
@@ -190,7 +211,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     })
     expect(description).toContain('광주 북구 새한A 아파트 매매 실거래가')
     expect(description).toContain('주변 생활시설과')
-    expect(description).toContain('면적별 최근 거래가를 함께 확인하세요')
+    expect(description).toContain('면적별 거래가를 함께 확인하세요')
   })
 
   it('rent mode — uses 전월세 label', () => {
@@ -285,9 +306,7 @@ describe('buildRealEstateDetailMeta - 전월세 거래 종류와 금액', () => 
       ...rentBase,
       summary: { totalCount: 12, recentDeal: { amount: 0, dealDate: '2026년 8월', monthlyRent: 0 } },
     })
-    // 끝 문구 '면적별 최근 거래가' 의 '최근' 은 금액 절이 아니다.
-    expect(description).not.toContain(', 최근')
-    expect(description).not.toContain('2026년 8월')
+    expect(description).not.toContain('최근')
     expect(description).toContain('실거래 12건')
   })
 

@@ -419,7 +419,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   // 면적 필터 값은 면적 그룹 key(ROUND(전용면적)) — 상단 칩과 같은 그룹
   await expect(page.locator('select[name="area"]')).toHaveValue('85')
   const hero = page.getByRole('region', { name: '면적별 최근 거래가' })
-  await expect(hero.locator('button[aria-pressed="true"]')).toContainText('84㎡ · 전용 26평')
+  await expect(hero.locator('.estate-price-hero__chips button[aria-pressed="true"]')).toContainText('84㎡ · 전용 26평')
   await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   const selectedSameDay = `${kstDateLabel(-2)} · 21건`
   await expect(page.getByText(selectedSameDay)).toBeVisible()
@@ -465,7 +465,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   // 필터에서 다른 면적 그룹을 고르면 상단 칩·최근 거래·중간값·차트·표가 모두 그 그룹으로 바뀐다
   await page.locator('select[name="area"]').selectOption('60')
   await expect(page.getByText('적용 조건 · 매매 · 전용 59㎡ · 1년')).toBeVisible()
-  await expect(hero.locator('button[aria-pressed="true"]')).toContainText('59㎡ · 전용 18평')
+  await expect(hero.locator('.estate-price-hero__chips button[aria-pressed="true"]')).toContainText('59㎡ · 전용 18평')
   await expect(hero.getByTestId('estate-price-median')).toContainText('9억 600만')
   await expect(hero.getByTestId('estate-area-latest').locator('tbody tr[aria-current="true"]')).toContainText('59㎡ · 18평')
   await expect(page.getByText('최근 1년 거래').locator('..').getByText('7건')).toBeVisible()

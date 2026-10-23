@@ -80,7 +80,7 @@ describe('EstatePriceHero', () => {
     expect(text).not.toContain('시세')
     expect(text).not.toContain('최근 실거래')
 
-    const pressed = wrapper.findAll('button[aria-pressed="true"]')
+    const pressed = wrapper.findAll('.estate-price-hero__chips button[aria-pressed="true"]')
     expect(pressed).toHaveLength(1)
     expect(pressed[0].text()).toContain('84㎡ · 전용 26평')
     expect(pressed[0].text()).toContain('매매 326건')
@@ -90,7 +90,7 @@ describe('EstatePriceHero', () => {
     const wrapper = mountHero(makeOverview(), '60')
     expect(wrapper.get('.estate-price-hero__cell--lead .estate-price-hero__value').text()).toBe('7억 9,000만원')
     expect(wrapper.get('[data-testid="estate-price-median"]').text()).toBe('최근 1년 5건 중간 7억 8,000만원')
-    expect(wrapper.get('button[aria-pressed="true"]').text()).toContain('59㎡ · 전용 18평')
+    expect(wrapper.get('.estate-price-hero__chips button[aria-pressed="true"]').text()).toContain('59㎡ · 전용 18평')
   })
 
   it('shows decline / flat and omits the change part when changeRate is null', () => {
@@ -166,12 +166,12 @@ describe('EstatePriceHero', () => {
     // 면적 무관·3년 넘은 최근 매매로 대신하지 않는다.
     expect(wrapper.text()).not.toContain('2억 7,000만')
     expect(wrapper.find('[data-testid="estate-price-median"]').exists()).toBe(false)
-    expect(wrapper.findAll('button[aria-pressed]').length).toBeGreaterThan(0)
+    expect(wrapper.findAll('.estate-price-hero__chips button[aria-pressed]').length).toBeGreaterThan(0)
   })
 
   it('emits select-area on chip click', async () => {
     const wrapper = mountHero(makeOverview())
-    const chip = wrapper.findAll('button[aria-pressed]').find(b => b.text().includes('59㎡'))!
+    const chip = wrapper.findAll('.estate-price-hero__chips button[aria-pressed]').find(b => b.text().includes('59㎡'))!
     await chip.trigger('click')
     expect(wrapper.emitted('select-area')?.[0]).toEqual(['60'])
   })
@@ -200,7 +200,7 @@ describe('EstatePriceHero', () => {
     expect(saleCell.get('.estate-price-hero__value').text()).toBe('9억 1,000만원')
     expect(wrapper.find('[data-testid="estate-price-body"]').text()).not.toContain('9억 4,000만')
     expect(wrapper.text()).not.toContain('시세')
-    expect(wrapper.get('button[aria-pressed="true"]').text()).toContain('전세 1,107건')
+    expect(wrapper.get('.estate-price-hero__chips button[aria-pressed="true"]').text()).toContain('전세 1,107건')
   })
 
   it('rent URL omits the sale secondary when the group has no sale deal', () => {
@@ -224,11 +224,11 @@ describe('EstatePriceHero', () => {
       jeonseCount36m: 0,
     }))
     const wrapper = mountHero(makeOverview({ areaGroups: groups, defaultAreaGroup: '40', saleBasis: {} }))
-    expect(wrapper.findAll('button[aria-pressed]')).toHaveLength(6)
+    expect(wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')).toHaveLength(6)
     const more = wrapper.findAll('button').find(b => b.text() === '더보기')!
     expect(more).toBeTruthy()
     await more.trigger('click')
-    expect(wrapper.findAll('button[aria-pressed]')).toHaveLength(8)
+    expect(wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')).toHaveLength(8)
   })
 
   it('keeps a selected group visible even when it ranks beyond six', () => {
@@ -240,12 +240,12 @@ describe('EstatePriceHero', () => {
       jeonseCount36m: 0,
     }))
     const wrapper = mountHero(makeOverview({ areaGroups: groups, defaultAreaGroup: '40', saleBasis: {} }), '110')
-    expect(wrapper.get('button[aria-pressed="true"]').text()).toContain('109㎡')
+    expect(wrapper.get('.estate-price-hero__chips button[aria-pressed="true"]').text()).toContain('109㎡')
   })
 
   it('orders chips by basisMode count descending', () => {
     const wrapper = mountHero(makeOverview())
-    const chips = wrapper.findAll('button[aria-pressed]')
+    const chips = wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')
     expect(chips[0].text()).toContain('84㎡')
     expect(chips[1].text()).toContain('59㎡')
   })
@@ -271,9 +271,38 @@ describe('EstatePriceHero', () => {
       expect(cells85[2]).toBe('-')
       const cells60 = rows[1].findAll('td').map(td => td.text())
       expect(cells60[1]).toBe('-')
-      expect(cells60[2]).toBe('1억 / 120만원26.09')
+      expect(cells60[2]).toBe('1억/120만원26.09')
       expect(table.text()).toContain('최근 3년 중 가장 최근 거래 · 출처 국토교통부 실거래가')
       expect(table.text()).not.toContain('시세')
+    })
+
+    it('always shows monthly rent in the wolse cell, even 0', () => {
+      const wrapper = mountHero(makeOverview({
+        wolseLatest: {
+          '60': { date: '2026-09-11', deposit: 30000, monthlyRent: 0, floor: 4 },
+          '85': { date: '2026-08-01', deposit: 0, monthlyRent: 150, floor: 2 },
+        },
+      }))
+      const rows = wrapper.get('[data-testid="estate-area-latest"]').findAll('tbody tr')
+      expect(rows[0].findAll('td')[2].text()).toBe('0만원/150만원26.08')
+      expect(rows[1].findAll('td')[2].text()).toBe('3억/0만원26.09')
+    })
+
+    it('rows without a deal in the current mode are display-only', async () => {
+      const groups: AreaGroup[] = [
+        { key: '60', label: '59', pyeong: 18, saleCount36m: 0, jeonseCount36m: 12 },
+        { key: '85', label: '84', pyeong: 26, saleCount36m: 30, jeonseCount36m: 4 },
+      ]
+      const wrapper = mountHero(makeOverview({ areaGroups: groups }))
+      const rows = wrapper.get('[data-testid="estate-area-latest"]').findAll('tbody tr')
+      expect(rows).toHaveLength(2)
+      const jeonseOnly = rows[1]
+      expect(jeonseOnly.get('th').text()).toBe('59㎡ · 18평')
+      expect(jeonseOnly.find('button').exists()).toBe(false)
+      expect(jeonseOnly.classes()).not.toContain('estate-price-hero__row--selectable')
+      await jeonseOnly.trigger('click')
+      expect(wrapper.emitted('select-area')).toBeUndefined()
+      expect(rows[0].classes()).toContain('estate-price-hero__row--selectable')
     })
 
     it('marks the active row and emits select-area on row click', async () => {
@@ -281,6 +310,8 @@ describe('EstatePriceHero', () => {
       const rows = wrapper.get('[data-testid="estate-area-latest"]').findAll('tbody tr')
       expect(rows[0].attributes('aria-current')).toBe('true')
       expect(rows[1].attributes('aria-current')).toBeUndefined()
+      expect(rows[0].get('button').attributes('aria-pressed')).toBe('true')
+      expect(rows[1].get('button').attributes('aria-pressed')).toBe('false')
       await rows[1].trigger('click')
       expect(wrapper.emitted('select-area')?.[0]).toEqual(['60'])
       await rows[1].get('button').trigger('click')
@@ -308,7 +339,7 @@ describe('EstatePriceHero', () => {
 
     it('hides chips with zero count for the basis mode', () => {
       const wrapper = mountHero(makeOverview({ areaGroups: mixed }))
-      const chips = wrapper.findAll('button[aria-pressed]')
+      const chips = wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')
       expect(chips).toHaveLength(1)
       expect(chips[0].text()).toContain('84㎡')
       expect(wrapper.text()).not.toContain('매매 0건')
@@ -316,9 +347,9 @@ describe('EstatePriceHero', () => {
 
     it('keeps the active group even with zero count', () => {
       const wrapper = mountHero(makeOverview({ areaGroups: mixed }), '60')
-      const chips = wrapper.findAll('button[aria-pressed]')
+      const chips = wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')
       expect(chips).toHaveLength(2)
-      expect(wrapper.get('button[aria-pressed="true"]').text()).toContain('59㎡')
+      expect(wrapper.get('.estate-price-hero__chips button[aria-pressed="true"]').text()).toContain('59㎡')
     })
 
     it('rent URL hides groups without jeonse deals', () => {
@@ -327,7 +358,7 @@ describe('EstatePriceHero', () => {
         { key: '85', label: '84', pyeong: 26, saleCount36m: 30, jeonseCount36m: 4 },
       ]
       const wrapper = mountHero(makeOverview({ basisMode: 'jeonse', areaGroups: groups, jeonseBasis: {} }))
-      expect(wrapper.findAll('button[aria-pressed]')).toHaveLength(1)
+      expect(wrapper.findAll('.estate-price-hero__chips button[aria-pressed]')).toHaveLength(1)
       expect(wrapper.text()).not.toContain('전세 0건')
     })
   })

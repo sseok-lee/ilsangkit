@@ -80,14 +80,24 @@
             v-for="row in areaRows"
             :key="row.key"
             class="estate-price-hero__row"
-            :class="{ 'estate-price-hero__row--active': row.key === activeKey }"
+            :class="{
+              'estate-price-hero__row--active': row.key === activeKey,
+              'estate-price-hero__row--selectable': row.selectable,
+            }"
             :aria-current="row.key === activeKey ? 'true' : undefined"
-            @click="emit('select-area', row.key)"
+            @click="row.selectable && emit('select-area', row.key)"
           >
             <th scope="row">
-              <button type="button" class="estate-price-hero__row-button" @click.stop="emit('select-area', row.key)">
+              <button
+                v-if="row.selectable"
+                type="button"
+                class="estate-price-hero__row-button"
+                :aria-pressed="row.key === activeKey ? 'true' : 'false'"
+                @click.stop="emit('select-area', row.key)"
+              >
                 {{ row.label }}㎡ · {{ row.pyeong }}평
               </button>
+              <span v-else class="estate-price-hero__row-label">{{ row.label }}㎡ · {{ row.pyeong }}평</span>
             </th>
             <td v-for="(cell, index) in row.cells" :key="index">
               <template v-if="cell">
@@ -109,7 +119,6 @@
 import { computed, ref } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { resolveHeroBasis } from '~/utils/realEstateDetailPrice'
-import { formatLatestPrice } from '~/utils/realEstateRecentDeal'
 import type { AreaGroup, DetailOverview } from '~/types/housingRedesign'
 
 const props = withDefaults(defineProps<{
@@ -223,7 +232,13 @@ interface TableCell {
   month: string
 }
 
+/** 월세 칸: 보증금 0·월세 0 이어도 항상 '{보증금}/{월세}' 로 쓴다. */
+function wolsePrice(deposit: number, monthlyRent: number): string {
+  return `${formatKoreanPrice(deposit)}/${formatKoreanPrice(monthlyRent)}`
+}
+
 // 면적별 최근 거래가 표: 칩과 같은 순서·라벨, 그룹 전부(현재 모드 거래가 없는 그룹도 다른 모드 칸이 있을 수 있다).
+// 현재 모드 거래가 없는 행은 칩처럼 고를 수 없다(고르면 아래 필터가 area-reset 된다) — 보기 전용.
 const areaRows = computed(() =>
   [...(props.overview.areaGroups ?? [])].sort(byCount).map((group) => {
     const sale = props.overview.saleBasis?.[group.key]?.latestAny ?? null
@@ -233,10 +248,10 @@ const areaRows = computed(() =>
       sale ? { value: formatKoreanPrice(sale.amount), month: shortMonth(sale.date) } : null,
       jeonse ? { value: formatKoreanPrice(jeonse.amount), month: shortMonth(jeonse.date) } : null,
       wolse
-        ? { value: formatLatestPrice({ amount: wolse.deposit, monthlyRent: wolse.monthlyRent, dealDate: null }), month: shortMonth(wolse.date) }
+        ? { value: wolsePrice(wolse.deposit, wolse.monthlyRent), month: shortMonth(wolse.date) }
         : null,
     ]
-    return { key: group.key, label: group.label, pyeong: group.pyeong, cells }
+    return { key: group.key, label: group.label, pyeong: group.pyeong, selectable: groupCount(group) > 0, cells }
   }),
 )
 </script>
@@ -427,12 +442,17 @@ const areaRows = computed(() =>
   color: rgb(var(--strong-rgb));
 }
 
-.estate-price-hero__row {
+.estate-price-hero__row--selectable {
   cursor: pointer;
 }
 
 .estate-price-hero__row--active {
   background: rgb(var(--brand-tint-rgb));
+}
+
+.estate-price-hero__row-label {
+  color: rgb(var(--muted-rgb));
+  font-weight: 500;
 }
 
 .estate-price-hero__row-button {
