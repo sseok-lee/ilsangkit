@@ -671,12 +671,10 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
         '85': {
           representative: 94000,
           sampleCount: 5,
-          latest: { id: 2, date: '2026-10-19', amount: 91000, floor: 20 },
           latestAny: { id: 2, date: '2026-10-19', amount: 91000, floor: 20, direct: false },
           max12m: 103000,
           yearAgo: null,
           changeRate: null,
-          excluded: [],
         },
       },
       jeonseBasis: {},

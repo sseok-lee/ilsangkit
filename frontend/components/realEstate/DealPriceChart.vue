@@ -86,8 +86,7 @@
         <p v-if="activeMonth" data-testid="monthly-price-summary" class="mb-4 text-sm text-muted">
           {{ formatDate(activeMonth.month) }} 중간값
           <strong v-if="activeMonth.amount !== null" class="mt-1 block text-xl font-semibold tabular-nums text-strong">{{ formatAmount(activeMonth.amount) }}</strong>
-          <span v-else-if="activeMonth.points.length === 0" class="mt-1 block">이 달에는 거래가 없습니다</span>
-          <span v-else class="mt-1 block">{{ monthlyTrendStatus(activeMonth) }}</span>
+          <span v-else class="mt-1 block">이 달에는 거래가 없습니다</span>
         </p>
         <label class="grid gap-1 text-sm font-medium text-strong">
           거래 날짜
@@ -120,10 +119,10 @@
                 <span class="flex items-baseline gap-2">
                   <strong class="tabular-nums text-strong">{{ formatAmount(point.amount) }}</strong>
                   <span
-                    v-if="point.flag === 'outlier' || point.flag === 'direct'"
+                    v-if="point.flag === 'direct'"
                     data-testid="deal-flag-tag"
                     class="rounded border border-line px-1.5 py-0.5 text-xs text-muted"
-                  >{{ point.flag === 'outlier' ? '시세 제외' : '직거래' }}</span>
+                  >직거래</span>
                 </span>
                 <span class="text-muted">전용 {{ point.area }}㎡</span>
               </div>

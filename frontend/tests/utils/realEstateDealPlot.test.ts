@@ -114,39 +114,38 @@ describe('realEstateDealPlot', () => {
     expect(projected[0].points.map(point => point.id)).toEqual([1, 2])
   })
 
-  it('monthly amount is median of normal points', () => {
+  it('monthly amount is median of all points including direct deals', () => {
     const o = (id: number, date: string, amount: number, flag: DealPoint['flag'] = 'normal'): DealPoint =>
       ({ ...base, id, date, amount, area: '84.97', flag })
     const points = [
       o(1, '2026-10-19', 91000), o(2, '2026-10-18', 88000), o(3, '2026-10-17', 94000),
-      o(4, '2026-10-17', 95000), o(5, '2026-10-14', 53000, 'outlier'), o(6, '2026-10-14', 97000),
+      o(4, '2026-10-17', 95000), o(5, '2026-10-14', 53000), o(6, '2026-10-14', 97000, 'direct'),
       o(7, '2026-10-12', 100000), o(8, '2026-10-04', 91000), o(9, '2026-10-02', 103000),
     ]
     const trend = projectMonthlyDealTrend(points, { from: '2026-10-01', to: '2026-10-31' }, 400, 288)
-    expect(trend[0].amount).toBe(94500)
+    expect(trend[0].amount).toBe(94000)
     expect(trend[0].points).toHaveLength(9)
   })
 
-  it('month with only excluded points has null amount', () => {
+  it('month with only direct deals still has a median', () => {
     const points: DealPoint[] = [
-      { ...base, id: 1, date: '2026-09-02', amount: 50000, flag: 'outlier' },
+      { ...base, id: 1, date: '2026-09-02', amount: 50000, flag: 'direct' },
       { ...base, id: 2, date: '2026-09-03', amount: 60000, flag: 'direct' },
       { ...base, id: 3, date: '2026-10-03', amount: 70000 },
     ]
     const trend = projectMonthlyDealTrend(points, { from: '2026-09-01', to: '2026-10-31' }, 400, 288)
-    expect(trend[0].amount).toBeNull()
-    expect(trend[0].y).toBeNull()
+    expect(trend[0].amount).toBe(55000)
+    expect(trend[0].y).not.toBeNull()
     expect(trend[0].points).toHaveLength(2)
     expect(trend[1].amount).toBe(70000)
   })
 
-  it('제외 거래만 있는 달은 거래 없음이 아니라 정상 거래 없음 · 제외 N건이다', () => {
+  it('거래가 없는 달만 거래 없음이다', () => {
     const points: DealPoint[] = [
       { ...base, id: 1, date: '2026-08-01', amount: 100 },
       { ...base, id: 2, date: '2026-09-03', amount: 50, flag: 'direct' },
-      { ...base, id: 3, date: '2026-09-04', amount: 300, flag: 'outlier' },
     ]
     const trend = projectMonthlyDealTrend(points, { from: '2026-08-01', to: '2026-10-31' }, 400, 288)
-    expect(trend.map(monthlyTrendStatus)).toEqual([null, '정상 거래 없음 · 제외 2건', '거래 없음'])
+    expect(trend.map(monthlyTrendStatus)).toEqual([null, null, '거래 없음'])
   })
 })

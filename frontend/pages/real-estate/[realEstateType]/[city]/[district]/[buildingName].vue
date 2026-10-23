@@ -541,7 +541,7 @@ import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
-import { summarizeNormalPoints } from '~/utils/realEstatePriceSummary'
+import { summarizePoints } from '~/utils/realEstatePriceSummary'
 
 definePageMeta({
   path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
@@ -1247,23 +1247,23 @@ const selectedRentType = computed<'jeonse' | 'wolse'>(() =>
   snapshot.value?.filters.mode === 'wolse' ? 'wolse' : 'jeonse',
 )
 
-const normalSummary = computed(() => summarizeNormalPoints(snapshot.value?.points ?? []))
+const pointSummary = computed(() => summarizePoints(snapshot.value?.points ?? []))
 
-const exactMedian = computed(() => normalSummary.value.median)
+const exactMedian = computed(() => pointSummary.value.median)
 
 const periodTradeLabel = computed(() => {
   const months = snapshot.value?.filters.months ?? 0
-  if (months === 0) return '전체 기간 정상 거래'
-  if (months === 6) return '최근 6개월 정상 거래'
-  if (months === 12) return '최근 1년 정상 거래'
-  return '최근 3년 정상 거래'
+  if (months === 0) return '전체 기간 거래'
+  if (months === 6) return '최근 6개월 거래'
+  if (months === 12) return '최근 1년 거래'
+  return '최근 3년 거래'
 })
 
-const periodTradeCount = computed(() => normalSummary.value.count.toLocaleString())
+const periodTradeCount = computed(() => pointSummary.value.count.toLocaleString())
 
 const periodPriceExtremes = computed(() => ({
-  maxPrice: normalSummary.value.max,
-  minPrice: normalSummary.value.min,
+  maxPrice: pointSummary.value.max,
+  minPrice: pointSummary.value.min,
 }))
 
 const periodMaxPriceLabel = computed(() => {

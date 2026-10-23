@@ -7,12 +7,10 @@ function basis(partial: Partial<PriceBasis> = {}): PriceBasis {
   return {
     representative: null,
     sampleCount: 0,
-    latest: null,
     latestAny: null,
     max12m: null,
     yearAgo: null,
     changeRate: null,
-    excluded: [],
     ...partial,
   }
 }
@@ -41,18 +39,15 @@ function makeOverview(partial: Partial<DetailOverview> = {}): DetailOverview {
       '85': basis({
         representative: 94000,
         sampleCount: 5,
-        latest: { id: 11, date: '2026-10-19', amount: 91000, floor: 20 },
+        latestAny: { id: 11, date: '2026-10-19', amount: 91000, floor: 20, direct: false },
         max12m: 103000,
         yearAgo: 71600,
         changeRate: 0.3128,
-        excluded: [
-          { id: 12, date: '2026-10-14', amount: 53000, floor: 12, reason: 'outlier', deviation: -0.4319 },
-        ],
       }),
       '60': basis({
         representative: 78000,
         sampleCount: 5,
-        latest: { id: 21, date: '2026-10-02', amount: 79000, floor: 7 },
+        latestAny: { id: 21, date: '2026-10-02', amount: 79000, floor: 7, direct: false },
         max12m: 85900,
       }),
     },
@@ -72,7 +67,8 @@ describe('EstatePriceHero', () => {
     const text = wrapper.text()
     expect(text).toContain('대표 시세')
     expect(text).toContain('9억 4,000만')
-    expect(text).toContain('최근 중개거래 5건 중간값')
+    expect(text).toContain('최근 거래 5건 중간값')
+    expect(text).not.toContain('중개거래')
     expect(text).toContain('▲ 1년 전보다 31%')
     expect(text).toContain('최근 실거래')
     expect(text).toContain('9억 1,000만')
@@ -115,32 +111,29 @@ describe('EstatePriceHero', () => {
     expect(mountHero(overview).text()).toContain(expected)
   })
 
-  it('shows excluded notice with link', () => {
+  it('has no excluded-deal notice', () => {
     const wrapper = mountHero(makeOverview())
-    const text = wrapper.text()
-    expect(text).toContain('시세 계산에서 뺀 거래 1건')
-    expect(text).toContain('26.10.14')
-    expect(text).toContain('5억 3,000만')
-    expect(text).toContain('중간값 대비 -43%')
-    const link = wrapper.get('a[href="#transactions"]')
-    expect(link.text()).toBe('거래 내역에서 보기')
+    expect(wrapper.text()).not.toContain('뺀 거래')
+    expect(wrapper.find('a[href="#transactions"]').exists()).toBe(false)
   })
 
-  it('labels direct deals as 직거래', () => {
+  it('labels a direct latest deal as 직거래 next to the representative', () => {
     const overview = makeOverview()
     overview.saleBasis['85'] = {
       ...overview.saleBasis['85'],
-      excluded: [{ id: 30, date: '2026-09-01', amount: 52000, floor: 3, reason: 'direct', deviation: null }],
+      latestAny: { id: 30, date: '2026-10-21', amount: 52000, floor: 3, direct: true },
     }
-    expect(mountHero(overview).text()).toContain('직거래')
+    const body = mountHero(overview).get('[data-testid="estate-price-body"]').text()
+    expect(body).toContain('최근 실거래')
+    expect(body).toContain('5억 2,000만')
+    expect(body).toContain('26.10.21 · 3층 · 직거래')
   })
 
   it('no 시세 word without representative', () => {
     const overview = makeOverview({
       saleBasis: {
         '85': basis({
-          latest: { id: 11, date: '2026-10-19', amount: 91000, floor: null },
-          excluded: [{ id: 12, date: '2026-10-14', amount: 53000, floor: 12, reason: 'direct', deviation: null }],
+          latestAny: { id: 11, date: '2026-10-19', amount: 91000, floor: null, direct: false },
         }),
       },
     })
@@ -150,7 +143,6 @@ describe('EstatePriceHero', () => {
     expect(text).toContain('최근 거래')
     expect(text).toContain('9억 1,000만')
     expect(text).toContain('26.10.19')
-    expect(wrapper.find('a[href="#transactions"]').exists()).toBe(true)
   })
 
   it('renders no price body when neither representative nor latest exists', () => {
@@ -175,7 +167,7 @@ describe('EstatePriceHero', () => {
         '85': basis({
           representative: 48000,
           sampleCount: 6,
-          latest: { id: 41, date: '2026-10-20', amount: 47000, floor: 9 },
+          latestAny: { id: 41, date: '2026-10-20', amount: 47000, floor: 9, direct: false },
           max12m: 50000,
         }),
       },
@@ -233,13 +225,12 @@ describe('EstatePriceHero', () => {
     expect(chips[1].text()).toContain('59㎡')
   })
 
-  describe('정상 거래가 없을 때 최근 거래', () => {
-    it('shows latestAny as 최근 거래 · 직거래 when no normal deal exists', () => {
+  describe('대표 시세가 없을 때 최근 거래', () => {
+    it('shows a direct latestAny as 최근 거래 · 직거래', () => {
       const overview = makeOverview({
         saleBasis: {
           '85': basis({
             latestAny: { id: 31, date: '2026-05-02', amount: 30500, floor: 4, direct: true },
-            excluded: [{ id: 31, date: '2026-05-02', amount: 30500, floor: 4, reason: 'direct', deviation: null }],
           }),
         },
       })
@@ -249,8 +240,6 @@ describe('EstatePriceHero', () => {
       expect(body).toContain('3억 500만')
       expect(body).toContain('26.05.02 · 4층 · 직거래')
       expect(wrapper.text()).not.toContain('시세')
-      expect(wrapper.text()).toContain('정상 거래가 아닌 거래 1건')
-      expect(wrapper.text()).not.toContain('뺀 거래')
     })
 
     it('shows latestAny without direct tag when it is a brokered deal', () => {

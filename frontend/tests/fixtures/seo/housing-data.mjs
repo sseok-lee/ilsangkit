@@ -275,22 +275,19 @@ function pointFromRow(row, mode) {
     area: Number(row.exclusiveArea).toFixed(2),
     floor: row.floor,
     deposit: 'deposit' in row ? row.deposit : null,
-    // 픽스처 거래는 모두 정상 거래로 둔다(직거래·이상거래 판정은 백엔드 단위 테스트가 고정).
+    // 픽스처 거래는 직거래 태그 없이 둔다(직거래 태그는 백엔드 단위 테스트가 고정).
     flag: 'normal',
   }
 }
 
 function basis(representative, sampleCount, latestAmount, max12m) {
-  const latest = { id: 9001, date: kstDate(-2), amount: latestAmount, floor: 10 }
   return {
     representative,
     sampleCount,
-    latest,
-    latestAny: { ...latest, direct: false },
+    latestAny: { id: 9001, date: kstDate(-2), amount: latestAmount, floor: 10, direct: false },
     max12m,
     yearAgo: null,
     changeRate: null,
-    excluded: [],
   }
 }
 

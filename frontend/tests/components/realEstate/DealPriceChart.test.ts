@@ -309,10 +309,10 @@ describe('DealPriceChart', () => {
     expect(error.emitted('retry')).toHaveLength(1)
   })
 
-  it('DealPriceChart lists excluded deal with tag', async () => {
+  it('DealPriceChart tags direct deals only', async () => {
     const data: DealPoint[] = [
       { ...points[0], id: 21, date: '2026-10-02', amount: 90000, flag: 'normal' },
-      { ...points[0], id: 22, date: '2026-10-03', amount: 53000, flag: 'outlier' },
+      { ...points[0], id: 22, date: '2026-10-03', amount: 53000, flag: 'normal' },
       { ...points[0], id: 23, date: '2026-10-04', amount: 91000, flag: 'direct' },
     ]
     const wrapper = mount(DealPriceChart, {
@@ -323,13 +323,13 @@ describe('DealPriceChart', () => {
     const rows = wrapper.findAll('[data-testid="deal-point-row"]')
     expect(rows).toHaveLength(3)
     const text = (id: number) => rows.find(row => row.attributes('data-deal-id') === String(id))!.text()
-    expect(text(22)).toContain('시세 제외')
     expect(text(23)).toContain('직거래')
-    expect(text(21)).not.toContain('시세 제외')
+    expect(text(22)).not.toContain('직거래')
     expect(text(21)).not.toContain('직거래')
+    expect(wrapper.text()).not.toContain('시세 제외')
   })
 
-  it('제외 거래만 있는 달은 정상 거래 없음 · 제외 N건으로 안내하고 그 거래를 보여준다', async () => {
+  it('직거래만 있는 달도 중간값을 보여 준다', async () => {
     const data: DealPoint[] = [
       { ...points[0], id: 31, date: '2026-09-02', amount: 90000, flag: 'normal' },
       { ...points[0], id: 32, date: '2026-10-04', amount: 52000, flag: 'direct' },
@@ -339,10 +339,10 @@ describe('DealPriceChart', () => {
     })
     await nextTick()
     const option = wrapper.findAll('select[name="deal-month"] option').find(o => o.attributes('value') === '2026-10')!
-    expect(option.text()).toBe('2026.10 · 정상 거래 없음 · 제외 1건')
+    expect(option.text()).toBe('2026.10')
     await wrapper.get('select[name="deal-month"]').setValue('2026-10')
     const summary = wrapper.get('[data-testid="monthly-price-summary"]').text()
-    expect(summary).toContain('정상 거래 없음 · 제외 1건')
+    expect(summary).not.toContain('거래 없음')
     expect(summary).not.toContain('이 달에는 거래가 없습니다')
     expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(1)
   })
