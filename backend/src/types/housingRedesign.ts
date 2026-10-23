@@ -161,3 +161,35 @@ export interface HomeMarket {
   counts: Record<PropertyType, SectionResult<MarketCount>>;
   recent: SectionResult<RecentBuilding[]>;
 }
+
+export type DealFlag = 'normal' | 'direct' | 'outlier';
+
+export interface AreaGroup {
+  key: string;
+  label: string;
+  pyeong: number;
+  saleCount36m: number;
+  jeonseCount36m: number;
+}
+
+export interface BasisDealRef {
+  id: number;
+  date: string;
+  amount: number;
+  floor: number | null;
+}
+
+export interface ExcludedDeal extends BasisDealRef {
+  reason: 'direct' | 'outlier';
+  deviation: number | null;
+}
+
+export interface PriceBasis {
+  representative: number | null;
+  sampleCount: number;
+  latest: BasisDealRef | null;
+  max12m: number | null;
+  yearAgo: number | null;
+  changeRate: number | null;
+  excluded: ExcludedDeal[];
+}
