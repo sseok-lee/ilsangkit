@@ -6,6 +6,12 @@ import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser
 import { buildRegionFilter } from './cityMapping.js';
 import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
 import { attachRealEstateCanonicalPaths, getDeferredRealEstateIdentity } from './realEstateUrlRegistry.js';
+import {
+  attachNearbyAreaDeals,
+  loadNearbyTargetArea,
+  type NearbyAreaDeal,
+  type NearbyTargetArea,
+} from './realEstateNearbyArea.js';
 import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
 
 // ─────────────────────────────────────────────
@@ -1219,9 +1225,16 @@ export interface NearbyComplex {
   latestDealMonth: number | null;
   lat: number | null;
   lng: number | null;
+  /** 최근 36개월 거래 수(모든 면적, 해당 모드·rentType 반영) */
+  recentCount3y?: number;
+  /** 비교 면적(없으면 대표 면적)의 최근 36개월 최신 거래 1건 */
+  areaDeal?: NearbyAreaDeal | null;
 }
 
-export type NearbyResult = Record<NearbyPropertyKey, NearbyComplex[]>;
+export interface NearbyResult extends Record<NearbyPropertyKey, NearbyComplex[]> {
+  /** 현재 단지의 비교 면적(상세 overview defaultAreaGroup 과 같은 규칙). type 미지정이면 null. */
+  targetArea: NearbyTargetArea | null;
+}
 
 const NEARBY_PROPERTY_KEYS: NearbyPropertyKey[] = ['apt', 'villa', 'offitel'];
 
@@ -1294,13 +1307,56 @@ async function fetchNearbyFromSummary(
 export async function getNearbyByBjd(
   bjdCode: string,
   mode: NearbyMode,
-  opts: { rentType?: NearbyRentType; dongName?: string; excludeBuildingName?: string; limitPerType?: number }
+  opts: {
+    rentType?: NearbyRentType;
+    dongName?: string;
+    excludeBuildingName?: string;
+    limitPerType?: number;
+    /** 현재 상세 페이지 유형. 주면 targetArea 를 계산하고 같은 유형 탭에서 같은 면적을 비교한다. */
+    type?: RealEstateType;
+    /** 비교 면적 키(ROUND(전용면적)). 주면 기본 면적 계산 대신 이 값을 쓴다. */
+    areaKey?: string;
+    now?: Date;
+  }
 ): Promise<NearbyResult> {
   const rentType: NearbyRentType = opts.rentType ?? 'all';
   const dongName = opts.dongName ?? null;
   const excludeBuildingName = opts.excludeBuildingName ?? null;
   const limitPerType = opts.limitPerType ?? 4;
-  const result: NearbyResult = { apt: [], villa: [], offitel: [] };
+  const now = opts.now ?? new Date();
+  const result: NearbyResult = { apt: [], villa: [], offitel: [], targetArea: null };
+
+  // 현재 단지 비교 면적: summary 조회와 병렬로 1회. 같은 면적 거래 조회(유형당 1회)는 summary 결과가 나온 뒤.
+  const currentProperty = opts.type ? propertyTypeFromRealEstateType(opts.type) : null;
+  const targetPromise: Promise<NearbyTargetArea | null> = !opts.type || !currentProperty
+    ? Promise.resolve(null)
+    : excludeBuildingName
+      ? loadNearbyTargetArea({
+        property: currentProperty,
+        prefer: SALE_TYPES.includes(opts.type) ? 'sale' : 'jeonse',
+        bjdCode,
+        buildingName: excludeBuildingName,
+        dongName,
+        areaKey: opts.areaKey ?? null,
+        now,
+      })
+      : Promise.resolve(opts.areaKey ? { key: opts.areaKey, label: opts.areaKey } : null);
+  // summary 가 먼저 실패해도 처리되지 않은 rejection 으로 남지 않게 흡수(아래 await 에서 다시 던진다).
+  targetPromise.catch(() => {});
+  const withAreaDeals = async (key: NearbyPropertyKey, rows: NearbyComplex[]): Promise<NearbyComplex[]> => {
+    if (rows.length === 0) return rows;
+    const target = await targetPromise;
+    return attachNearbyAreaDeals({
+      property: key,
+      mode,
+      rentType: mode === 'rent' ? rentType : 'all',
+      bjdCode,
+      items: rows,
+      targetKey: target?.key ?? null,
+      sameProperty: key === currentProperty,
+      now,
+    });
+  };
 
   if (mode === 'sale') {
     // Sale path: summary 테이블 — 매매가만 필요.
@@ -1310,10 +1366,11 @@ export async function getNearbyByBjd(
       NEARBY_PROPERTY_KEYS.map(async (key) => {
         const type = `${key}-sale`;
         const rows = await fetchNearbyFromSummary(type, bjdCode, { dongName, excludeBuildingName, limitPerType });
-        return [key, rows.map((row) => ({ ...row, monthlyRent: null }))] as const;
+        return [key, await withAreaDeals(key, rows.map((row) => ({ ...row, monthlyRent: null })))] as const;
       }),
     );
     for (const [key, items] of saleEntries) result[key] = items;
+    result.targetArea = await targetPromise;
     return result;
   }
 
@@ -1329,10 +1386,11 @@ export async function getNearbyByBjd(
       NEARBY_PROPERTY_KEYS.map(async (key) => {
         const type = `${key}-rent`;
         const rows = await fetchNearbyFromSummary(type, bjdCode, { dongName, excludeBuildingName, limitPerType });
-        return [key, rows] as const;
+        return [key, await withAreaDeals(key, rows)] as const;
       }),
     );
     for (const [key, items] of entries) result[key] = items;
+    result.targetArea = await targetPromise;
     return result;
   }
 
@@ -1433,7 +1491,7 @@ export async function getNearbyByBjd(
       LIMIT ${limitPerType}
     `;
 
-    return [key, rows.map((r) => ({
+    return [key, await withAreaDeals(key, rows.map((r) => ({
       buildingName: r.buildingName,
       bjdCode: r.bjdCode,
       city: r.city,
@@ -1448,9 +1506,10 @@ export async function getNearbyByBjd(
       latestDealMonth: r.latestDealMonth != null ? Number(r.latestDealMonth) : null,
       lat: null,
       lng: null,
-    }))] as const;
+    })))] as const;
   }));
   for (const [key, items] of rentEntries) result[key] = items;
+  result.targetArea = await targetPromise;
 
   return result;
 }

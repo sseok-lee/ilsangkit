@@ -74,10 +74,10 @@ router.get(
   '/nearby',
   validate(NearbyQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { bjdCode, mode, rentType, dongName, excludeBuildingName, limitPerType } =
+    const { bjdCode, mode, rentType, dongName, excludeBuildingName, limitPerType, type, areaKey } =
       req.query as unknown as z.infer<typeof NearbyQuerySchema>;
     const data = await getNearbyByBjd(bjdCode, mode, {
-      rentType, dongName, excludeBuildingName, limitPerType,
+      rentType, dongName, excludeBuildingName, limitPerType, type, areaKey,
     });
     res.json({ success: true, data });
   })

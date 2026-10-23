@@ -47,6 +47,8 @@ const summaryRow = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   mockQueryRaw.mockReset();
   mockQueryRawUnsafe.mockReset();
+  // summary 결과가 있으면 단지별 면적 거래 조회($queryRaw, 단지 이름 IN)가 뒤따른다 — 기본은 빈 결과.
+  mockQueryRaw.mockResolvedValue([]);
 });
 
 describe('getNearbyByBjd rent — rentType=all (summary 경로)', () => {

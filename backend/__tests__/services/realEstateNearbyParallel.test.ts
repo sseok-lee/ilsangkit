@@ -51,7 +51,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     expect(started).toBe(3);
 
     gates.forEach((g) => g.resolve([]));
-    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
+    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [], targetArea: null });
   });
 
   it('rent(all→summary): 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
@@ -67,7 +67,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     expect(mockQueryRaw).not.toHaveBeenCalled();
 
     gates.forEach((g) => g.resolve([]));
-    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
+    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [], targetArea: null });
   });
 
   it('rent(전세/월세→raw): 3종을 아무것도 resolve 되기 전에 모두 착수한다', async () => {
@@ -82,7 +82,7 @@ describe('getNearbyByBjd 병렬 조회', () => {
     expect(mockQueryRawUnsafe).not.toHaveBeenCalled();
 
     gates.forEach((g) => g.resolve([]));
-    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [] });
+    await expect(pending).resolves.toEqual({ apt: [], villa: [], offitel: [], targetArea: null });
   });
 
   it('병렬로 바꿔도 결과가 키별로 올바르게 매핑된다 (순서 뒤바뀜 내성)', async () => {
@@ -95,6 +95,9 @@ describe('getNearbyByBjd 병렬 조회', () => {
     const gates = [deferred<unknown[]>(), deferred<unknown[]>(), deferred<unknown[]>()];
     let started = 0;
     mockQueryRawUnsafe.mockImplementation(() => gates[started++].promise);
+
+    // summary 결과가 있으면 단지별 면적 거래 조회($queryRaw)가 뒤따른다 — 여기서는 빈 결과.
+    mockQueryRaw.mockResolvedValue([]);
 
     const pending = getNearbyByBjd('11680', 'sale', { limitPerType: 4 });
     await flush();
