@@ -1,5 +1,5 @@
 <template>
-  <section class="estate-price-hero" aria-label="면적별 대표 가격" :aria-busy="pending">
+  <section class="estate-price-hero" aria-label="면적별 최근 거래가" :aria-busy="pending">
     <div v-if="sortedGroups.length" class="estate-price-hero__areas">
       <p class="estate-price-hero__areas-label">
         전용면적<span class="estate-price-hero__areas-hint"> · 거래가 가장 많은 면적을 먼저 보여줍니다</span>
@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <dl v-if="cells.length" class="estate-price-hero__body" data-testid="estate-price-body">
+    <dl class="estate-price-hero__body" data-testid="estate-price-body">
       <div
         v-for="cell in cells"
         :key="cell.label"
@@ -37,17 +37,81 @@
         :class="{ 'estate-price-hero__cell--lead': cell.lead }"
       >
         <dt class="estate-price-hero__label">{{ cell.label }}</dt>
-        <dd class="estate-price-hero__value">{{ cell.value }}</dd>
-        <dd v-if="cell.note" class="estate-price-hero__note">{{ cell.note }}</dd>
         <dd
-          v-if="cell.change"
-          class="estate-price-hero__change"
-          :class="cell.change.tone ? `estate-price-hero__change--${cell.change.tone}` : undefined"
+          class="estate-price-hero__value"
+          :class="{ 'estate-price-hero__value--empty': cell.empty }"
         >
-{{ cell.change.text }}
+{{ cell.value }}
 </dd>
+        <dd v-if="cell.note" class="estate-price-hero__note">{{ cell.note }}</dd>
+        <dd v-if="cell.median" class="estate-price-hero__median" data-testid="estate-price-median">
+          {{ cell.median.text }}<span
+            v-if="cell.median.change"
+            class="estate-price-hero__change"
+            :class="cell.median.change.tone ? `estate-price-hero__change--${cell.median.change.tone}` : undefined"
+          > · {{ cell.median.change.text }}</span>
+        </dd>
       </div>
     </dl>
+
+    <div v-if="areaRows.length > 1" class="estate-price-hero__table-wrap" data-testid="estate-area-latest">
+      <table class="estate-price-hero__table">
+        <caption class="estate-price-hero__caption">
+최근 3년 중 가장 최근 거래 · 출처 국토교통부 실거래가
+</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+전용면적
+</th>
+            <th scope="col">
+매매
+</th>
+            <th scope="col">
+전세
+</th>
+            <th scope="col">
+월세
+</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in areaRows"
+            :key="row.key"
+            class="estate-price-hero__row"
+            :class="{
+              'estate-price-hero__row--active': row.key === activeKey,
+              'estate-price-hero__row--selectable': row.selectable,
+            }"
+            :aria-current="row.key === activeKey ? 'true' : undefined"
+            @click="row.selectable && emit('select-area', row.key)"
+          >
+            <th scope="row">
+              <button
+                v-if="row.selectable"
+                type="button"
+                class="estate-price-hero__row-button"
+                :aria-pressed="row.key === activeKey ? 'true' : 'false'"
+                @click.stop="emit('select-area', row.key)"
+              >
+                {{ row.label }}㎡ · {{ row.pyeong }}평
+              </button>
+              <span v-else class="estate-price-hero__row-label">{{ row.label }}㎡ · {{ row.pyeong }}평</span>
+            </th>
+            <td v-for="(cell, index) in row.cells" :key="index">
+              <template v-if="cell">
+                <span class="estate-price-hero__table-value">{{ cell.value }}</span>
+                <span class="estate-price-hero__table-date">{{ cell.month }}</span>
+              </template>
+              <template v-else>
+-
+</template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </template>
 
@@ -81,11 +145,13 @@ function countLabel(group: AreaGroup): string {
   return `${prefix} ${groupCount(group).toLocaleString()}건`
 }
 
+const byCount = (a: AreaGroup, b: AreaGroup): number => groupCount(b) - groupCount(a) || Number(a.key) - Number(b.key)
+
 // 현재 모드(매매/전세) 거래가 없는 그룹은 칩으로 내지 않는다(누르면 아래 필터가 area-reset 된다). 선택된 그룹만 예외.
 const sortedGroups = computed(() =>
   [...(props.overview.areaGroups ?? [])]
     .filter(group => groupCount(group) > 0 || group.key === activeKey.value)
-    .sort((a, b) => groupCount(b) - groupCount(a) || Number(a.key) - Number(b.key)),
+    .sort(byCount),
 )
 
 const expanded = ref(false)
@@ -106,6 +172,11 @@ function shortDate(date: string): string {
   return [year?.slice(2), month, day].filter(Boolean).join('.')
 }
 
+function shortMonth(date: string): string {
+  const [year, month] = date.split('-')
+  return [year?.slice(2), month].filter(Boolean).join('.')
+}
+
 function dealLine(deal: { date: string; floor: number | null; direct?: boolean }): string {
   const parts = [shortDate(deal.date)]
   if (deal.floor != null) parts.push(`${deal.floor}층`)
@@ -113,77 +184,76 @@ function dealLine(deal: { date: string; floor: number | null; direct?: boolean }
   return parts.join(' · ')
 }
 
-/** 오버뷰 latestSale(면적 무관 최근 매매) → 히어로 셀. 그룹에 읽은 거래가 하나도 없을 때만 쓴다. */
-function latestSaleCell(): HeroCell | null {
-  const sale = props.overview.latestSale
-  if (!sale) return null
-  const date = [String(sale.year).slice(2), String(sale.month).padStart(2, '0')]
-  if (sale.day != null) date.push(String(sale.day).padStart(2, '0'))
-  const parts = [date.join('.')]
-  if (sale.area) parts.push(`전용 ${sale.area}㎡`)
-  if (sale.floor != null) parts.push(`${sale.floor}층`)
-  return {
-    label: props.overview.basisMode === 'jeonse' ? '최근 매매' : '최근 거래',
-    value: formatKoreanPrice(sale.amount),
-    note: parts.join(' · '),
-    lead: true,
-  }
-}
-
 interface HeroCell {
   label: string
   value: string
   note?: string
-  change?: { text: string; tone: 'up' | 'down' | null }
+  median?: { text: string; change?: { text: string; tone: 'up' | 'down' | null } }
   lead?: boolean
+  empty?: boolean
 }
 
-function changeLine(rate: number | null): HeroCell['change'] {
+function changeLine(rate: number | null): { text: string; tone: 'up' | 'down' | null } | undefined {
   if (rate == null || !Number.isFinite(rate)) return undefined
   const percent = Math.trunc(Math.round(rate * 1e4) / 100)
-  if (percent > 0) return { text: `▲ 1년 전보다 ${percent}%`, tone: 'up' }
-  if (percent < 0) return { text: `▼ 1년 전보다 ${Math.abs(percent)}%`, tone: 'down' }
-  return { text: '1년 전보다 0%', tone: null }
+  if (percent > 0) return { text: `1년 전보다 +${percent}%`, tone: 'up' }
+  if (percent < 0) return { text: `1년 전보다 −${Math.abs(percent)}%`, tone: 'down' }
+  return { text: '1년 전보다 변동 없음', tone: null }
 }
 
+// 주 숫자 = 선택 그룹·모드의 가장 최근 거래 1건(사실). 최근 1년 중간값은 그 아래 보조 줄.
 const cells = computed<HeroCell[]>(() => {
-  const { basis, saleRepresentative } = hero.value
+  const { basis, saleLatest } = hero.value
   const jeonse = props.overview.basisMode === 'jeonse'
+  const latest = basis?.latestAny ?? null
 
-  // 대표 시세가 없으면 '시세' 단어 없이 최근 거래 1건만: 그룹 최근 거래(직거래 포함) → 오버뷰 최근 매매.
-  if (basis?.representative == null) {
-    const latest = basis?.latestAny ?? null
-    if (!latest) {
-      const fallback = latestSaleCell()
-      return fallback ? [fallback] : []
+  const lead: HeroCell = latest
+    ? { label: jeonse ? '최근 전세' : '최근 매매', value: formatKoreanPrice(latest.amount), note: dealLine(latest), lead: true }
+    : { label: jeonse ? '최근 전세' : '최근 매매', value: '최근 3년 거래 없음', lead: true, empty: true }
+  if (basis?.representative != null) {
+    lead.median = {
+      text: `최근 1년 ${basis.sampleCount}건 중간 ${formatKoreanPrice(basis.representative)}`,
+      change: changeLine(basis.changeRate),
     }
-    return [{
-      label: '최근 거래',
-      value: formatKoreanPrice(latest.amount),
-      note: dealLine(latest),
-      lead: true,
-    }]
   }
 
-  const sample = basis.sampleCount > 0 ? basis.sampleCount : jeonse ? 6 : 5
-  const result: HeroCell[] = [{
-    label: '대표 시세',
-    value: formatKoreanPrice(basis.representative),
-    note: jeonse ? `최근 전세 ${sample}건 중간값` : `최근 거래 ${sample}건 중간값`,
-    change: changeLine(basis.changeRate),
-    lead: true,
-  }]
-  if (basis.latestAny) {
-    result.push({ label: '최근 실거래', value: formatKoreanPrice(basis.latestAny.amount), note: dealLine(basis.latestAny) })
-  }
-  if (basis.max12m != null) {
+  const result: HeroCell[] = [lead]
+  if (basis?.max12m != null) {
     result.push({ label: '최고가 · 12개월', value: formatKoreanPrice(basis.max12m) })
   }
-  if (jeonse && saleRepresentative != null) {
-    result.push({ label: '매매 시세', value: formatKoreanPrice(saleRepresentative) })
+  if (jeonse && saleLatest) {
+    result.push({ label: '최근 매매', value: formatKoreanPrice(saleLatest.amount), note: dealLine(saleLatest) })
   }
   return result
 })
+
+interface TableCell {
+  value: string
+  month: string
+}
+
+/** 월세 칸: 보증금 0·월세 0 이어도 항상 '{보증금}/{월세}' 로 쓴다. */
+function wolsePrice(deposit: number, monthlyRent: number): string {
+  return `${formatKoreanPrice(deposit)}/${formatKoreanPrice(monthlyRent)}`
+}
+
+// 면적별 최근 거래가 표: 칩과 같은 순서·라벨, 그룹 전부(현재 모드 거래가 없는 그룹도 다른 모드 칸이 있을 수 있다).
+// 현재 모드 거래가 없는 행은 칩처럼 고를 수 없다(고르면 아래 필터가 area-reset 된다) — 보기 전용.
+const areaRows = computed(() =>
+  [...(props.overview.areaGroups ?? [])].sort(byCount).map((group) => {
+    const sale = props.overview.saleBasis?.[group.key]?.latestAny ?? null
+    const jeonse = props.overview.jeonseBasis?.[group.key]?.latestAny ?? null
+    const wolse = props.overview.wolseLatest?.[group.key] ?? null
+    const cells: Array<TableCell | null> = [
+      sale ? { value: formatKoreanPrice(sale.amount), month: shortMonth(sale.date) } : null,
+      jeonse ? { value: formatKoreanPrice(jeonse.amount), month: shortMonth(jeonse.date) } : null,
+      wolse
+        ? { value: wolsePrice(wolse.deposit, wolse.monthlyRent), month: shortMonth(wolse.date) }
+        : null,
+    ]
+    return { key: group.key, label: group.label, pyeong: group.pyeong, selectable: groupCount(group) > 0, cells }
+  }),
+)
 </script>
 
 <style scoped>
@@ -313,7 +383,7 @@ const cells = computed<HeroCell[]>(() => {
 }
 
 .estate-price-hero__note,
-.estate-price-hero__change {
+.estate-price-hero__median {
   margin: 4px 0 0;
   color: rgb(var(--muted-rgb));
   font-size: 12px;
@@ -325,12 +395,102 @@ const cells = computed<HeroCell[]>(() => {
   font-weight: 650;
 }
 
+.estate-price-hero__cell--lead .estate-price-hero__value--empty {
+  color: rgb(var(--muted-rgb));
+  font-size: 1.1875rem;
+  font-weight: 650;
+}
+
 .estate-price-hero__change--up {
   color: rgb(var(--delta-up-rgb));
 }
 
 .estate-price-hero__change--down {
   color: rgb(var(--delta-down-rgb));
+}
+
+.estate-price-hero__table-wrap {
+  margin-top: 20px;
+}
+
+.estate-price-hero__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.estate-price-hero__table th,
+.estate-price-hero__table td {
+  border-bottom: 1px solid rgb(var(--border-rgb));
+  padding: 8px 4px;
+  text-align: left;
+  vertical-align: top;
+  /* 360px 에서도 넘치지 않게 줄바꿈은 허용하되, 금액은 글자 단위가 아니라 띄어쓰기에서 끊는다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.estate-price-hero__table thead th {
+  color: rgb(var(--muted-rgb));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.estate-price-hero__table td {
+  color: rgb(var(--strong-rgb));
+}
+
+.estate-price-hero__row--selectable {
+  cursor: pointer;
+}
+
+.estate-price-hero__row--active {
+  background: rgb(var(--brand-tint-rgb));
+}
+
+.estate-price-hero__row-label {
+  color: rgb(var(--muted-rgb));
+  font-weight: 500;
+}
+
+.estate-price-hero__row-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--strong-rgb));
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+}
+
+.estate-price-hero__row--active .estate-price-hero__row-button {
+  color: rgb(var(--brand-strong-rgb));
+}
+
+.estate-price-hero__row-button:focus-visible {
+  outline: 2px solid rgb(var(--brand-rgb));
+  outline-offset: 2px;
+}
+
+.estate-price-hero__table-value,
+.estate-price-hero__table-date {
+  display: block;
+}
+
+.estate-price-hero__table-date {
+  margin-top: 2px;
+  color: rgb(var(--faint-rgb));
+  font-size: 11px;
+}
+
+.estate-price-hero__caption {
+  caption-side: bottom;
+  margin-top: 8px;
+  color: rgb(var(--faint-rgb));
+  font-size: 12px;
+  text-align: left;
 }
 
 @media (min-width: 768px) {
@@ -376,8 +536,17 @@ const cells = computed<HeroCell[]>(() => {
   }
 
   .estate-price-hero__note,
-  .estate-price-hero__change {
+  .estate-price-hero__median {
     font-size: 13px;
+  }
+
+  .estate-price-hero__table {
+    font-size: 14px;
+  }
+
+  .estate-price-hero__table th,
+  .estate-price-hero__table td {
+    padding: 10px 8px;
   }
 }
 </style>

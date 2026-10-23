@@ -41,7 +41,7 @@ function sqlText(query: unknown): string {
 
 beforeEach(() => {
   mockQueryRaw.mockReset();
-  // 대표 시세용 매매·전세 로드(6·7번째 쿼리)는 별도 지정이 없으면 빈 결과
+  // 중간값용 매매·전세 로드(6·7번째)·월세 최근가(8번째) 쿼리는 별도 지정이 없으면 빈 결과
   mockQueryRaw.mockResolvedValue([]);
   mockGetBuildingInfo.mockReset();
   mockGetCanonicalPath.mockReset();
@@ -194,8 +194,8 @@ describe('getDetailOverview price basis', () => {
 
     await getDetailOverview('villa-sale', { bjdCode: '11680', buildingName: '스톤빌리지', buildingKey: 'a'.repeat(64) }, NOW);
 
-    expect(mockQueryRaw).toHaveBeenCalledTimes(8);
-    for (const index of [6, 7]) {
+    expect(mockQueryRaw).toHaveBeenCalledTimes(9);
+    for (const index of [6, 7, 8]) {
       const sql = mockQueryRaw.mock.calls[index][0] as Prisma.Sql;
       expect(sqlText(sql)).toContain('t.dongName');
       expect(sqlText(sql)).toContain('t.jibun');
@@ -204,6 +204,7 @@ describe('getDetailOverview price basis', () => {
     }
     expect(sqlText(mockQueryRaw.mock.calls[6][0])).toContain('FROM VillaSaleTransaction t');
     expect(sqlText(mockQueryRaw.mock.calls[7][0])).toContain('FROM VillaRentTransaction t');
+    expect(sqlText(mockQueryRaw.mock.calls[8][0])).toContain('FROM VillaRentTransaction t');
   });
 
   it('basis loader excludes cancellations', async () => {
@@ -216,11 +217,67 @@ describe('getDetailOverview price basis', () => {
     expect(saleSql).toContain('cancelDealType');
     expect(saleSql).toContain('직거래');
     expect(saleSql).toContain('dealAmount');
-    // 기준일 이전 42개월(36개월 + 6개월)부터
-    expect((mockQueryRaw.mock.calls[5][0] as Prisma.Sql).values).toContain('2023-04-23');
+    // 기준일 이전 36개월(기본 면적 창)부터
+    expect((mockQueryRaw.mock.calls[5][0] as Prisma.Sql).values).toContain('2023-10-23');
+    expect((mockQueryRaw.mock.calls[5][0] as Prisma.Sql).values).not.toContain('2023-04-23');
     const jeonseSql = sqlText(mockQueryRaw.mock.calls[6][0]);
     expect(jeonseSql).toContain('t.deposit');
     expect(jeonseSql).not.toContain('직거래');
+  });
+});
+
+describe('getDetailOverview wolseLatest', () => {
+  const rawWolse = (id: number, date: string, deposit: number, monthlyRent: number, area: string, floor: number | null = 5) => ({
+    id, date, deposit: BigInt(deposit), monthlyRent: BigInt(monthlyRent), area, floor,
+  });
+
+  it('keeps the latest wolse deal per area group and drops keys outside areaGroups', async () => {
+    mockOverviewBase();
+    mockQueryRaw
+      .mockResolvedValueOnce([rawBasis(1, '2026-10-01', 90000, '84.97')])
+      .mockResolvedValueOnce([rawBasis(10, '2026-10-05', 40000, '59.89')])
+      .mockResolvedValueOnce([
+        rawWolse(100, '2026-08-01', 10000, 120, '84.97', 3),
+        rawWolse(101, '2026-09-15', 5000, 150, '84.90', 11),
+        rawWolse(102, '2026-09-15', 6000, 140, '84.91', 12),
+        rawWolse(103, '2026-10-10', 3000, 90, '39.50', 2),
+      ]);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.wolseLatest).toEqual({
+      '60': null,
+      // 같은 날이면 id 가 큰 쪽
+      '85': { date: '2026-09-15', deposit: 6000, monthlyRent: 140, floor: 12 },
+    });
+  });
+
+  it('reads the wolse rows from the rent table within 36 months for both sale and rent URLs', async () => {
+    for (const [type, table] of [['apt-sale', 'AptRentTransaction'], ['villa-rent', 'VillaRentTransaction']] as const) {
+      mockQueryRaw.mockReset();
+      mockQueryRaw.mockResolvedValue([]);
+      mockOverviewBase();
+
+      await getDetailOverview(type, { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+      expect(mockQueryRaw).toHaveBeenCalledTimes(8);
+      const sql = mockQueryRaw.mock.calls[7][0] as Prisma.Sql;
+      expect(sqlText(sql)).toContain(`FROM ${table} t`);
+      expect(sqlText(sql)).toContain('t.monthlyRent IS NOT NULL');
+      expect(sqlText(sql)).toContain('STR_TO_DATE');
+      expect(sql.values).toContain('월세');
+      // 36개월 밖 거래는 SQL 날짜 조건으로 빠진다
+      expect(sql.values).toContain('2023-10-23');
+      expect(sql.values).toContain('2026-10-23');
+    }
+  });
+
+  it('wolseLatest is empty when the building has no area groups', async () => {
+    mockOverviewBase();
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.wolseLatest).toEqual({});
   });
 });
 

@@ -179,7 +179,7 @@ test('initial mobile detail hydration does not emit Vue hydration mismatch while
 
   expect(hydrationMessages).toEqual([])
   await expectRenderedDetailState(page, 'sale')
-  await expectSsrPayloadContains(page, '8억 6,500만원')
+  await expectSsrPayloadContains(page, '84㎡ 최근 매매 8억 7,000만원(')
 })
 
 test('sale to wolse preserves the internal buildingKey, URL mode, browser state, and API mode across reload and back', async ({
@@ -189,7 +189,7 @@ test('sale to wolse preserves the internal buildingKey, URL mode, browser state,
   await page.goto(buildingPath)
   await hydrated(page)
   await expectRenderedDetailState(page, 'sale')
-  await expectSsrPayloadContains(page, '8억 6,500만원')
+  await expectSsrPayloadContains(page, '84㎡ 최근 매매 8억 7,000만원(')
 
   await page.locator('select[name="area"]').selectOption('60')
   await page.getByLabel('조회 기간').selectOption('12')

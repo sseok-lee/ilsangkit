@@ -453,7 +453,7 @@ describe('useStructuredData', () => {
       expect(parsed.mainEntityOfPage).toBe('https://ilsangkit.co.kr/x')
     })
 
-    it('recentAvg → recentAveragePrice additionalProperty (offers 제거됨)', () => {
+    it('latestDealPrice → latestDealPrice additionalProperty (offers 제거됨)', () => {
       const { setRealEstateListingSchema } = useStructuredData()
       setRealEstateListingSchema({
         name: '래미안',
@@ -462,17 +462,19 @@ describe('useStructuredData', () => {
         district: '마포구',
         propertyType: '아파트',
         url: 'https://ilsangkit.co.kr/x',
-        recentAvg: 1_500_000_000,
+        latestDealPrice: 1_500_000_000,
       })
       const factory = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(factory().script[0].innerHTML)
-      // offers 블록은 더 이상 포함되지 않는다 (역사적 평균가를 현재 재고처럼 표현하면 오해 소지)
+      // offers 블록은 더 이상 포함되지 않는다 (지난 거래가를 현재 재고처럼 표현하면 오해 소지)
       expect(parsed.offers).toBeUndefined()
-      // 대신 additionalProperty 에 recentAveragePrice 로 추가된다
-      const avgProp = parsed.additionalProperty.find((p: { name: string }) => p.name === 'recentAveragePrice')
-      expect(avgProp).toBeDefined()
-      expect(avgProp['@type']).toBe('PropertyValue')
-      expect(avgProp.value).toBe('1500000000')
+      // 최근 거래 1건이므로 평균(average) 이름을 쓰지 않는다
+      expect(parsed.additionalProperty.find((p: { name: string }) => p.name === 'recentAveragePrice')).toBeUndefined()
+      const priceProp = parsed.additionalProperty.find((p: { name: string }) => p.name === 'latestDealPrice')
+      expect(priceProp).toBeDefined()
+      expect(priceProp['@type']).toBe('PropertyValue')
+      expect(priceProp.value).toBe('1500000000')
+      expect(priceProp.unitText).toBe('KRW')
     })
 
     it('latestDealDate → datePosted', () => {
@@ -495,7 +497,7 @@ describe('useStructuredData', () => {
   // ─── P1-4: setRealEstateListingSchema offers 제거 ──────────────────────────
 
   describe('setRealEstateListingSchema - offers 제거', () => {
-    it('recentAvg 없을 때도 offers 는 undefined 이다', () => {
+    it('latestDealPrice 없을 때도 offers 는 undefined 이다', () => {
       const { setRealEstateListingSchema } = useStructuredData()
       setRealEstateListingSchema({
         name: '래미안',
@@ -510,7 +512,7 @@ describe('useStructuredData', () => {
       expect(parsed.offers).toBeUndefined()
     })
 
-    it('recentAvg 있을 때도 offers 는 undefined 이다 (역사적 평균가는 InStock 으로 표현 불가)', () => {
+    it('latestDealPrice 있을 때도 offers 는 undefined 이다 (지난 거래가는 InStock 으로 표현 불가)', () => {
       const { setRealEstateListingSchema } = useStructuredData()
       setRealEstateListingSchema({
         name: '래미안',
@@ -519,7 +521,7 @@ describe('useStructuredData', () => {
         district: '마포구',
         propertyType: '아파트',
         url: 'https://ilsangkit.co.kr/x',
-        recentAvg: 900_000_000,
+        latestDealPrice: 900_000_000,
       })
       const factory = mockUseHead.mock.calls[0][0]
       const parsed = JSON.parse(factory().script[0].innerHTML)

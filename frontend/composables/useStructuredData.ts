@@ -472,7 +472,8 @@ export function useStructuredData() {
     lat?: number | null
     lng?: number | null
     image?: string
-    recentAvg?: number
+    /** 기본 면적 그룹 최근 거래 1건 금액(원) */
+    latestDealPrice?: number
     latestDealDate?: string
   }
 
@@ -510,8 +511,8 @@ export function useStructuredData() {
       }
       schema.mainEntityOfPage = options.url
       if (options.image) schema.image = options.image
-      if (options.recentAvg != null) {
-        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'recentAveragePrice', value: String(options.recentAvg) })
+      if (options.latestDealPrice != null) {
+        ;(schema.additionalProperty as unknown[]).push({ '@type': 'PropertyValue', name: 'latestDealPrice', value: String(options.latestDealPrice), unitText: 'KRW' })
       }
       if (options.latestDealDate) schema.datePosted = options.latestDealDate
       return {

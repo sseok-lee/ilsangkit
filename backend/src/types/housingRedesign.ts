@@ -131,7 +131,7 @@ export interface DetailOverview {
   addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>;
   location: { lat: number; lng: number } | null;
   locationAmbiguous: boolean;
-  /** 대표 시세 기준 거래 유형: 매매 URL 'sale', 전월세 URL 'jeonse' */
+  /** 상단 최근 거래·중간값 기준 거래 유형: 매매 URL 'sale', 전월세 URL 'jeonse' */
   basisMode: 'sale' | 'jeonse';
   defaultAreaGroup: string | null;
   areaGroups: AreaGroup[];
@@ -139,7 +139,17 @@ export interface DetailOverview {
   saleBasis: Record<string, PriceBasis>;
   /** 면적 그룹 key → 전세 기준 */
   jeonseBasis: Record<string, PriceBasis>;
+  /** 면적 그룹 key(areaGroups 전부) → 최근 36개월 가장 최근 월세 거래. 없으면 null. */
+  wolseLatest: Record<string, WolseLatestDeal | null>;
   generatedAt: string;
+}
+
+/** 면적별 최근 거래가 표의 월세 칸. 금액은 만원 단위. */
+export interface WolseLatestDeal {
+  date: string;
+  deposit: number;
+  monthlyRent: number;
+  floor: number | null;
 }
 
 export type SectionResult<T> =
@@ -181,7 +191,7 @@ export interface HomeMarket {
   recent: SectionResult<RecentBuilding[]>;
 }
 
-/** 표시용 태그. 대표 시세는 모든 거래로 계산한다. */
+/** 표시용 태그. 중간값은 모든 거래로 계산한다. */
 export type DealFlag = 'normal' | 'direct';
 
 export interface AreaGroup {
@@ -199,7 +209,7 @@ export interface BasisDealRef {
   floor: number | null;
 }
 
-/** 가장 최근 거래(직거래 포함). 상단 '최근 실거래'·'최근 거래' 표시용. */
+/** 가장 최근 거래(직거래 포함). 상단 주 숫자·면적별 최근 거래가 표시용. */
 export interface LatestAnyDeal extends BasisDealRef {
   direct: boolean;
 }

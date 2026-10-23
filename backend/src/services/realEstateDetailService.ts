@@ -49,6 +49,7 @@ import type {
   PeriodMonths,
   PriceBasis,
   SerializedTransaction,
+  WolseLatestDeal,
 } from '../types/housingRedesign.js';
 
 const PAGE_SIZE = 15;
@@ -56,11 +57,8 @@ const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-s
 
 export type QueryClient = Pick<typeof prisma, '$queryRaw'>;
 
-/**
- * 대표 시세 로드 범위: 기본 면적 창 36개월 + 6개월.
- * 6개월은 예전 이상거래 판정용 여유였지만, 오버뷰 면적 그룹(칩·라벨)이 바뀌지 않도록 범위는 그대로 둔다.
- */
-const BASIS_LOAD_MONTHS = PRICE_BASIS.defaultAreaMonths + 6;
+/** 오버뷰 거래 로드 범위: 가장 긴 판정 창인 기본 면적 36개월(최근 거래·12개월 중간값·1년 전 13개월 포함). */
+const BASIS_LOAD_MONTHS = PRICE_BASIS.defaultAreaMonths;
 
 export interface RawDetailPoint {
   id: number;
@@ -144,6 +142,15 @@ interface RawBasisDealRow {
   area: string | Prisma.Decimal;
   floor: number | null;
   direct: number | bigint | boolean | null;
+}
+
+interface RawWolseDealRow {
+  id: number;
+  date: string | Date;
+  deposit: number | bigint | Prisma.Decimal;
+  monthlyRent: number | bigint | Prisma.Decimal;
+  area: string | Prisma.Decimal;
+  floor: number | null;
 }
 
 interface RawWindowRow {
@@ -298,7 +305,7 @@ export async function getDetailOverview(
 
   const basisFrom = monthsBefore(today, BASIS_LOAD_MONTHS);
 
-  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows, saleDeals, jeonseDeals] = await Promise.all([
+  const [latestSaleRows, countRowsResult, areaRows, rawAddresses, locationRows, saleDeals, jeonseDeals, wolseRows] = await Promise.all([
     prisma.$queryRaw<RawLatestSaleRow[]>(latestSaleSql(saleTable, identity, today)),
     prisma.$queryRaw<RawCountRow[]>(overviewSaleCountSql(saleTable, identity, window6m)),
     prisma.$queryRaw<RawAreaBoundsRow[]>(overviewAreaBoundsSql(saleTable, rentTable, identity, today)),
@@ -306,6 +313,7 @@ export async function getDetailOverview(
     prisma.$queryRaw<RawLocationRow[]>(overviewLocationSql(saleTable, rentTable, identity)),
     loadBasisDeals(prisma, type, identity, 'sale', today, basisFrom),
     loadBasisDeals(prisma, type, identity, 'jeonse', today, basisFrom),
+    prisma.$queryRaw<RawWolseDealRow[]>(wolseDealsSql(type, identity, today, basisFrom)),
   ]);
 
   const basisMode: 'sale' | 'jeonse' = SALE_TYPES.has(type) ? 'sale' : 'jeonse';
@@ -340,11 +348,12 @@ export async function getDetailOverview(
     areaGroups,
     saleBasis: priceBasisByGroup(saleDeals, today, PRICE_BASIS.saleSample),
     jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
+    wolseLatest: wolseLatestByGroup(wolseRows, areaGroups.map((group) => group.key)),
     generatedAt,
   };
 }
 
-/** 대표 시세 계산용 거래(취소 제외·유효 계약일·주소 범위). 매매는 dealAmount, 전세는 deposit. */
+/** 최근 거래·중간값 계산용 거래(취소 제외·유효 계약일·주소 범위). 매매는 dealAmount, 전세는 deposit. */
 export async function loadBasisDeals(
   client: QueryClient,
   type: RealEstateType,
@@ -392,6 +401,41 @@ function priceBasisByGroup(
     result[key] = computePriceBasis(groups.get(key) ?? [], today, sampleSize);
   }
   return result;
+}
+
+/** 면적별 최근 거래가 표의 월세 칸: 같은 건물 월세(전월세 테이블) 최근 36개월. 매매·전월세 URL 공통. */
+function wolseDealsSql(type: RealEstateType, identity: DetailIdentity, today: string, fromDate: string): Prisma.Sql {
+  const table = tableForMode(type, 'wolse');
+  return Prisma.sql`
+    SELECT
+      t.id,
+      DATE_FORMAT(${dealDateExpression('t')}, '%Y-%m-%d') AS date,
+      t.deposit,
+      t.monthlyRent,
+      CAST(t.exclusiveArea AS CHAR) AS area,
+      t.floor
+    FROM ${Prisma.raw(table.table)} t
+    WHERE ${baseWhere(table, identity, 'wolse')}
+      AND ${validKnownDateThrough(today, 't')}
+      AND ${requiredValueWhere(table, 'wolse')}
+      AND ${exactDealDateFilter({ from: fromDate, to: today }, 't')}
+  `;
+}
+
+/** 그룹 key(ROUND(전용면적))별 가장 최근 월세 1건(같은 날이면 id 큰 쪽). areaGroups 에 없는 key 는 버린다. */
+function wolseLatestByGroup(rows: RawWolseDealRow[], groupKeys: string[]): Record<string, WolseLatestDeal | null> {
+  const best = new Map<string, { id: number; deal: WolseLatestDeal }>();
+  for (const row of rows) {
+    const key = areaGroupKey(formatArea(row.area));
+    const date = formatDateValue(row.date);
+    const current = best.get(key);
+    if (current && (current.deal.date > date || (current.deal.date === date && current.id > row.id))) continue;
+    best.set(key, {
+      id: row.id,
+      deal: { date, deposit: toNumber(row.deposit), monthlyRent: toNumber(row.monthlyRent), floor: row.floor },
+    });
+  }
+  return Object.fromEntries(groupKeys.map((key) => [key, best.get(key)?.deal ?? null]));
 }
 
 async function resolveDetailIdentity(type: RealEstateType, input: DetailIdentity, legacyBuilding?: BuildingInfo): Promise<DetailIdentity> {

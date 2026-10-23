@@ -340,6 +340,10 @@ export function detailOverview(type, buildingName) {
       '60': basis(61900, 6, 62600, 62600),
       '85': basis(62100, 6, 62600, 62600),
     },
+    wolseLatest: {
+      '60': { date: kstDate(-5), deposit: 10000, monthlyRent: 120, floor: 6 },
+      '85': { date: kstDate(-3), deposit: 20000, monthlyRent: 150, floor: 10 },
+    },
     generatedAt: isoAtKstNoon(),
   }
 }
