@@ -101,6 +101,19 @@ describe('EstatePriceHero', () => {
     expect(mountHero(flat).text()).not.toContain('1년 전보다')
   })
 
+  it.each([
+    [0.29, '▲ 1년 전보다 29%'],
+    [-0.29, '▼ 1년 전보다 29%'],
+    [0.57, '▲ 1년 전보다 57%'],
+    [0.58, '▲ 1년 전보다 58%'],
+    [0.3128, '▲ 1년 전보다 31%'],
+    [-0.057, '▼ 1년 전보다 5%'],
+  ])('changeRate %s renders %s without float drift', (rate, expected) => {
+    const overview = makeOverview()
+    overview.saleBasis['85'] = { ...overview.saleBasis['85'], changeRate: rate }
+    expect(mountHero(overview).text()).toContain(expected)
+  })
+
   it('shows excluded notice with link', () => {
     const wrapper = mountHero(makeOverview())
     const text = wrapper.text()

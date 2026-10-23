@@ -145,7 +145,7 @@ interface HeroCell {
 
 function changeLine(rate: number | null): HeroCell['change'] {
   if (rate == null || !Number.isFinite(rate)) return undefined
-  const percent = Math.trunc(rate * 100)
+  const percent = Math.trunc(Math.round(rate * 1e4) / 100)
   if (percent > 0) return { text: `▲ 1년 전보다 ${percent}%`, tone: 'up' }
   if (percent < 0) return { text: `▼ 1년 전보다 ${Math.abs(percent)}%`, tone: 'down' }
   return { text: '1년 전보다 0%', tone: null }
