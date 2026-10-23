@@ -37,6 +37,12 @@ async function hydrated(page: Page) {
   await page.evaluate(() => document.fonts?.ready ?? Promise.resolve())
 }
 
+// 상단: 준공 연도 보조 줄 + 면적별 대표 가격(EstatePriceHero) 영역
+async function expectDetailHeader(page: Page) {
+  await expect(page.getByText(/2000년 준공/).first()).toBeVisible()
+  await expect(page.getByRole('region', { name: '면적별 대표 가격' })).toContainText('대표 시세')
+}
+
 function captureRuntime(page: Page): Capture {
   const capture: Capture = { pageErrors: [], consoleErrors: [], hydrationWarnings: [] }
   page.on('pageerror', (error) => capture.pageErrors.push(error.message))
@@ -402,12 +408,15 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await page.goto(salePath)
   await hydrated(page)
   await expect(page.locator('h1').first()).toContainText('회복아파트')
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await expect(page.getByTestId('deal-point-row')).toHaveCount(20)
   await page.getByTestId('show-more-deals').click()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(21)
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(20)
-  await expect(page.getByLabel('전용면적')).toHaveValue('84.90')
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(20)
+  // 면적 필터 값은 면적 그룹 key(ROUND(전용면적)) — 상단 칩과 같은 그룹
+  await expect(page.locator('select[name="area"]')).toHaveValue('85')
+  const hero = page.getByRole('region', { name: '면적별 대표 가격' })
+  await expect(hero.locator('button[aria-pressed="true"]')).toContainText('84㎡ · 전용 26평')
   await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   const selectedSameDay = `${kstDateLabel(-2)} · 21건`
   await expect(page.getByText(selectedSameDay)).toBeVisible()
@@ -418,12 +427,14 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row')).toHaveText([
     ...Array.from({ length: 21 }, () => /전용 84\.90㎡/),
   ])
-  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=84.90&months=0&buildingName=회복아파트')
+  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=85&months=0&buildingName=회복아파트')
   expect(detailWireResponse.ok()).toBe(true)
   const detailWire = await detailWireResponse.json()
   expect(detailWire.data.points).toHaveLength(21)
   expect(detailWire.data.table.total).toBe(21)
+  expect(detailWire.data.filters.area).toBe('85')
   expect(detailWire.data.points.every((point: { area: string }) => point.area === '84.90')).toBe(true)
+  expect(detailWire.data.points.every((point: { flag: string }) => point.flag === 'normal')).toBe(true)
   const detailWireText = JSON.stringify(detailWire.data)
   for (const excludedAmount of [99001, 99002, 99003]) {
     expect(detailWireText).not.toContain(String(excludedAmount))
@@ -448,21 +459,29 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row').nth(1)).toContainText('전용 84.90㎡')
   await page.getByLabel('조회 기간').selectOption('12')
   await expect(page.getByText('최근 1년 정상 거래').locator('..').getByText('21건')).toBeVisible()
-  await page.getByLabel('전용면적').selectOption('84.91')
-  await expect(page.getByText('적용 조건 · 매매 · 전용 84.91㎡ · 1년')).toBeVisible()
+  // 필터에서 다른 면적 그룹을 고르면 상단 칩·대표 가격·차트·표가 모두 그 그룹으로 바뀐다
+  await page.locator('select[name="area"]').selectOption('60')
+  await expect(page.getByText('적용 조건 · 매매 · 전용 59㎡ · 1년')).toBeVisible()
+  await expect(hero.locator('button[aria-pressed="true"]')).toContainText('59㎡ · 전용 18평')
+  await expect(hero).toContainText('9억 600만')
   await expect(page.getByText('최근 1년 정상 거래').locator('..').getByText('7건')).toBeVisible()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(7)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('9억 1,000만원')
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(7)
-  await expect(page.getByTestId('detail-transaction-card').first()).toContainText('9억 1,000만원')
-  await page.getByLabel('전용면적').selectOption('84.90')
+  await expect(page.getByTestId('deal-point-row').first()).toContainText('전용 59.91㎡')
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(7)
+  await expect(page.getByTestId('detail-transaction-row').first()).toContainText('9억 1,000만원')
+  // 상단 칩으로 되돌리면 아래 필터도 같은 그룹으로 돌아간다
+  await hero.getByRole('button', { name: /84㎡ · 전용 26평/ }).click()
+  await expect(page.locator('select[name="area"]')).toHaveValue('85')
+  await expect(page.getByText('적용 조건 · 매매 · 전용 84㎡ · 1년')).toBeVisible()
+  await expect(page.getByTestId('deal-point-row').first()).toContainText('전용 84.90㎡')
   await page.getByLabel('조회 기간').selectOption('6')
   const detailCountAfterChartLoad = detailRequests.length
-  await page.getByRole('button', { name: '2' }).click()
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(1)
+  await page.getByRole('button', { name: '2 페이지' }).click()
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(1)
   expect(pageRequests.length).toBeGreaterThanOrEqual(1)
   expect(detailRequests.length).toBe(detailCountAfterChartLoad)
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await attachCapture(testInfo, capture)
 })
 
@@ -493,13 +512,13 @@ test('상세 overview 안정성과 page 실패는 실제 네트워크 재시도�
     overviewFailures: [{ type: 'apt-sale', name: '요약재시도아파트', count: 0 }],
   })
   await page.getByRole('button', { name: '요약 다시 불러오기' }).click()
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await expect.poll(() => nearbyCountsDuringFailure.length).toBeGreaterThan(0)
 
   const retryPagePath = '/real-estate/apt-sale/seoul/gangnam/페이지재시도아파트'
   await page.goto(retryPagePath)
   await hydrated(page)
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   const failedPage = page.waitForResponse(
     (response) =>
       response.url().includes('/api/real-estate/apt-sale/detail-page') &&
@@ -511,18 +530,18 @@ test('상세 overview 안정성과 page 실패는 실제 네트워크 재시도�
       response.url().includes('page=2')
   )
   const pageConsoleStart = capture.consoleErrors.length
-  await page.getByRole('button', { name: '2' }).click()
+  await page.getByRole('button', { name: '2 페이지' }).click()
   expect((await failedPage).status()).toBe(503)
   await expect(page.getByRole('alert').filter({ hasText: '거래 내역 페이지' })).toBeVisible()
   await allowOnlyExpectedConsoleErrors(testInfo, capture, pageConsoleStart, [
     /Failed to load resource: the server responded with a status of 50[0-9]/,
   ])
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(20)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(20)
   await configureFixtureApi(page, {
     pageFailures: [{ type: 'apt-sale', name: '페이지재시도아파트', page: 2, count: 0 }],
   })
   await page.getByRole('button', { name: '거래 내역 다시 불러오기' }).click()
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(1)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(1)
   await attachCapture(testInfo, capture)
 })
 
@@ -619,7 +638,7 @@ test('월세 보증금 0 필터는 무보증 월세 거래와 차트 보증금 �
   await page.getByLabel('거래 유형').selectOption('wolse')
   await expect(page.getByLabel('보증금')).toBeVisible()
   await page.getByLabel('보증금').selectOption('0')
-  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 0')).toBeVisible()
+  await expect(page.getByText('적용 조건 · 월세 · 전용 84㎡ · 전체 기간 · 보증금 0')).toBeVisible()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(6)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 0')
   await expect(page.getByText('전체 기간 정상 거래').locator('..').getByText('6건')).toBeVisible()
