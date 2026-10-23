@@ -7,11 +7,15 @@ export function formatKoreanPrice(amount: number): string {
   return `${roundedAmount.toLocaleString()}만원`
 }
 
-/** 좁은 화면용 짧은 가격(만원 단위 입력). 억은 소수 첫째 자리 반올림: 45150 → "4.5억", 90000 → "9억", 9480 → "9,480만" */
+/**
+ * 좁은 화면용 짧은 가격(만원 단위 입력). 억은 소수 둘째 자리(100만원)까지 반올림, 끝의 0 은 뗀다:
+ * 14500 → "1.45억", 45000 → "4.5억", 90000 → "9억", 9480 → "9,480만".
+ * 정수(100만원 단위)로 먼저 반올림한다 — 1.45 같은 값을 소수로 반올림하면 1.4499… 로 저장돼 내려간다.
+ */
 export function formatCompactPrice(amount: number): string {
   const roundedAmount = Math.round(amount)
   if (roundedAmount < 10000) return `${roundedAmount.toLocaleString()}만`
-  return `${Number((roundedAmount / 10000).toFixed(1))}억`
+  return `${Math.round(roundedAmount / 100) / 100}억`
 }
 
 /** 좁은 화면용 월세 표기: 31000·80 → "3.1억/80만" */

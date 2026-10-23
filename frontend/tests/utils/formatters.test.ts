@@ -73,13 +73,16 @@ describe('buildYearLabel', () => {
 })
 
 describe('formatCompactPrice', () => {
-  it('억 단위는 소수 첫째 자리까지 반올림하고 .0 은 뗀다', () => {
+  it('억 단위는 소수 둘째 자리(100만원)까지 반올림하고 끝의 0 은 뗀다', () => {
+    expect(formatCompactPrice(14500)).toBe('1.45억')
     expect(formatCompactPrice(45000)).toBe('4.5억')
-    expect(formatCompactPrice(45150)).toBe('4.5억')
-    expect(formatCompactPrice(92500)).toBe('9.3억')
+    expect(formatCompactPrice(45150)).toBe('4.52억')
+    expect(formatCompactPrice(45149)).toBe('4.51억')
+    expect(formatCompactPrice(92500)).toBe('9.25억')
     expect(formatCompactPrice(90000)).toBe('9억')
     expect(formatCompactPrice(99960)).toBe('10억')
     expect(formatCompactPrice(125000)).toBe('12.5억')
+    expect(formatCompactPrice(123450)).toBe('12.35억')
   })
 
   it('1억 미만은 만 단위로 쓴다', () => {
