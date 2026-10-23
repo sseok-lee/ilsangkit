@@ -13,13 +13,11 @@ import {
   buildAreaGroups,
   chooseDefaultAreaGroup,
   classifyDeals,
-  classifyDealsDetailed,
   computePriceBasis,
   groupByArea,
   labelAreaGroups,
   monthsBefore,
   type BasisDeal,
-  type DealClassification,
 } from '../lib/realEstatePriceBasis.js';
 import {
   getBuildingInfo,
@@ -58,7 +56,10 @@ const SALE_TYPES = new Set<RealEstateType>(['apt-sale', 'villa-sale', 'offitel-s
 
 export type QueryClient = Pick<typeof prisma, '$queryRaw'>;
 
-/** 대표 시세 로드 범위: 기본 면적 창 36개월 + 이상거래 판정 이웃 6개월 */
+/**
+ * 대표 시세 로드 범위: 기본 면적 창 36개월 + 6개월.
+ * 6개월은 예전 이상거래 판정용 여유였지만, 오버뷰 면적 그룹(칩·라벨)이 바뀌지 않도록 범위는 그대로 둔다.
+ */
 const BASIS_LOAD_MONTHS = PRICE_BASIS.defaultAreaMonths + 6;
 
 export interface RawDetailPoint {
@@ -96,7 +97,7 @@ interface RawAreaCountRow {
 interface AreaChoice {
   options: AreaOption[];
   defaultKey: string | null;
-  /** 매매·전세 모드에서 전 기간 거래를 판정한 플래그(그룹 단위 판정이라 그룹별로 다시 판정한 것과 같다). 월세는 null. */
+  /** 매매·전세 모드에서 전 기간 거래의 표시 태그(직거래 여부). 월세는 null. */
   flags: Map<number, DealFlag> | null;
 }
 
@@ -207,7 +208,7 @@ export async function getDetailSnapshot(
     const pointRows = await getPointRows(tx, normalized, window);
     const total = await countRows(tx, normalized, window);
     const tableRows = await getTableRows(tx, normalized, window, 1);
-    // 판정은 오버뷰와 같은 함수·같은 입력(그룹의 전 기간 거래)으로 한다. 월세는 판정하지 않는다.
+    // 직거래 태그는 면적 선택 때 읽은 거래로 붙인다. 월세는 태그 없음.
     const flags = choiceFlags ?? undefined;
 
     return {
@@ -308,13 +309,8 @@ export async function getDetailOverview(
   ]);
 
   const basisMode: 'sale' | 'jeonse' = SALE_TYPES.has(type) ? 'sale' : 'jeonse';
-  const saleClassified = classifyDealsDetailed(saleDeals);
-  const jeonseClassified = classifyDealsDetailed(jeonseDeals);
   const areaGroups = buildAreaGroups(saleDeals, jeonseDeals, today);
-  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode, today, {
-    sale: saleClassified.flags,
-    jeonse: jeonseClassified.flags,
-  });
+  const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode, today);
 
   const addresses = mergeReportedAddresses(rawAddresses);
   const locationAmbiguous = addresses.length > 1;
@@ -342,8 +338,8 @@ export async function getDetailOverview(
     basisMode,
     defaultAreaGroup,
     areaGroups,
-    saleBasis: priceBasisByGroup(saleDeals, saleClassified, today, PRICE_BASIS.saleSample),
-    jeonseBasis: priceBasisByGroup(jeonseDeals, jeonseClassified, today, PRICE_BASIS.jeonseSample),
+    saleBasis: priceBasisByGroup(saleDeals, today, PRICE_BASIS.saleSample),
+    jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
     generatedAt,
   };
 }
@@ -387,14 +383,13 @@ export async function loadBasisDeals(
 
 function priceBasisByGroup(
   deals: BasisDeal[],
-  { flags, deviations }: DealClassification,
   today: string,
   sampleSize: number,
 ): Record<string, PriceBasis> {
   const groups = groupByArea(deals);
   const result: Record<string, PriceBasis> = {};
   for (const key of [...groups.keys()].sort((a, b) => Number(a) - Number(b))) {
-    result[key] = computePriceBasis(groups.get(key) ?? [], flags, today, sampleSize, deviations);
+    result[key] = computePriceBasis(groups.get(key) ?? [], today, sampleSize);
   }
   return result;
 }
@@ -524,7 +519,7 @@ function emptySnapshot(
 /**
  * 면적 그룹 옵션과 기본 그룹.
  * - 매매·전세: 전 기간 거래를 loadBasisDeals 로 읽어 옵션(라벨·36개월 수)을 만들고,
- *   기본 그룹은 오버뷰와 같은 chooseDefaultAreaGroup(현재 모드 쪽만 채움)으로 고른다. 읽은 거래는 판정에 재사용.
+ *   기본 그룹은 오버뷰와 같은 chooseDefaultAreaGroup(현재 모드 쪽만 채움)으로 고른다. 읽은 거래는 직거래 태그에 재사용.
  * - 월세: 면적별 집계 1회, 기본 그룹은 36개월 거래 수 최대(동률이면 작은 키).
  */
 async function getAreaChoice(
@@ -545,11 +540,10 @@ async function getAreaChoice(
       label: group.label,
       count: mode === 'sale' ? group.saleCount36m : group.jeonseCount36m,
     }));
-    const flags = classifyDeals(deals);
     return {
       options,
-      defaultKey: chooseDefaultAreaGroup(groups, sale, jeonse, mode, today, { [mode]: flags }),
-      flags,
+      defaultKey: chooseDefaultAreaGroup(groups, sale, jeonse, mode, today),
+      flags: classifyDeals(deals),
     };
   }
 

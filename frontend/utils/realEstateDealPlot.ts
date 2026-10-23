@@ -102,8 +102,8 @@ export function projectMonthlyDealTrend(
     const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1))
     const month = start.toISOString().slice(0, 7)
     const group = byMonth.get(month) ?? []
-    // 월 집계는 정상 거래(flag==='normal')의 중간값. points 는 제외 거래까지 전부 유지한다.
-    const amount = medianOf(group.filter(point => point.flag === 'normal').map(point => point.amount))
+    // 월 집계는 그 달 모든 거래(직거래 포함)의 중간값.
+    const amount = medianOf(group.map(point => point.amount))
     // Monthly aggregates sit at the midpoint of the visible part of that month.
     const center = (Math.max(from, start.getTime()) + Math.min(to, next.getTime() - 86400000)) / 2
     const position = project(center, amount ?? 0)
@@ -113,12 +113,8 @@ export function projectMonthlyDealTrend(
   return result
 }
 
-/**
- * 월 선택·요약에 붙일 상태 문구. 중간값이 있으면 null.
- * 제외 거래(직거래·이상거래)만 있는 달을 '거래 없음'이라고 하면 아래 목록과 모순되므로 개수를 밝힌다.
- */
+/** 월 선택에 붙일 상태 문구. 중간값이 있으면 null, 거래가 없는 달은 '거래 없음'. */
 export function monthlyTrendStatus(month: Pick<MonthlyDealTrend, 'amount' | 'points'>): string | null {
   if (month.amount !== null) return null
-  if (month.points.length === 0) return '거래 없음'
-  return `정상 거래 없음 · 제외 ${month.points.length}건`
+  return '거래 없음'
 }

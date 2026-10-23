@@ -3,7 +3,6 @@ import type {
   BasisDealRef,
   DealFlag,
   LatestAnyDeal,
-  ExcludedDeal,
   PriceBasis,
 } from '../types/housingRedesign.js';
 
@@ -11,10 +10,6 @@ export const PRICE_BASIS = {
   saleSample: 5,
   jeonseSample: 6,
   minSample: 3,
-  outlierRatio: 0.4,
-  outlierNeighbors: 10,
-  outlierMinNeighbors: 5,
-  outlierWindowDays: 183,
   repMonths: 12,
   yearAgoFromMonths: 13,
   yearAgoToMonths: 11,
@@ -28,13 +23,6 @@ export interface BasisDeal {
   area: string;
   floor: number | null;
   direct: boolean;
-}
-
-const DAY_MS = 86_400_000;
-
-function toUtc(date: string): number {
-  const [y, m, d] = date.split('-').map(Number);
-  return Date.UTC(y, m - 1, d);
 }
 
 export function areaGroupKey(area: string | number): string {
@@ -117,76 +105,6 @@ export function labelAreaGroups(areasByKey: Map<string, string[]>): Map<string, 
   return result;
 }
 
-export interface DealClassification {
-  flags: Map<number, DealFlag>;
-  /** 비직거래 거래의 (금액 ÷ 이웃 중간값 − 1). 이웃이 5건 미만이면 null. 직거래는 없음. */
-  deviations: Map<number, number | null>;
-}
-
-/**
- * 같은 그룹 안에서 자기 제외·비직거래·±183일 이내 가장 가까운 이웃 10건의 금액 중간값(5건 미만이면 null)을
- * 그룹 전체에 대해 계산한다. 정렬은 날짜 거리 오름차순, 동률이면 id 오름차순.
- * 그룹을 (날짜, id) 로 한 번 정렬한 뒤 각 거래 위치에서 좌우로 날짜 블록 단위로 넓혀 가므로 거의 선형이다.
- */
-function neighborMedians(group: BasisDeal[]): Map<number, number | null> {
-  const sorted = [...group].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
-  const n = sorted.length;
-  const days = sorted.map((d) => toUtc(d.date) / DAY_MS);
-  // 같은 날짜 블록의 [시작, 끝] 인덱스
-  const blockStart = new Array<number>(n);
-  const blockEnd = new Array<number>(n);
-  for (let i = 0; i < n; i++) {
-    blockStart[i] = i > 0 && days[i - 1] === days[i] ? blockStart[i - 1] : i;
-  }
-  for (let i = n - 1; i >= 0; i--) {
-    blockEnd[i] = i < n - 1 && days[i + 1] === days[i] ? blockEnd[i + 1] : i;
-  }
-
-  const want = PRICE_BASIS.outlierNeighbors;
-  const result = new Map<number, number | null>();
-  for (let i = 0; i < n; i++) {
-    const target = sorted[i];
-    if (target.direct) continue;
-    const picked: number[] = [];
-    // 같은 거리 수준의 두 후보 구간(각각 id 오름차순)을 병합해 비직거래를 필요한 만큼만 취한다.
-    const take = (aFrom: number, aTo: number, bFrom: number, bTo: number): void => {
-      let a = aFrom;
-      let b = bFrom;
-      while (picked.length < want) {
-        while (a <= aTo && (sorted[a].direct || sorted[a].id === target.id)) a++;
-        while (b <= bTo && (sorted[b].direct || sorted[b].id === target.id)) b++;
-        if (a > aTo && b > bTo) return;
-        if (b > bTo || (a <= aTo && sorted[a].id < sorted[b].id)) picked.push(sorted[a++].amount);
-        else picked.push(sorted[b++].amount);
-      }
-    };
-    // 거리 0: 같은 날짜 블록(자기 제외)
-    take(blockStart[i], i - 1, i + 1, blockEnd[i]);
-    let l = blockStart[i] - 1;
-    let r = blockEnd[i] + 1;
-    while (picked.length < want) {
-      const dl = l >= 0 ? days[i] - days[l] : Infinity;
-      const dr = r < n ? days[r] - days[i] : Infinity;
-      const d = Math.min(dl, dr);
-      if (d > PRICE_BASIS.outlierWindowDays) break;
-      const useL = dl === d;
-      const useR = dr === d;
-      const lFrom = useL ? blockStart[l] : 0;
-      const lTo = useL ? l : -1;
-      const rFrom = useR ? r : 0;
-      const rTo = useR ? blockEnd[r] : -1;
-      take(lFrom, lTo, rFrom, rTo);
-      if (useL) l = lFrom - 1;
-      if (useR) r = rTo + 1;
-    }
-    result.set(
-      target.id,
-      picked.length < PRICE_BASIS.outlierMinNeighbors ? null : median(picked),
-    );
-  }
-  return result;
-}
-
 /** 면적 그룹 키별로 거래를 묶는다(입력 순서 유지). */
 export function groupByArea(deals: BasisDeal[]): Map<string, BasisDeal[]> {
   const groups = new Map<string, BasisDeal[]>();
@@ -199,30 +117,9 @@ export function groupByArea(deals: BasisDeal[]): Map<string, BasisDeal[]> {
   return groups;
 }
 
-export function classifyDealsDetailed(deals: BasisDeal[]): DealClassification {
-  const flags = new Map<number, DealFlag>();
-  const deviations = new Map<number, number | null>();
-  for (const group of groupByArea(deals).values()) {
-    const medians = neighborMedians(group);
-    for (const d of group) {
-      if (d.direct) {
-        flags.set(d.id, 'direct');
-        continue;
-      }
-      const med = medians.get(d.id) ?? null;
-      const deviation = med !== null ? d.amount / med - 1 : null;
-      deviations.set(d.id, deviation);
-      flags.set(
-        d.id,
-        deviation !== null && Math.abs(deviation) >= PRICE_BASIS.outlierRatio ? 'outlier' : 'normal',
-      );
-    }
-  }
-  return { flags, deviations };
-}
-
+/** 표시용 태그: 직거래는 'direct', 그 외는 'normal'. 대표 시세 계산에는 쓰지 않는다(모든 거래 포함). */
 export function classifyDeals(deals: BasisDeal[]): Map<number, DealFlag> {
-  return classifyDealsDetailed(deals).flags;
+  return new Map(deals.map((d) => [d.id, d.direct ? 'direct' : 'normal']));
 }
 
 const byDateDesc = (a: BasisDeal, b: BasisDeal): number =>
@@ -235,7 +132,7 @@ const toRef = (d: BasisDeal): BasisDealRef => ({
   floor: d.floor,
 });
 
-/** 판정과 무관하게 가장 최근 거래 1건(직거래·이상거래 포함). */
+/** 가장 최근 거래 1건(직거래 포함). */
 function latestAnyDeal(deals: BasisDeal[]): LatestAnyDeal | null {
   let best: BasisDeal | null = null;
   for (const d of deals) {
@@ -244,61 +141,47 @@ function latestAnyDeal(deals: BasisDeal[]): LatestAnyDeal | null {
   return best ? { ...toRef(best), direct: best.direct } : null;
 }
 
+/**
+ * 대표 시세: 최근 12개월 모든 거래(직거래 포함, 취소 거래는 SQL 에서 이미 빠짐) 중 최신 sampleSize 건의 중간값.
+ * 3건 미만이면 null. 1년 전 값·12개월 최고가·최근 거래도 모든 거래 기준.
+ */
 export function computePriceBasis(
   deals: BasisDeal[],
-  flags: Map<number, DealFlag>,
   today: string,
   sampleSize: number,
-  deviations: Map<number, number | null> = classifyDealsDetailed(deals).deviations,
 ): PriceBasis {
   const winStart = monthsBefore(today, PRICE_BASIS.repMonths);
-  const inWindow = deals.filter((d) => d.date > winStart && d.date <= today);
-  const normalAll = deals.filter((d) => flags.get(d.id) === 'normal').sort(byDateDesc);
-  const normalWin = inWindow.filter((d) => flags.get(d.id) === 'normal').sort(byDateDesc);
+  const inWindow = deals.filter((d) => d.date > winStart && d.date <= today).sort(byDateDesc);
 
   let representative: number | null = null;
   let sampleCount = 0;
-  if (normalWin.length >= PRICE_BASIS.minSample) {
-    const sample = normalWin.slice(0, sampleSize);
+  if (inWindow.length >= PRICE_BASIS.minSample) {
+    const sample = inWindow.slice(0, sampleSize);
     representative = median(sample.map((d) => d.amount));
     sampleCount = sample.length;
   }
 
   const yearFrom = monthsBefore(today, PRICE_BASIS.yearAgoFromMonths);
   const yearTo = monthsBefore(today, PRICE_BASIS.yearAgoToMonths);
-  const yearNormals = normalAll.filter((d) => d.date > yearFrom && d.date <= yearTo);
+  const yearDeals = deals.filter((d) => d.date > yearFrom && d.date <= yearTo);
   const yearAgo =
-    yearNormals.length >= PRICE_BASIS.minSample ? median(yearNormals.map((d) => d.amount)) : null;
+    yearDeals.length >= PRICE_BASIS.minSample ? median(yearDeals.map((d) => d.amount)) : null;
 
   const changeRate =
     representative !== null && yearAgo !== null
       ? Math.round((representative / yearAgo - 1) * 1e4) / 1e4
       : null;
 
-  const excluded: ExcludedDeal[] = inWindow
-    .filter((d) => flags.get(d.id) === 'direct' || flags.get(d.id) === 'outlier')
-    .sort(byDateDesc)
-    .map((d) => {
-      if (flags.get(d.id) === 'direct') {
-        return { ...toRef(d), reason: 'direct' as const, deviation: null };
-      }
-      const deviation = deviations.get(d.id) ?? null;
-      return {
-        ...toRef(d),
-        reason: 'outlier' as const,
-        deviation: deviation !== null ? Math.round(deviation * 100) / 100 : null,
-      };
-    });
-
+  const latestAny = latestAnyDeal(deals);
   return {
     representative,
     sampleCount,
-    latest: normalAll.length > 0 ? toRef(normalAll[0]) : null,
-    latestAny: latestAnyDeal(deals),
-    max12m: normalWin.length > 0 ? Math.max(...normalWin.map((d) => d.amount)) : null,
+    latestAny,
+    max12m: inWindow.length > 0 ? Math.max(...inWindow.map((d) => d.amount)) : null,
     yearAgo,
     changeRate,
-    excluded,
+    excluded: [],
+    latest: latestAny ? { id: latestAny.id, date: latestAny.date, amount: latestAny.amount, floor: latestAny.floor } : null,
   };
 }
 
@@ -340,18 +223,12 @@ interface SideStats {
   latest: Map<string, string>;
 }
 
-/** 36개월 창 안 거래를 그룹별로 센다. normalOnly 면 정상 거래만. */
-function sideStats(
-  deals: BasisDeal[],
-  flags: Map<number, DealFlag>,
-  today: string,
-  normalOnly: boolean,
-): SideStats {
+/** 36개월 창 안 거래(직거래 포함)를 그룹별로 센다. */
+function sideStats(deals: BasisDeal[], today: string): SideStats {
   const winStart = monthsBefore(today, PRICE_BASIS.defaultAreaMonths);
   const count = new Map<string, number>();
   const latest = new Map<string, string>();
   for (const d of deals) {
-    if (normalOnly && flags.get(d.id) !== 'normal') continue;
     if (!(d.date > winStart && d.date <= today)) continue;
     const key = areaGroupKey(d.area);
     count.set(key, (count.get(key) ?? 0) + 1);
@@ -381,10 +258,8 @@ function pickByStats(groups: AreaGroup[], stats: SideStats): string | null {
 }
 
 /**
- * 기본 면적(스펙 3장): 최근 36개월 **정상** 거래 수가 가장 많은 그룹, 동률이면 더 최근 정상 거래가 있는 그룹.
- * prefer 쪽 → 반대쪽 순서. 양쪽 모두 정상 거래가 없으면(예: 전부 직거래) 같은 규칙을 전체 거래 수로,
- * 그것도 없으면 가장 작은 key.
- * flags 를 넘기지 않으면 여기서 판정한다(같은 거래 집합을 이미 판정했다면 넘겨서 재사용).
+ * 기본 면적(스펙 3장): 최근 36개월 거래(직거래 포함) 수가 가장 많은 그룹, 동률이면 더 최근 거래가 있는 그룹,
+ * 그래도 같으면 작은 key. prefer 쪽 → 반대쪽 순서. 양쪽 모두 36개월 거래가 없으면 가장 작은 key.
  */
 export function chooseDefaultAreaGroup(
   groups: AreaGroup[],
@@ -392,19 +267,12 @@ export function chooseDefaultAreaGroup(
   jeonse: BasisDeal[],
   prefer: 'sale' | 'jeonse',
   today: string,
-  flags: { sale?: Map<number, DealFlag>; jeonse?: Map<number, DealFlag> } = {},
 ): string | null {
   const deals = { sale, jeonse };
-  const flagMaps = {
-    sale: flags.sale ?? classifyDeals(sale),
-    jeonse: flags.jeonse ?? classifyDeals(jeonse),
-  };
   const other = prefer === 'sale' ? 'jeonse' : 'sale';
-  for (const normalOnly of [true, false]) {
-    for (const side of [prefer, other] as const) {
-      const picked = pickByStats(groups, sideStats(deals[side], flagMaps[side], today, normalOnly));
-      if (picked !== null) return picked;
-    }
+  for (const side of [prefer, other] as const) {
+    const picked = pickByStats(groups, sideStats(deals[side], today));
+    if (picked !== null) return picked;
   }
   const keys = groups.map((g) => g.key).sort((x, y) => Number(x) - Number(y));
   return keys.length > 0 ? keys[0] : null;

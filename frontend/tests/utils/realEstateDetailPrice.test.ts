@@ -3,7 +3,7 @@ import { resolveDefaultRepresentative, resolveHeroBasis } from '~/utils/realEsta
 import type { DetailOverview, PriceBasis } from '~/types/housingRedesign'
 
 function basis(representative: number | null): PriceBasis {
-  return { representative, sampleCount: 5, changeRate: null, latest: null, latestAny: null, max12m: null, excluded: [] } as unknown as PriceBasis
+  return { representative, sampleCount: 5, changeRate: null, latestAny: null, max12m: null, yearAgo: null }
 }
 
 function overview(partial: Record<string, unknown>): DetailOverview {

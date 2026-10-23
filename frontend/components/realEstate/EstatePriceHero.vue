@@ -48,11 +48,6 @@
 </dd>
       </div>
     </dl>
-
-    <p v-if="excludedNotice" class="estate-price-hero__excluded">
-      <span>{{ excludedNotice }}</span>
-      <a href="#transactions" class="estate-price-hero__excluded-link">거래 내역에서 보기</a>
-    </p>
   </section>
 </template>
 
@@ -60,7 +55,7 @@
 import { computed, ref } from 'vue'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { resolveHeroBasis } from '~/utils/realEstateDetailPrice'
-import type { AreaGroup, DetailOverview, ExcludedDeal } from '~/types/housingRedesign'
+import type { AreaGroup, DetailOverview } from '~/types/housingRedesign'
 
 const props = withDefaults(defineProps<{
   overview: DetailOverview
@@ -155,9 +150,9 @@ const cells = computed<HeroCell[]>(() => {
   const { basis, saleRepresentative } = hero.value
   const jeonse = props.overview.basisMode === 'jeonse'
 
-  // 대표 시세가 없으면 '시세' 단어 없이 최근 거래 1건만: 정상 거래 → 직거래 포함 최근 거래 → 오버뷰 최근 매매.
+  // 대표 시세가 없으면 '시세' 단어 없이 최근 거래 1건만: 그룹 최근 거래(직거래 포함) → 오버뷰 최근 매매.
   if (basis?.representative == null) {
-    const latest = basis?.latest ?? basis?.latestAny ?? null
+    const latest = basis?.latestAny ?? null
     if (!latest) {
       const fallback = latestSaleCell()
       return fallback ? [fallback] : []
@@ -174,12 +169,12 @@ const cells = computed<HeroCell[]>(() => {
   const result: HeroCell[] = [{
     label: '대표 시세',
     value: formatKoreanPrice(basis.representative),
-    note: jeonse ? `최근 전세 ${sample}건 중간값` : `최근 중개거래 ${sample}건 중간값`,
+    note: jeonse ? `최근 전세 ${sample}건 중간값` : `최근 거래 ${sample}건 중간값`,
     change: changeLine(basis.changeRate),
     lead: true,
   }]
-  if (basis.latest) {
-    result.push({ label: '최근 실거래', value: formatKoreanPrice(basis.latest.amount), note: dealLine(basis.latest) })
+  if (basis.latestAny) {
+    result.push({ label: '최근 실거래', value: formatKoreanPrice(basis.latestAny.amount), note: dealLine(basis.latestAny) })
   }
   if (basis.max12m != null) {
     result.push({ label: '최고가 · 12개월', value: formatKoreanPrice(basis.max12m) })
@@ -188,28 +183,6 @@ const cells = computed<HeroCell[]>(() => {
     result.push({ label: '매매 시세', value: formatKoreanPrice(saleRepresentative) })
   }
   return result
-})
-
-function reasonLabel(deal: ExcludedDeal): string {
-  if (deal.reason === 'direct') return '직거래'
-  if (deal.deviation == null || !Number.isFinite(deal.deviation)) return '중간값 대비 큰 차이'
-  const percent = Math.round(deal.deviation * 100)
-  return `중간값 대비 ${percent > 0 ? '+' : ''}${percent}%`
-}
-
-const excludedNotice = computed(() => {
-  const basis = hero.value.basis
-  if (!basis || basis.excluded.length === 0) return null
-  const [first] = basis.excluded
-  // 대표 시세가 없으면 화면 어디에도 '시세' 를 쓰지 않는다 — 최근 거래 선택에서 뺀 것으로 안내한다.
-  // 정상 거래가 아예 없어 직거래·이상거래를 최근 거래로 보여 주는 중이면 '뺀' 대신 정상 거래가 아니라고만 알린다.
-  const n = basis.excluded.length
-  const head = basis.representative != null
-    ? `시세 계산에서 뺀 거래 ${n}건`
-    : basis.latest
-      ? `최근 거래에서 뺀 거래 ${n}건`
-      : `정상 거래가 아닌 거래 ${n}건`
-  return `${head} · ${shortDate(first.date)} ${formatKoreanPrice(first.amount)}(${reasonLabel(first)})`
 })
 </script>
 
@@ -265,8 +238,7 @@ const excludedNotice = computed(() => {
 }
 
 .estate-price-hero__chip:focus-visible,
-.estate-price-hero__more:focus-visible,
-.estate-price-hero__excluded-link:focus-visible {
+.estate-price-hero__more:focus-visible {
   outline: 2px solid rgb(var(--brand-rgb));
   outline-offset: 2px;
 }
@@ -361,29 +333,6 @@ const excludedNotice = computed(() => {
   color: rgb(var(--delta-down-rgb));
 }
 
-.estate-price-hero__excluded {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin: 16px 0 0;
-  border-radius: 8px;
-  background: rgb(var(--paper-rgb));
-  padding: 10px 12px;
-  color: rgb(var(--muted-rgb));
-  font-size: 12px;
-  line-height: 1.6;
-  font-variant-numeric: tabular-nums;
-}
-
-.estate-price-hero__excluded-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: rgb(var(--brand-rgb));
-  font-weight: 650;
-}
-
 @media (min-width: 768px) {
   .estate-price-hero {
     padding-top: 22px;
@@ -427,13 +376,8 @@ const excludedNotice = computed(() => {
   }
 
   .estate-price-hero__note,
-  .estate-price-hero__change,
-  .estate-price-hero__excluded {
+  .estate-price-hero__change {
     font-size: 13px;
-  }
-
-  .estate-price-hero__excluded-link {
-    min-height: 0;
   }
 }
 </style>

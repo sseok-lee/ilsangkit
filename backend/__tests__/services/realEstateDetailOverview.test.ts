@@ -99,10 +99,31 @@ describe('getDetailOverview price basis', () => {
     expect(overview?.defaultAreaGroup).toBe('85');
     expect(overview?.areaGroups.map((g) => g.key)).toEqual(['60', '85']);
     expect(overview?.saleBasis['85'].representative).toBe(94000);
-    expect(overview?.saleBasis['85'].excluded).toHaveLength(1);
-    expect(overview?.saleBasis['85'].excluded[0]).toMatchObject({ id: 5, reason: 'outlier', deviation: -0.43 });
+    expect(overview?.saleBasis['85'].sampleCount).toBe(5);
+    expect(overview?.saleBasis['85'].latestAny).toMatchObject({ id: 1, direct: false });
+    expect(overview?.saleBasis['85'].excluded).toEqual([]);
     expect(Object.keys(overview?.jeonseBasis ?? {})).toEqual(['60']);
     expect(overview?.latestSale).toBeNull();
+  });
+
+  it('sale basis includes direct deals and low-priced deals', async () => {
+    mockOverviewBase();
+    mockQueryRaw
+      .mockResolvedValueOnce([
+        rawBasis(1, '2026-10-19', 52000, '84.97', 3, 1n),
+        rawBasis(2, '2026-10-18', 91000, '84.97'),
+        rawBasis(3, '2026-10-17', 45000, '84.97'),
+        rawBasis(4, '2026-10-16', 93000, '84.97'),
+        rawBasis(5, '2026-10-15', 94000, '84.97'),
+        rawBasis(6, '2026-10-14', 95000, '84.97'),
+      ])
+      .mockResolvedValueOnce([]);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    // 최신 5건: 52000(직거래), 91000, 45000, 93000, 94000 → 중간값 91000
+    expect(overview?.saleBasis['85'].representative).toBe(91000);
+    expect(overview?.saleBasis['85'].latestAny).toMatchObject({ id: 1, amount: 52000, direct: true });
   });
 
   it('rent URL prefers jeonse', async () => {
@@ -146,7 +167,7 @@ describe('getDetailOverview price basis', () => {
     expect(overview?.defaultAreaGroup).toBe('60');
     expect(overview?.saleBasis).toEqual({});
     expect(overview?.jeonseBasis['60'].representative).toBeNull();
-    expect(overview?.jeonseBasis['60'].latest?.id).toBe(10);
+    expect(overview?.jeonseBasis['60'].latestAny?.id).toBe(10);
   });
 
   it('building without any deals has no area groups', async () => {
@@ -195,7 +216,7 @@ describe('getDetailOverview price basis', () => {
     expect(saleSql).toContain('cancelDealType');
     expect(saleSql).toContain('직거래');
     expect(saleSql).toContain('dealAmount');
-    // 기준일 이전 42개월(36개월 + 판정 이웃 6개월)부터
+    // 기준일 이전 42개월(36개월 + 6개월)부터
     expect((mockQueryRaw.mock.calls[5][0] as Prisma.Sql).values).toContain('2023-04-23');
     const jeonseSql = sqlText(mockQueryRaw.mock.calls[6][0]);
     expect(jeonseSql).toContain('t.deposit');
