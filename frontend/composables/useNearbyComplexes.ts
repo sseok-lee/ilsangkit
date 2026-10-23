@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, readonly, shallowRef, watch, type Ref } from 'vue'
-import type { NearbyResponse, TransactionMode } from '~/types/realEstate'
+import type { NearbyResponse, RealEstateType, TransactionMode } from '~/types/realEstate'
 
 interface NearbyQuery {
   bjdCode: string
@@ -8,6 +8,7 @@ interface NearbyQuery {
   dongName?: string
   excludeBuildingName: string
   limitPerType: number
+  type?: RealEstateType
 }
 
 type FetchNearby = ReturnType<typeof useRealEstate>['getNearby']

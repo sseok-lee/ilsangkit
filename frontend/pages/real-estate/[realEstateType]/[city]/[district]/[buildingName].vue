@@ -351,76 +351,19 @@
 
       <AffiliateBanner class="order-10" />
 
-      <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
+      <!-- "주변 단지" 블록 — 유형 탭(아파트 → 오피스텔 → 빌라) · 같은 면적 최근가 2열 리스트 -->
       <div id="nearby" class="flex flex-col gap-0 order-12 md:order-12">
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.apt.length > 0"
-          subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/apt.webp?v2" alt="아파트" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('apt') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.apt"
-              :key="item.buildingKey ?? `apt-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="apt"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
-
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.offitel.length > 0"
-          subtext="같은 동 내 오피스텔 단지의 실거래를 함께 확인하세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/offitel.webp?v2" alt="오피스텔" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('offitel') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.offitel"
-              :key="item.buildingKey ?? `offitel-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="offitel"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
-
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.villa.length > 0"
-          subtext="같은 동 내 빌라 단지의 실거래를 비교해 보세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/villa.webp?v2" alt="빌라" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('villa') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.villa"
-              :key="item.buildingKey ?? `villa-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="villa"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
+        <NearbyComplexList
+          v-if="hasNearby"
+          :nearby="nearbyByType"
+          :current-property="propertyTypeParam"
+          :mode="currentTab"
+          :rent-type="currentTab === 'rent' ? selectedRentType : 'all'"
+          :dong-name="buildingInfo?.dongName"
+          :district-name="districtName"
+          :city-slug="citySlugParam"
+          :district-slug="districtSlugParam"
+        />
 
         <!-- 인근 단지 결측: 세 유형이 모두 비면 블록째 사라져 앞뒤 광고가 붙는다. -->
         <SectionBlock variant="flat" v-if="!hasNearby" heading="인근 단지" subtext="반경 내 등록된 다른 단지가 없습니다.">
@@ -529,7 +472,7 @@ import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { isDetailSsrDegraded } from '~/utils/detailSsrDegraded'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
-import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
+import NearbyComplexList from '~/components/realEstate/NearbyComplexList.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
@@ -1378,14 +1321,18 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     if (bjdCode) {
       const nearbyMode = currentTab.value
       // The exact-detail snapshot is initialized after this SSR loader. Rent pages start
-      // in the jeonse detail mode, then client/server hydration can refine nearby links
-      // from the serialized snapshot without reading that snapshot before declaration.
-      const nearbyRentType: 'jeonse' | undefined = nearbyMode === 'rent' ? 'jeonse' : undefined
+      // in the jeonse detail mode unless the URL asks for ?mode=wolse — the client nearby
+      // query keys on the snapshot mode, so SSR must fetch the same rentType or a wolse
+      // page would keep jeonse rows after hydration.
+      const nearbyRentType: 'jeonse' | 'wolse' | undefined = nearbyMode === 'rent'
+        ? validateInitialDetailMode(routeRealEstateType.value as RealEstateType, route.query.mode) === 'wolse' ? 'wolse' : 'jeonse'
+        : undefined
       nearbySSR = await fetchNearbyForSsr(() => getNearby(bjdCode, nearbyMode, {
         rentType: nearbyRentType,
         dongName: resolvedBuildingInfo?.dongName,
         excludeBuildingName: buildingName.value,
-        limitPerType: 4,
+        limitPerType: 6,
+        type: realEstateType,
       }))
     }
     return {
@@ -1783,14 +1730,6 @@ watch(() => buildingInfo.value, (info) => {
 
 // ── Nearby complexes ──────────────────────────────────────────────────────────
 
-function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
-  const label = propertyType === 'apt' ? '아파트' : propertyType === 'villa' ? '빌라' : '오피스텔'
-  if (currentTab.value === 'sale') return `주변 ${label} 매매가`
-  if (selectedRentType.value === 'jeonse') return `주변 ${label} 전세가`
-  if (selectedRentType.value === 'wolse') return `주변 ${label} 월세가`
-  return `주변 ${label} 전월세`
-}
-
 // Reuse successful SSR data (including empty results); retry failed/missing SSR once.
 const { nearby: nearbyByType } = useNearbyComplexes(
   computed(() => ({
@@ -1799,7 +1738,8 @@ const { nearby: nearbyByType } = useNearbyComplexes(
     rentType: currentTab.value === 'rent' ? selectedRentType.value : undefined,
     dongName: buildingInfo.value?.dongName,
     excludeBuildingName: buildingName.value,
-    limitPerType: 4,
+    limitPerType: 6,
+    type: realEstateType,
   })),
   getNearby,
   ssrData.value?.nearbyLoaded ? ssrData.value.nearby : undefined,

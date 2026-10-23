@@ -206,6 +206,9 @@ export function useRealEstate() {
       dongName?: string
       excludeBuildingName?: string
       limitPerType?: number
+      /** 현재 상세 페이지 유형 — 주면 같은 면적 최근가(targetArea·areaDeal)를 계산한다 */
+      type?: RealEstateType
+      areaKey?: string
     } = {}
   ): Promise<NearbyResponse> {
     const query = new URLSearchParams({ bjdCode, mode })
@@ -213,6 +216,8 @@ export function useRealEstate() {
     if (opts.dongName) query.set('dongName', opts.dongName)
     if (opts.excludeBuildingName) query.set('excludeBuildingName', opts.excludeBuildingName)
     if (opts.limitPerType) query.set('limitPerType', String(opts.limitPerType))
+    if (opts.type) query.set('type', opts.type)
+    if (opts.areaKey) query.set('areaKey', opts.areaKey)
 
     const res = await $fetch<{ success: boolean; data: NearbyResponse }>(
       `${apiBase}/api/real-estate/nearby?${query.toString()}`

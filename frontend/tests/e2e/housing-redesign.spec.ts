@@ -222,7 +222,7 @@ async function configureFixtureApi(page: Page, body: unknown) {
     data: body,
   })
   expect(response.ok()).toBe(true)
-  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null }> } }>
+  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null; type?: string | null; limitPerType?: string | null }> } }>
 }
 
 async function blockExternalNetwork(page: Page) {
@@ -646,6 +646,69 @@ test('월세 보증금 0 필터는 무보증 월세 거래와 차트 보증금 �
   await expect(page.getByTestId('deal-point-row')).toHaveCount(6)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 0')
   await expect(page.getByText('전체 기간 거래').locator('..').getByText('6건')).toBeVisible()
+  await attachCapture(testInfo, capture)
+})
+
+test('주변 단지는 유형 탭·같은 면적 최근가 2열 리스트로 SSR 되고 360px에서 넘치지 않는다', async ({
+  page,
+}, testInfo) => {
+  const capture = captureRuntime(page)
+  await stubKakaoMaps(page)
+  await blockExternalNetwork(page)
+  // 다른 테스트가 아직 열지 않은 경로 — 상세 SSR 캐시를 거치지 않아 nearby 요청이 로그에 남는다
+  const nearbyPath = '/real-estate/apt-sale/seoul/gangnam/회복아파트주변'
+  await configureFixtureApi(page, { reset: true })
+
+  // SSR HTML: 비활성 탭 패널도 링크째 들어 있고 display:none 으로만 숨긴다
+  const html = await (await page.request.get(nearbyPath)).text()
+  expect(html.match(/<div[^>]*id="nearby-panel-villa"[^>]*>/)?.[0]).toContain('display:none')
+  expect(html).toContain(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('이웃빌라')}`)
+
+  const log = await configureFixtureApi(page, {})
+  expect(log.data.nearbyRequests).toContainEqual(expect.objectContaining({
+    mode: 'sale',
+    type: 'apt-sale',
+    limitPerType: '6',
+    excludeBuildingName: '회복아파트주변',
+  }))
+
+  await page.goto(salePath)
+  await hydrated(page)
+
+  const nearby = page.locator('#nearby')
+  await nearby.scrollIntoViewIfNeeded()
+  await expect(nearby.locator('h3')).toHaveText('주변 아파트 매매가')
+  await expect(nearby).toContainText('같은 역삼동 단지의 84㎡ 최근 매매가입니다. 평당가는 전용면적 기준입니다.')
+  await expect(nearby.getByRole('tab')).toHaveText(['아파트 1', '오피스텔 1', '빌라 1'])
+  await expect(nearby.getByRole('tab', { name: '아파트 1' })).toHaveAttribute('aria-selected', 'true')
+  const aptRow = nearby.locator('#nearby-panel-apt [data-testid="nearby-row"]').first()
+  await expect(aptRow).toContainText('이웃아파트')
+  await expect(aptRow).toContainText('2000년 준공 · 3년 거래 21건')
+  await expect(aptRow).toContainText('8억 5,000만원')
+  await expect(aptRow).toContainText('84㎡ · 26.09.12 · 7층')
+  await expect(aptRow).toContainText('평당 3,308만원')
+  await expect(nearby.locator('#nearby-panel-villa')).toBeHidden()
+  await expect(nearby.locator('#nearby-panel-villa a')).toHaveAttribute('href', /\/real-estate\/villa-sale\//)
+  await expect(nearby).toContainText('최근 3년 국토교통부 실거래')
+
+  await nearby.getByRole('tab', { name: '빌라 1' }).click()
+  await expect(nearby.locator('h3')).toHaveText('주변 빌라 매매가')
+  await expect(nearby).toContainText('같은 역삼동 빌라 단지의 대표 면적 최근 매매가입니다.')
+  const villaRow = nearby.locator('#nearby-panel-villa [data-testid="nearby-row"]').first()
+  await expect(villaRow).toBeVisible()
+  await expect(villaRow).toContainText('59㎡ · 26.09.12 · 7층')
+  await expect(villaRow).not.toContainText('대표 면적')
+  await expect(nearby.getByTestId('nearby-list-link')).toHaveAttribute('href', '/real-estate/villa-sale/seoul/gangnam')
+  await expect(nearby.getByTestId('nearby-list-link')).toContainText('강남구 빌라 전체 보기')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  await page.locator('#nearby').scrollIntoViewIfNeeded()
+  await expect(page.locator('#nearby [data-testid="nearby-row"]').first()).toBeVisible()
+  const overflow = await viewportOverflowEvidence(page)
+  expect(overflow, JSON.stringify(overflow, null, 2)).toMatchObject({ documentWidth: overflow.viewport })
+  await page.screenshot({ path: `${screenshotDir}/${testInfo.project.name}-360-nearby.png`, fullPage: false })
   await attachCapture(testInfo, capture)
 })
 
