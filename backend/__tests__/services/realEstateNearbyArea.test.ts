@@ -171,7 +171,7 @@ describe('targetArea — 현재 단지 비교 면적', () => {
         { side: 'sale', area: '59.99', total: 3n, recent: 3n, latestYmd: 20260901n },
       ],
     });
-    const recent = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const recent = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(recent.targetArea?.key).toBe('60');
 
     install({
@@ -180,7 +180,7 @@ describe('targetArea — 현재 단지 비교 면적', () => {
         { side: 'sale', area: '59.99', total: 3n, recent: 3n, latestYmd: 20260901n },
       ],
     });
-    const smaller = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const smaller = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(smaller.targetArea?.key).toBe('60');
   });
 
@@ -191,7 +191,7 @@ describe('targetArea — 현재 단지 비교 면적', () => {
         { side: 'jeonse', area: '59.99', total: 2n, recent: 2n, latestYmd: 20260101n },
       ],
     });
-    const result = await getNearbyByBjd(BJD, 'rent', { rentType: 'jeonse', type: 'apt-rent', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'rent', { rentType: 'jeonse', type: 'apt-rent', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.targetArea?.key).toBe('60');
   });
 
@@ -202,13 +202,13 @@ describe('targetArea — 현재 단지 비교 면적', () => {
         { side: 'sale', area: '59.99', total: 9n, recent: 9n, latestYmd: 20260901n },
       ],
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', areaKey: '85', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, areaKey: '85', now: NOW });
     expect(result.targetArea).toEqual({ key: '85', label: '84' });
   });
 
   it('type 이 없으면 targetArea 는 null 이고 targetArea 쿼리를 하지 않는다', async () => {
     install({});
-    const result = await getNearbyByBjd(BJD, 'sale', { excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.targetArea).toBeNull();
     expect(calls.some((c) => c.text.includes('UNION ALL'))).toBe(false);
   });
@@ -225,7 +225,7 @@ describe('targetArea — 현재 단지 비교 면적', () => {
       const groups = buildAreaGroups(sale, jeonse, '2026-10-23');
       const expectedKey = chooseDefaultAreaGroup(groups, sale, jeonse, prefer, '2026-10-23');
       install({ target: aggregateTargetRows(sale, jeonse, loadFrom) });
-      const result = await getNearbyByBjd(BJD, mode, { type, excludeBuildingName: '현재', now: NOW });
+      const result = await getNearbyByBjd(BJD, mode, { type, excludeBuildingName: '현재', dongName: DONG, now: NOW });
       expect(result.targetArea?.key).toBe(expectedKey);
       expect(result.targetArea?.label).toBe(groups.find((g) => g.key === expectedKey)?.label);
     }
@@ -286,7 +286,7 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
         ],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.apt[0].areaDeal).toMatchObject({ areaKey: '60', areaLabel: '59', isRepresentative: true, price: 30000 });
   });
 
@@ -301,7 +301,7 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
         ],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.apt[0].areaDeal?.areaKey).toBe('101');
   });
 
@@ -316,7 +316,7 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
         ],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.villa[0].areaDeal).toMatchObject({ areaKey: '40', isRepresentative: false, price: 21000 });
   });
 
@@ -328,13 +328,13 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
         AptSaleTransaction: [dealRow({ buildingName: '이웃E', area: '84.90', date: '2023-10-23', cnt: 1 })],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.apt.map((item) => [item.recentCount3y, item.areaDeal])).toEqual([[0, null], [0, null]]);
   });
 
   it('SQL: summary 단지 이름 IN·bjdCode·36개월 창(2023-10-24~)·취소 제외로 거래 테이블 1회', async () => {
     install({ summary: { 'apt-sale': [summaryRow('이웃A'), summaryRow('이웃B')] }, target: targetRows });
-    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     const deals = calls.filter((c) => c.text.includes('AS cnt'));
     expect(deals).toHaveLength(1);
     expect(deals[0].text).toContain('AptSaleTransaction');
@@ -345,7 +345,7 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
 
   it('summary 결과가 없는 유형은 거래 테이블을 읽지 않는다', async () => {
     install({ summary: { 'apt-sale': [summaryRow('이웃A')] }, target: targetRows });
-    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     const deals = calls.filter((c) => c.text.includes('AS cnt'));
     expect(deals.map((c) => c.text.includes('AptSaleTransaction'))).toEqual([true]);
   });
@@ -362,7 +362,7 @@ describe('areaDeal — 인근 단지 같은 면적 최근가', () => {
         ],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.apt[0].recentCount3y).toBe(2);
     expect(result.apt[0].areaDeal).toMatchObject({ date: '2026-02-01', price: 50000 });
   });
@@ -380,7 +380,7 @@ describe('areaDeal — 전월세 rentType 반영', () => {
     ['wolse', "t.rentType = '월세'"],
   ] as const)('rentType=%s 는 거래 SQL 에 %s 를 건다', async (rentType, clause) => {
     install({ rawRent: [rawRentRow], target: targetRows });
-    await getNearbyByBjd(BJD, 'rent', { rentType, type: 'apt-rent', excludeBuildingName: '현재', now: NOW });
+    await getNearbyByBjd(BJD, 'rent', { rentType, type: 'apt-rent', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     const deals = calls.filter((c) => c.text.includes('AS cnt'));
     expect(deals.length).toBeGreaterThan(0);
     for (const call of deals) expect(call.text).toContain(clause);
@@ -388,7 +388,7 @@ describe('areaDeal — 전월세 rentType 반영', () => {
 
   it('rentType=all 은 전세·월세 모두(rentType 조건 없음)', async () => {
     install({ summary: { 'apt-rent': [summaryRow('이웃R')] }, target: targetRows });
-    await getNearbyByBjd(BJD, 'rent', { rentType: 'all', type: 'apt-rent', excludeBuildingName: '현재', now: NOW });
+    await getNearbyByBjd(BJD, 'rent', { rentType: 'all', type: 'apt-rent', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     const deals = calls.filter((c) => c.text.includes('AS cnt'));
     expect(deals).toHaveLength(1);
     expect(deals[0].text).not.toContain('t.rentType =');
@@ -405,8 +405,76 @@ describe('areaDeal — 전월세 rentType 반영', () => {
         ],
       },
     });
-    const result = await getNearbyByBjd(BJD, 'rent', { rentType: 'wolse', type: 'apt-rent', excludeBuildingName: '현재', now: NOW });
+    const result = await getNearbyByBjd(BJD, 'rent', { rentType: 'wolse', type: 'apt-rent', excludeBuildingName: '현재', dongName: DONG, now: NOW });
     expect(result.apt[0].areaDeal).toMatchObject({ areaKey: '85', price: 10000, monthlyRent: 120, isRepresentative: false });
     expect(result.apt[0].recentCount3y).toBe(2);
   });
 });
+
+describe('식별 범위 — overview 와 같은 거래 집합', () => {
+  it('jibun 을 주면 같은 이름·다른 지번 거래를 targetArea 집계에서 뺀다(동+지번 조건)', async () => {
+    install({});
+    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '동명', dongName: DONG, jibun: '1-1', now: NOW });
+    const target = calls.find((c) => c.text.includes('UNION ALL'));
+    expect(target?.text).toContain("COALESCE(TRIM(t.jibun), '') = ");
+    expect(target?.values).toEqual(expect.arrayContaining(['동명', DONG, '1-1']));
+  });
+
+  it('jibun 이 빈 문자열이면 지번 없는 거래만(overview addressWhere 와 같음)', async () => {
+    install({});
+    await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '동명', dongName: DONG, jibun: '', now: NOW });
+    const target = calls.find((c) => c.text.includes('UNION ALL'));
+    expect(target?.text).toContain("COALESCE(TRIM(t.jibun), '') = ");
+  });
+
+  it('dongName 이 없으면 bjdCode 전체를 이름으로 묶지 않고 targetArea=null(쿼리 없음)', async () => {
+    install({ target: [{ side: 'sale', area: '84.97', total: 5n, recent: 5n, latestYmd: 20260101n }] });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', now: NOW });
+    expect(result.targetArea).toBeNull();
+    expect(calls.some((c) => c.text.includes('UNION ALL'))).toBe(false);
+  });
+
+  it('wolse 거래 조회는 월세 금액이 있는 거래만(monthlyRent IS NOT NULL)', async () => {
+    install({
+      rawRent: [{
+        buildingName: '이웃R', bjdCode: BJD, city: '서울특별시', district: '강남구', dongName: DONG, jibun: '',
+        buildYear: 2015n, transactionCount: 3n, latestPrice: 50000n, monthlyRent: 0n, latestDealYear: 2026n, latestDealMonth: 9n,
+      }],
+    });
+    await getNearbyByBjd(BJD, 'rent', { rentType: 'wolse', type: 'apt-rent', excludeBuildingName: '현재', dongName: DONG, now: NOW });
+    const deals = calls.filter((c) => c.text.includes('AS cnt'));
+    expect(deals[0].text).toContain('t.monthlyRent IS NOT NULL');
+  });
+});
+
+describe('부분 실패 시 강등', () => {
+  it('면적 거래 조회가 실패해도 그 유형의 기본 행은 그대로 돌려준다(areaDeal 없음)', async () => {
+    install({ summary: { 'apt-sale': [summaryRow('이웃A')], 'villa-sale': [summaryRow('이웃빌라')] }, target: [] });
+    const base = mockQueryRaw.getMockImplementation()!;
+    mockQueryRaw.mockImplementation(async (query: Sql, ...rest: unknown[]) => {
+      if (sqlText(query).includes('AS cnt') && sqlText(query).includes('AptSaleTransaction')) throw new Error('deals down');
+      return base(query, ...rest);
+    });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
+    expect(result.apt.map((item) => item.buildingName)).toEqual(['이웃A']);
+    expect(result.apt[0].areaDeal).toBeUndefined();
+    expect(result.apt[0].recentCount3y).toBeUndefined();
+    expect(result.villa[0].recentCount3y).toBe(0);
+  });
+
+  it('targetArea 조회가 실패하면 targetArea=null, 단지 목록은 대표 면적으로 그대로', async () => {
+    install({
+      summary: { 'apt-sale': [summaryRow('이웃A')] },
+      deals: { AptSaleTransaction: [dealRow({ buildingName: '이웃A', area: '59.90', date: '2026-09-12', cnt: 2 })] },
+    });
+    const base = mockQueryRaw.getMockImplementation()!;
+    mockQueryRaw.mockImplementation(async (query: Sql, ...rest: unknown[]) => {
+      if (sqlText(query).includes('UNION ALL')) throw new Error('target down');
+      return base(query, ...rest);
+    });
+    const result = await getNearbyByBjd(BJD, 'sale', { type: 'apt-sale', excludeBuildingName: '현재', dongName: DONG, now: NOW });
+    expect(result.targetArea).toBeNull();
+    expect(result.apt[0].areaDeal).toMatchObject({ areaKey: '60', isRepresentative: false });
+  });
+});
+

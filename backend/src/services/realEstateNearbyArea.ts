@@ -125,11 +125,15 @@ function targetAreaSql(
   property: NearbyAreaPropertyKey,
   bjdCode: string,
   buildingName: string,
-  dongName: string | null,
+  dongName: string,
+  jibun: string | null,
   window: NearbyDealWindow,
 ): Prisma.Sql {
   const tables = TRANSACTION_TABLE[property];
-  const dongFilter = dongName ? Prisma.sql`AND TRIM(t.dongName) = ${dongName.trim()}` : Prisma.empty;
+  // overview(addressWhere)와 같은 주소 범위: 동 + 지번(없으면 ''). jibun 미지정(구 호출자)이면 동까지만.
+  const dongFilter = Prisma.sql`AND TRIM(t.dongName) = ${dongName.trim()}${
+    jibun === null ? Prisma.empty : Prisma.sql` AND COALESCE(TRIM(t.jibun), '') = ${jibun.trim()}`
+  }`;
   const dateFilter = exactDealDateFilter({ from: window.loadFrom, to: window.today }, 't');
   const fromYmd = ymdNumber(window.loadFrom);
   const aggregate = Prisma.sql`
@@ -189,13 +193,14 @@ export async function loadNearbyTargetArea(params: {
   prefer: 'sale' | 'jeonse';
   bjdCode: string;
   buildingName: string;
-  dongName: string | null;
+  dongName: string;
+  jibun: string | null;
   areaKey: string | null;
   now: Date;
 }): Promise<NearbyTargetArea | null> {
   const window = nearbyDealWindow(params.now);
   const rows = await prisma.$queryRaw<RawTargetAreaRow[]>(
-    targetAreaSql(params.property, params.bjdCode, params.buildingName, params.dongName, window),
+    targetAreaSql(params.property, params.bjdCode, params.buildingName, params.dongName, params.jibun, window),
   );
   const { sale, jeonse } = targetDealsFromRows(rows, window);
   const groups = buildAreaGroups(sale, jeonse, window.today);
@@ -237,7 +242,9 @@ function nearbyAreaDealsSql(
     ? Prisma.sql`AND ${saleNotCanceled('t')} AND t.dealAmount IS NOT NULL`
     : Prisma.sql`AND t.deposit IS NOT NULL ${
       rentType === 'jeonse' ? Prisma.sql`AND t.rentType = '전세'`
-        : rentType === 'wolse' ? Prisma.sql`AND t.rentType = '월세'`
+        // 월세는 overview(requiredValueWhere 'wolse')처럼 월세 금액이 있는 거래만
+        : rentType === 'wolse' ? Prisma.sql`AND t.rentType = '월세' AND t.monthlyRent IS NOT NULL`
+          // 'all' 은 전세·월세를 섞어 단지별 최신 1건을 고른다(외부 호출자만 쓰는 경로 — 상세 페이지는 jeonse|wolse 를 보낸다).
           : Prisma.empty
     }`;
   const partition = Prisma.sql`PARTITION BY t.buildingName, TRIM(t.dongName), COALESCE(TRIM(t.jibun), ''), t.exclusiveArea`;

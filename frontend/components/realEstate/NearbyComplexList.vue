@@ -21,12 +21,13 @@
         :aria-controls="`nearby-panel-${tab.key}`"
         :tabindex="tab.key === activeKey ? 0 : -1"
         :class="[
-          'min-h-[36px] px-3 rounded-full border text-[13px] font-bold transition-colors duration-200',
+          'min-h-[44px] px-3.5 rounded-full border text-[13px] font-bold transition-colors duration-200',
           tab.key === activeKey
             ? 'border-primary bg-primary-50 text-primary-700'
             : 'border-line bg-white text-muted hover:text-strong',
         ]"
         @click="selected = tab.key"
+        @keydown="onTabKeydown"
       >
         {{ tab.label }} {{ tab.items.length }}
       </button>
@@ -84,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import HardLink from '~/components/common/HardLink.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import type { NearbyComplexItem, NearbyResponse, RealEstatePropertyType } from '~/types/realEstate'
@@ -185,6 +186,27 @@ const activeKey = computed<RealEstatePropertyType | null>(() => {
   return keys[0] ?? null
 })
 const activeTab = computed(() => tabs.value.find((tab) => tab.key === activeKey.value) ?? null)
+
+// WAI-ARIA tabs: roving tabindex — ←/→(양끝 순환)·Home·End 로 선택과 포커스를 함께 옮긴다.
+const TAB_KEY_STEP: Record<string, (index: number, count: number) => number> = {
+  ArrowRight: (i, n) => (i + 1) % n,
+  ArrowLeft: (i, n) => (i - 1 + n) % n,
+  Home: () => 0,
+  End: (_i, n) => n - 1,
+}
+
+function onTabKeydown(event: KeyboardEvent) {
+  const step = TAB_KEY_STEP[event.key]
+  const keys = tabs.value.map((tab) => tab.key)
+  if (!step || keys.length === 0) return
+  event.preventDefault()
+  const current = Math.max(0, keys.indexOf(activeKey.value as RealEstatePropertyType))
+  const next = keys[step(current, keys.length)]
+  selected.value = next
+  // keydown 은 브라우저에서만 일어나므로 SSR 가드가 필요 없다. 같은 tablist 안에서 찾는다.
+  const tablist = (event.currentTarget as HTMLElement | null)?.parentElement
+  void nextTick(() => tablist?.querySelector<HTMLElement>(`#nearby-tab-${next}`)?.focus())
+}
 
 const heading = computed(() => {
   const label = activeTab.value?.label ?? ''

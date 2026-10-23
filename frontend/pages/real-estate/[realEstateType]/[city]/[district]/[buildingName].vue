@@ -358,7 +358,7 @@
           :nearby="nearbyByType"
           :current-property="propertyTypeParam"
           :mode="currentTab"
-          :rent-type="currentTab === 'rent' ? selectedRentType : 'all'"
+          :rent-type="currentTab === 'rent' ? nearbyRentType : 'all'"
           :dong-name="buildingInfo?.dongName"
           :district-name="districtName"
           :city-slug="citySlugParam"
@@ -1330,6 +1330,7 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
       nearbySSR = await fetchNearbyForSsr(() => getNearby(bjdCode, nearbyMode, {
         rentType: nearbyRentType,
         dongName: resolvedBuildingInfo?.dongName,
+        jibun: nearbyIdentityJibun(resolvedBuildingInfo),
         excludeBuildingName: buildingName.value,
         limitPerType: 6,
         type: realEstateType,
@@ -1730,13 +1731,24 @@ watch(() => buildingInfo.value, (info) => {
 
 // ── Nearby complexes ──────────────────────────────────────────────────────────
 
+/** 주변 단지 비교 면적용 지번 — overview identity 처럼 동이 있을 때만 '지번(없으면 \'\')'으로 범위를 맞춘다. */
+function nearbyIdentityJibun(info: BuildingInfo | null | undefined): string | undefined {
+  return info?.dongName ? (info.jibun?.trim() ?? '') : undefined
+}
+
+// 스냅샷이 아직 없으면(수화 직후 등) SSR 이 쓴 초기 모드(?mode=)로 맞춰 키가 SSR 데이터와 어긋나지 않게 한다.
+const nearbyRentType = computed<'jeonse' | 'wolse'>(() =>
+  snapshot.value ? selectedRentType.value : initialDetailMode.value === 'wolse' ? 'wolse' : 'jeonse',
+)
+
 // Reuse successful SSR data (including empty results); retry failed/missing SSR once.
 const { nearby: nearbyByType } = useNearbyComplexes(
   computed(() => ({
     bjdCode: resolvedBjdCode.value,
     mode: currentTab.value,
-    rentType: currentTab.value === 'rent' ? selectedRentType.value : undefined,
+    rentType: currentTab.value === 'rent' ? nearbyRentType.value : undefined,
     dongName: buildingInfo.value?.dongName,
+    jibun: nearbyIdentityJibun(buildingInfo.value),
     excludeBuildingName: buildingName.value,
     limitPerType: 6,
     type: realEstateType,

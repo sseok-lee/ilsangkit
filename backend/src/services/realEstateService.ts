@@ -1314,7 +1314,12 @@ export async function getNearbyByBjd(
     limitPerType?: number;
     /** 현재 상세 페이지 유형. 주면 targetArea 를 계산하고 같은 유형 탭에서 같은 면적을 비교한다. */
     type?: RealEstateType;
-    /** 비교 면적 키(ROUND(전용면적)). 주면 기본 면적 계산 대신 이 값을 쓴다. */
+    /** 현재 단지 지번(overview identity 와 같은 주소 범위). '' = 지번 없음, 미지정 = 동까지만. */
+    jibun?: string;
+    /**
+     * 비교 면적 키(ROUND(전용면적)). 주면 기본 면적 계산 대신 이 값을 쓴다.
+     * 현재 단지를 특정할 수 없으면(excludeBuildingName·dongName 없음) 라벨은 키 그대로다.
+     */
     areaKey?: string;
     now?: Date;
   }
@@ -1328,34 +1333,47 @@ export async function getNearbyByBjd(
 
   // 현재 단지 비교 면적: summary 조회와 병렬로 1회. 같은 면적 거래 조회(유형당 1회)는 summary 결과가 나온 뒤.
   const currentProperty = opts.type ? propertyTypeFromRealEstateType(opts.type) : null;
-  const targetPromise: Promise<NearbyTargetArea | null> = !opts.type || !currentProperty
-    ? Promise.resolve(null)
-    : excludeBuildingName
-      ? loadNearbyTargetArea({
-        property: currentProperty,
-        prefer: SALE_TYPES.includes(opts.type) ? 'sale' : 'jeonse',
-        bjdCode,
-        buildingName: excludeBuildingName,
-        dongName,
-        areaKey: opts.areaKey ?? null,
-        now,
-      })
-      : Promise.resolve(opts.areaKey ? { key: opts.areaKey, label: opts.areaKey } : null);
-  // summary 가 먼저 실패해도 처리되지 않은 rejection 으로 남지 않게 흡수(아래 await 에서 다시 던진다).
-  targetPromise.catch(() => {});
+  // dongName 이 없으면(상세 buildingInfo 미확보) bjdCode 전체를 이름으로 묶지 않는다 — overview 와 다른 거래 집합이 된다.
+  const loadTarget = async (): Promise<NearbyTargetArea | null> => {
+    if (!opts.type || !currentProperty) return null;
+    if (!excludeBuildingName || !dongName) {
+      return opts.areaKey ? { key: opts.areaKey, label: opts.areaKey } : null;
+    }
+    return loadNearbyTargetArea({
+      property: currentProperty,
+      prefer: SALE_TYPES.includes(opts.type) ? 'sale' : 'jeonse',
+      bjdCode,
+      buildingName: excludeBuildingName,
+      dongName,
+      jibun: opts.jibun ?? null,
+      areaKey: opts.areaKey ?? null,
+      now,
+    });
+  };
+  // 보조 정보라 실패해도 인근 단지 목록(내부 링크)은 살린다 — targetArea=null 로 강등.
+  const targetPromise: Promise<NearbyTargetArea | null> = loadTarget().catch((err: unknown) => {
+    console.warn(`[nearby] targetArea 조회 실패 — null 로 강등 (${bjdCode}): ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  });
   const withAreaDeals = async (key: NearbyPropertyKey, rows: NearbyComplex[]): Promise<NearbyComplex[]> => {
     if (rows.length === 0) return rows;
     const target = await targetPromise;
-    return attachNearbyAreaDeals({
-      property: key,
-      mode,
-      rentType: mode === 'rent' ? rentType : 'all',
-      bjdCode,
-      items: rows,
-      targetKey: target?.key ?? null,
-      sameProperty: key === currentProperty,
-      now,
-    });
+    try {
+      return await attachNearbyAreaDeals({
+        property: key,
+        mode,
+        rentType: mode === 'rent' ? rentType : 'all',
+        bjdCode,
+        items: rows,
+        targetKey: target?.key ?? null,
+        sameProperty: key === currentProperty,
+        now,
+      });
+    } catch (err) {
+      // 같은 면적 최근가가 실패해도 기본 행은 그대로 — 프론트는 areaDeal 이 없으면 기존 최근가로 표시한다.
+      console.warn(`[nearby] ${key} 면적 거래 조회 실패 — 기본 행으로 강등 (${bjdCode}): ${err instanceof Error ? err.message : String(err)}`);
+      return rows;
+    }
   };
 
   if (mode === 'sale') {

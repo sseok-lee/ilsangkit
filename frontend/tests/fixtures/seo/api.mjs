@@ -412,6 +412,8 @@ createServer(async (req, res) => {
       excludeBuildingName: url.searchParams.get('excludeBuildingName'),
       type: url.searchParams.get('type'),
       limitPerType: url.searchParams.get('limitPerType'),
+      dongName: url.searchParams.get('dongName'),
+      jibun: url.searchParams.get('jibun'),
     })
     const excluded = url.searchParams.get('excludeBuildingName')
     if (excluded === '모호아파트') return ok(res, { apt: [], villa: [], offitel: [], targetArea: null })

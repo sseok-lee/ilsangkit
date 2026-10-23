@@ -209,6 +209,8 @@ export function useRealEstate() {
       /** 현재 상세 페이지 유형 — 주면 같은 면적 최근가(targetArea·areaDeal)를 계산한다 */
       type?: RealEstateType
       areaKey?: string
+      /** 현재 단지 지번('' = 지번 없음) — 비교 면적을 overview 와 같은 주소 범위로 고른다 */
+      jibun?: string
     } = {}
   ): Promise<NearbyResponse> {
     const query = new URLSearchParams({ bjdCode, mode })
@@ -218,6 +220,7 @@ export function useRealEstate() {
     if (opts.limitPerType) query.set('limitPerType', String(opts.limitPerType))
     if (opts.type) query.set('type', opts.type)
     if (opts.areaKey) query.set('areaKey', opts.areaKey)
+    if (opts.jibun !== undefined) query.set('jibun', opts.jibun)
 
     const res = await $fetch<{ success: boolean; data: NearbyResponse }>(
       `${apiBase}/api/real-estate/nearby?${query.toString()}`

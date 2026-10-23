@@ -222,7 +222,7 @@ async function configureFixtureApi(page: Page, body: unknown) {
     data: body,
   })
   expect(response.ok()).toBe(true)
-  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null; type?: string | null; limitPerType?: string | null }> } }>
+  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null; type?: string | null; limitPerType?: string | null; dongName?: string | null; jibun?: string | null }> } }>
 }
 
 async function blockExternalNetwork(page: Page) {
@@ -670,6 +670,9 @@ test('주변 단지는 유형 탭·같은 면적 최근가 2열 리스트로 SSR
     type: 'apt-sale',
     limitPerType: '6',
     excludeBuildingName: '회복아파트주변',
+    // overview identity 와 같은 주소 범위(동+지번)로 비교 면적을 고르도록 지번도 보낸다
+    dongName: '역삼동',
+    jibun: '123',
   }))
 
   await page.goto(salePath)

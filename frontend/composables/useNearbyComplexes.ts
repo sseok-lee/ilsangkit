@@ -6,6 +6,7 @@ interface NearbyQuery {
   mode: TransactionMode
   rentType?: string
   dongName?: string
+  jibun?: string
   excludeBuildingName: string
   limitPerType: number
   type?: RealEstateType

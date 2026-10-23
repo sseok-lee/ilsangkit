@@ -49,8 +49,12 @@ const baseProps = {
   districtSlug: 'mapo',
 }
 
-function mountList(data: NearbyResponse, props: Partial<typeof baseProps> & Record<string, unknown> = {}) {
-  return mount(NearbyComplexList, { props: { ...baseProps, ...props, nearby: data } })
+function mountList(
+  data: NearbyResponse,
+  props: Partial<typeof baseProps> & Record<string, unknown> = {},
+  options: { attachTo?: HTMLElement } = {},
+) {
+  return mount(NearbyComplexList, { props: { ...baseProps, ...props, nearby: data }, ...options })
 }
 
 describe('NearbyComplexList 탭', () => {
@@ -95,6 +99,43 @@ describe('NearbyComplexList 탭', () => {
     expect(wrapper.find('h3').text()).toBe('주변 빌라 매매가')
     expect(wrapper.find('#nearby-panel-apt').attributes('style')).toContain('display: none')
     expect(wrapper.find('#nearby-panel-villa').attributes('style') ?? '').not.toContain('display: none')
+  })
+
+  it('roving tabindex: 활성 탭만 0, 탭 버튼 높이 44px 이상', () => {
+    const wrapper = mountList(nearby({ apt: [item()], offitel: [item({ buildingName: '오피1' })], villa: [item({ buildingName: '빌라1' })] }))
+    const tabs = wrapper.findAll('[role="tab"]')
+    expect(tabs.map((t) => t.attributes('tabindex'))).toEqual(['0', '-1', '-1'])
+    for (const tab of tabs) expect(tab.classes()).toContain('min-h-[44px]')
+  })
+
+  it('←/→/Home/End 로 탭 선택과 포커스가 이동한다(양끝 순환)', async () => {
+    const wrapper = mountList(
+      nearby({ apt: [item()], offitel: [item({ buildingName: '오피1' })], villa: [item({ buildingName: '빌라1' })] }),
+      {},
+      { attachTo: document.body },
+    )
+    const selectedText = () => wrapper.find('[role="tab"][aria-selected="true"]').text()
+    const focusedId = () => (document.activeElement as HTMLElement | null)?.id
+
+    await wrapper.find('#nearby-tab-apt').trigger('keydown', { key: 'ArrowRight' })
+    expect(selectedText()).toBe('오피스텔 1')
+    expect(focusedId()).toBe('nearby-tab-offitel')
+    expect(wrapper.find('#nearby-tab-offitel').attributes('tabindex')).toBe('0')
+
+    await wrapper.find('#nearby-tab-offitel').trigger('keydown', { key: 'End' })
+    expect(selectedText()).toBe('빌라 1')
+    expect(focusedId()).toBe('nearby-tab-villa')
+
+    await wrapper.find('#nearby-tab-villa').trigger('keydown', { key: 'ArrowRight' })
+    expect(selectedText()).toBe('아파트 1')
+
+    await wrapper.find('#nearby-tab-apt').trigger('keydown', { key: 'ArrowLeft' })
+    expect(selectedText()).toBe('빌라 1')
+
+    await wrapper.find('#nearby-tab-villa').trigger('keydown', { key: 'Home' })
+    expect(selectedText()).toBe('아파트 1')
+    expect(focusedId()).toBe('nearby-tab-apt')
+    wrapper.unmount()
   })
 
   it('제목·설명은 모드를 따른다', () => {

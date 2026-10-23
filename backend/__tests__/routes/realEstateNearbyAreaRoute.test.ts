@@ -46,11 +46,11 @@ describe('GET /api/real-estate/nearby areaKey·type', () => {
   it('type·areaKey 를 서비스에 넘기고 targetArea 를 응답에 싣는다', async () => {
     const res = await request(app)
       .get('/api/real-estate/nearby')
-      .query({ bjdCode: '11680', mode: 'sale', type: 'apt-sale', areaKey: '85', excludeBuildingName: 'A' });
+      .query({ bjdCode: '11680', mode: 'sale', type: 'apt-sale', areaKey: '85', excludeBuildingName: 'A', jibun: '1-1' });
     expect(res.status).toBe(200);
     expect(res.body.data.targetArea).toEqual({ key: '85', label: '84' });
     expect(getNearbyByBjd).toHaveBeenCalledWith('11680', 'sale', expect.objectContaining({
-      type: 'apt-sale', areaKey: '85', excludeBuildingName: 'A',
+      type: 'apt-sale', areaKey: '85', excludeBuildingName: 'A', jibun: '1-1',
     }));
   });
 
