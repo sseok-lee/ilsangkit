@@ -634,7 +634,7 @@ describe('useRealEstateDetail', () => {
     const fastPage = detail.goToPage(1)
     fast.resolve({
       success: true,
-      data: { items: saleRows.slice(0, 20), total: 21, page: 1, totalPages: 2 },
+      data: { items: saleRows.slice(0, 15), total: 21, page: 1, totalPages: 2 },
     })
     await fastPage
     slow.resolve({
@@ -800,7 +800,7 @@ describe('useRealEstateDetail', () => {
 
   it('page total이 snapshot total과 달라지면 snapshot을 다시 받고 갱신 문구를 남긴다', async () => {
     const refreshed = cloneSnapshot({
-      table: { items: saleRows.slice(0, 20), total: 22, page: 1, totalPages: 2 },
+      table: { items: saleRows.slice(0, 15), total: 22, page: 1, totalPages: 2 },
       points: saleSnapshot.points.concat({
         id: 99,
         date: '2026-09-13',

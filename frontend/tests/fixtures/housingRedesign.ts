@@ -53,7 +53,7 @@ export const saleSnapshot: DetailSnapshot<SaleTransaction> = {
     deposit: null,
     flag: 'normal' as const,
   })),
-  table: { items: saleRows.slice(0, 20), total: 21, page: 1, totalPages: 2 },
+  table: { items: saleRows.slice(0, 15), total: 21, page: 1, totalPages: 2 },
   generatedAt: '2026-09-21T03:00:00Z',
   adjustment: null,
 }

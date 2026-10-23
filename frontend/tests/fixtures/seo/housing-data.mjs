@@ -1,3 +1,6 @@
+// 백엔드 realEstateDetailService PAGE_SIZE 와 같은 값
+const TABLE_PAGE_SIZE = 15
+
 const MS_PER_DAY = 86_400_000
 
 export const typeIdentities = {
@@ -364,7 +367,7 @@ export function detailSnapshot(type, query) {
   }
   if (mode !== 'wolse') deposit = null
   const rows = rowsFor(type, mode, area, deposit)
-  const pageRows = rows.slice(0, 20)
+  const pageRows = rows.slice(0, TABLE_PAGE_SIZE)
   const months = Number(query.get('months') ?? 0)
   const window = months === 0
     ? { from: rows.map(rowYmd).filter(Boolean).sort()[0] ?? kstDate(0), to: kstDate(0) }
@@ -394,7 +397,7 @@ export function detailSnapshot(type, query) {
       items: pageRows,
       total: rows.length,
       page: 1,
-      totalPages: Math.ceil(rows.length / 20),
+      totalPages: Math.ceil(rows.length / TABLE_PAGE_SIZE),
     },
     generatedAt: isoAtKstNoon(),
     adjustment,
@@ -413,10 +416,10 @@ export function detailPage(type, query) {
   const page = Number(query.get('page') ?? 1)
   const rows = rowsFor(type, mode, area, deposit)
   return {
-    items: rows.slice((page - 1) * 20, page * 20),
+    items: rows.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE),
     total: rows.length,
     page,
-    totalPages: Math.ceil(rows.length / 20),
+    totalPages: Math.ceil(rows.length / TABLE_PAGE_SIZE),
   }
 }
 

@@ -412,7 +412,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row')).toHaveCount(20)
   await page.getByTestId('show-more-deals').click()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(21)
-  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(20)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(15)
   // 면적 필터 값은 면적 그룹 key(ROUND(전용면적)) — 상단 칩과 같은 그룹
   await expect(page.locator('select[name="area"]')).toHaveValue('85')
   const hero = page.getByRole('region', { name: '면적별 대표 가격' })
@@ -478,7 +478,7 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await page.getByLabel('조회 기간').selectOption('6')
   const detailCountAfterChartLoad = detailRequests.length
   await page.getByRole('button', { name: '2 페이지' }).click()
-  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(1)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(6)
   expect(pageRequests.length).toBeGreaterThanOrEqual(1)
   expect(detailRequests.length).toBe(detailCountAfterChartLoad)
   await expectDetailHeader(page)
@@ -536,12 +536,12 @@ test('상세 overview 안정성과 page 실패는 실제 네트워크 재시도�
   await allowOnlyExpectedConsoleErrors(testInfo, capture, pageConsoleStart, [
     /Failed to load resource: the server responded with a status of 50[0-9]/,
   ])
-  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(20)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(15)
   await configureFixtureApi(page, {
     pageFailures: [{ type: 'apt-sale', name: '페이지재시도아파트', page: 2, count: 0 }],
   })
   await page.getByRole('button', { name: '거래 내역 다시 불러오기' }).click()
-  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(1)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(6)
   await attachCapture(testInfo, capture)
 })
 
