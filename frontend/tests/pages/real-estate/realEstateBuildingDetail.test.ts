@@ -649,7 +649,7 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(wrapper.findAll('h1').length).toBe(1)
   })
 
-  it('상단 가격 영역은 기본 면적 그룹 대표 시세를 보여주고 칩 선택 시 면적 필터를 바꾼다', async () => {
+  it('상단 가격 영역은 기본 면적 그룹 최근 거래를 보여주고 칩 선택 시 면적 필터를 바꾼다', async () => {
     mockDetailOverview = {
       identity: { bjdCode: '1168010100', buildingName: '반포자이' },
       latestSale: { id: 1, amount: 52000, year: 2026, month: 10, day: 14, area: '84.90', floor: 12 },
@@ -684,10 +684,18 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
     const hero = wrapper.get('.page-head').get('.estate-price-hero')
-    expect(hero.text()).toContain('대표 시세')
-    expect(hero.text()).toContain('9억 4,000만')
-    // 단건 최근 매매(직거래 5.2억)가 머리 대표 가격으로 나오지 않는다.
+    expect(hero.text()).toContain('최근 매매')
+    expect(hero.text()).toContain('9억 1,000만')
+    expect(hero.text()).toContain('최근 1년 5건 중간 9억 4,000만원')
+    expect(hero.text()).not.toContain('시세')
+    // 면적 무관 단건 최근 매매(overview.latestSale 5.2억)가 머리 숫자로 나오지 않는다.
     expect(hero.text()).not.toContain('5억 2,000만')
+
+    // JSON-LD 가격 = 기본 그룹 최근 거래(만원) × 10000. 이름에 average 를 쓰지 않는다.
+    const listingInput = mockSetRealEstateListingSchema.mock.calls.at(-1)?.[0]
+    const listing = typeof listingInput === 'function' ? listingInput() : listingInput
+    expect(listing.latestDealPrice).toBe(91000 * 10_000)
+    expect(listing).not.toHaveProperty('recentAvg')
     expect(wrapper.text()).toContain('2009년 준공')
     expect(wrapper.text()).toContain('6개월 매매 12건')
 

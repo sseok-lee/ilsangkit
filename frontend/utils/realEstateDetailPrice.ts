@@ -1,15 +1,17 @@
-import type { DetailOverview, PriceBasis } from '~/types/housingRedesign'
+import type { DetailOverview, LatestAnyDeal, PriceBasis } from '~/types/housingRedesign'
 
 export interface HeroBasis {
   groupKey: string | null
   basis: PriceBasis | null
-  /** 전월세 URL 에서 같은 그룹 매매 대표 시세(있을 때만) */
-  saleRepresentative: number | null
+  /** 전월세 URL 에서 같은 그룹 최근 매매 1건(있을 때만) */
+  saleLatest: LatestAnyDeal | null
 }
 
-export interface DefaultRepresentative {
+export interface DefaultLatestDeal {
   /** 만원 단위 */
   amount: number
+  /** YYYY-MM-DD */
+  date: string
   areaLabel: string
   mode: 'sale' | 'jeonse'
 }
@@ -22,25 +24,27 @@ export interface DefaultRepresentative {
 export function resolveHeroBasis(overview: DetailOverview, selectedArea: string | null): HeroBasis {
   const keys = new Set((overview.areaGroups ?? []).map(group => group.key))
   const groupKey = selectedArea && keys.has(selectedArea) ? selectedArea : overview.defaultAreaGroup
-  if (!groupKey) return { groupKey: null, basis: null, saleRepresentative: null }
+  if (!groupKey) return { groupKey: null, basis: null, saleLatest: null }
   const source = overview.basisMode === 'jeonse' ? overview.jeonseBasis : overview.saleBasis
-  const saleRepresentative = overview.basisMode === 'jeonse'
-    ? overview.saleBasis?.[groupKey]?.representative ?? null
+  const saleLatest = overview.basisMode === 'jeonse'
+    ? overview.saleBasis?.[groupKey]?.latestAny ?? null
     : null
-  return { groupKey, basis: source?.[groupKey] ?? null, saleRepresentative }
+  return { groupKey, basis: source?.[groupKey] ?? null, saleLatest }
 }
 
 /**
- * 기본 면적 그룹의 대표 시세. meta·JSON-LD 는 사용자가 고른 칩이 아닌 이 값만 쓴다(SSR 색인 안정).
- * 대표 시세·기본 그룹·그룹 라벨 중 하나라도 없으면 null.
+ * 기본 면적 그룹의 최근 거래 1건(히어로 주 숫자와 같은 값). meta·JSON-LD 는 사용자가 고른 칩이 아닌
+ * 이 값만 쓴다(SSR 색인 안정). 최근 거래·기본 그룹·그룹 라벨 중 하나라도 없으면 null.
  */
-export function resolveDefaultRepresentative(overview: DetailOverview): DefaultRepresentative | null {
+export function resolveDefaultLatestDeal(overview: DetailOverview): DefaultLatestDeal | null {
   const { groupKey, basis } = resolveHeroBasis(overview, null)
-  if (!groupKey || basis?.representative == null) return null
+  const latest = basis?.latestAny
+  if (!groupKey || !latest) return null
   const label = (overview.areaGroups ?? []).find(group => group.key === groupKey)?.label
   if (!label) return null
   return {
-    amount: basis.representative,
+    amount: latest.amount,
+    date: latest.date,
     areaLabel: label,
     mode: overview.basisMode === 'jeonse' ? 'jeonse' : 'sale',
   }

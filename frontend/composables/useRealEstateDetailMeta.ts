@@ -39,8 +39,11 @@ export interface DetailMetaInput {
     recentDeal?: { amount: number; dealDate: string; monthlyRent?: number | null }
     /** 전월세 URL에서 독립 최신 매매를 보증금/월세로 오표기하지 않기 위한 별도 값. */
     recentSale?: { amount: number; dealDate: string }
-    /** 대표 시세(헤더와 같은 함수 출력). 있으면 최근 거래 가격 절보다 우선한다. */
-    representative?: { amount: number; areaLabel: string; mode: 'sale' | 'jeonse' }
+    /**
+     * 기본 면적 그룹의 최근 매매/전세 1건(헤더 주 숫자와 같은 함수 출력, date=YYYY-MM-DD).
+     * 있으면 최근 거래 가격 절보다 우선한다.
+     */
+    latestDeal?: { amount: number; date: string; areaLabel: string; mode: 'sale' | 'jeonse' }
   } | null
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
@@ -121,6 +124,12 @@ function formatRecentPrice(
   return monthlyRent === 0 ? `전세 ${formatKoreanPrice(amount)}` : `보증금 ${formatKoreanPrice(amount)}`
 }
 
+/** 'YYYY-MM-DD' → 'YY.MM' */
+function shortYearMonth(date: string): string {
+  const [year, month] = date.split('-')
+  return `${(year ?? '').slice(2)}.${month ?? ''}`
+}
+
 interface DescriptionOptions {
   withBuildYear: boolean
   withArea: boolean
@@ -145,11 +154,11 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
   const salePriceText = recentSale?.amount != null && recentSale.amount > 0
     ? `매매 ${formatKoreanPrice(recentSale.amount)}`
     : ''
-  const representative = input.summary?.representative
-  const representativeClause = representative && Number.isFinite(representative.amount) && representative.amount > 0
-    ? `, ${representative.areaLabel}㎡ ${representative.mode === 'jeonse' ? '전세' : '매매'} 시세 약 ${formatKoreanPrice(representative.amount)}`
+  const latestDeal = input.summary?.latestDeal
+  const latestDealClause = latestDeal && Number.isFinite(latestDeal.amount) && latestDeal.amount > 0
+    ? `, ${latestDeal.areaLabel}㎡ 최근 ${latestDeal.mode === 'jeonse' ? '전세' : '매매'} ${formatKoreanPrice(latestDeal.amount)}(${shortYearMonth(latestDeal.date)})`
     : ''
-  const priceClause = representativeClause || (priceText
+  const priceClause = latestDealClause || (priceText
     ? `, 최근 ${priceText}(${recentDeal!.dealDate})`
     : salePriceText
       ? `, 최근 ${salePriceText}(${recentSale!.dealDate})`
@@ -170,7 +179,7 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
     ? `${input.facilitySummary} 등 주변 생활시설과 `
     : '주변 생활시설과 '
 
-  return `${lead}${factClause} ${facilityClause}면적별 시세를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
+  return `${lead}${factClause} ${facilityClause}면적별 최근 거래가를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
 }
 
 // 길이 상한을 넘을 때 떨어뜨리는 순서 — 준공년도 → 주변 시설 상세 → 전용면적.

@@ -73,8 +73,9 @@ describe('buildRealEstateDetailMeta - description', () => {
     expect(description).toContain('학교 4곳·병원 6곳 등 주변 생활시설')
   })
   // 준공년도는 같은 이름·같은 구의 두 단지를 가르는 실데이터 토큰이라 다시 싣는다.
+  // 120자 상한을 넘으면 준공년도가 먼저 빠지므로(DESCRIPTION_LADDER) 시설 요약 없이 확인한다.
   it('준공년도를 description 에 싣는다', () => {
-    expect(buildRealEstateDetailMeta(base).description).toContain('2015년 준공')
+    expect(buildRealEstateDetailMeta({ ...base, facilitySummary: null }).description).toContain('2015년 준공')
   })
   it('전체 길이 120자 이하', () => {
     expect(buildRealEstateDetailMeta(base).description.length).toBeLessThanOrEqual(120)
@@ -125,6 +126,8 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
   it('full payload — description has 실거래 count and recent price', () => {
     const { description } = buildRealEstateDetailMeta({
       ...legacyBase,
+      // 시설 요약까지 실으면 120자를 넘어 준공년도가 먼저 빠진다(DESCRIPTION_LADDER).
+      facilitySummary: null,
       summary: {
         totalCount: 30,
         recentDeal: { amount: 10700, dealDate: '2026년 5월' },
@@ -142,7 +145,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
       summary: { totalCount: 0 },
     })
     expect(description).not.toMatch(/실거래 \d+건/)
-    expect(description).toContain('면적별 시세를 함께 확인하세요')
+    expect(description).toContain('면적별 최근 거래가를 함께 확인하세요')
   })
 
   it('buildYear null — description omits 준공', () => {
@@ -174,7 +177,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     expect(description).toContain('주변 생활시설과')
   })
 
-  it('all optionals missing — minimal description has 면적별 시세', () => {
+  it('all optionals missing — minimal description has 면적별 최근 거래가', () => {
     const { description } = buildRealEstateDetailMeta({
       buildingName: '새한A',
       region: { city: '광주', district: '북구' },
@@ -187,7 +190,7 @@ describe('buildRealEstateDetailMeta - legacy cases (updated to new format)', () 
     })
     expect(description).toContain('광주 북구 새한A 아파트 매매 실거래가')
     expect(description).toContain('주변 생활시설과')
-    expect(description).toContain('면적별 시세를 함께 확인하세요')
+    expect(description).toContain('면적별 최근 거래가를 함께 확인하세요')
   })
 
   it('rent mode — uses 전월세 label', () => {
@@ -282,7 +285,9 @@ describe('buildRealEstateDetailMeta - 전월세 거래 종류와 금액', () => 
       ...rentBase,
       summary: { totalCount: 12, recentDeal: { amount: 0, dealDate: '2026년 8월', monthlyRent: 0 } },
     })
-    expect(description).not.toContain('최근')
+    // 끝 문구 '면적별 최근 거래가' 의 '최근' 은 금액 절이 아니다.
+    expect(description).not.toContain(', 최근')
+    expect(description).not.toContain('2026년 8월')
     expect(description).toContain('실거래 12건')
   })
 
@@ -308,45 +313,47 @@ describe('buildRealEstateDetailMeta - 전월세 거래 종류와 금액', () => 
   })
 })
 
-describe('buildRealEstateDetailMeta - 대표 시세', () => {
-  it('description uses representative price when present', () => {
+describe('buildRealEstateDetailMeta - 기본 면적 최근 거래', () => {
+  it('description uses the default group latest deal when present', () => {
     const { description } = buildRealEstateDetailMeta({
       ...base,
       summary: {
         totalCount: 312,
         recentDeal: { amount: 285000, dealDate: '2025.3' },
-        representative: { amount: 94000, areaLabel: '84', mode: 'sale' },
+        latestDeal: { amount: 91000, date: '2026-10-19', areaLabel: '84', mode: 'sale' },
       },
     })
-    expect(description).toContain('84㎡ 매매 시세 약 9억 4,000만원')
-    expect(description).not.toContain('최근')
+    expect(description).toContain(', 84㎡ 최근 매매 9억 1,000만원(26.10).')
+    expect(description).not.toContain('시세 약')
+    expect(description).not.toContain('28억')
     expect(description.length).toBeLessThanOrEqual(120)
   })
 
-  it('rent URL description uses jeonse representative', () => {
+  it('rent URL description uses the jeonse latest deal', () => {
     const { description } = buildRealEstateDetailMeta({
       ...base,
       transactionMode: 'rent',
       summary: {
         totalCount: 40,
         recentSale: { amount: 100000, dealDate: '2025.3' },
-        representative: { amount: 50000, areaLabel: '59', mode: 'jeonse' },
+        latestDeal: { amount: 50000, date: '2026-09-02', areaLabel: '59', mode: 'jeonse' },
       },
     })
-    expect(description).toContain('59㎡ 전세 시세 약 5억')
-    expect(description).not.toContain('최근')
+    expect(description).toContain('59㎡ 최근 전세 5억(26.09)')
+    expect(description).not.toContain('매매 10억')
   })
 
-  it('falls back to recent deal without representative', () => {
+  it('falls back to recent deal without latestDeal', () => {
     const { description } = buildRealEstateDetailMeta(base)
     expect(description).toContain('최근 28억 5,000만원(2025.3)')
   })
 
-  it('title 은 대표 시세와 무관하다', () => {
-    const withRep = buildRealEstateDetailMeta({
+  it('title 은 최근 거래와 무관하다(실거래가·시세 유지)', () => {
+    const withDeal = buildRealEstateDetailMeta({
       ...base,
-      summary: { totalCount: 312, representative: { amount: 94000, areaLabel: '84', mode: 'sale' } },
+      summary: { totalCount: 312, latestDeal: { amount: 91000, date: '2026-10-19', areaLabel: '84', mode: 'sale' } },
     })
-    expect(withRep.title).toBe(buildRealEstateDetailMeta(base).title)
+    expect(withDeal.title).toBe(buildRealEstateDetailMeta(base).title)
+    expect(withDeal.title).toContain('실거래가·시세')
   })
 })

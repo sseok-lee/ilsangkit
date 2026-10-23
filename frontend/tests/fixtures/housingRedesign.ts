@@ -74,5 +74,6 @@ export const saleOverview: DetailOverview = {
   areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 21, jeonseCount36m: 0 }],
   saleBasis: {},
   jeonseBasis: {},
+  wolseLatest: { '85': null },
   generatedAt: saleSnapshot.generatedAt,
 }
