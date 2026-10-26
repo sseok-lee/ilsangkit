@@ -252,4 +252,29 @@ describe('NearbyQuerySchema', () => {
     const parsed = NearbyQuerySchema.parse({ bjdCode: '1111017900', mode: 'sale', excludeBuildingName: '래미안' });
     expect(parsed.excludeBuildingName).toBe('래미안');
   });
+
+  it('areaKey는 선택, 1~4자리 정수 문자열만 허용', () => {
+    const base = { bjdCode: '1111017900', mode: 'sale' };
+    expect(NearbyQuerySchema.parse(base).areaKey).toBeUndefined();
+    expect(NearbyQuerySchema.parse({ ...base, areaKey: '85' }).areaKey).toBe('85');
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '1234' }).success).toBe(true);
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '12345' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '84.9' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '-1' }).success).toBe(false);
+    expect(NearbyQuerySchema.safeParse({ ...base, areaKey: '8a' }).success).toBe(false);
+  });
+
+  it('jibun은 선택, 앞뒤 공백 제거·50자 이하·빈 문자열 허용', () => {
+    const base = { bjdCode: '1111017900', mode: 'sale' };
+    expect(NearbyQuerySchema.parse({ ...base, jibun: ' 1-1 ' }).jibun).toBe('1-1');
+    expect(NearbyQuerySchema.parse({ ...base, jibun: '' }).jibun).toBe('');
+    expect(NearbyQuerySchema.safeParse({ ...base, jibun: 'x'.repeat(51) }).success).toBe(false);
+  });
+
+  it('type은 선택, RealEstateType 슬러그만 허용', () => {
+    const base = { bjdCode: '1111017900', mode: 'sale' };
+    expect(NearbyQuerySchema.parse({ ...base, type: 'apt-sale' }).type).toBe('apt-sale');
+    expect(NearbyQuerySchema.safeParse({ ...base, type: 'apt' }).success).toBe(false);
+  });
 });

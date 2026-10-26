@@ -39,10 +39,53 @@ export interface DealPoint {
   area: string
   floor: number | null
   deposit: number | null
+  /** 직거래 표시 태그(매매만). 전세·월세는 항상 'normal'. */
+  flag: DealFlag
+}
+
+/** 표시용 태그. 중간값은 모든 거래로 계산한다. */
+export type DealFlag = 'normal' | 'direct'
+
+export interface AreaOption {
+  /** 면적 그룹 키 = ROUND(전용면적) */
+  key: string
+  /** 그룹 내 최다 빈도 전용면적의 소수 버림 */
+  label: string
+  /** 현재 모드의 최근 36개월 거래 수 */
+  count: number
+}
+
+export interface AreaGroup {
+  key: string
+  label: string
+  pyeong: number
+  saleCount36m: number
+  jeonseCount36m: number
+}
+
+export interface BasisDealRef {
+  id: number
+  date: string
+  amount: number
+  floor: number | null
+}
+
+/** 가장 최근 거래(직거래 포함). 상단 주 숫자·면적별 최근 거래가 표시용. */
+export interface LatestAnyDeal extends BasisDealRef {
+  direct: boolean
+}
+
+export interface PriceBasis {
+  representative: number | null
+  sampleCount: number
+  latestAny: LatestAnyDeal | null
+  max12m: number | null
+  yearAgo: number | null
+  changeRate: number | null
 }
 
 export interface DetailOptions {
-  areas: string[]
+  areas: AreaOption[]
   deposits: Array<{ amount: number; count: number }>
 }
 
@@ -84,7 +127,25 @@ export interface DetailOverview {
   addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>
   location: { lat: number; lng: number } | null
   locationAmbiguous: boolean
+  /** 상단 최근 거래·중간값 기준 거래 유형: 매매 URL 'sale', 전월세 URL 'jeonse' */
+  basisMode: 'sale' | 'jeonse'
+  defaultAreaGroup: string | null
+  areaGroups: AreaGroup[]
+  /** 면적 그룹 key → 매매 기준 */
+  saleBasis: Record<string, PriceBasis>
+  /** 면적 그룹 key → 전세 기준 */
+  jeonseBasis: Record<string, PriceBasis>
+  /** 면적 그룹 key(areaGroups 전부) → 최근 36개월 가장 최근 월세 거래. 없으면 null. 구 응답엔 없을 수 있다. */
+  wolseLatest?: Record<string, WolseLatestDeal | null>
   generatedAt: string
+}
+
+/** 면적별 최근 거래가 표의 월세 칸. 금액은 만원 단위. */
+export interface WolseLatestDeal {
+  date: string
+  deposit: number
+  monthlyRent: number
+  floor: number | null
 }
 
 export type SectionResult<T> =

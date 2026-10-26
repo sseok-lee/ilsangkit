@@ -410,13 +410,36 @@ createServer(async (req, res) => {
       mode: url.searchParams.get('mode'),
       rentType: url.searchParams.get('rentType'),
       excludeBuildingName: url.searchParams.get('excludeBuildingName'),
+      type: url.searchParams.get('type'),
+      limitPerType: url.searchParams.get('limitPerType'),
+      dongName: url.searchParams.get('dongName'),
+      jibun: url.searchParams.get('jibun'),
     })
     const excluded = url.searchParams.get('excludeBuildingName')
-    if (excluded === '모호아파트') return ok(res, { apt: [], villa: [], offitel: [] })
+    if (excluded === '모호아파트') return ok(res, { apt: [], villa: [], offitel: [], targetArea: null })
+    const rentMode = url.searchParams.get('mode') === 'rent'
+    const wolse = rentMode && url.searchParams.get('rentType') === 'wolse'
+    const pageProperty = (url.searchParams.get('type') ?? 'apt-sale').split('-')[0]
+    // 같은 면적 최근가: 같은 유형은 비교 면적(84㎡), 이웃빌라는 대표 면적(59㎡)
+    const withAreaDeal = (row, property, representative = false) => ({
+      ...row,
+      recentCount3y: 21,
+      areaDeal: {
+        areaKey: representative ? '60' : '85',
+        areaLabel: representative ? '59' : '84',
+        isRepresentative: representative && property === pageProperty,
+        date: '2026-09-12',
+        floor: 7,
+        price: wolse ? 10000 : rentMode ? 49800 : 85000,
+        monthlyRent: wolse ? 120 : rentMode ? 0 : null,
+        exclusiveArea: representative ? 59.9 : 84.94,
+      },
+    })
     return ok(res, {
-      apt: [baseBuilding('apt-sale', excluded === '이웃아파트' ? '회복아파트' : '이웃아파트')],
-      villa: [baseBuilding('villa-sale', '이웃빌라')],
-      offitel: [baseBuilding('offitel-sale', '이웃오피스텔')],
+      apt: [withAreaDeal(baseBuilding('apt-sale', excluded === '이웃아파트' ? '회복아파트' : '이웃아파트'), 'apt')],
+      villa: [withAreaDeal(baseBuilding('villa-sale', '이웃빌라'), 'villa', true)],
+      offitel: [withAreaDeal(baseBuilding('offitel-sale', '이웃오피스텔'), 'offitel')],
+      targetArea: { key: '85', label: '84' },
     })
   }
 
@@ -430,7 +453,44 @@ createServer(async (req, res) => {
     return ok(res, subscriptionListFixture(new URLSearchParams('status=upcoming')).items)
 
   if (path === '/api/facilities/hospital/hospital-seo-fixture') return ok(res, facility)
+  if (path === '/api/facilities/hospital/hospital-seo-fixture/nearby-grouped') {
+    const near = (category, names, extras = {}) =>
+      names.map((name, i) => ({
+        id: `fixture-${category}-${i + 1}`, name, category,
+        address: '서울특별시 강남구 역삼동 100',
+        roadAddress: `서울특별시 강남구 테헤란로 ${100 + i}, ${i + 1}층 (역삼동)`,
+        lat: 37.5, lng: 127.03, city: '서울특별시', district: '강남구',
+        distance: 12 + i * 131, extras,
+      }))
+    return ok(res, {
+      radius: 1000,
+      groups: [
+        { category: 'hospital', count: 1942, exact: false, items: near('hospital', ['강남연세내과의원', '테헤란정형외과의원', '역삼소아청소년과의원', '선릉이비인후과의원', '역삼아산치과의원'], { clCdNm: '의원', drTotCnt: 2 }) },
+        { category: 'pharmacy', count: 2, exact: true, items: near('pharmacy', ['역삼온누리약국', '테헤란약국'], { dutyTime1s: '900', dutyTime1c: '1830' }) },
+        { category: 'aed', count: 0, exact: true, items: [] },
+      ],
+    })
+  }
   if (path.endsWith('/nearby-counts')) return ok(res, { radius: 300, counts: {} })
+  if (path === '/api/facilities/nearby-grouped') {
+    const fixtureItems = (category, names) =>
+      names.map((name, i) => ({ id: `fixture-${category}-${i + 1}`, name, category, distance: 26 + i * 147 }))
+    return ok(res, {
+      radius: 2000,
+      groups: {
+        school: { count: 14, exact: true, items: fixtureItems('school', ['역삼초등학교', '도성초등학교', '진선여자중학교', '역삼중학교', '진선여자고등학교']) },
+        childcare: { count: 64, exact: true, items: fixtureItems('childcare', ['역삼어린이집']) },
+        hospital: { count: 20000, exact: false, items: fixtureItems('hospital', ['강남연세내과의원', '테헤란정형외과의원']) },
+        pharmacy: { count: 0, exact: true, items: [] },
+      },
+    })
+  }
+  if (path === '/api/transit/nearby')
+    return ok(res, {
+      stations: [
+        { id: 'fixture-st-1', name: '역삼', nameSlug: 'yeoksam', line: '2호선', distance: 320, type: 'subway' },
+      ],
+    })
   if (path.includes('/guides') || path.includes('/blog') || path.endsWith('/search'))
     return ok(res, { items: [], total: 0 })
   if (path.endsWith('/price-analysis')) return ok(res, null)

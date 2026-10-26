@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { kstCalendarToday } from '../lib/kstDate.js';
+import { areaGroupKey } from '../lib/realEstatePriceBasis.js';
 import type { DateWindow, PeriodMonths } from '../types/housingRedesign.js';
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -79,6 +80,15 @@ export function normalizeExactArea(value: string): string {
   }
 
   return area.toFixed(2);
+}
+
+/**
+ * 상세 면적 파라미터 → 면적 그룹 키(ROUND(전용면적) 정수 문자열).
+ * 그룹 키('85')와 기존 소수 URL('84.97') 둘 다 받는다. 형식 오류는 normalizeExactArea 와 같이 throw.
+ */
+export function normalizeAreaGroupParam(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  return areaGroupKey(normalizeExactArea(value));
 }
 
 export function exactDealDateFilter(window: DateWindow, alias?: string): Prisma.Sql {

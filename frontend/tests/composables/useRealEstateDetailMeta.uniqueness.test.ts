@@ -128,4 +128,12 @@ describe('description 변별력', () => {
     expect(description).toContain('제주 서귀포시')
     expect(description).toContain('실거래 27건')
   })
+
+  it('최근 거래 절을 써도 서로 다른 지역 문서의 description 이 겹치지 않고 120자 이내다', () => {
+    const latestDeal = { amount: 94000, date: '2026-10-19', areaLabel: '84', mode: 'sale' as const }
+    const descs = [현대_강남, 현대_해운대, 현대_서귀포].map(i =>
+      buildRealEstateDetailMeta({ ...i, summary: { ...i.summary, latestDeal } }).description)
+    expect(new Set(descs).size).toBe(3)
+    descs.forEach(d => expect(d.length).toBeLessThanOrEqual(120))
+  })
 })

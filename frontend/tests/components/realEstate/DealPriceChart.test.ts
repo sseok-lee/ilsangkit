@@ -29,9 +29,9 @@ const canvasContext = {
 }
 
 const points: DealPoint[] = [
-  { id: 1, date: '2026-09-12', amount: 84500, area: '84.90', floor: 0, deposit: 0 },
-  { id: 2, date: '2026-09-12', amount: 84500, area: '84.90', floor: null, deposit: 0 },
-  { id: 3, date: '2026-08-20', amount: 120, area: '84.90', floor: 10, deposit: 5000 },
+  { id: 1, date: '2026-09-12', amount: 84500, area: '84.90', floor: 0, deposit: 0, flag: 'normal' },
+  { id: 2, date: '2026-09-12', amount: 84500, area: '84.90', floor: null, deposit: 0, flag: 'normal' },
+  { id: 3, date: '2026-08-20', amount: 120, area: '84.90', floor: 10, deposit: 5000, flag: 'normal' },
 ]
 
 beforeEach(() => {
@@ -93,7 +93,7 @@ async function mountFlow(data = flowPoints) {
 
 
 describe('DealPriceChart', () => {
-  it.each(['sale', 'jeonse', 'wolse'] as const)('%s에서 기존 월 표시만 평균으로 바꾼다', async mode => {
+  it.each(['sale', 'jeonse', 'wolse'] as const)('%s에서 기존 월 표시만 중간값으로 바꾼다', async mode => {
     const wrapper = mount(DealPriceChart, {
       props: {
         points: [100, 101, 101].map((amount, index) => ({
@@ -106,13 +106,13 @@ describe('DealPriceChart', () => {
     expect(wrapper.get<HTMLSelectElement>('select[name="deal-date"]').element.value).toBe('2026-08-03')
     await wrapper.get('select[name="deal-month"]').setValue('2026-08')
     expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('101만원')
-    expect(wrapper.text()).toContain('월별 평균')
+    expect(wrapper.text()).toContain('월별 중간값')
     expect(wrapper.text()).not.toContain('중앙값')
     expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(3)
     wrapper.unmount()
   })
 
-  it('점 없이 거래가 있는 월평균을 빈 달 너머로 연결한다', async () => {
+  it('점 없이 거래가 있는 월별 중간값을 빈 달 너머로 연결한다', async () => {
     const wrapper = await mountFlow()
     const path = averagePaths.at(-1)!
     expect(path.map(command => command[0])).toEqual(['M', 'L', 'L'])
@@ -124,7 +124,7 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('여러 빈 달을 건너 연결해도 빈 달의 평균과 거래를 만들지 않는다', async () => {
+  it('여러 빈 달을 건너 연결해도 빈 달의 중간값과 거래를 만들지 않는다', async () => {
     const wrapper = await mountFlow([flowPoints[0], flowPoints[4]])
     expect(averagePaths.at(-1)!.map(command => command[0])).toEqual(['M', 'L'])
     await wrapper.get('select[name="deal-month"]').setValue('2026-09')
@@ -182,7 +182,7 @@ describe('DealPriceChart', () => {
     wrapper.unmount()
   })
 
-  it('월평균을 선택하면 같은 월의 거래를 모두 보여주고 날짜 선택으로 돌아간다', async () => {
+  it('월별 중간값을 선택하면 같은 월의 거래를 모두 보여주고 날짜 선택으로 돌아간다', async () => {
     const wrapper = mount(DealPriceChart, {
       props: {
         points: [
@@ -193,7 +193,7 @@ describe('DealPriceChart', () => {
         window: { from: '2026-08-01', to: '2026-10-31' }, mode: 'sale', loading: false,
       },
     })
-    expect(wrapper.text()).toContain('월별 평균')
+    expect(wrapper.text()).toContain('월별 중간값')
     await wrapper.get('select[name="deal-month"]').setValue('2026-08')
     expect(wrapper.get('[data-testid="monthly-price-summary"]').text()).toContain('4억')
     expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(2)
@@ -307,5 +307,43 @@ describe('DealPriceChart', () => {
     })
     await error.get('button').trigger('click')
     expect(error.emitted('retry')).toHaveLength(1)
+  })
+
+  it('DealPriceChart tags direct deals only', async () => {
+    const data: DealPoint[] = [
+      { ...points[0], id: 21, date: '2026-10-02', amount: 90000, flag: 'normal' },
+      { ...points[0], id: 22, date: '2026-10-03', amount: 53000, flag: 'normal' },
+      { ...points[0], id: 23, date: '2026-10-04', amount: 91000, flag: 'direct' },
+    ]
+    const wrapper = mount(DealPriceChart, {
+      props: { points: data, window: { from: '2026-10-01', to: '2026-10-31' }, mode: 'sale', loading: false },
+    })
+    await nextTick()
+    await wrapper.get('select[name="deal-month"]').setValue('2026-10')
+    const rows = wrapper.findAll('[data-testid="deal-point-row"]')
+    expect(rows).toHaveLength(3)
+    const text = (id: number) => rows.find(row => row.attributes('data-deal-id') === String(id))!.text()
+    expect(text(23)).toContain('직거래')
+    expect(text(22)).not.toContain('직거래')
+    expect(text(21)).not.toContain('직거래')
+    expect(wrapper.text()).not.toContain('시세 제외')
+  })
+
+  it('직거래만 있는 달도 중간값을 보여 준다', async () => {
+    const data: DealPoint[] = [
+      { ...points[0], id: 31, date: '2026-09-02', amount: 90000, flag: 'normal' },
+      { ...points[0], id: 32, date: '2026-10-04', amount: 52000, flag: 'direct' },
+    ]
+    const wrapper = mount(DealPriceChart, {
+      props: { points: data, window: { from: '2026-09-01', to: '2026-10-31' }, mode: 'sale', loading: false },
+    })
+    await nextTick()
+    const option = wrapper.findAll('select[name="deal-month"] option').find(o => o.attributes('value') === '2026-10')!
+    expect(option.text()).toBe('2026.10')
+    await wrapper.get('select[name="deal-month"]').setValue('2026-10')
+    const summary = wrapper.get('[data-testid="monthly-price-summary"]').text()
+    expect(summary).not.toContain('거래 없음')
+    expect(summary).not.toContain('이 달에는 거래가 없습니다')
+    expect(wrapper.findAll('[data-testid="deal-point-row"]')).toHaveLength(1)
   })
 })

@@ -10,8 +10,11 @@ import {
   RegionAllFacilitiesParamsSchema,
   RegionFacilitiesQuerySchema,
   NearbyCountsSchema,
+  NearbyGroupedSchema,
   NearbyCountCategorySchema,
+  FacilityNearbyGroupedQuerySchema,
   type NearbyCountsInput,
+  type NearbyGroupedInput,
 } from '../schemas/facility.js';
 import { FacilityBrowseSchema, type FacilityBrowseInput } from '../schemas/facilityBrowse.js';
 import * as facilityService from '../services/facilityService.js';
@@ -103,6 +106,28 @@ router.get(
   })
 );
 
+// 주변 시설 카테고리별 개수 + 가까운 N곳
+// GET /api/facilities/nearby-grouped?lat=&lng=&radius=2000&categories=school,park&limit=5
+//
+// 부동산 상세 "주변 생활시설" 섹션용. POST /search(전 카테고리 가까운 100곳)를 나눠 쓰면
+// 화장실·주차장이 많은 동네에서 학교·공원이 빠지고 헤더 개수가 보이는 수(≤5)가 된다.
+router.get(
+  '/nearby-grouped',
+  validate(NearbyGroupedSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { lat, lng, radius, categories, limit } = req.query as unknown as NearbyGroupedInput;
+    const groups = await facilityService.nearbyGrouped({
+      lat,
+      lng,
+      radius,
+      categories: categories as FacilityCategory[],
+      limit,
+    });
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800');
+    res.json({ success: true, data: { radius, groups } });
+  })
+);
+
 // 지역별 전체 카테고리 시설 조회 API
 // GET /api/facilities/region/:city/:district
 router.get(
@@ -161,8 +186,34 @@ router.get(
   })
 );
 
+// 시설 상세 "주변 시설" — 카테고리별 개수 + 가까운 N곳 (반경 1km)
+// GET /api/facilities/:category/:id/nearby-grouped?limit=5
+//
+// 그룹 = [현재 카테고리(자기 제외), ...CROSS_CATEGORY_MAP]. 아래 /nearby 는 관련 카테고리를
+// 합쳐 가까운 6곳만 줘서 한 카테고리가 자리를 다 차지할 수 있었다.
+// Cache-Control 은 /nearby 와 같이 따로 지정하지 않는다.
+router.get(
+  '/:category/:id/nearby-grouped',
+  validateMultiple({
+    params: FacilityDetailParamsSchema,
+    query: FacilityNearbyGroupedQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { params, query } = res.locals.validated as {
+      params: { category: FacilityCategory; id: string };
+      query: { limit: number };
+    };
+    const result = await facilityService.nearbyGroupedForFacility(params.category, params.id, query.limit);
+    if (!result) {
+      throw new NotFoundError('시설을 찾을 수 없습니다');
+    }
+    res.json({ success: true, data: result });
+  })
+);
+
 // 크로스 카테고리 주변 시설 조회 API
 // GET /api/facilities/:category/:id/nearby
+// ⚠️ 시설 상세는 /nearby-grouped 로 옮겼다. 배포 직후 캐시된 구 프론트 JS 호환용 — 다음 릴리스에 제거.
 router.get(
   '/:category/:id/nearby',
   validate(FacilityDetailParamsSchema, 'params'),

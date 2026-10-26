@@ -301,6 +301,25 @@ export function handleLifestyleFixture(url) {
 
   if (path === '/api/subway/stations') return ok({ items: [station], total: 1, page: Number(q.get('page') || 1), limit: Number(q.get('limit') || 20) })
   if (path === '/api/subway/stations/nearby') return ok({ items: [{ id: 'station-lifestyle-2', name: '검증역삼', nameSlug: 'yeoksam-lifestyle', line: '2호선', lat: 37.5006, lng: 127.0365, distance: 820 }] })
+  // 지하철역 상세 "주변 시설" — [주변 역, ...CROSS_CATEGORY_MAP.subway] (반경 1km)
+  if (path === '/api/subway/stations/gangnam-lifestyle/nearby-grouped') {
+    return ok({
+      radius: 1000,
+      groups: [
+        {
+          category: 'subway', count: 2, exact: true,
+          items: [
+            { id: 'station-lifestyle-3', name: '검증신논현', nameSlug: 'sinnonhyeon-lifestyle', category: 'subway', lines: ['9호선', '신분당선'], distance: 726 },
+            { id: 'station-lifestyle-2', name: '검증역삼역', nameSlug: 'yeoksam-lifestyle', category: 'subway', lines: ['2호선'], distance: 820 },
+          ],
+        },
+        { category: 'parking', count: 25, exact: true, items: parkingItems.slice(0, 5).map((row, i) => ({ ...row, distance: 80 + i * 90 })) },
+        { category: 'ev-charger', count: 2, exact: true, items: evStations.map((row, i) => ({ ...row, distance: 150 + i * 100 })) },
+        { category: 'toilet', count: 0, exact: true, items: [] },
+        { category: 'market', count: 0, exact: true, items: [] },
+      ],
+    })
+  }
   if (path === '/api/subway/stations/gangnam-lifestyle') return ok(station)
 
   if (path === '/api/waste-schedules') return ok(pageOf(wasteScheduleRows(q), q))
@@ -340,6 +359,16 @@ export function handleLifestyleFixture(url) {
     return item ? ok(item) : missing()
   }
 
+  const nearbyGroupedMatch = path.match(/^\/api\/facilities\/([^/]+)\/([^/]+)\/nearby-grouped$/)
+  if (nearbyGroupedMatch) {
+    const [, category, id] = nearbyGroupedMatch
+    if (!detailFor(category, decodeURIComponent(id))) return missing()
+    const others = parkingItems.filter(row => row.id !== decodeURIComponent(id)).slice(0, 3)
+    return ok({
+      radius: 1000,
+      groups: [{ category: 'parking', count: others.length, exact: true, items: others.map((row, i) => ({ ...row, distance: 80 + i * 90 })) }],
+    })
+  }
   const nearbyMatch = path.match(/^\/api\/facilities\/([^/]+)\/([^/]+)\/nearby$/)
   if (nearbyMatch) return ok({ items: parkingItems.slice(0, 3) })
 

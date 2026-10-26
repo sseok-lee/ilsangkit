@@ -15,6 +15,7 @@ export const FILES = [
   'components/facility/detail/DetailFacilityStatus.vue',
   'components/facility/detail/DetailContextLinks.vue',
   'components/facility/detail/DetailNearby.vue',
+  'components/subway/SubwayStationNearby.vue',
   'components/facility/detail/FieldGrid.vue',
   'components/facility/DetailRow.vue',
   'components/facility/details/EvChargerDetail.vue',
@@ -77,11 +78,13 @@ export const FILES = [
   'pages/index.vue',
   'components/home/HomeMarketSection.vue',
   'components/subscription/HomeSubscriptionSection.vue',
-  'components/realEstate/NearbyComplexCard.vue',
+  'components/realEstate/NearbyComplexList.vue',
   'components/realEstate/RentRatioBar.vue',
   'components/realEstate/TransactionTable.vue',
   'components/realEstate/ExactDealFilters.vue',
   'components/realEstate/NearbyFacilities.vue',
+  'components/common/nearby/NearbyPlaceSection.vue',
+  'components/common/nearby/NearbyPlaceRow.vue',
   'components/realEstate/DealPriceChart.vue',
 ]
 

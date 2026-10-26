@@ -107,6 +107,9 @@ function mockUseAsyncDataWith(data: any, status = 'success', error: any = null) 
   ;(globalThis as any).useAsyncData = vi.fn(() => Object.assign(Promise.resolve(result), result))
 }
 
+/** Nuxt auto-import 전역 mock (tests/setup.ts 가 등록) — 주변 시설 테스트용 타입 */
+const nuxtGlobals = globalThis as unknown as Record<'useAsyncData' | '$fetch', ReturnType<typeof vi.fn>>
+
 describe('DetailPage', () => {
   beforeEach(() => {
     // Default: return facility data
@@ -262,27 +265,68 @@ describe('DetailPage', () => {
     expect(html.split('"자주 묻는 질문"').length - 1).toBeLessThanOrEqual(1)
   })
 
-  it('주변 시설(nearby/cross)을 SSR 데이터로 렌더링', async () => {
-    // key-aware: nearby-* 키는 주변시설, 그 외는 facility 응답
-    ;(globalThis as any).useAsyncData = vi.fn((key: string, _handler?: () => Promise<unknown>, opts?: any) => {
-      const isNearby = typeof key === 'string' && key.startsWith('nearby-')
-      const data = ref(
-        isNearby
-          ? {
-              nearby: [{ id: 'toilet-2', category: 'toilet', name: '역삼역 화장실', address: 'A', lat: 37.5, lng: 127.03 }],
-              cross: [{ id: 'hospital-9', category: 'hospital', name: '강남병원', address: 'B', lat: 37.5, lng: 127.03 }],
-            }
-          : { success: true, data: mockFacility },
-      )
+  it('주변 시설을 nearby-grouped API 1회(lazy SSR 합류)로 받아 렌더링', async () => {
+    // key-aware: nearby-grouped-* 키는 주변 시설 그룹, 그 외는 facility 응답
+    const groups = [
+      {
+        category: 'toilet', count: 3, exact: true,
+        items: [{ id: 'toilet-2', category: 'toilet', name: '역삼역 화장실', address: 'A', roadAddress: null, lat: 37.5, lng: 127.03, city: '서울', district: '강남구', distance: 120 }],
+      },
+      {
+        category: 'park', count: 1, exact: true,
+        items: [{ id: 'park-9', category: 'park', name: '강남공원', address: 'B', roadAddress: null, lat: 37.5, lng: 127.03, city: '서울', district: '강남구', distance: 480 }],
+      },
+    ]
+    ;nuxtGlobals.useAsyncData = vi.fn((key: string, _handler?: () => Promise<unknown>, _opts?: unknown) => {
+      const isNearby = typeof key === 'string' && key.startsWith('nearby-grouped-')
+      const data = ref(isNearby ? groups : { success: true, data: mockFacility })
       const result = { data, status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
-      void opts
       return Object.assign(Promise.resolve(result), result)
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { radius: 1000, groups } })
+    ;nuxtGlobals.$fetch = fetchMock
+
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
+    const nearbyCall = nuxtGlobals.useAsyncData.mock.calls.find((c: unknown[]) => String(c[0]).startsWith('nearby-grouped-'))
+    expect(nearbyCall[0]).toBe('nearby-grouped-toilet-toilet-1')
+    expect(nearbyCall[2]).toMatchObject({ lazy: true })
+    await expect(nearbyCall[1]()).resolves.toEqual(groups)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/facilities\/toilet\/toilet-1\/nearby-grouped$/)
+
+    expect(wrapper.find('[data-testid="facility-nearby"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('주변 시설')
+    expect(wrapper.text()).toContain('강남역 공중화장실에서 반경 1km 안의 시설입니다.')
+    expect(wrapper.text()).toContain('역삼역 화장실') // 같은 카테고리
+    expect(wrapper.text()).toContain('강남공원')       // 관련 카테고리
+    expect(wrapper.find('a[href="/toilet/toilet-2"]').exists()).toBe(true)
+    const regionLink = wrapper.find('[data-testid="nearby-facilities-region-link"]')
+    expect(regionLink.attributes('href')).toBe('/seoul/gangnam/toilet')
+    expect(regionLink.text()).toBe('강남구 공공화장실 전체 보기 →')
+  })
+
+  it('주변 시설 API 가 실패해도 페이지는 렌더되고 블록만 빠진다', async () => {
+    nuxtGlobals.$fetch = vi.fn().mockRejectedValue(new Error('down'))
+    // 주변 시설 키는 실제 핸들러 결과(실패 → catch)를 data 로 쓴다
+    nuxtGlobals.useAsyncData = vi.fn((key: string, handler?: () => Promise<unknown>) => {
+      const isNearby = typeof key === 'string' && key.startsWith('nearby-grouped-')
+      const data = ref<unknown>(isNearby ? null : { success: true, data: mockFacility })
+      const result = { data, status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      const settled = isNearby && handler ? handler().then((v) => { data.value = v; return result }) : Promise.resolve(result)
+      return Object.assign(settled, result)
     })
 
     const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
 
-    expect(wrapper.text()).toContain('역삼역 화장실') // 동일 카테고리 반경 nearby
-    expect(wrapper.text()).toContain('강남병원')       // cross-category nearby
+    const nearbyCall = nuxtGlobals.useAsyncData.mock.calls.find((c: unknown[]) => String(c[0]).startsWith('nearby-grouped-'))
+    await expect(nearbyCall[1]()).resolves.toEqual([])
+    // 본문은 그대로
+    expect(wrapper.find('h1').text()).toBe('강남역 공중화장실')
+    expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
+    // 주변 시설 블록만 없다
+    expect(wrapper.find('[data-testid="facility-nearby"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('반경 1km 안의 시설입니다')
   })
 
   it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {

@@ -67,6 +67,7 @@
         <p v-else class="mt-3 text-[13px] md:text-sm text-faint">
           <AddressLine :address="fullAddress" />
         </p>
+        <p v-if="overviewFactsLine" class="estate-facts">{{ overviewFactsLine }}</p>
 
         <AdBanner
           data-testid="building-header-ad"
@@ -74,7 +75,24 @@
           variant="mobile-banner-320x100"
           only="mobile"
         />
-        <SummaryRow lead class="mt-[22px] md:mt-7" aria-label="실거래 요약" :items="estateSummaryItems" />
+        <EstatePriceHero
+          v-if="detailOverview"
+          class="mt-[22px] md:mt-7"
+          :overview="detailOverview"
+          :selected-area="snapshot?.filters.area ?? detailOverview.defaultAreaGroup"
+          :pending="pending"
+          @select-area="handleHeroAreaSelect"
+        />
+        <div
+          v-else-if="!overviewError"
+          class="estate-price-hero-skeleton mt-[22px] md:mt-7"
+          data-testid="estate-price-hero-skeleton"
+          aria-hidden="true"
+        >
+          <span class="estate-price-hero-skeleton__chips" />
+          <span class="estate-price-hero-skeleton__value" />
+          <span class="estate-price-hero-skeleton__note" />
+        </div>
         <div v-if="overviewError" class="estate-inline-error" role="alert">
           <span>최근 매매 요약을 불러오지 못했습니다. 가격 흐름과 거래 내역은 마지막 성공 데이터를 유지합니다.</span>
           <button type="button" @click="refreshOverview">요약 다시 불러오기</button>
@@ -227,6 +245,7 @@
           class="estate-exact-filters"
           :filters="snapshot.filters"
           :options="snapshot.options"
+          :area-labels="areaLabelMap"
           :pending="pending"
           @patch="handleExactFilterPatch"
         />
@@ -313,16 +332,22 @@
           :loading="tablePending || pending"
           :hide-building="true"
           presentation="detail"
+          :mobile-visible-limit="10"
+          :mobile-expanded="tableMobileExpanded"
+          @mobile-expand="tableMobileExpanded = true"
         />
         <div v-else class="estate-empty">
           {{ emptyFiltered('거래 내역') }}
         </div>
+        <!-- 모바일: 거래 더보기를 누르기 전엔 페이지 번호를 숨긴다(데스크톱은 항상). SSR HTML 에는 남겨 크롤러가 다음 페이지 링크를 본다. -->
         <Pagination
           v-if="table.totalPages > 1"
           :current-page="table.page"
           :total-pages="table.totalPages"
           @page-change="goToExactPage"
           class="mt-4"
+          :class="hidePaginationOnMobile ? 'max-md:hidden' : undefined"
+          data-testid="transaction-pagination"
         />
       </SectionBlock>
 
@@ -331,76 +356,19 @@
 
       <AffiliateBanner class="order-10" />
 
-      <!-- "인근 단지" 블록 — cross-property 3섹션 (apt → offitel → villa) -->
+      <!-- "주변 단지" 블록 — 유형 탭(아파트 → 오피스텔 → 빌라) · 같은 면적 최근가 2열 리스트 -->
       <div id="nearby" class="flex flex-col gap-0 order-12 md:order-12">
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.apt.length > 0"
-          subtext="같은 동 내 다른 아파트 단지를 함께 확인하세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/apt.webp?v2" alt="아파트" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('apt') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.apt"
-              :key="item.buildingKey ?? `apt-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="apt"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
-
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.offitel.length > 0"
-          subtext="같은 동 내 오피스텔 단지의 실거래를 함께 확인하세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/offitel.webp?v2" alt="오피스텔" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('offitel') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.offitel"
-              :key="item.buildingKey ?? `offitel-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="offitel"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
-
-        <SectionBlock
-          variant="flat"
-          v-if="nearbyByType.villa.length > 0"
-          subtext="같은 동 내 빌라 단지의 실거래를 비교해 보세요."
-        >
-          <template #heading>
-            <h3 class="ui-h2 text-strong flex items-center gap-2">
-              <img src="/icons/category/villa.webp?v2" alt="빌라" class="w-6 h-6" width="24" height="24" />
-              {{ nearbyHeading('villa') }}
-            </h3>
-          </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <NearbyComplexCard
-              v-for="item in nearbyByType.villa"
-              :key="item.buildingKey ?? `villa-${item.buildingName}-${item.bjdCode}-${item.dongName}-${item.jibun ?? ''}`"
-              :item="item"
-              property-type="villa"
-              :mode="currentTab"
-              :rent-type="selectedRentType"
-            />
-          </div>
-        </SectionBlock>
+        <NearbyComplexList
+          v-if="hasNearby"
+          :nearby="nearbyByType"
+          :current-property="propertyTypeParam"
+          :mode="currentTab"
+          :rent-type="currentTab === 'rent' ? nearbyRentType : 'all'"
+          :dong-name="buildingInfo?.dongName"
+          :district-name="districtName"
+          :city-slug="citySlugParam"
+          :district-slug="districtSlugParam"
+        />
 
         <!-- 인근 단지 결측: 세 유형이 모두 비면 블록째 사라져 앞뒤 광고가 붙는다. -->
         <SectionBlock variant="flat" v-if="!hasNearby" heading="인근 단지" subtext="반경 내 등록된 다른 단지가 없습니다.">
@@ -428,7 +396,13 @@
         heading="주변 생활시설"
         :subtext="facilitySectionSubtext"
       >
-        <NearbyFacilities v-if="hasMapCoords" :lat="buildingInfo!.lat!" :lng="buildingInfo!.lng!" />
+        <NearbyFacilities
+          v-if="hasMapCoords"
+          :lat="buildingInfo!.lat!"
+          :lng="buildingInfo!.lng!"
+          :region-href="`/${citySlugParam}/${districtSlugParam}`"
+          :region-label="districtName"
+        />
         <EmptyState
           v-else
           icon="search_off"
@@ -509,17 +483,19 @@ import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 import { isDetailSsrDegraded } from '~/utils/detailSsrDegraded'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
-import NearbyComplexCard from '~/components/realEstate/NearbyComplexCard.vue'
+import NearbyComplexList from '~/components/realEstate/NearbyComplexList.vue'
 import RelatedGuides from '~/components/guide/RelatedGuides.vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import PageHead from '~/components/common/PageHead.vue'
-import SummaryRow, { type SummaryItem } from '~/components/common/SummaryRow.vue'
+import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
+import { resolveDefaultLatestDeal } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 import { DETAIL_MAP_MEDIA_HEIGHT } from '~/utils/mapMedia'
+import { summarizePoints } from '~/utils/realEstatePriceSummary'
 
 definePageMeta({
   path: '/real-estate/:realEstateType/:city/:district/:buildingName/:addressSuffix?',
@@ -825,6 +801,13 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 const detailOverview = ref<DetailOverview | null>(null)
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
+const areaLabelMap = computed<Record<string, string>>(() =>
+  Object.fromEntries((detailOverview.value?.areaGroups ?? []).map(group => [group.key, group.label]))
+)
+// meta·JSON-LD 는 사용자가 고른 칩이 아닌 기본 그룹의 최근 거래 1건만 쓴다(헤더 주 숫자 기본 상태와 같은 함수).
+const defaultLatestDeal = computed(() =>
+  detailOverview.value ? resolveDefaultLatestDeal(detailOverview.value) : null
+)
 const recentDealForDisplay = computed(() => resolveLatestSaleDeal(detailOverview.value))
 
 const detailMeta = computed(() => {
@@ -861,7 +844,9 @@ const detailMeta = computed(() => {
     },
     propertyType: propertyTypeParam,
     transactionMode: mode,
-    summary: summary.value ? { totalCount, recentDeal, recentSale } : null,
+    summary: summary.value
+      ? { totalCount, recentDeal, recentSale, latestDeal: defaultLatestDeal.value ?? undefined }
+      : null,
     buildYear: buildYearVal,
     areaRange,
     facilitySummary: facilitySummary.value,
@@ -1122,7 +1107,7 @@ const locationEmptyDescription = computed(() =>
     : `${buildingName.value}의 좌표가 원본에 등록되지 않아 지도·로드뷰를 표시하지 못합니다. 주소로 직접 찾아보세요.`
 )
 const facilitySectionSubtext = computed(() => {
-  if (hasMapCoords.value) return '부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다.'
+  if (hasMapCoords.value) return `${buildingName.value}에서 반경 2km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.`
   if (hasReportedAddressAmbiguity.value) return '대표 위치를 고르지 않아 반경 검색을 하지 않습니다.'
   return '좌표가 없어 반경 검색을 할 수 없습니다.'
 })
@@ -1173,23 +1158,6 @@ const areaRange = computed(() => {
   return `${minArea ?? '?'}~${maxArea ?? '?'}㎡`
 })
 
-const latestSaleAmountLabel = computed(() => {
-  const sale = detailOverview.value?.latestSale
-  return sale?.amount != null && sale.amount > 0 ? formatKoreanPrice(sale.amount) : EMPTY_FIELD_TEXT
-})
-
-const latestSaleDetailLine = computed(() => {
-  const sale = detailOverview.value?.latestSale
-  if (!sale) return '최근 매매 신고 내역 없음'
-  const parts: string[] = []
-  if (sale.area) parts.push(`전용 ${sale.area}㎡`)
-  if (sale.floor !== null && sale.floor !== undefined) parts.push(`${sale.floor}층`)
-  const month = String(sale.month).padStart(2, '0')
-  const day = sale.day == null ? null : String(sale.day).padStart(2, '0')
-  parts.push(`${String(sale.year).slice(2)}.${month}${day ? `.${day}` : ''} 계약`)
-  return parts.join(' · ')
-})
-
 const overviewBuildYearLabel = computed(() => {
   const year = detailOverview.value?.buildYear ?? buildingInfo.value?.buildYear
   return year ? `${year}년` : EMPTY_FIELD_TEXT
@@ -1208,13 +1176,20 @@ const overviewSaleCount6mLabel = computed(() => {
   return Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT
 })
 
-// 머리 요약 줄 — 최근 매매를 강조하고 날짜·면적·층을 보조 줄로 단다
-const estateSummaryItems = computed<SummaryItem[]>(() => [
-  { label: '최근 매매', value: latestSaleAmountLabel.value, note: latestSaleDetailLine.value },
-  { label: '건축연도', value: overviewBuildYearLabel.value },
-  { label: '거래된 전용면적', value: overviewAreaRangeLabel.value },
-  { label: '6개월 매매 · 전체 면적', value: overviewSaleCount6mLabel.value },
-])
+// 머리 보조 줄 — 건축연도·거래된 면적·최근 6개월 매매 수(값 없는 항목은 뺀다).
+// 6개월 매매 수는 매매 기준 화면에서 1건 이상일 때만(전월세 URL 의 '매매 0건'은 혼란만 준다).
+const overviewFactsLine = computed(() => {
+  const parts: string[] = []
+  if (overviewBuildYearLabel.value !== EMPTY_FIELD_TEXT) parts.push(`${overviewBuildYearLabel.value} 준공`)
+  if (overviewAreaRangeLabel.value !== EMPTY_FIELD_TEXT) parts.push(`거래된 전용면적 ${overviewAreaRangeLabel.value}`)
+  const saleCount6m = Number(detailOverview.value?.saleCount6m ?? 0)
+  if (
+    detailOverview.value?.basisMode !== 'jeonse'
+    && saleCount6m > 0
+    && overviewSaleCount6mLabel.value !== EMPTY_FIELD_TEXT
+  ) parts.push(`6개월 매매 ${overviewSaleCount6mLabel.value}`)
+  return parts.join(' · ')
+})
 
 
 const rentRatioTotal = computed(
@@ -1226,12 +1201,9 @@ const selectedRentType = computed<'jeonse' | 'wolse'>(() =>
   snapshot.value?.filters.mode === 'wolse' ? 'wolse' : 'jeonse',
 )
 
-const exactAmounts = computed(() => snapshot.value?.points.map(point => point.amount) ?? [])
+const pointSummary = computed(() => summarizePoints(snapshot.value?.points ?? []))
 
-const exactAverage = computed(() => {
-  if (exactAmounts.value.length === 0) return null
-  return exactAmounts.value.reduce((sum, amount) => sum + amount, 0) / exactAmounts.value.length
-})
+const exactMedian = computed(() => pointSummary.value.median)
 
 const periodTradeLabel = computed(() => {
   const months = snapshot.value?.filters.months ?? 0
@@ -1241,15 +1213,12 @@ const periodTradeLabel = computed(() => {
   return '최근 3년 거래'
 })
 
-const periodTradeCount = computed(() => (snapshot.value?.points.length ?? 0).toLocaleString())
+const periodTradeCount = computed(() => pointSummary.value.count.toLocaleString())
 
-const periodPriceExtremes = computed(() => {
-  if (exactAmounts.value.length === 0) return { maxPrice: null, minPrice: null }
-  return {
-    maxPrice: Math.max(...exactAmounts.value),
-    minPrice: Math.min(...exactAmounts.value),
-  }
-})
+const periodPriceExtremes = computed(() => ({
+  maxPrice: pointSummary.value.max,
+  minPrice: pointSummary.value.min,
+}))
 
 const periodMaxPriceLabel = computed(() => {
   const price = periodPriceExtremes.value.maxPrice
@@ -1363,14 +1332,19 @@ const { data: ssrData, error: ssrError, status: ssrStatus } = await useAsyncData
     if (bjdCode) {
       const nearbyMode = currentTab.value
       // The exact-detail snapshot is initialized after this SSR loader. Rent pages start
-      // in the jeonse detail mode, then client/server hydration can refine nearby links
-      // from the serialized snapshot without reading that snapshot before declaration.
-      const nearbyRentType: 'jeonse' | undefined = nearbyMode === 'rent' ? 'jeonse' : undefined
+      // in the jeonse detail mode unless the URL asks for ?mode=wolse — the client nearby
+      // query keys on the snapshot mode, so SSR must fetch the same rentType or a wolse
+      // page would keep jeonse rows after hydration.
+      const nearbyRentType: 'jeonse' | 'wolse' | undefined = nearbyMode === 'rent'
+        ? validateInitialDetailMode(routeRealEstateType.value as RealEstateType, route.query.mode) === 'wolse' ? 'wolse' : 'jeonse'
+        : undefined
       nearbySSR = await fetchNearbyForSsr(() => getNearby(bjdCode, nearbyMode, {
         rentType: nearbyRentType,
         dongName: resolvedBuildingInfo?.dongName,
+        jibun: nearbyIdentityJibun(resolvedBuildingInfo),
         excludeBuildingName: buildingName.value,
-        limitPerType: 4,
+        limitPerType: 6,
+        type: realEstateType,
       }))
     }
     return {
@@ -1657,7 +1631,7 @@ watch(overviewFacilitySummary, (value) => {
 watch(snapshot, (value) => {
   const totalCount = value?.table.total ?? 0
   summary.value = {
-    recentAvg: exactAverage.value,
+    recentAvg: exactMedian.value,
     previousAvg: null,
     changeRate: null,
     totalCount,
@@ -1671,6 +1645,10 @@ watch(snapshot, (value) => {
 type FilterPatch = Partial<Pick<DetailQuery, 'mode' | 'months' | 'area' | 'deposit'>>
 
 const lastRequestedTablePage = ref<number | null>(null)
+// 모바일 거래 내역 '더보기'를 눌렀는지 — 누른 뒤에만 페이지 번호를 보인다.
+const tableMobileExpanded = ref(false)
+// 숨긴 거래가 있을 때(10건 초과)만 페이지 번호를 숨긴다 — 마지막 페이지처럼 더보기 버튼이 없는 페이지에서 길이 막히지 않게.
+const hidePaginationOnMobile = computed(() => !tableMobileExpanded.value && table.value.items.length > 10)
 
 async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
   if (patch.mode) {
@@ -1684,6 +1662,10 @@ async function handleExactFilterPatch(patch: FilterPatch): Promise<void> {
     }
   }
   await setFilters(patch)
+}
+
+async function handleHeroAreaSelect(key: string): Promise<void> {
+  await handleExactFilterPatch({ area: key })
 }
 
 async function goToExactPage(page: number): Promise<void> {
@@ -1735,8 +1717,8 @@ setRealEstateListingSchema(() => {
     lat: info?.lat ?? null,
     lng: info?.lng ?? null,
     image: buildOgImage(info),
-    // summary.recentAvg는 만원 단위 — schema.org offers.price는 KRW(원) 이므로 10_000 곱해 전달
-    recentAvg: summary.value?.recentAvg != null ? summary.value.recentAvg * 10_000 : undefined,
+    // 기본 그룹 최근 거래는 만원 단위 — 원(KRW)으로 10_000 곱해 전달. 없으면 속성 생략.
+    latestDealPrice: defaultLatestDeal.value ? defaultLatestDeal.value.amount * 10_000 : undefined,
     latestDealDate,
   }
 })
@@ -1764,23 +1746,27 @@ watch(() => buildingInfo.value, (info) => {
 
 // ── Nearby complexes ──────────────────────────────────────────────────────────
 
-function nearbyHeading(propertyType: 'apt' | 'villa' | 'offitel'): string {
-  const label = propertyType === 'apt' ? '아파트' : propertyType === 'villa' ? '빌라' : '오피스텔'
-  if (currentTab.value === 'sale') return `주변 ${label} 매매가`
-  if (selectedRentType.value === 'jeonse') return `주변 ${label} 전세가`
-  if (selectedRentType.value === 'wolse') return `주변 ${label} 월세가`
-  return `주변 ${label} 전월세`
+/** 주변 단지 비교 면적용 지번 — overview identity 처럼 동이 있을 때만 '지번(없으면 \'\')'으로 범위를 맞춘다. */
+function nearbyIdentityJibun(info: BuildingInfo | null | undefined): string | undefined {
+  return info?.dongName ? (info.jibun?.trim() ?? '') : undefined
 }
+
+// 스냅샷이 아직 없으면(수화 직후 등) SSR 이 쓴 초기 모드(?mode=)로 맞춰 키가 SSR 데이터와 어긋나지 않게 한다.
+const nearbyRentType = computed<'jeonse' | 'wolse'>(() =>
+  snapshot.value ? selectedRentType.value : initialDetailMode.value === 'wolse' ? 'wolse' : 'jeonse',
+)
 
 // Reuse successful SSR data (including empty results); retry failed/missing SSR once.
 const { nearby: nearbyByType } = useNearbyComplexes(
   computed(() => ({
     bjdCode: resolvedBjdCode.value,
     mode: currentTab.value,
-    rentType: currentTab.value === 'rent' ? selectedRentType.value : undefined,
+    rentType: currentTab.value === 'rent' ? nearbyRentType.value : undefined,
     dongName: buildingInfo.value?.dongName,
+    jibun: nearbyIdentityJibun(buildingInfo.value),
     excludeBuildingName: buildingName.value,
-    limitPerType: 4,
+    limitPerType: 6,
+    type: realEstateType,
   })),
   getNearby,
   ssrData.value?.nearbyLoaded ? ssrData.value.nearby : undefined,
@@ -1798,6 +1784,42 @@ const hasNearby = computed(() =>
 <style scoped>
 .estate-header-mobile-ad {
   margin: 16px 0 0;
+}
+
+.estate-facts {
+  margin: 6px 0 0;
+  color: rgb(var(--faint-rgb));
+  font-size: 13px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.estate-price-hero-skeleton {
+  display: grid;
+  gap: 12px;
+  min-height: 196px;
+  border-top: 1px solid rgb(var(--border-rgb));
+  padding-top: 18px;
+}
+
+.estate-price-hero-skeleton span {
+  display: block;
+  border-radius: 6px;
+  background: rgb(var(--paper-rgb));
+}
+
+.estate-price-hero-skeleton__chips {
+  height: 48px;
+}
+
+.estate-price-hero-skeleton__value {
+  width: 60%;
+  height: 44px;
+}
+
+.estate-price-hero-skeleton__note {
+  width: 40%;
+  height: 16px;
 }
 
 .estate-record-note {

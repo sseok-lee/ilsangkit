@@ -2,8 +2,8 @@ import type { SaleTransaction } from '~/types/realEstate'
 import type { DetailOverview, DetailSnapshot } from '~/types/housingRedesign'
 
 export const twoDealPoints = [
-  { id: 1, date: '2026-09-12', amount: 80000, area: '84.90', floor: 3, deposit: null },
-  { id: 2, date: '2026-09-12', amount: 81000, area: '84.90', floor: 5, deposit: null },
+  { id: 1, date: '2026-09-12', amount: 80000, area: '84.90', floor: 3, deposit: null, flag: 'normal' as const },
+  { id: 2, date: '2026-09-12', amount: 81000, area: '84.90', floor: 5, deposit: null, flag: 'normal' as const },
 ]
 
 export const saleFilters = {
@@ -11,7 +11,7 @@ export const saleFilters = {
   buildingName: '일상숲 리버파크',
   mode: 'sale' as const,
   months: 6 as const,
-  area: '84.90',
+  area: '85',
   deposit: null,
 }
 
@@ -43,7 +43,7 @@ export const saleRows: SaleTransaction[] = Array.from({ length: 21 }, (_, i) => 
 export const saleSnapshot: DetailSnapshot<SaleTransaction> = {
   filters: saleFilters,
   window: { from: '2026-03-21', to: '2026-09-21' },
-  options: { areas: ['84.90'], deposits: [] },
+  options: { areas: [{ key: '85', label: '84', count: 21 }], deposits: [] },
   points: saleRows.map(row => ({
     id: row.id,
     date: '2026-09-12',
@@ -51,8 +51,9 @@ export const saleSnapshot: DetailSnapshot<SaleTransaction> = {
     area: '84.90',
     floor: row.floor,
     deposit: null,
+    flag: 'normal' as const,
   })),
-  table: { items: saleRows.slice(0, 20), total: 21, page: 1, totalPages: 2 },
+  table: { items: saleRows.slice(0, 15), total: 21, page: 1, totalPages: 2 },
   generatedAt: '2026-09-21T03:00:00Z',
   adjustment: null,
 }
@@ -68,5 +69,11 @@ export const saleOverview: DetailOverview = {
   addresses: [{ dongName: '역삼동', jibun: '123', roadName: null }],
   location: null,
   locationAmbiguous: false,
+  basisMode: 'sale',
+  defaultAreaGroup: '85',
+  areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 21, jeonseCount36m: 0 }],
+  saleBasis: {},
+  jeonseBasis: {},
+  wolseLatest: { '85': null },
   generatedAt: saleSnapshot.generatedAt,
 }

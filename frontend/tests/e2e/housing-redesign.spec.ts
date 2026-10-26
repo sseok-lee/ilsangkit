@@ -37,6 +37,15 @@ async function hydrated(page: Page) {
   await page.evaluate(() => document.fonts?.ready ?? Promise.resolve())
 }
 
+// 상단: 준공 연도 보조 줄 + 면적별 최근 거래가(EstatePriceHero) 영역 — 주 숫자는 최근 거래, '시세' 단어 없음
+async function expectDetailHeader(page: Page) {
+  await expect(page.getByText(/2000년 준공/).first()).toBeVisible()
+  const hero = page.getByRole('region', { name: '면적별 최근 거래가' })
+  await expect(hero.getByTestId('estate-price-body')).toContainText(/최근 (매매|전세)/)
+  await expect(hero.getByTestId('estate-price-median')).toContainText(/최근 1년 \d+건 중간/)
+  await expect(hero).not.toContainText('시세')
+}
+
 function captureRuntime(page: Page): Capture {
   const capture: Capture = { pageErrors: [], consoleErrors: [], hydrationWarnings: [] }
   page.on('pageerror', (error) => capture.pageErrors.push(error.message))
@@ -213,7 +222,7 @@ async function configureFixtureApi(page: Page, body: unknown) {
     data: body,
   })
   expect(response.ok()).toBe(true)
-  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null }> } }>
+  return response.json() as Promise<{ data: { nearbyRequests?: Array<{ mode: string | null; rentType: string | null; excludeBuildingName: string | null; type?: string | null; limitPerType?: string | null; dongName?: string | null; jibun?: string | null }> } }>
 }
 
 async function blockExternalNetwork(page: Page) {
@@ -402,12 +411,15 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await page.goto(salePath)
   await hydrated(page)
   await expect(page.locator('h1').first()).toContainText('회복아파트')
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await expect(page.getByTestId('deal-point-row')).toHaveCount(20)
   await page.getByTestId('show-more-deals').click()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(21)
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(20)
-  await expect(page.getByLabel('전용면적')).toHaveValue('84.90')
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(15)
+  // 면적 필터 값은 면적 그룹 key(ROUND(전용면적)) — 상단 칩과 같은 그룹
+  await expect(page.locator('select[name="area"]')).toHaveValue('85')
+  const hero = page.getByRole('region', { name: '면적별 최근 거래가' })
+  await expect(hero.locator('.estate-price-hero__chips button[aria-pressed="true"]')).toContainText('84㎡ · 전용 26평')
   await expect(page.getByLabel('조회 기간')).toHaveValue('0')
   const selectedSameDay = `${kstDateLabel(-2)} · 21건`
   await expect(page.getByText(selectedSameDay)).toBeVisible()
@@ -418,12 +430,14 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row')).toHaveText([
     ...Array.from({ length: 21 }, () => /전용 84\.90㎡/),
   ])
-  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=84.90&months=0&buildingName=회복아파트')
+  const detailWireResponse = await page.request.get('http://127.0.0.1:18080/api/real-estate/apt-sale/detail?mode=sale&area=85&months=0&buildingName=회복아파트')
   expect(detailWireResponse.ok()).toBe(true)
   const detailWire = await detailWireResponse.json()
   expect(detailWire.data.points).toHaveLength(21)
   expect(detailWire.data.table.total).toBe(21)
+  expect(detailWire.data.filters.area).toBe('85')
   expect(detailWire.data.points.every((point: { area: string }) => point.area === '84.90')).toBe(true)
+  expect(detailWire.data.points.every((point: { flag: string }) => point.flag === 'normal')).toBe(true)
   const detailWireText = JSON.stringify(detailWire.data)
   for (const excludedAmount of [99001, 99002, 99003]) {
     expect(detailWireText).not.toContain(String(excludedAmount))
@@ -448,21 +462,30 @@ test('상세 필터·표·차트는 같은 eligible 거래 집합을 사용하�
   await expect(page.getByTestId('deal-point-row').nth(1)).toContainText('전용 84.90㎡')
   await page.getByLabel('조회 기간').selectOption('12')
   await expect(page.getByText('최근 1년 거래').locator('..').getByText('21건')).toBeVisible()
-  await page.getByLabel('전용면적').selectOption('84.91')
-  await expect(page.getByText('적용 조건 · 매매 · 전용 84.91㎡ · 1년')).toBeVisible()
+  // 필터에서 다른 면적 그룹을 고르면 상단 칩·최근 거래·중간값·차트·표가 모두 그 그룹으로 바뀐다
+  await page.locator('select[name="area"]').selectOption('60')
+  await expect(page.getByText('적용 조건 · 매매 · 전용 59㎡ · 1년')).toBeVisible()
+  await expect(hero.locator('.estate-price-hero__chips button[aria-pressed="true"]')).toContainText('59㎡ · 전용 18평')
+  await expect(hero.getByTestId('estate-price-median')).toContainText('9억 600만')
+  await expect(hero.getByTestId('estate-area-latest').locator('tbody tr[aria-current="true"]')).toContainText('59㎡ · 18평')
   await expect(page.getByText('최근 1년 거래').locator('..').getByText('7건')).toBeVisible()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(7)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('9억 1,000만원')
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(7)
-  await expect(page.getByTestId('detail-transaction-card').first()).toContainText('9억 1,000만원')
-  await page.getByLabel('전용면적').selectOption('84.90')
+  await expect(page.getByTestId('deal-point-row').first()).toContainText('전용 59.91㎡')
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(7)
+  await expect(page.getByTestId('detail-transaction-row').first()).toContainText('9억 1,000만원')
+  // 상단 칩으로 되돌리면 아래 필터도 같은 그룹으로 돌아간다
+  await hero.getByRole('button', { name: /84㎡ · 전용 26평/ }).click()
+  await expect(page.locator('select[name="area"]')).toHaveValue('85')
+  await expect(page.getByText('적용 조건 · 매매 · 전용 84㎡ · 1년')).toBeVisible()
+  await expect(page.getByTestId('deal-point-row').first()).toContainText('전용 84.90㎡')
   await page.getByLabel('조회 기간').selectOption('6')
   const detailCountAfterChartLoad = detailRequests.length
-  await page.getByRole('button', { name: '2' }).click()
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(1)
+  await page.getByRole('button', { name: '2 페이지' }).click()
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(6)
   expect(pageRequests.length).toBeGreaterThanOrEqual(1)
   expect(detailRequests.length).toBe(detailCountAfterChartLoad)
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await attachCapture(testInfo, capture)
 })
 
@@ -493,13 +516,13 @@ test('상세 overview 안정성과 page 실패는 실제 네트워크 재시도�
     overviewFailures: [{ type: 'apt-sale', name: '요약재시도아파트', count: 0 }],
   })
   await page.getByRole('button', { name: '요약 다시 불러오기' }).click()
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   await expect.poll(() => nearbyCountsDuringFailure.length).toBeGreaterThan(0)
 
   const retryPagePath = '/real-estate/apt-sale/seoul/gangnam/페이지재시도아파트'
   await page.goto(retryPagePath)
   await hydrated(page)
-  await expect(page.getByLabel('실거래 요약').getByText('2000년')).toBeVisible()
+  await expectDetailHeader(page)
   const failedPage = page.waitForResponse(
     (response) =>
       response.url().includes('/api/real-estate/apt-sale/detail-page') &&
@@ -511,18 +534,18 @@ test('상세 overview 안정성과 page 실패는 실제 네트워크 재시도�
       response.url().includes('page=2')
   )
   const pageConsoleStart = capture.consoleErrors.length
-  await page.getByRole('button', { name: '2' }).click()
+  await page.getByRole('button', { name: '2 페이지' }).click()
   expect((await failedPage).status()).toBe(503)
   await expect(page.getByRole('alert').filter({ hasText: '거래 내역 페이지' })).toBeVisible()
   await allowOnlyExpectedConsoleErrors(testInfo, capture, pageConsoleStart, [
     /Failed to load resource: the server responded with a status of 50[0-9]/,
   ])
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(20)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(15)
   await configureFixtureApi(page, {
     pageFailures: [{ type: 'apt-sale', name: '페이지재시도아파트', page: 2, count: 0 }],
   })
   await page.getByRole('button', { name: '거래 내역 다시 불러오기' }).click()
-  await expect(page.getByTestId('detail-transaction-card')).toHaveCount(1)
+  await expect(page.getByTestId('detail-transaction-row')).toHaveCount(6)
   await attachCapture(testInfo, capture)
 })
 
@@ -619,10 +642,122 @@ test('월세 보증금 0 필터는 무보증 월세 거래와 차트 보증금 �
   await page.getByLabel('거래 유형').selectOption('wolse')
   await expect(page.getByLabel('보증금')).toBeVisible()
   await page.getByLabel('보증금').selectOption('0')
-  await expect(page.getByText('적용 조건 · 월세 · 전용 84.90㎡ · 전체 기간 · 보증금 0')).toBeVisible()
+  await expect(page.getByText('적용 조건 · 월세 · 전용 84㎡ · 전체 기간 · 보증금 0')).toBeVisible()
   await expect(page.getByTestId('deal-point-row')).toHaveCount(6)
   await expect(page.getByTestId('deal-point-row').first()).toContainText('보증금 0')
   await expect(page.getByText('전체 기간 거래').locator('..').getByText('6건')).toBeVisible()
+  await attachCapture(testInfo, capture)
+})
+
+test('주변 단지는 유형 탭·같은 면적 최근가 2열 리스트로 SSR 되고 360px에서 넘치지 않는다', async ({
+  page,
+}, testInfo) => {
+  const capture = captureRuntime(page)
+  await stubKakaoMaps(page)
+  await blockExternalNetwork(page)
+  // 다른 테스트가 아직 열지 않은 경로 — 상세 SSR 캐시를 거치지 않아 nearby 요청이 로그에 남는다
+  const nearbyPath = '/real-estate/apt-sale/seoul/gangnam/회복아파트주변'
+  await configureFixtureApi(page, { reset: true })
+
+  // SSR HTML: 비활성 탭 패널도 링크째 들어 있고 display:none 으로만 숨긴다
+  const html = await (await page.request.get(nearbyPath)).text()
+  expect(html.match(/<div[^>]*id="nearby-panel-villa"[^>]*>/)?.[0]).toContain('display:none')
+  expect(html).toContain(`/real-estate/villa-sale/seoul/gangnam/${encodeURIComponent('이웃빌라')}`)
+
+  const log = await configureFixtureApi(page, {})
+  expect(log.data.nearbyRequests).toContainEqual(expect.objectContaining({
+    mode: 'sale',
+    type: 'apt-sale',
+    limitPerType: '6',
+    excludeBuildingName: '회복아파트주변',
+    // overview identity 와 같은 주소 범위(동+지번)로 비교 면적을 고르도록 지번도 보낸다
+    dongName: '역삼동',
+    jibun: '123',
+  }))
+
+  await page.goto(salePath)
+  await hydrated(page)
+
+  const nearby = page.locator('#nearby')
+  await nearby.scrollIntoViewIfNeeded()
+  await expect(nearby.locator('h3')).toHaveText('주변 아파트 매매가')
+  await expect(nearby).toContainText('같은 역삼동 단지의 84㎡ 최근 매매가입니다. 평당가는 전용면적 기준입니다.')
+  await expect(nearby.getByRole('tab')).toHaveText(['아파트 1', '오피스텔 1', '빌라 1'])
+  await expect(nearby.getByRole('tab', { name: '아파트 1' })).toHaveAttribute('aria-selected', 'true')
+  const aptRow = nearby.locator('#nearby-panel-apt [data-testid="nearby-row"]').first()
+  await expect(aptRow).toContainText('이웃아파트')
+  await expect(aptRow).toContainText('2000년 준공 · 3년 거래 21건')
+  await expect(aptRow).toContainText('8억 5,000만원')
+  await expect(aptRow).toContainText('84㎡ · 26.09.12 · 7층')
+  await expect(aptRow).toContainText('평당 3,308만원')
+  await expect(nearby.locator('#nearby-panel-villa')).toBeHidden()
+  await expect(nearby.locator('#nearby-panel-villa a')).toHaveAttribute('href', /\/real-estate\/villa-sale\//)
+  await expect(nearby).toContainText('최근 3년 국토교통부 실거래')
+
+  await nearby.getByRole('tab', { name: '빌라 1' }).click()
+  await expect(nearby.locator('h3')).toHaveText('주변 빌라 매매가')
+  await expect(nearby).toContainText('같은 역삼동 빌라 단지의 대표 면적 최근 매매가입니다.')
+  const villaRow = nearby.locator('#nearby-panel-villa [data-testid="nearby-row"]').first()
+  await expect(villaRow).toBeVisible()
+  await expect(villaRow).toContainText('59㎡ · 26.09.12 · 7층')
+  await expect(villaRow).not.toContainText('대표 면적')
+  await expect(nearby.getByTestId('nearby-list-link')).toHaveAttribute('href', '/real-estate/villa-sale/seoul/gangnam')
+  await expect(nearby.getByTestId('nearby-list-link')).toContainText('강남구 빌라 전체 보기')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  await page.locator('#nearby').scrollIntoViewIfNeeded()
+  await expect(page.locator('#nearby [data-testid="nearby-row"]').first()).toBeVisible()
+  const overflow = await viewportOverflowEvidence(page)
+  expect(overflow, JSON.stringify(overflow, null, 2)).toMatchObject({ documentWidth: overflow.viewport })
+  await page.screenshot({ path: `${screenshotDir}/${testInfo.project.name}-360-nearby.png`, fullPage: false })
+  await attachCapture(testInfo, capture)
+})
+
+test('주변 생활시설은 카테고리별 실제 개수·도보 시간 목록으로 SSR 되고 360px에서 넘치지 않는다', async ({
+  page,
+}, testInfo) => {
+  const capture = captureRuntime(page)
+  await stubKakaoMaps(page)
+  await blockExternalNetwork(page)
+  await configureFixtureApi(page, { reset: true })
+
+  // SSR HTML: 4·5번째 행도 링크째 들어 있고 모바일에서는 클래스로만 숨긴다
+  const html = await (await page.request.get(salePath)).text()
+  expect(html).toContain('href="/school/fixture-school-5"')
+  expect(html.match(/<li[^>]*>(?:(?!<\/li>)[\s\S])*?\/school\/fixture-school-4/)?.[0]).toContain('max-md:hidden')
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  const facilities = page.getByTestId('nearby-facilities')
+  await facilities.scrollIntoViewIfNeeded()
+  await expect(facilities.locator('h3')).toHaveText(['지하철역', '학교', '어린이집', '병원'])
+  await expect(page.getByText('회복아파트에서 반경 2km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.')).toBeVisible()
+  await expect(facilities.getByTestId('nearby-facility-count')).toHaveText([
+    '2km 안 1곳', '2km 안 14곳', '2km 안 64곳', '2km 안 20,000곳 이상',
+  ])
+  await expect(facilities.getByRole('link', { name: /역삼초등학교/ })).toContainText('26m')
+  await expect(facilities.getByRole('link', { name: /역삼초등학교/ })).toContainText('도보 약 1분')
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeVisible()
+  await expect(facilities.getByRole('button', { name: /모두 보기/ })).toBeHidden()
+  await expect(facilities.getByTestId('nearby-facilities-region-link')).toHaveAttribute('href', '/seoul/gangnam')
+  await expect(facilities.getByTestId('nearby-facilities-region-link')).toContainText('강남구 생활시설 전체 보기 →')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  await facilities.scrollIntoViewIfNeeded()
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeHidden()
+  const more = facilities.getByRole('button', { name: '5곳 모두 보기' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  const overflow = await viewportOverflowEvidence(page)
+  expect(overflow, JSON.stringify(overflow, null, 2)).toMatchObject({ documentWidth: overflow.viewport })
+  await page.screenshot({ path: `${screenshotDir}/${testInfo.project.name}-360-nearby-facilities.png`, fullPage: false })
+  await more.click()
+  await expect(facilities.getByRole('button', { name: '접기' })).toHaveAttribute('aria-expanded', 'true')
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeVisible()
   await attachCapture(testInfo, capture)
 })
 

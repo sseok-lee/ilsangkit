@@ -91,6 +91,90 @@ export const facilityHandlers = [
     });
   }),
 
+  // 주변 시설 카테고리별 개수 + 가까운 N곳 (부동산 상세 "주변 생활시설")
+  http.get(`${API_BASE}/api/facilities/nearby-grouped`, ({ request }) => {
+    const url = new URL(request.url);
+    const radius = Number(url.searchParams.get('radius') ?? 2000);
+    const limit = Number(url.searchParams.get('limit') ?? 5);
+    const categories = (url.searchParams.get('categories') ?? '').split(',').filter(Boolean);
+
+    const groups = Object.fromEntries(
+      categories.map((category) => {
+        // mock 에서는 distance 필드를 직선거리로 본다
+        const inside = mockFacilities
+          .filter((f) => f.category === category && f.distance <= radius)
+          .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+        return [
+          category,
+          {
+            count: inside.length,
+            exact: true,
+            items: inside.slice(0, limit).map((f) => ({ id: f.id, name: f.name, category: f.category, distance: f.distance })),
+          },
+        ];
+      }),
+    );
+
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
+  // 시설 상세 "주변 시설" — [현재 카테고리(자기 제외), ...관련 카테고리], 반경 1km
+  http.get(`${API_BASE}/api/facilities/:category/:id/nearby-grouped`, ({ params, request }) => {
+    const { category, id } = params as { category: string; id: string };
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 5);
+    if (!mockFacilities.some((f) => f.id === id && f.category === category)) {
+      return HttpResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' } },
+        { status: 404 },
+      );
+    }
+    const radius = 1000;
+    // backend CROSS_CATEGORY_MAP 의 mock 사본
+    const cross: Record<string, string[]> = {
+      toilet: ['park', 'wifi'], wifi: ['library', 'park', 'toilet'], parking: ['ev-charger', 'toilet', 'market'],
+      hospital: ['pharmacy', 'aed'], pharmacy: ['hospital', 'childcare'], aed: ['hospital', 'pharmacy'],
+      library: ['parking', 'wifi', 'park'], clothes: ['toilet', 'park'], park: ['toilet', 'parking', 'sports'],
+      school: ['childcare', 'library', 'park'], market: ['parking', 'toilet'], childcare: ['school', 'hospital', 'pharmacy', 'park'],
+      'ev-charger': ['parking', 'park', 'market', 'library'], sports: ['parking', 'park', 'toilet'],
+    };
+    const groups = [category, ...(cross[category] ?? [])].map((cat) => {
+      // mock 에서는 distance 필드를 직선거리로 본다
+      const inside = mockFacilities
+        .filter((f) => f.category === cat && f.id !== id && f.distance <= radius)
+        .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+      return { category: cat, count: inside.length, exact: true, items: inside.slice(0, limit) };
+    });
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
+  // 지하철역 상세 "주변 시설" — [주변 역(역명 단위, 자기 제외), ...CROSS_CATEGORY_MAP.subway], 반경 1km
+  http.get(`${API_BASE}/api/subway/stations/:slug/nearby-grouped`, ({ params, request }) => {
+    const { slug } = params as { slug: string };
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 5);
+    if (slug !== 'gangnam') {
+      return HttpResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Station not found' } },
+        { status: 404 },
+      );
+    }
+    const radius = 1000;
+    const stations = [
+      { id: 'subway-D006', name: '신논현', nameSlug: 'sinnonhyeon', category: 'subway', lines: ['9호선', '신분당선'], distance: 726 },
+      { id: 'subway-0221', name: '역삼', nameSlug: 'yeoksam', category: 'subway', lines: ['2호선'], distance: 802 },
+    ];
+    const groups = [
+      { category: 'subway', count: stations.length, exact: true, items: stations.slice(0, limit) },
+      // backend CROSS_CATEGORY_MAP.subway 의 mock 사본. mock 에서는 distance 필드를 직선거리로 본다
+      ...['parking', 'ev-charger', 'toilet', 'market'].map((cat) => {
+        const inside = mockFacilities
+          .filter((f) => f.category === cat && f.distance <= radius)
+          .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+        return { category: cat, count: inside.length, exact: true, items: inside.slice(0, limit) };
+      }),
+    ];
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
   // 시설 상세
   http.get(`${API_BASE}/api/facilities/:category/:id`, ({ params }) => {
     const { category, id } = params;

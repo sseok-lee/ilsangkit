@@ -23,13 +23,21 @@ beforeEach(() => {
   mockFindMany.mockReset();
 });
 
+/** 전세/월세 raw 경로 3건에만 rows 를 돌려주고, 뒤따르는 단지별 면적 거래 조회(AS cnt)는 빈 결과. */
+function rawPathReturns(rows: unknown[]) {
+  mockQueryRaw.mockImplementation(async (query: { strings?: string[] } | string[]) => {
+    const text = Array.isArray(query) ? query.join('?') : (query.strings ?? []).join('?');
+    return text.includes('AS cnt') ? [] : rows;
+  });
+}
+
 // rentType 필터가 걸린 경로(전세/월세)는 여전히 transaction 테이블 raw SQL 을 쓴다.
 // rentType='all'(SSR 기본값)은 2026-08-03 부터 summary 경로로 분리됐다 —
 // 그쪽 커버리지는 realEstateNearbyRentSummary.test.ts.
 describe('getNearbyComplexes (rent raw path — 전세/월세 필터)', () => {
   it('returns latestDealYear/Month from the actual latest row (not max of each column)', async () => {
     // Rent path runs raw SQL 3 times (apt/villa/offitel)
-    mockQueryRaw.mockResolvedValue([
+    rawPathReturns([
       {
         buildingName: '강남타워',
         bjdCode: '1168010100',
@@ -74,7 +82,7 @@ describe('getNearbyComplexes (rent raw path — 전세/월세 필터)', () => {
   });
 
   it('converts BigInt transactionCount/latestPrice/monthlyRent to Number', async () => {
-    mockQueryRaw.mockResolvedValue([
+    rawPathReturns([
       {
         buildingName: '테스트빌딩',
         bjdCode: '1168010100',
@@ -103,7 +111,7 @@ describe('getNearbyComplexes (rent raw path — 전세/월세 필터)', () => {
 
   it('converts BigInt buildYear/latestDealYear/latestDealMonth to Number (JSON serialize 가능)', async () => {
     // ANY_VALUE / window function 결과가 Prisma raw에서 BigInt로 들어올 수 있음
-    mockQueryRaw.mockResolvedValue([
+    rawPathReturns([
       {
         buildingName: '반포미도',
         bjdCode: '1165010600',

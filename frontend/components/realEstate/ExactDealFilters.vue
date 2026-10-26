@@ -29,8 +29,8 @@
           @change="emitArea"
         >
           <option v-if="displayedAreas.length === 0" value="">선택 가능한 면적 없음</option>
-          <option v-for="area in displayedAreas" :key="area" :value="area">
-            전용 {{ area }}㎡
+          <option v-for="area in displayedAreas" :key="area.key" :value="area.key">
+            전용 {{ area.label }}㎡
           </option>
         </select>
       </label>
@@ -83,6 +83,8 @@ const props = defineProps<{
   filters: AppliedFilters
   options: DetailOptions
   pending: boolean
+  /** 면적 그룹 key → 라벨. 있으면 옵션 자체 라벨보다 우선(헤더 칩과 동일 표기). */
+  areaLabels?: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -95,10 +97,21 @@ const currentMonths = ref(String(props.filters.months))
 const currentDeposit = ref(props.filters.deposit == null ? '' : String(props.filters.deposit))
 
 const displayedAreas = computed(() => {
-  if (props.filters.area && !props.options.areas.includes(props.filters.area)) {
-    return [props.filters.area, ...props.options.areas]
+  const areas = props.options.areas.map(area => ({
+    key: area.key,
+    label: props.areaLabels?.[area.key] ?? area.label,
+  }))
+  const applied = props.filters.area
+  if (applied && !areas.some(area => area.key === applied)) {
+    return [{ key: applied, label: props.areaLabels?.[applied] ?? applied }, ...areas]
   }
-  return props.options.areas
+  return areas
+})
+
+const appliedAreaLabel = computed(() => {
+  const applied = props.filters.area
+  if (!applied) return ''
+  return displayedAreas.value.find(area => area.key === applied)?.label ?? applied
 })
 
 const displayedDeposits = computed(() => {
@@ -110,7 +123,7 @@ const displayedDeposits = computed(() => {
 
 const appliedStatusText = computed(() => {
   const parts = [props.pending ? '적용 중' : '적용 조건', modeLabel(props.filters.mode)]
-  if (props.filters.area) parts.push(`전용 ${props.filters.area}㎡`)
+  if (props.filters.area) parts.push(`전용 ${appliedAreaLabel.value}㎡`)
   parts.push(periodLabel(props.filters.months))
   if (props.filters.mode === 'wolse' && props.filters.deposit != null) {
     parts.push(`보증금 ${formatMoney(props.filters.deposit)}`)

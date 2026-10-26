@@ -24,7 +24,8 @@ describe('부동산 상세 히어로 빈값 — EMPTY_FIELD_TEXT 통일 (§5-8 r
     expect(SRC).not.toContain("'정보 없음'")
   })
   it('히어로 대표값은 EMPTY_FIELD_TEXT 상수를 참조한다 (커플링 구조적 보장)', () => {
-    expect(SRC).toContain('return sale?.amount != null && sale.amount > 0 ? formatKoreanPrice(sale.amount) : EMPTY_FIELD_TEXT')
+    // 단건 최근 매매 대표값은 EstatePriceHero(면적 그룹 대표 시세)로 대체되어 사라졌다.
+    expect(SRC).not.toContain('latestSaleAmountLabel')
     expect(SRC).toContain('return year ? `${year}년` : EMPTY_FIELD_TEXT')
     expect(SRC).toContain("areaRange.value !== '-' ? areaRange.value.replace('~', '–') : EMPTY_FIELD_TEXT")
     expect(SRC).toContain('Number.isFinite(count) ? `${Number(count).toLocaleString()}건` : EMPTY_FIELD_TEXT')

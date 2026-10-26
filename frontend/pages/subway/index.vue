@@ -160,6 +160,7 @@ import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
+import { withStationSuffix } from '~/utils/stationName'
 
 interface SubwayStationGroup {
   id: string
@@ -232,11 +233,6 @@ const { data: stations, pending, error } = await useAsyncData<ListResponse>(
 // 크롤러에겐 그냥 얇은 페이지다 — 서버에서는 503 + no-store 로 알린다 (#467 / #674).
 if (import.meta.server && error.value) markDegradedResponse()
 
-// CSV에 "가산디지털단지" / "가산디지털단지역" 같이 끝 "역" 유무가 혼재 — 항상 "역" 1개 보장
-function withStationSuffix(name: string): string {
-  const base = name.replace(/역$/, '').trim()
-  return base ? `${base}역` : ''
-}
 
 // SubwayStationGroup → Facility 매핑 (FacilityCard 재사용용)
 const facilities = computed<Facility[]>(() => {

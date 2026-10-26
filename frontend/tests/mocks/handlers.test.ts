@@ -66,6 +66,65 @@ describe('MSW Facility Handlers', () => {
     });
   });
 
+  describe('GET /api/facilities/nearby-grouped', () => {
+    it('요청한 카테고리마다 count/exact/items 를 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/nearby-grouped?lat=37.4979&lng=127.0276&radius=2000&categories=toilet,school&limit=1`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(2000);
+      expect(Object.keys(data.data.groups)).toEqual(['toilet', 'school']);
+      expect(data.data.groups.toilet.count).toBeGreaterThanOrEqual(1);
+      expect(data.data.groups.toilet.items).toHaveLength(1);
+      expect(data.data.groups.toilet.items[0]).toEqual({
+        id: 'toilet-1', name: '강남역 공중화장실', category: 'toilet', distance: 120,
+      });
+    });
+  });
+
+  describe('GET /api/facilities/:category/:id/nearby-grouped', () => {
+    it('현재 카테고리(자기 제외) → 관련 카테고리 순서의 groups 배열을 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/toilet/toilet-1/nearby-grouped?limit=5`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(1000);
+      expect(data.data.groups.map((g: { category: string }) => g.category)).toEqual(['toilet', 'park', 'wifi']);
+      const same = data.data.groups[0];
+      expect(same.items.some((f: { id: string }) => f.id === 'toilet-1')).toBe(false);
+      expect(same.count).toBe(same.items.length);
+    });
+
+    it('없는 시설은 404', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/toilet/nope/nearby-grouped`);
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/subway/stations/:slug/nearby-grouped', () => {
+    it('주변 역 → CROSS_CATEGORY_MAP.subway 순서의 groups 배열을 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/subway/stations/gangnam/nearby-grouped?limit=5`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(1000);
+      expect(data.data.groups.map((g: { category: string }) => g.category))
+        .toEqual(['subway', 'parking', 'ev-charger', 'toilet', 'market']);
+      const subway = data.data.groups[0];
+      expect(subway.items.length).toBeGreaterThan(0);
+      expect(subway.items[0]).toMatchObject({ category: 'subway', nameSlug: expect.any(String), lines: expect.any(Array) });
+      expect(subway.items.some((s: { nameSlug: string }) => s.nameSlug === 'gangnam')).toBe(false);
+    });
+
+    it('없는 역은 404', async () => {
+      const response = await fetch(`${API_BASE}/api/subway/stations/nope/nearby-grouped`);
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('POST /api/facilities/search', () => {
     it('should return all facilities without filters', async () => {
       const response = await fetch(`${API_BASE}/api/facilities/search`, {

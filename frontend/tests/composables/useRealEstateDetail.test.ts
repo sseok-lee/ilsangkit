@@ -76,12 +76,12 @@ function rentSnapshot(
       buildingName: '일상숲 리버파크',
       mode: 'wolse',
       months: 6,
-      area: '84.90',
+      area: '85',
       deposit: 0,
     },
     window: { from: '2026-03-21', to: '2026-09-21' },
-    options: { areas: ['84.90'], deposits: [{ amount: 0, count: 1 }] },
-    points: [{ id: row.id, date: '2026-09-12', amount: 120, area: '84.90', floor: 3, deposit: 0 }],
+    options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [{ amount: 0, count: 1 }] },
+    points: [{ id: row.id, date: '2026-09-12', amount: 120, area: '84.90', floor: 3, deposit: 0, flag: 'normal' }],
     table: { items: [row], total: 1, page: 1, totalPages: 1 },
     generatedAt: '2026-09-21T03:00:00Z',
     adjustment: null,
@@ -326,7 +326,7 @@ describe('useRealEstateDetail', () => {
               buildingName: '일상숲 리버파크',
               mode: 'jeonse',
               months: 6,
-              area: '84.90',
+              area: '85',
               deposit: null,
             },
           }),
@@ -406,7 +406,7 @@ describe('useRealEstateDetail', () => {
 
   it('필터 변경은 단일 snapshot 요청으로 page를 1로 돌리고 적용 filters와 points를 교체한다', async () => {
     const nextSnapshot = cloneSnapshot({
-      filters: { ...saleSnapshot.filters, months: 12, area: '59.90' },
+      filters: { ...saleSnapshot.filters, months: 12, area: '60' },
       points: saleSnapshot.points.slice(0, 2),
       table: { items: saleRows.slice(0, 2), total: 2, page: 1, totalPages: 1 },
     })
@@ -425,7 +425,7 @@ describe('useRealEstateDetail', () => {
     })
     const detail = await useRealEstateDetail(context)
 
-    await detail.setFilters({ months: 12, area: '59.90' })
+    await detail.setFilters({ months: 12, area: '60' })
 
     expect(detail.snapshot.value?.filters).toEqual(nextSnapshot.filters)
     expect(detail.snapshot.value?.points).toEqual(nextSnapshot.points)
@@ -438,7 +438,7 @@ describe('useRealEstateDetail', () => {
         buildingName: '일상숲 리버파크',
         mode: 'sale',
         months: 12,
-        area: '59.90',
+        area: '60',
       },
     })
   })
@@ -472,7 +472,7 @@ describe('useRealEstateDetail', () => {
                     area: null,
                     deposit: null,
                   },
-                  options: { areas: ['84.90'], deposits: [] },
+                  options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
                   points: [],
                   table: { items: [], total: 0, page: 1, totalPages: 0 },
                 })
@@ -487,11 +487,11 @@ describe('useRealEstateDetail', () => {
     })
     const detail = await useRealEstateDetail(context)
 
-    await detail.setFilters({ mode: 'wolse', area: '84.90', deposit: 0 })
+    await detail.setFilters({ mode: 'wolse', area: '85', deposit: 0 })
     await detail.goToPage(1)
 
-    expect(fetchCalls[2].query).toMatchObject({ mode: 'wolse', area: '84.90', deposit: 0 })
-    expect(fetchCalls[3].query).toMatchObject({ mode: 'wolse', area: '84.90', deposit: 0, page: 1 })
+    expect(fetchCalls[2].query).toMatchObject({ mode: 'wolse', area: '85', deposit: 0 })
+    expect(fetchCalls[3].query).toMatchObject({ mode: 'wolse', area: '85', deposit: 0, page: 1 })
   })
 
   it('월세에서 전세로 바꾸면 보증금을 제거하고 초기화 문구를 남긴다', async () => {
@@ -511,10 +511,10 @@ describe('useRealEstateDetail', () => {
                     buildingName: '일상숲 리버파크',
                     mode: 'jeonse',
                     months: 6,
-                    area: '84.90',
+                    area: '85',
                     deposit: null,
                   },
-                  options: { areas: ['84.90'], deposits: [] },
+                  options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
                   points: [],
                   table: { items: [], total: 0, page: 1, totalPages: 0 },
                 }),
@@ -532,7 +532,7 @@ describe('useRealEstateDetail', () => {
       buildingName: '일상숲 리버파크',
       mode: 'jeonse',
       months: 6,
-      area: '84.90',
+      area: '85',
     })
     expect(detail.announcement.value).toBe('거래 유형 변경으로 보증금 선택을 초기화했습니다')
   })
@@ -550,10 +550,10 @@ describe('useRealEstateDetail', () => {
         buildingName: '일상숲 리버파크',
         mode: 'wolse',
         months: 6,
-        area: '84.90',
+        area: '85',
         deposit: null,
       },
-      options: { areas: ['84.90'], deposits: [] },
+      options: { areas: [{ key: '85', label: '84', count: 1 }], deposits: [] },
       points: [],
       table: { items: [], total: 0, page: 1, totalPages: 0 },
     })
@@ -634,7 +634,7 @@ describe('useRealEstateDetail', () => {
     const fastPage = detail.goToPage(1)
     fast.resolve({
       success: true,
-      data: { items: saleRows.slice(0, 20), total: 21, page: 1, totalPages: 2 },
+      data: { items: saleRows.slice(0, 15), total: 21, page: 1, totalPages: 2 },
     })
     await fastPage
     slow.resolve({
@@ -717,9 +717,9 @@ describe('useRealEstateDetail', () => {
       fetchCalls.push({ url, query: opts?.query })
       if (url.endsWith('/detail-overview'))
         return Promise.resolve({ success: true, data: saleOverview })
-      if (url.endsWith('/detail') && opts?.query?.months === 12 && opts?.query?.area === '59.90') {
+      if (url.endsWith('/detail') && opts?.query?.months === 12 && opts?.query?.area === '60') {
         if (
-          fetchCalls.filter((call) => call.url.endsWith('/detail') && call.query?.area === '59.90')
+          fetchCalls.filter((call) => call.url.endsWith('/detail') && call.query?.area === '60')
             .length === 1
         ) {
           return Promise.reject(areaFailure)
@@ -727,7 +727,7 @@ describe('useRealEstateDetail', () => {
         return Promise.resolve({
           success: true,
           data: cloneSnapshot({
-            filters: { ...saleSnapshot.filters, months: 12, area: '59.90' },
+            filters: { ...saleSnapshot.filters, months: 12, area: '60' },
           }),
         })
       }
@@ -740,7 +740,7 @@ describe('useRealEstateDetail', () => {
     )
 
     const monthsRequest = detail.setFilters({ months: 12 })
-    await detail.setFilters({ area: '59.90' })
+    await detail.setFilters({ area: '60' })
     slowMonths.resolve({
       success: true,
       data: cloneSnapshot({ filters: { ...saleSnapshot.filters, months: 12 } }),
@@ -749,12 +749,12 @@ describe('useRealEstateDetail', () => {
     await detail.refresh()
 
     const areaCalls = fetchCalls.filter(
-      (call) => call.url.endsWith('/detail') && call.query?.area === '59.90'
+      (call) => call.url.endsWith('/detail') && call.query?.area === '60'
     )
     expect(areaCalls).toHaveLength(2)
-    expect(areaCalls[0].query).toMatchObject({ months: 12, area: '59.90' })
-    expect(areaCalls[1].query).toMatchObject({ months: 12, area: '59.90' })
-    expect(detail.snapshot.value?.filters).toMatchObject({ months: 12, area: '59.90' })
+    expect(areaCalls[0].query).toMatchObject({ months: 12, area: '60' })
+    expect(areaCalls[1].query).toMatchObject({ months: 12, area: '60' })
+    expect(detail.snapshot.value?.filters).toMatchObject({ months: 12, area: '60' })
   })
 
   it('server adjustment 성공 후 partial patch와 refresh는 applied filters를 기준으로 요청한다', async () => {
@@ -767,7 +767,7 @@ describe('useRealEstateDetail', () => {
         return Promise.resolve({
           success: true,
           data: cloneSnapshot({
-            filters: { ...saleSnapshot.filters, area: '84.90' },
+            filters: { ...saleSnapshot.filters, area: '85' },
             adjustment: 'area-reset',
           }),
         })
@@ -794,13 +794,13 @@ describe('useRealEstateDetail', () => {
     await detail.refresh()
 
     const detailCalls = fetchCalls.filter((call) => call.url.endsWith('/detail'))
-    expect(detailCalls[2].query).toMatchObject({ months: 12, area: '84.90' })
-    expect(detailCalls[3].query).toMatchObject({ months: 12, area: '84.90' })
+    expect(detailCalls[2].query).toMatchObject({ months: 12, area: '85' })
+    expect(detailCalls[3].query).toMatchObject({ months: 12, area: '85' })
   })
 
   it('page total이 snapshot total과 달라지면 snapshot을 다시 받고 갱신 문구를 남긴다', async () => {
     const refreshed = cloneSnapshot({
-      table: { items: saleRows.slice(0, 20), total: 22, page: 1, totalPages: 2 },
+      table: { items: saleRows.slice(0, 15), total: 22, page: 1, totalPages: 2 },
       points: saleSnapshot.points.concat({
         id: 99,
         date: '2026-09-13',
@@ -808,6 +808,7 @@ describe('useRealEstateDetail', () => {
         area: '84.90',
         floor: 9,
         deposit: null,
+        flag: 'normal' as const,
       }),
     })
     testGlobal.$fetch = vi.fn(async (url: string) => {
@@ -866,7 +867,7 @@ describe('useRealEstateDetail', () => {
       if (
         url.endsWith('/detail') &&
         opts?.query?.mode === 'jeonse' &&
-        opts?.query?.area === '84.90'
+        opts?.query?.area === '85'
       )
         return slowJeonse.promise
       if (
@@ -882,7 +883,7 @@ describe('useRealEstateDetail', () => {
               buildingName: '일상숲 리버파크',
               mode: 'wolse',
               months: 6,
-              area: '84.90',
+              area: '85',
               deposit: 10000,
             },
             adjustment: 'deposit-reset',
@@ -906,7 +907,7 @@ describe('useRealEstateDetail', () => {
           buildingName: '일상숲 리버파크',
           mode: 'jeonse',
           months: 6,
-          area: '84.90',
+          area: '85',
           deposit: null,
         },
       }),
@@ -1026,7 +1027,7 @@ describe('useRealEstateDetail', () => {
                   buildingName: '일상숲 리버파크',
                   mode: 'jeonse',
                   months: 6,
-                  area: '84.90',
+                  area: '85',
                   deposit: null,
                 },
               })

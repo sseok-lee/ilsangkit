@@ -1,3 +1,6 @@
+// 백엔드 realEstateDetailService PAGE_SIZE 와 같은 값
+const TABLE_PAGE_SIZE = 15
+
 const MS_PER_DAY = 86_400_000
 
 export const typeIdentities = {
@@ -199,13 +202,33 @@ function saleIneligibleRows(type, exclusiveArea) {
   ]
 }
 
-function rowsFor(type, mode, area = '84.90', deposit = null) {
-  const numericArea = Number(area)
+// 면적 그룹 key(ROUND(전용면적)) → 그 그룹 거래의 전용면적. 백엔드처럼 area 파라미터는 그룹 key 이고
+// 예전 소수 면적(84.90 등)은 속한 그룹으로 해석한다.
+const GROUP_AREA = { '60': 59.91, '85': 84.9 }
+const DEFAULT_GROUP = '85'
+
+function resolveAreaGroup(param) {
+  if (param == null || param === '') return null
+  if (param in GROUP_AREA) return param
+  const numeric = Number(param)
+  if (!Number.isFinite(numeric) || numeric <= 0) return 'invalid'
+  const key = String(Math.round(numeric))
+  return key in GROUP_AREA ? key : 'invalid'
+}
+
+const AREA_OPTIONS = {
+  sale: [{ key: '60', label: '59', count: 7 }, { key: '85', label: '84', count: 21 }],
+  jeonse: [{ key: '60', label: '59', count: 9 }, { key: '85', label: '84', count: 9 }],
+  wolse: [{ key: '60', label: '59', count: 14 }, { key: '85', label: '84', count: 14 }],
+}
+
+function rowsFor(type, mode, group = DEFAULT_GROUP, deposit = null) {
+  const numericArea = GROUP_AREA[group] ?? GROUP_AREA[DEFAULT_GROUP]
   if (mode === 'sale') {
-    if (area === '84.91') {
+    if (group === '60') {
       return Array.from({ length: 7 }, (_, index) =>
         saleRow(11_000 + index, type, {
-          exclusiveArea: 84.91,
+          exclusiveArea: numericArea,
           dealAmount: index < 2 ? 91000 : 90000 + index * 120,
           jibun: index === 2 ? null : undefined,
         })
@@ -225,7 +248,8 @@ function rowsFor(type, mode, area = '84.90', deposit = null) {
   if (mode === 'jeonse') {
     return Array.from({ length: 9 }, (_, index) =>
       rentRow(20_000 + index, type, '전세', {
-        exclusiveArea: index === 0 ? 84.91 : numericArea,
+        // 같은 그룹(85) 안의 다른 소수 면적도 한 건 섞는다.
+        exclusiveArea: index === 0 && group === '85' ? 84.91 : numericArea,
         deposit: 61000 + index * 200,
       })
     )
@@ -251,6 +275,19 @@ function pointFromRow(row, mode) {
     area: Number(row.exclusiveArea).toFixed(2),
     floor: row.floor,
     deposit: 'deposit' in row ? row.deposit : null,
+    // 픽스처 거래는 직거래 태그 없이 둔다(직거래 태그는 백엔드 단위 테스트가 고정).
+    flag: 'normal',
+  }
+}
+
+function basis(representative, sampleCount, latestAmount, max12m) {
+  return {
+    representative,
+    sampleCount,
+    latestAny: { id: 9001, date: kstDate(-2), amount: latestAmount, floor: 10, direct: false },
+    max12m,
+    yearAgo: null,
+    changeRate: null,
   }
 }
 
@@ -289,16 +326,35 @@ export function detailOverview(type, buildingName) {
         ],
     location: ambiguous ? null : { lat: 37.5, lng: 127.03 },
     locationAmbiguous: ambiguous,
+    basisMode: type.endsWith('-rent') ? 'jeonse' : 'sale',
+    defaultAreaGroup: DEFAULT_GROUP,
+    areaGroups: [
+      { key: '60', label: '59', pyeong: 18, saleCount36m: 7, jeonseCount36m: 9 },
+      { key: '85', label: '84', pyeong: 26, saleCount36m: 21, jeonseCount36m: 9 },
+    ],
+    saleBasis: {
+      '60': basis(90600, 5, 91000, 91000),
+      '85': basis(86500, 5, 87000, 87000),
+    },
+    jeonseBasis: {
+      '60': basis(61900, 6, 62600, 62600),
+      '85': basis(62100, 6, 62600, 62600),
+    },
+    wolseLatest: {
+      '60': { date: kstDate(-5), deposit: 10000, monthlyRent: 120, floor: 6 },
+      '85': { date: kstDate(-3), deposit: 20000, monthlyRent: 150, floor: 10 },
+    },
     generatedAt: isoAtKstNoon(),
   }
 }
 
 export function detailSnapshot(type, query) {
   const mode = query.get('mode') ?? (type.endsWith('-sale') ? 'sale' : 'jeonse')
-  let area = query.get('area') ?? '84.90'
+  const requested = resolveAreaGroup(query.get('area'))
+  let area = requested ?? DEFAULT_GROUP
   let adjustment = null
-  if (!['84.90', '84.91'].includes(area)) {
-    area = '84.90'
+  if (requested === 'invalid') {
+    area = DEFAULT_GROUP
     adjustment = 'area-reset'
   }
   let deposit = query.has('deposit')
@@ -312,7 +368,7 @@ export function detailSnapshot(type, query) {
   }
   if (mode !== 'wolse') deposit = null
   const rows = rowsFor(type, mode, area, deposit)
-  const pageRows = rows.slice(0, 20)
+  const pageRows = rows.slice(0, TABLE_PAGE_SIZE)
   const months = Number(query.get('months') ?? 0)
   const window = months === 0
     ? { from: rows.map(rowYmd).filter(Boolean).sort()[0] ?? kstDate(0), to: kstDate(0) }
@@ -328,7 +384,7 @@ export function detailSnapshot(type, query) {
     },
     window,
     options: {
-      areas: ['84.90', '84.91'],
+      areas: AREA_OPTIONS[mode] ?? AREA_OPTIONS.sale,
       deposits:
         mode === 'wolse'
           ? [
@@ -342,7 +398,7 @@ export function detailSnapshot(type, query) {
       items: pageRows,
       total: rows.length,
       page: 1,
-      totalPages: Math.ceil(rows.length / 20),
+      totalPages: Math.ceil(rows.length / TABLE_PAGE_SIZE),
     },
     generatedAt: isoAtKstNoon(),
     adjustment,
@@ -351,7 +407,8 @@ export function detailSnapshot(type, query) {
 
 export function detailPage(type, query) {
   const mode = query.get('mode') ?? (type.endsWith('-sale') ? 'sale' : 'jeonse')
-  const area = query.get('area') ?? '84.90'
+  const resolved = resolveAreaGroup(query.get('area'))
+  const area = resolved === null || resolved === 'invalid' ? DEFAULT_GROUP : resolved
   const deposit = query.has('deposit')
     ? Number(query.get('deposit'))
     : mode === 'wolse'
@@ -360,10 +417,10 @@ export function detailPage(type, query) {
   const page = Number(query.get('page') ?? 1)
   const rows = rowsFor(type, mode, area, deposit)
   return {
-    items: rows.slice((page - 1) * 20, page * 20),
+    items: rows.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE),
     total: rows.length,
     page,
-    totalPages: Math.ceil(rows.length / 20),
+    totalPages: Math.ceil(rows.length / TABLE_PAGE_SIZE),
   }
 }
 
