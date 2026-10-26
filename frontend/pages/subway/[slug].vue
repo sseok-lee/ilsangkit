@@ -297,6 +297,7 @@ import type { SubwayNearbyGroup, SubwayNearbyGroupedResponse } from '~/types/sub
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { useStructuredData } from '~/composables/useStructuredData'
+import { withStationSuffix } from '~/utils/stationName'
 
 const FacilityMap = defineAsyncComponent(() => import('~/components/map/FacilityMap.vue'))
 
@@ -324,12 +325,6 @@ if (stationErrStatus === 404 || stationErrStatus === 422) {
 }
 
 const station = computed(() => data.value?.data ?? null)
-// CSV에 "가산디지털단지" / "가산디지털단지역" 같이 끝 "역" 유무가 혼재되어 있어
-// 표시할 때는 항상 "역" 1개를 보장 (이중 "역역" 방지).
-function withStationSuffix(name: string): string {
-  const base = name.replace(/역$/, '').trim()
-  return base ? `${base}역` : ''
-}
 const displayName = computed(() => (station.value ? withStationSuffix(station.value.name) : ''))
 
 // 노선 합집합 (주 노선 + 환승)

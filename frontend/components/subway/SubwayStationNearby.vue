@@ -61,6 +61,7 @@ import type { SubwayNearbyGroup, SubwayNearbyStation } from '~/types/subway'
 import { nearbyCountLabel } from '~/utils/nearbyCountLabel'
 import { nearbyFacilitySub } from '~/utils/nearbyFacilitySub'
 import { dedupeLines, lineColor } from '~/utils/subwayLineColors'
+import { withStationSuffix } from '~/utils/stationName'
 
 const props = withDefaults(defineProps<{
   /** GET /api/subway/stations/:slug/nearby-grouped 의 groups — [주변 역, ...관련 카테고리] 순서 */
@@ -87,12 +88,6 @@ interface Section {
   label: string
   countLabel: string
   rows: NearbyPlaceRowData[]
-}
-
-/** 표시 역명 — 페이지 withStationSuffix 와 같은 규칙("역" 1개 보장) */
-function withStationSuffix(name: string): string {
-  const base = name.replace(/역$/, '').trim()
-  return base ? `${base}역` : ''
 }
 
 function stationRowKey(s: SubwayNearbyStation): string {
