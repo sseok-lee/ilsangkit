@@ -69,6 +69,7 @@ describe('getLatestDeals', () => {
     expect(result.get(latestDealsKey(key))?.jeonse).toBeNull();
     expect(result.get(latestDealsKey(key))?.wolse).toBeNull();
     expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+    // 옛 형식 키(동·지번 없음)는 한 키에 여러 파티션이 걸리므로 기존 창 함수 경로를 그대로 쓴다.
     expect(sqlText(mockQueryRaw.mock.calls[0][0])).toContain('ROW_NUMBER() OVER');
     expect(sqlText(mockQueryRaw.mock.calls[0][0])).toContain('dealDay IS NULL ASC');
   });
@@ -144,6 +145,9 @@ describe('getLatestDeals', () => {
     ]);
     expect(sqlText(mockQueryRaw.mock.calls[1][0])).toContain(
       "PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), ''), t.rentType",
+    );
+    expect(sqlText(mockQueryRaw.mock.calls[1][0])).toContain(
+      "ORDER BY latest.buildingName, latest.bjdCode, TRIM(latest.dongName), COALESCE(TRIM(latest.jibun), ''), latest.rentType",
     );
   });
 
@@ -247,18 +251,13 @@ describe('getLatestDeals', () => {
     expect(result.get(latestDealsKey(keys[0]))?.sale?.amount).toBe(81000);
     expect(result.get(latestDealsKey(keys[1]))?.sale).toBeNull();
     const sql = sqlText(mockQueryRaw.mock.calls[0][0]);
-    expect(sql).toContain("PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), '')");
-    expect(sql).toContain('t.jibun');
-    expect(sqlValues(mockQueryRaw.mock.calls[0][0]).slice(0, 8)).toEqual([
-      '11680',
-      '스톤빌리지',
-      '대치동',
-      '934-2',
-      '11680',
-      '스톤빌리지',
-      '역삼동',
-      '785-10',
-    ]);
+    expect(sql).not.toContain('ROW_NUMBER() OVER');
+    expect(sql.match(/LIMIT 1\)/g)).toHaveLength(2);
+    expect(sql).toContain("COALESCE(TRIM(t.jibun), '') = ?");
+    const values = sqlValues(mockQueryRaw.mock.calls[0][0]);
+    const perBranch = values.length / 2;
+    expect(values.slice(0, 4)).toEqual(['11680', '스톤빌리지', '대치동', '934-2']);
+    expect(values.slice(perBranch, perBranch + 4)).toEqual(['11680', '스톤빌리지', '역삼동', '785-10']);
   });
 
   it('projects only latest-deal DTO source fields inside ranking subqueries', async () => {
@@ -289,6 +288,94 @@ describe('getLatestDeals', () => {
     expect(rentSql).toContain('t.exclusiveArea');
     expect(rentSql).toContain('t.floor');
     expect(rentSql).toContain('t.id DESC');
+  });
+
+  it('reads one row per address key with an index-ordered LIMIT 1 branch instead of ranking every deal', async () => {
+    const keys: BuildingKey[] = [
+      { propertyType: 'apt', buildingName: '검증아파트', bjdCode: '11680', dongName: '대치동', jibun: '1' },
+      { propertyType: 'apt', buildingName: '동명아파트', bjdCode: '11710', dongName: '잠실동', jibun: null },
+    ];
+    mockQueryRaw.mockResolvedValue([]);
+
+    await getLatestDeals(keys, 'sale');
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+    const sql = sqlText(mockQueryRaw.mock.calls[0][0]);
+    expect(sql).not.toContain('ROW_NUMBER() OVER');
+    expect(sql.match(/UNION ALL/g)).toHaveLength(1);
+    expect(sql.match(/ORDER BY t\.dealYear DESC, t\.dealMonth DESC, t\.dealDay DESC, t\.id DESC\s+LIMIT 1\)/g)).toHaveLength(2);
+    expect(sql).toContain('FROM AptSaleTransaction t');
+    expect(sql.match(/SELECT \/\*\+ INDEX\(t AptSaleTransaction_buildingName_bjdCode_dealYear_dealMonth_d_idx\) \*\//g))
+      .toHaveLength(2);
+    expect(sql).toContain('t.dealAmount IS NOT NULL');
+    expect(sql).toContain('cancelDealDay');
+    expect(sql).toContain(
+      "ORDER BY latest.buildingName, latest.bjdCode, TRIM(latest.dongName), COALESCE(TRIM(latest.jibun), '')",
+    );
+  });
+
+  it('splits rent into one jeonse and one wolse branch per address key, keeping the existing rent filters', async () => {
+    const key: BuildingKey = {
+      propertyType: 'offitel', buildingName: '오피스텔', bjdCode: '11680', dongName: '역삼동', jibun: '7',
+    };
+    mockQueryRaw.mockResolvedValueOnce([
+      {
+        buildingName: '오피스텔', bjdCode: '11680', dongName: '역삼동', jibun: '7', rentType: '월세',
+        deposit: 1000n, monthlyRent: 80, exclusiveArea: 20.5, floor: 9, dealYear: 2026, dealMonth: 9, dealDay: 1,
+      },
+      {
+        buildingName: '오피스텔', bjdCode: '11680', dongName: '역삼동', jibun: '7', rentType: '전세',
+        deposit: 20000n, monthlyRent: 0, exclusiveArea: 20.5, floor: 3, dealYear: 2026, dealMonth: 8, dealDay: null,
+      },
+    ]);
+
+    const result = await getLatestDeals([key], 'rent');
+
+    const sql = sqlText(mockQueryRaw.mock.calls[0][0]);
+    expect(sql).toContain('FROM OffitelRentTransaction t');
+    expect(sql).toContain('/*+ INDEX(t OffitelRentTransaction_buildingName_bjdCode_dealYear_dealMon_idx) */');
+    expect(sql.match(/LIMIT 1\)/g)).toHaveLength(2);
+    expect(sql).toContain("t.rentType = '전세' AND t.deposit IS NOT NULL");
+    expect(sql).toContain("t.rentType = '월세' AND t.deposit IS NOT NULL AND t.monthlyRent IS NOT NULL");
+    expect(result.get(latestDealsKey(key))).toMatchObject({
+      sale: null,
+      jeonse: { kind: 'jeonse', deposit: 20000, dealDay: null },
+      wolse: { kind: 'wolse', deposit: 1000, monthlyRent: 80 },
+    });
+  });
+
+  it('keeps legacy keys on the ranking path and address keys on LIMIT 1 branches in the same round trip', async () => {
+    const keys: BuildingKey[] = [
+      { propertyType: 'villa', buildingName: '스톤빌리지', bjdCode: '11680' },
+      { propertyType: 'villa', buildingName: '스톤빌리지', bjdCode: '11680', dongName: '대치동', jibun: '934-2' },
+    ];
+    mockQueryRaw.mockResolvedValueOnce([]);
+
+    await getLatestDeals(keys, 'sale');
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+    const sql = sqlText(mockQueryRaw.mock.calls[0][0]);
+    expect(sql.match(/ROW_NUMBER\(\) OVER/g)).toHaveLength(1);
+    expect(sql.match(/LIMIT 1\)/g)).toHaveLength(1);
+    expect(sql).toContain('UNION ALL');
+  });
+
+  it('lets the last row win when several partitions map to one legacy key, as before', async () => {
+    const key: BuildingKey = { propertyType: 'villa', buildingName: '스톤빌리지', bjdCode: '11680' };
+    mockQueryRaw.mockResolvedValueOnce([
+      {
+        buildingName: '스톤빌리지', bjdCode: '11680', dongName: '대치동', jibun: '1', dealAmount: 1n,
+        exclusiveArea: 1, floor: 1, dealYear: 2026, dealMonth: 1, dealDay: 1,
+      },
+      {
+        buildingName: '스톤빌리지', bjdCode: '11680', dongName: '역삼동', jibun: '2', dealAmount: 2n,
+        exclusiveArea: 1, floor: 1, dealYear: 2025, dealMonth: 1, dealDay: 1,
+      },
+    ]);
+
+    const result = await getLatestDeals([key], 'sale');
+
+    expect(result.get(latestDealsKey(key))?.sale?.amount).toBe(2);
   });
 
   it('does not issue SQL for an empty candidate list', async () => {
