@@ -101,7 +101,7 @@ describe('subway/[slug].vue 흰색 평면형', () => {
     expect(content).not.toContain('<PageHero')
     expect(content).toMatch(/<PageHead\b[^>]*title-tag="div"/)
     expect(content).toMatch(/<MobileDetailHeader\b[^>]*variant="flat"/)
-    expect(content).toMatch(/<DetailNearby\b[^>]*section-variant="flat"/)
+    expect(content).toMatch(/<SubwayNearby\b[^>]*section-variant="flat"/)
     expect(content.match(/<SectionBlock\b/g)?.length).toBe(content.match(/<SectionBlock\b(?:[^>"]|"[^"]*")*variant="flat"/g)?.length)
     expect(content).not.toMatch(/:deep\(/)
   })

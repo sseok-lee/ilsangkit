@@ -340,6 +340,16 @@ export function handleLifestyleFixture(url) {
     return item ? ok(item) : missing()
   }
 
+  const nearbyGroupedMatch = path.match(/^\/api\/facilities\/([^/]+)\/([^/]+)\/nearby-grouped$/)
+  if (nearbyGroupedMatch) {
+    const [, category, id] = nearbyGroupedMatch
+    if (!detailFor(category, decodeURIComponent(id))) return missing()
+    const others = parkingItems.filter(row => row.id !== decodeURIComponent(id)).slice(0, 3)
+    return ok({
+      radius: 1000,
+      groups: [{ category: 'parking', count: others.length, exact: true, items: others.map((row, i) => ({ ...row, distance: 80 + i * 90 })) }],
+    })
+  }
   const nearbyMatch = path.match(/^\/api\/facilities\/([^/]+)\/([^/]+)\/nearby$/)
   if (nearbyMatch) return ok({ items: parkingItems.slice(0, 3) })
 

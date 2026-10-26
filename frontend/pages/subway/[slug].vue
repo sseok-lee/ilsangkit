@@ -164,7 +164,7 @@
               <AffiliateBanner />
 
               <!-- 주변 시설 (다른 지하철역 + 주차장·EV충전·화장실·시장) -->
-              <DetailNearby
+              <SubwayNearby
                 section-variant="flat"
                 :nearby-facilities="nearbyStations"
                 :nearby-loading="nearbyLoading"
@@ -280,7 +280,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
-import DetailNearby from '~/components/facility/detail/DetailNearby.vue'
+import SubwayNearby from '~/components/subway/SubwayNearby.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'

@@ -453,6 +453,24 @@ createServer(async (req, res) => {
     return ok(res, subscriptionListFixture(new URLSearchParams('status=upcoming')).items)
 
   if (path === '/api/facilities/hospital/hospital-seo-fixture') return ok(res, facility)
+  if (path === '/api/facilities/hospital/hospital-seo-fixture/nearby-grouped') {
+    const near = (category, names, extras = {}) =>
+      names.map((name, i) => ({
+        id: `fixture-${category}-${i + 1}`, name, category,
+        address: '서울특별시 강남구 역삼동 100',
+        roadAddress: `서울특별시 강남구 테헤란로 ${100 + i}, ${i + 1}층 (역삼동)`,
+        lat: 37.5, lng: 127.03, city: '서울특별시', district: '강남구',
+        distance: 12 + i * 131, extras,
+      }))
+    return ok(res, {
+      radius: 1000,
+      groups: [
+        { category: 'hospital', count: 1942, exact: false, items: near('hospital', ['강남연세내과의원', '테헤란정형외과의원', '역삼소아청소년과의원', '선릉이비인후과의원', '역삼아산치과의원'], { clCdNm: '의원', drTotCnt: 2 }) },
+        { category: 'pharmacy', count: 2, exact: true, items: near('pharmacy', ['역삼온누리약국', '테헤란약국'], { dutyTime1s: '900', dutyTime1c: '1830' }) },
+        { category: 'aed', count: 0, exact: true, items: [] },
+      ],
+    })
+  }
   if (path.endsWith('/nearby-counts')) return ok(res, { radius: 300, counts: {} })
   if (path === '/api/facilities/nearby-grouped') {
     const fixtureItems = (category, names) =>
