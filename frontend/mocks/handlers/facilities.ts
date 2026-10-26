@@ -118,6 +118,35 @@ export const facilityHandlers = [
     return HttpResponse.json({ success: true, data: { radius, groups } });
   }),
 
+  // 시설 상세 "주변 시설" — [현재 카테고리(자기 제외), ...관련 카테고리], 반경 1km
+  http.get(`${API_BASE}/api/facilities/:category/:id/nearby-grouped`, ({ params, request }) => {
+    const { category, id } = params as { category: string; id: string };
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 5);
+    if (!mockFacilities.some((f) => f.id === id && f.category === category)) {
+      return HttpResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: '시설을 찾을 수 없습니다' } },
+        { status: 404 },
+      );
+    }
+    const radius = 1000;
+    // backend CROSS_CATEGORY_MAP 의 mock 사본
+    const cross: Record<string, string[]> = {
+      toilet: ['park', 'wifi'], wifi: ['library', 'park', 'toilet'], parking: ['ev-charger', 'toilet', 'market'],
+      hospital: ['pharmacy', 'aed'], pharmacy: ['hospital', 'childcare'], aed: ['hospital', 'pharmacy'],
+      library: ['parking', 'wifi', 'park'], clothes: ['toilet', 'park'], park: ['toilet', 'parking', 'sports'],
+      school: ['childcare', 'library', 'park'], market: ['parking', 'toilet'], childcare: ['school', 'hospital', 'pharmacy', 'park'],
+      'ev-charger': ['parking', 'park', 'market', 'library'], sports: ['parking', 'park', 'toilet'],
+    };
+    const groups = [category, ...(cross[category] ?? [])].map((cat) => {
+      // mock 에서는 distance 필드를 직선거리로 본다
+      const inside = mockFacilities
+        .filter((f) => f.category === cat && f.id !== id && f.distance <= radius)
+        .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+      return { category: cat, count: inside.length, exact: true, items: inside.slice(0, limit) };
+    });
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
   // 시설 상세
   http.get(`${API_BASE}/api/facilities/:category/:id`, ({ params }) => {
     const { category, id } = params;

@@ -12,6 +12,7 @@ import {
   NearbyCountsSchema,
   NearbyGroupedSchema,
   NearbyCountCategorySchema,
+  FacilityNearbyGroupedQuerySchema,
   type NearbyCountsInput,
   type NearbyGroupedInput,
 } from '../schemas/facility.js';
@@ -185,8 +186,34 @@ router.get(
   })
 );
 
+// 시설 상세 "주변 시설" — 카테고리별 개수 + 가까운 N곳 (반경 1km)
+// GET /api/facilities/:category/:id/nearby-grouped?limit=5
+//
+// 그룹 = [현재 카테고리(자기 제외), ...CROSS_CATEGORY_MAP]. 아래 /nearby 는 관련 카테고리를
+// 합쳐 가까운 6곳만 줘서 한 카테고리가 자리를 다 차지할 수 있었다.
+// Cache-Control 은 /nearby 와 같이 따로 지정하지 않는다.
+router.get(
+  '/:category/:id/nearby-grouped',
+  validateMultiple({
+    params: FacilityDetailParamsSchema,
+    query: FacilityNearbyGroupedQuerySchema,
+  }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { params, query } = res.locals.validated as {
+      params: { category: FacilityCategory; id: string };
+      query: { limit: number };
+    };
+    const result = await facilityService.nearbyGroupedForFacility(params.category, params.id, query.limit);
+    if (!result) {
+      throw new NotFoundError('시설을 찾을 수 없습니다');
+    }
+    res.json({ success: true, data: result });
+  })
+);
+
 // 크로스 카테고리 주변 시설 조회 API
 // GET /api/facilities/:category/:id/nearby
+// ⚠️ 시설 상세는 /nearby-grouped 로 옮겼다. 배포 직후 캐시된 구 프론트 JS 호환용 — 다음 릴리스에 제거.
 router.get(
   '/:category/:id/nearby',
   validate(FacilityDetailParamsSchema, 'params'),

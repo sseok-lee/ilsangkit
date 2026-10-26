@@ -956,3 +956,20 @@ export interface NearbyGroupedResponse {
   radius: number
   groups: Partial<Record<FacilityCategory, NearbyGroupedEntry>>
 }
+
+// 시설 상세 "주변 시설" (GET /api/facilities/:category/:id/nearby-grouped)
+export interface FacilityNearbyGroup {
+  category: FacilityCategory
+  /** 반경 안 시설 수(자기 자신 제외). exact=false 면 하한값. */
+  count: number
+  exact: boolean
+  /** 가까운 순 최대 limit 곳 — distance(m 정수) + 보조 줄용 extras(listFields) */
+  items: Facility[]
+}
+
+export interface FacilityNearbyGroupedResponse {
+  /** 반경(m) — 시설 상세는 1000 */
+  radius: number
+  /** [현재 카테고리, ...관련 카테고리] 순서. 좌표 없는 시설은 [] */
+  groups: FacilityNearbyGroup[]
+}

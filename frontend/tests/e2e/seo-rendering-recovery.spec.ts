@@ -132,6 +132,70 @@ test('HardLink nearby card starts a new document and hydrates with API blocked',
   await expect(page.getByRole('heading', { name: '회복아파트', exact: true })).toBeVisible()
 })
 
+test('시설 상세 주변 시설: SSR HTML 링크, 1440 2열 목록, 360 접기·가로 넘침 없음', async ({
+  browser,
+  page,
+}, testInfo) => {
+  // JS 끔 = 크롤러가 받는 SSR HTML. 4·5번째 행 링크도 있고 모바일 숨김은 CSS 클래스로만.
+  const ssrContext = await browser.newContext({
+    javaScriptEnabled: false,
+    serviceWorkers: 'block',
+    baseURL: testInfo.project.use.baseURL,
+  })
+  const ssrPage = await ssrContext.newPage()
+  await ssrPage.goto(hospital)
+  const ssrBlock = ssrPage.getByTestId('facility-nearby')
+  await expect(ssrBlock.locator('h2')).toHaveText('주변 시설')
+  await expect(ssrBlock.locator('a[href="/hospital/fixture-hospital-5"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('a[href="/pharmacy/fixture-pharmacy-1"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('#nearby-facility-list-hospital > li').nth(3)).toHaveClass(/max-md:hidden/)
+  await ssrContext.close()
+
+  const requests = await blockBrowserApi(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(hospital)
+  await hydrated(page)
+  // SSR payload 를 그대로 쓰고 브라우저에서 다시 부르지 않는다
+  expect(requests.blocked).not.toContain('/api/facilities/hospital/hospital-seo-fixture/nearby-grouped')
+  const block = page.getByTestId('facility-nearby')
+  await block.scrollIntoViewIfNeeded()
+  await expect(page.getByText('렌더링회복병원에서 반경 1km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.')).toBeVisible()
+  await expect(block.locator('h3')).toHaveText(['주변 병원', '주변 약국'])
+  await expect(block.getByTestId('nearby-facility-count')).toHaveText(['1km 안 1,942곳 이상', '1km 안 2곳'])
+  const first = block.getByRole('link', { name: /강남연세내과의원/ })
+  await expect(first).toContainText('테헤란로 100 · 의원 · 의사 2명')
+  await expect(first).toContainText('12m')
+  await expect(first).toContainText('도보 약 1분')
+  await expect(block.getByRole('link', { name: /역삼온누리약국/ })).toContainText('평일 09:00~18:30')
+  await expect(block.getByRole('link', { name: /역삼아산치과의원/ })).toBeVisible()
+  const [hospitalBox, pharmacyBox] = await Promise.all(
+    ['nearby-facility-hospital', 'nearby-facility-pharmacy'].map((id) => page.locator(`#${id}`).boundingBox())
+  )
+  expect(Math.abs(hospitalBox!.y - pharmacyBox!.y)).toBeLessThan(2) // 2열
+  const region = block.getByTestId('nearby-facilities-region-link')
+  await expect(region).toHaveAttribute('href', '/seoul/gangnam/hospital')
+  await expect(region).toHaveText('강남구 병원 전체 보기 →')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(hospital)
+  await hydrated(page)
+  await block.scrollIntoViewIfNeeded()
+  await expect(block.getByRole('link', { name: /역삼아산치과의원/ })).toBeHidden()
+  const rowHeight = (await first.boundingBox())!.height
+  expect(rowHeight).toBeGreaterThanOrEqual(64)
+  const overflow = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }))
+  expect(overflow.documentWidth, JSON.stringify(overflow)).toBe(overflow.viewport)
+  await page.screenshot({ path: `test-results/housing-redesign/${testInfo.project.name}-360-facility-nearby.png` })
+  const more = block.getByRole('button', { name: '5곳 모두 보기' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await more.click()
+  await expect(block.getByRole('button', { name: '접기' })).toHaveAttribute('aria-expanded', 'true')
+  await expect(block.getByRole('link', { name: /역삼아산치과의원/ })).toBeVisible()
+})
+
 test('negative control: blocking both external payload and API loses the SSR hospital body', async ({
   page,
 }) => {

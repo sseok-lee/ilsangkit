@@ -197,14 +197,14 @@
 
               <AffiliateBanner />
 
-              <!-- 주변 시설 (same + cross category) -->
+              <!-- 주변 시설 (같은 카테고리 + 관련 카테고리, 반경 1km) -->
               <DetailNearby
                 section-variant="flat"
-                :nearby-facilities="nearbyFiltered"
-                :nearby-loading="nearbyPending"
-                :cross-facilities-grouped="crossFacilitiesGrouped"
-                :cross-loading="nearbyPending"
-                :category-meta="categoryMeta"
+                :groups="nearbyGroupList"
+                :loading="nearbyPending"
+                :facility-name="displayName"
+                :region-href="nearbyRegionLink?.href"
+                :region-label="nearbyRegionLink?.label"
               />
 
 
@@ -262,7 +262,7 @@ import type { SummaryItem } from '~/components/common/SummaryRow.vue'
 import { getOperatingStatus } from '~/utils/facilityStatus'
 import { resolveFacilityPhone } from '~/utils/facilityPhone'
 import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
-import type { FacilityCategory, FacilityDetail, Facility, FacilityDetailsAll, LocatedFacility } from '~/types/facility'
+import type { FacilityCategory, FacilityDetail, FacilityDetailsAll, LocatedFacility, FacilityNearbyGroup, FacilityNearbyGroupedResponse } from '~/types/facility'
 import { generateDynamicFAQ } from '~/utils/dynamicFAQ'
 import { generateDynamicTips } from '~/utils/dynamicTips'
 import { formatOperatingHours } from '~/utils/formatOperatingHours'
@@ -898,57 +898,32 @@ const handleShare = async () => {
   }
 }
 
-// 주변 시설 — 메인 facility가 lazy라 좌표 확보 위해 상세 1회 재패칭 후 allSettled로 SSR 합류
-const { data: nearbyData, status: nearbyStatus } = await useAsyncData(
-  `nearby-${category.value}-${id.value}`,
-  async () => {
-    const detail = await $fetch<{ success: boolean; data: FacilityDetail }>(
-      `${apiBase}/api/facilities/${category.value}/${id.value}`,
-    ).catch(() => null)
-    const f = detail?.data
-    const crossP = $fetch<{ success: boolean; data: { items: Facility[] } }>(
-      `${apiBase}/api/facilities/${category.value}/${id.value}/nearby`,
+// 주변 시설 — 카테고리별 개수 + 가까운 5곳(반경 1km)을 1회 호출로 받는다. 백엔드가 시설 id 로
+// 좌표를 찾으므로 상세 재패칭이 필요 없다. lazy 지만 SSR 에서는 resolve 돼 주변 시설 링크가
+// SSR HTML 에 들어간다. 실패해도 본문은 렌더되고 블록만 빠진다(fail-open).
+const { data: nearbyGroups, status: nearbyStatus } = await useAsyncData(
+  `nearby-grouped-${category.value}-${id.value}`,
+  () =>
+    $fetch<{ success: boolean; data: FacilityNearbyGroupedResponse }>(
+      `${apiBase}/api/facilities/${category.value}/${id.value}/nearby-grouped`,
     )
-    const nearbyP = (f?.lat && f?.lng)
-      ? $fetch<{ success: boolean; data: { items: Facility[] } }>(
-          `${apiBase}/api/facilities/search`,
-          {
-            method: 'POST',
-            body: { category: f.category, lat: f.lat, lng: f.lng, radius: 1000, page: 1, limit: 10 },
-          },
-        )
-      : Promise.resolve(null)
-    const [nearbyR, crossR] = await Promise.allSettled([nearbyP, crossP])
-    return {
-      nearby: nearbyR.status === 'fulfilled' ? (nearbyR.value?.data?.items ?? []) : [],
-      cross: crossR.status === 'fulfilled' ? (crossR.value?.data?.items ?? []) : [],
-    }
-  },
-  { lazy: true, default: () => ({ nearby: [] as Facility[], cross: [] as Facility[] }) },
+      .then((res) => res?.data?.groups ?? [])
+      .catch(() => [] as FacilityNearbyGroup[]),
+  { lazy: true, default: () => [] as FacilityNearbyGroup[] },
 )
 
 const nearbyPending = computed(() => nearbyStatus.value === 'pending')
-
-const nearbyFiltered = computed(() =>
-  (nearbyData.value?.nearby ?? []).filter(f => f.id !== facility.value?.id).slice(0, 4)
+const nearbyGroupList = computed<FacilityNearbyGroup[]>(() =>
+  Array.isArray(nearbyGroups.value) ? nearbyGroups.value : [],
 )
 
-const crossFacilitiesGrouped = computed(() => {
-  const items = nearbyData.value?.cross ?? []
-  if (items.length === 0) return []
-
-  const grouped = new Map<string, Array<(typeof items)[number]>>()
-  for (const item of items) {
-    const list = grouped.get(item.category) ?? []
-    list.push(item)
-    grouped.set(item.category, list)
-  }
-
-  return Array.from(grouped.entries()).map(([cat, facilities]) => ({
-    category: cat as FacilityCategory,
-    meta: CATEGORY_META[cat as FacilityCategory],
-    items: facilities,
-  }))
+// 하단 "{구·군} {카테고리} 전체 보기" — 지역×카테고리 목록. 구·군 slug 를 못 만들면(시/도 허브로
+// 떨어지는 경우) 링크를 생략한다.
+const nearbyRegionLink = computed(() => {
+  const link = regionLink.value
+  const district = facility.value?.district
+  if (!link || !district || link.href === link.cityHref) return null
+  return { href: link.href, label: `${district} ${categoryMeta.value.label}` }
 })
 
 </script>

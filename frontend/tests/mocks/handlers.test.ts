@@ -83,6 +83,26 @@ describe('MSW Facility Handlers', () => {
     });
   });
 
+  describe('GET /api/facilities/:category/:id/nearby-grouped', () => {
+    it('현재 카테고리(자기 제외) → 관련 카테고리 순서의 groups 배열을 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/toilet/toilet-1/nearby-grouped?limit=5`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(1000);
+      expect(data.data.groups.map((g: { category: string }) => g.category)).toEqual(['toilet', 'park', 'wifi']);
+      const same = data.data.groups[0];
+      expect(same.items.some((f: { id: string }) => f.id === 'toilet-1')).toBe(false);
+      expect(same.count).toBe(same.items.length);
+    });
+
+    it('없는 시설은 404', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/toilet/nope/nearby-grouped`);
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('POST /api/facilities/search', () => {
     it('should return all facilities without filters', async () => {
       const response = await fetch(`${API_BASE}/api/facilities/search`, {

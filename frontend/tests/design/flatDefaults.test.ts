@@ -16,6 +16,7 @@ const PRIMITIVES = [
   'components/blog/BlogReviewSection.vue',
   'components/guide/RelatedGuides.vue',
   'components/facility/detail/DetailNearby.vue',
+  'components/subway/SubwayNearby.vue',
 ]
 
 describe('공통 부품 평면형 단일화', () => {
@@ -66,7 +67,7 @@ const walkVue = (dir: string): string[] =>
 
 describe('호출부에 card 변형이 남지 않는다', () => {
   const files = ['pages', 'components', 'layouts'].flatMap(walkVue)
-  const CARD_TAG = /<(?:SectionBlock|DetailNearby|RegionCascadingDropdown|RegionChips|HospitalDepartmentFilter|DataSourceSection|BlogReviewSection|RelatedGuides|MobileDetailHeader)\b[^>]*\bvariant="card"/s
+  const CARD_TAG = /<(?:SectionBlock|DetailNearby|SubwayNearby|RegionCascadingDropdown|RegionChips|HospitalDepartmentFilter|DataSourceSection|BlogReviewSection|RelatedGuides|MobileDetailHeader)\b[^>]*\bvariant="card"/s
   const CARD_SECTION = /\bsection-?[vV]ariant="card"/
 
   it('vue 파일을 실제로 스캔한다', () => {
