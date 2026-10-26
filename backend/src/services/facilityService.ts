@@ -33,7 +33,7 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList, resolveCitySlug } from './cityMapping.js';
-import { isWifiGroupId } from './wifiGroup.js';
+import { buildWifiGroupId, isWifiGroupId } from './wifiGroup.js';
 import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
@@ -203,72 +203,108 @@ export async function nearbyGrouped(params: {
   limit: number;
 }): Promise<Record<string, NearbyGroupedEntry>> {
   const { lat, lng, radius, categories, limit } = params;
-  const approxBounds = nearbyApproxBounds(lat, lng, radius);
 
   const entries = await Promise.all(
     categories.map(async (cat): Promise<[string, NearbyGroupedEntry]> => {
-      const model = CATEGORY_REGISTRY[cat].model();
-
-      // 1단계: id·lat·lng 만 읽는다. name 을 같이 select 하면 @@index([lat, lng]) 커버링을
-      // 못 타고 행마다 본문을 읽어 밀집 지역에서 수십 배 느려진다(강남 병원 2km 콜드 1s+).
-      // take 는 orderBy 없이 자르므로 SCAN_CAP 에 걸리면 가장 가까운 곳이 빠졌을 수 있다 —
-      // 그 경우는 exact=false 로 이미 알린다(count 도 하한값).
-      const rows: Array<{ id: unknown; lat: unknown; lng: unknown }> = await model.findMany({
-        where: approxBounds,
-        select: { id: true, lat: true, lng: true },
-        take: NEARBY_SUMMARY.SCAN_CAP,
+      const { count, exact, picked } = await nearestInCategory({
+        cat, lat, lng, radius, limit, select: { id: true, name: true },
       });
-
-      const inside: Array<{ id: string; lat: number; lng: number; meters: number }> = [];
-      for (const r of rows) {
-        // Decimal → Number (countNearby 와 같은 이유), NULL 좌표는 건너뛴다
-        if (r.lat === null || r.lng === null) continue;
-        const rLat = Number(r.lat);
-        const rLng = Number(r.lng);
-        if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue;
-        const meters = haversineDistance(lat, lng, rLat, rLng) * 1000;
-        if (meters <= radius) inside.push({ id: String(r.id), lat: rLat, lng: rLng, meters });
-      }
-      inside.sort((a, b) => a.meters - b.meters);
-
-      // 2단계: 가까운 후보 limit*3 개씩 id 로 이름을 붙인다. 같은 이름+같은 좌표 중복을
-      // 접고 나서 모자라면 다음 묶음을 이어서 가져온다(후보 소진까지).
-      const seen = new Set<string>();
-      const items: NearbyGroupedItem[] = [];
-      let cursor = 0;
-      while (items.length < limit && cursor < inside.length) {
-        let batchEnd = Math.min(cursor + limit * 3, inside.length);
-        // 거리 동률은 이름순이라, 같은 거리 묶음이 경계에서 갈리지 않게 함께 가져온다
-        while (batchEnd < inside.length && inside[batchEnd].meters === inside[batchEnd - 1].meters) batchEnd++;
-        const batch = inside.slice(cursor, batchEnd);
-        cursor = batchEnd;
-
-        const named: Array<{ id: unknown; name: unknown }> = await model.findMany({
-          where: { id: { in: batch.map((f) => f.id) } },
-          select: { id: true, name: true },
-        });
-        const nameById = new Map(named.map((n) => [String(n.id), String(n.name ?? '')]));
-
-        const candidates = batch
-          .filter((f) => nameById.has(f.id))
-          .map((f) => ({ ...f, name: nameById.get(f.id) as string }))
-          .sort((a, b) => a.meters - b.meters || a.name.localeCompare(b.name, 'ko'));
-
-        for (const f of candidates) {
-          if (items.length >= limit) break;
-          // dedupeByLocation 과 같은 키 — 같은 이름+같은 좌표만 접는다
-          const key = `${f.name}|${f.lat.toFixed(5)}|${f.lng.toFixed(5)}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          items.push({ id: f.id, name: f.name, category: cat, distance: Math.round(f.meters) });
-        }
-      }
-
-      return [cat, { count: inside.length, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP, items }];
+      const items = picked.map(({ record, meters }) => ({
+        id: String(record.id),
+        name: String(record.name ?? ''),
+        category: cat,
+        distance: Math.round(meters),
+      }));
+      return [cat, { count, exact, items }];
     }),
   );
 
   return Object.fromEntries(entries);
+}
+
+/**
+ * 한 카테고리에서 반경 안 개수 + 가까운 limit 곳(레코드는 select 로 2단계 조회).
+ * nearbyGrouped(부동산 상세)·nearbyGroupedForFacility(시설 상세) 공용.
+ * excludeId 는 1단계에서 빠지므로 count 에도 들어가지 않는다(시설 상세의 자기 자신).
+ */
+async function nearestInCategory(params: {
+  cat: FacilityCategory;
+  lat: number;
+  lng: number;
+  radius: number;
+  limit: number;
+  /** 2단계 select — id·name 은 반드시 포함 */
+  select: Record<string, boolean>;
+  excludeId?: string;
+}): Promise<{
+  count: number;
+  exact: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  picked: Array<{ record: any; meters: number }>;
+}> {
+  const { cat, lat, lng, radius, limit, select, excludeId } = params;
+  const model = CATEGORY_REGISTRY[cat].model();
+
+  // 1단계: id·lat·lng 만 읽는다. name 을 같이 select 하면 @@index([lat, lng]) 커버링을
+  // 못 타고 행마다 본문을 읽어 밀집 지역에서 수십 배 느려진다(강남 병원 2km 콜드 1s+).
+  // take 는 orderBy 없이 자르므로 SCAN_CAP 에 걸리면 가장 가까운 곳이 빠졌을 수 있다 —
+  // 그 경우는 exact=false 로 이미 알린다(count 도 하한값).
+  const rows: Array<{ id: unknown; lat: unknown; lng: unknown }> = await model.findMany({
+    where: nearbyApproxBounds(lat, lng, radius),
+    select: { id: true, lat: true, lng: true },
+    take: NEARBY_SUMMARY.SCAN_CAP,
+  });
+
+  const inside: Array<{ id: string; lat: number; lng: number; meters: number }> = [];
+  for (const r of rows) {
+    // Decimal → Number (countNearby 와 같은 이유), NULL 좌표는 건너뛴다
+    if (r.lat === null || r.lng === null) continue;
+    const id = String(r.id);
+    if (id === excludeId) continue;
+    const rLat = Number(r.lat);
+    const rLng = Number(r.lng);
+    if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue;
+    const meters = haversineDistance(lat, lng, rLat, rLng) * 1000;
+    if (meters <= radius) inside.push({ id, lat: rLat, lng: rLng, meters });
+  }
+  inside.sort((a, b) => a.meters - b.meters);
+
+  // 2단계: 가까운 후보 limit*3 개씩 id 로 레코드를 붙인다. 같은 이름+같은 좌표 중복을
+  // 접고 나서 모자라면 다음 묶음을 이어서 가져온다(후보 소진까지).
+  const seen = new Set<string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const picked: Array<{ record: any; meters: number }> = [];
+  let cursor = 0;
+  while (picked.length < limit && cursor < inside.length) {
+    let batchEnd = Math.min(cursor + limit * 3, inside.length);
+    // 거리 동률은 이름순이라, 같은 거리 묶음이 경계에서 갈리지 않게 함께 가져온다
+    while (batchEnd < inside.length && inside[batchEnd].meters === inside[batchEnd - 1].meters) batchEnd++;
+    const batch = inside.slice(cursor, batchEnd);
+    cursor = batchEnd;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const records: any[] = await model.findMany({
+      where: { id: { in: batch.map((f) => f.id) } },
+      select,
+    });
+    const byId = new Map(records.map((r) => [String(r.id), r]));
+
+    const candidates = batch
+      .filter((f) => byId.has(f.id))
+      .map((f) => ({ ...f, record: byId.get(f.id), name: String(byId.get(f.id).name ?? '') }))
+      .sort((a, b) => a.meters - b.meters || a.name.localeCompare(b.name, 'ko'));
+
+    for (const f of candidates) {
+      if (picked.length >= limit) break;
+      // dedupeByLocation 과 같은 키 — 같은 이름+같은 좌표만 접는다
+      const key = `${f.name}|${f.lat.toFixed(5)}|${f.lng.toFixed(5)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      picked.push({ record: f.record, meters: f.meters });
+    }
+  }
+
+  return { count: inside.length, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP, picked };
 }
 
 // 기본 select 필드 (공통 필드)
@@ -697,6 +733,107 @@ export async function getNearbyFacilities(
     .sort((a, b) => a.distance! - b.distance!);
   // 동일 시설(다른 id) 중복 노출 제거 → 정렬 후(최근접 유지) slice(0,6) 앞에서 병합
   return dedupeByLocation(sorted).slice(0, 6);
+}
+
+/** 시설 상세 "주변 시설" 반경(m) */
+export const FACILITY_DETAIL_NEARBY_RADIUS = 1000;
+/**
+ * ev-charger·wifi 묶음 검색에 넘기는 상한. evChargerStationSearch 는 반경 검색에서도 SQL 이
+ * 이름순 LIMIT 을 먼저 걸고 거리로 자르므로, limit 을 작게 주면 가까운 충전소가 빠진다.
+ * 1km 바운딩박스 안 충전소·와이파이 장소는 이보다 훨씬 적다(wifiGroupSearch GEO_SCAN_CAP 과 같은 값).
+ */
+const GROUPED_SEARCH_CAP = 500;
+
+export interface FacilityNearbyGroup {
+  category: FacilityCategory;
+  /** 반경 안 시설 수(자기 자신 제외). exact=false 면 하한값. */
+  count: number;
+  exact: boolean;
+  /** 가까운 순 최대 limit 곳 — distance(m 정수) + 보조 줄용 listFields(extras) 포함 */
+  items: FacilityItem[];
+}
+
+/** 상세 시설의 좌표 + 목록에서 뺄 자기 id. 시설이 없으면 null. */
+async function facilityNearbyAnchor(
+  category: FacilityCategory,
+  id: string,
+): Promise<{ lat: number | null; lng: number | null; excludeId: string } | null> {
+  // 충전소(statId)·와이파이 장소 그룹은 묶음 상세가 대표 좌표를 정한다
+  if (category === 'ev-charger' || (category === 'wifi' && isWifiGroupId(id))) {
+    const detail = await getDetail(category, id);
+    if (!detail) return null;
+    return { lat: detail.lat ?? null, lng: detail.lng ?? null, excludeId: id };
+  }
+
+  // 일반 시설은 좌표만 읽는다(getDetail 은 조회수를 올리고 include 가 무겁다)
+  const record = await CATEGORY_REGISTRY[category].model().findUnique({
+    where: { id },
+    select: { id: true, name: true, city: true, district: true, address: true, lat: true, lng: true },
+  });
+  if (!record) return null;
+  const lat = record.lat === null || record.lat === undefined ? null : Number(record.lat);
+  const lng = record.lng === null || record.lng === undefined ? null : Number(record.lng);
+  // 옛 와이파이 AP 상세: 목록은 장소 그룹 단위라 자기가 속한 그룹 id 를 뺀다
+  const excludeId = category === 'wifi'
+    ? buildWifiGroupId({ name: record.name ?? '', city: record.city ?? '', district: record.district ?? '', address: record.address ?? null })
+    : id;
+  return { lat, lng, excludeId };
+}
+
+/**
+ * 시설 상세 "주변 시설" — 시설 좌표 반경 1km, 그룹 = [현재 카테고리(자기 제외), ...CROSS_CATEGORY_MAP].
+ *
+ * getNearbyFacilities(전 관련 카테고리 합쳐 가까운 6곳)는 같은 건물 병원 4곳이 자리를 다
+ * 차지하면 다른 카테고리가 빠지고 개수도 없다. 여기서는 카테고리마다 따로 개수 + 가까운
+ * limit 곳을 구한다(일반 카테고리는 nearbyGrouped 와 같은 2단계 조회, 2단계만 listFields).
+ *
+ * @returns 시설이 없으면 null, 좌표가 없으면 groups: []
+ */
+export async function nearbyGroupedForFacility(
+  category: FacilityCategory,
+  id: string,
+  limit: number,
+): Promise<{ radius: number; groups: FacilityNearbyGroup[] } | null> {
+  const radius = FACILITY_DETAIL_NEARBY_RADIUS;
+  if (!CATEGORY_REGISTRY[category] || category === 'subway') return null;
+
+  const anchor = await facilityNearbyAnchor(category, id);
+  if (!anchor) return null;
+  const { lat, lng, excludeId } = anchor;
+  if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { radius, groups: [] };
+  }
+
+  const targets: FacilityCategory[] = [category, ...(CROSS_CATEGORY_MAP[category] ?? [])];
+  const groups = await Promise.all(
+    targets.map(async (cat): Promise<FacilityNearbyGroup> => {
+      const ownId = cat === category ? excludeId : undefined;
+
+      // 충전소·와이파이 장소는 묶음 단위 검색(반경 안 전부 → 자기 제외 → limit)
+      if (cat === 'ev-charger' || cat === 'wifi') {
+        const search = cat === 'ev-charger' ? evChargerStationSearch : wifiGroupSearch;
+        const result = await search({ lat, lng, radius, page: 1, limit: GROUPED_SEARCH_CAP });
+        const others = result.items.filter((item) => item.id !== ownId);
+        return {
+          category: cat,
+          count: result.total - (result.items.length - others.length),
+          exact: true,
+          items: others.slice(0, limit),
+        };
+      }
+
+      const { count, exact, picked } = await nearestInCategory({
+        cat, lat, lng, radius, limit, select: buildListSelect(cat), excludeId: ownId,
+      });
+      const items = picked.map(({ record, meters }) => ({
+        ...toFacilityItem(record, cat),
+        distance: Math.round(meters),
+      }));
+      return { category: cat, count, exact, items };
+    }),
+  );
+
+  return { radius, groups };
 }
 
 /**

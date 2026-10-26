@@ -83,6 +83,13 @@ export const NearbyGroupedSchema = z.object({
 
 export type NearbyGroupedInput = z.infer<typeof NearbyGroupedSchema>;
 
+// 시설 상세 "주변 시설" (GET /:category/:id/nearby-grouped) 쿼리 — 카테고리별 가까운 곳 수
+export const FacilityNearbyGroupedQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(5),
+});
+
+export type FacilityNearbyGroupedQuery = z.infer<typeof FacilityNearbyGroupedQuerySchema>;
+
 // 시설 검색 요청 스키마
 export const FacilitySearchSchema = z
   .object({
