@@ -75,7 +75,8 @@ export const NearbyGroupedSchema = z.object({
   categories: z
     .string()
     .max(200)
-    .transform((v) => v.split(',').map((c) => c.trim()).filter(Boolean))
+    // 중복 카테고리는 한 번만 조회한다(순서 유지)
+    .transform((v) => [...new Set(v.split(',').map((c) => c.trim()).filter(Boolean))])
     .pipe(z.array(NearbyCountCategorySchema).min(1).max(13)),
   limit: z.coerce.number().int().min(1).max(10).default(5),
 });

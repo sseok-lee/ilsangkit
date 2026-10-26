@@ -207,15 +207,19 @@ export async function nearbyGrouped(params: {
 
   const entries = await Promise.all(
     categories.map(async (cat): Promise<[string, NearbyGroupedEntry]> => {
-      const rows: Array<{ id: unknown; name: unknown; lat: unknown; lng: unknown }> = await CATEGORY_REGISTRY[cat]
-        .model()
-        .findMany({
-          where: approxBounds,
-          select: { id: true, name: true, lat: true, lng: true },
-          take: NEARBY_SUMMARY.SCAN_CAP,
-        });
+      const model = CATEGORY_REGISTRY[cat].model();
 
-      const inside: Array<{ id: string; name: string; lat: number; lng: number; meters: number }> = [];
+      // 1단계: id·lat·lng 만 읽는다. name 을 같이 select 하면 @@index([lat, lng]) 커버링을
+      // 못 타고 행마다 본문을 읽어 밀집 지역에서 수십 배 느려진다(강남 병원 2km 콜드 1s+).
+      // take 는 orderBy 없이 자르므로 SCAN_CAP 에 걸리면 가장 가까운 곳이 빠졌을 수 있다 —
+      // 그 경우는 exact=false 로 이미 알린다(count 도 하한값).
+      const rows: Array<{ id: unknown; lat: unknown; lng: unknown }> = await model.findMany({
+        where: approxBounds,
+        select: { id: true, lat: true, lng: true },
+        take: NEARBY_SUMMARY.SCAN_CAP,
+      });
+
+      const inside: Array<{ id: string; lat: number; lng: number; meters: number }> = [];
       for (const r of rows) {
         // Decimal → Number (countNearby 와 같은 이유), NULL 좌표는 건너뛴다
         if (r.lat === null || r.lng === null) continue;
@@ -223,20 +227,41 @@ export async function nearbyGrouped(params: {
         const rLng = Number(r.lng);
         if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue;
         const meters = haversineDistance(lat, lng, rLat, rLng) * 1000;
-        if (meters <= radius) inside.push({ id: String(r.id), name: String(r.name ?? ''), lat: rLat, lng: rLng, meters });
+        if (meters <= radius) inside.push({ id: String(r.id), lat: rLat, lng: rLng, meters });
       }
+      inside.sort((a, b) => a.meters - b.meters);
 
-      inside.sort((a, b) => a.meters - b.meters || a.name.localeCompare(b.name, 'ko'));
-
+      // 2단계: 가까운 후보 limit*3 개씩 id 로 이름을 붙인다. 같은 이름+같은 좌표 중복을
+      // 접고 나서 모자라면 다음 묶음을 이어서 가져온다(후보 소진까지).
       const seen = new Set<string>();
       const items: NearbyGroupedItem[] = [];
-      for (const f of inside) {
-        if (items.length >= limit) break;
-        // dedupeByLocation 과 같은 키 — 같은 이름+같은 좌표만 접는다
-        const key = `${f.name}|${f.lat.toFixed(5)}|${f.lng.toFixed(5)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        items.push({ id: f.id, name: f.name, category: cat, distance: Math.round(f.meters) });
+      let cursor = 0;
+      while (items.length < limit && cursor < inside.length) {
+        let batchEnd = Math.min(cursor + limit * 3, inside.length);
+        // 거리 동률은 이름순이라, 같은 거리 묶음이 경계에서 갈리지 않게 함께 가져온다
+        while (batchEnd < inside.length && inside[batchEnd].meters === inside[batchEnd - 1].meters) batchEnd++;
+        const batch = inside.slice(cursor, batchEnd);
+        cursor = batchEnd;
+
+        const named: Array<{ id: unknown; name: unknown }> = await model.findMany({
+          where: { id: { in: batch.map((f) => f.id) } },
+          select: { id: true, name: true },
+        });
+        const nameById = new Map(named.map((n) => [String(n.id), String(n.name ?? '')]));
+
+        const candidates = batch
+          .filter((f) => nameById.has(f.id))
+          .map((f) => ({ ...f, name: nameById.get(f.id) as string }))
+          .sort((a, b) => a.meters - b.meters || a.name.localeCompare(b.name, 'ko'));
+
+        for (const f of candidates) {
+          if (items.length >= limit) break;
+          // dedupeByLocation 과 같은 키 — 같은 이름+같은 좌표만 접는다
+          const key = `${f.name}|${f.lat.toFixed(5)}|${f.lng.toFixed(5)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          items.push({ id: f.id, name: f.name, category: cat, distance: Math.round(f.meters) });
+        }
       }
 
       return [cat, { count: inside.length, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP, items }];

@@ -22,9 +22,19 @@ import app from '../../src/app';
 const URL = '/api/facilities/nearby-grouped';
 const CENTER = { lat: 37.5, lng: 127.0 };
 
+type Row = { id: string; name: string; lat: number; lng: number };
+
+/** 1단계(좌표 스캔)·2단계(id 로 이름 붙이기) 를 흉내 낸다. */
+function useRows(rows: Row[]) {
+  mockFindMany.mockImplementation(async (arg: { select: Record<string, boolean>; where: any }) => {
+    if (arg.select.name) return rows.filter((r) => arg.where.id.in.includes(r.id));
+    return rows.map(({ id, lat, lng }) => ({ id, lat, lng }));
+  });
+}
+
 beforeEach(() => {
   mockFindMany.mockReset();
-  mockFindMany.mockResolvedValue([{ id: 's1', name: '가람초등학교', lat: 37.5, lng: 127.001 }]);
+  useRows([{ id: 's1', name: '가람초등학교', lat: 37.5, lng: 127.001 }]);
 });
 
 describe('GET /api/facilities/nearby-grouped', () => {
@@ -44,13 +54,18 @@ describe('GET /api/facilities/nearby-grouped', () => {
   });
 
   it('limit 기본값은 5', async () => {
-    mockFindMany.mockResolvedValue(
-      Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, name: `공원${i}`, lat: 37.5, lng: 127.0 + i * 0.001 })),
-    );
+    useRows(Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, name: `공원${i}`, lat: 37.5, lng: 127.0 + i * 0.001 })));
     const res = await request(app).get(URL).query({ ...CENTER, categories: 'park' });
 
     expect(res.body.data.groups.park.items).toHaveLength(5);
     expect(res.body.data.groups.park.count).toBe(8);
+  });
+
+  it('중복된 categories 는 한 번만 조회한다', async () => {
+    const res = await request(app).get(URL).query({ ...CENTER, categories: 'school,school,park' });
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body.data.groups)).toEqual(['school', 'park']);
   });
 
   it('categories 가 없으면 422', async () => {

@@ -7,6 +7,7 @@ import {
   FacilitySearchSchema,
   FacilityDetailParamsSchema,
   RegionFacilitiesParamsSchema,
+  NearbyGroupedSchema,
 } from '../../src/schemas/facility';
 
 describe('FacilityCategorySchema', () => {
@@ -117,5 +118,14 @@ describe('RegionFacilitiesParamsSchema', () => {
         category: 'wifi',
       })
     ).toThrow();
+  });
+});
+
+describe('NearbyGroupedSchema', () => {
+  it('categories 중복을 제거하고 순서를 유지한다', () => {
+    const result = NearbyGroupedSchema.parse({ lat: 37.5, lng: 127, categories: 'school,park,school, park' });
+    expect(result.categories).toEqual(['school', 'park']);
+    expect(result.radius).toBe(2000);
+    expect(result.limit).toBe(5);
   });
 });
