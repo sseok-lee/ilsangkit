@@ -1312,15 +1312,15 @@ async function fetchNearbyFromSummary(
 // (운영 송도동 전세 1.56s — 시간 대부분이 동 전체 거래의 창 정렬).
 // 지금은
 //   1) 같은 WHERE 로 파티션별 GROUP BY 집계만(COUNT, 최신 연·월) — 정렬 없는 임시 테이블 집계 — 해서 상위 n 개 파티션만 고르고
-//   2) 고른 파티션마다 LATERAL (… ORDER BY 최신순 LIMIT 1) 로 최신 행을 [buildingName, bjdCode, dealYear, dealMonth, dealDay]
-//      인덱스 역방향 스캔으로 읽는다(#949 getLatestDeals 와 같은 방식, 왕복 1회).
+//   2) 고른 파티션마다 LATERAL (… ORDER BY 최신순 LIMIT 1) 로 최신 행을 읽는다(왕복 1회). 실행계획은 [buildingName, bjdCode,
+//      dealYear, dealMonth, dealDay] 인덱스로 그 단지 거래만 lookup 한 뒤 filesort 우선순위 큐로 1건을 고른다(역방향 1행
+//      스캔은 아님 — 로컬 상계동 대단지 약 1천 행에 단지당 약 2ms). 동 전체를 창 정렬하던 옛 비용에 비하면 작다.
 //
 // 결과가 옛 구현과 같은 근거:
 // a) 파티션: GROUP BY 식이 옛 PARTITION BY 식과 같고 같은 컬럼 콜레이션으로 묶는다. LATERAL 의 등호 네 개도 같은 콜레이션
 //    비교라 정확히 그 파티션의 행만(옛 WHERE 그대로 함께 걸어) 읽는다.
-// b) 최신 행: 옛 rn = 1 은 (연, 월, COALESCE(일, 0), id) 최대 행이다. MySQL DESC 정렬은 NULL 을 맨 뒤에 두므로
-//    `dealDay DESC` 는 일자가 1 이상인 한 `COALESCE(dealDay, 0) DESC` 와 같은 순서다(일자 0·음수는 수집 원본에 없다 —
-//    로컬 전월세 3종 전 행 확인). id 는 PK 라 전순서가 되어 고르는 행이 하나로 같다.
+// b) 최신 행: 옛 rn = 1 은 (연, 월, COALESCE(일, 0), id) 최대 행이다. LATERAL 도 같은 식 `COALESCE(dealDay, 0) DESC` 로
+//    정렬해 일자 데이터(NULL·0·음수)와 무관하게 같은 순서다. id 는 PK 라 전순서가 되어 고르는 행이 하나로 같다.
 // c) 최신 연·월: rn = 1 행의 (연, 월) = 파티션의 (연, 월) 사전순 최대 = MAX(dealYear * 100 + dealMonth)(월 1~12).
 // d) 표시 값: 옛 counts CTE 는 창 정렬 순서로 물질화된 ranked 를 임시 테이블로 집계해, 파티션에서 처음 만난 행 = rn = 1
 //    행의 값을 GROUP BY 키(buildingName·TRIM(dongName)·COALESCE(TRIM(jibun), ''))와 ANY_VALUE(city·district·buildYear)로
@@ -1396,7 +1396,7 @@ export function nearbyRentFilteredSql(
           AND TRIM(lt.dongName) = g.dongKey
           AND COALESCE(TRIM(lt.jibun), '') = g.jibunKey
           AND ${where('lt')}
-        ORDER BY lt.dealYear DESC, lt.dealMonth DESC, lt.dealDay DESC, lt.id DESC
+        ORDER BY lt.dealYear DESC, lt.dealMonth DESC, COALESCE(lt.dealDay, 0) DESC, lt.id DESC
         LIMIT 1
       ) latest ON TRUE
       ORDER BY g.latestYm DESC, g.transactionCount DESC

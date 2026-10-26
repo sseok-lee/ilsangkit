@@ -40,8 +40,8 @@ describe('nearbyRentFilteredSql', () => {
     expect(t).toContain(
       "WHERE lt.buildingName = g.buildingName AND lt.bjdCode = g.bjdCode AND TRIM(lt.dongName) = g.dongKey AND COALESCE(TRIM(lt.jibun), '') = g.jibunKey",
     );
-    // dealDay DESC 는 NULL 을 맨 뒤에 두므로 옛 COALESCE(dealDay, 0) DESC 와 같은 순서(일자 1 이상).
-    expect(t).toContain('ORDER BY lt.dealYear DESC, lt.dealMonth DESC, lt.dealDay DESC, lt.id DESC LIMIT 1');
+    // 옛 ROW_NUMBER 와 같은 식(COALESCE(dealDay, 0)) — 일자 NULL·0·음수 데이터와 무관하게 같은 행을 고른다.
+    expect(t).toContain('ORDER BY lt.dealYear DESC, lt.dealMonth DESC, COALESCE(lt.dealDay, 0) DESC, lt.id DESC LIMIT 1');
   });
 
   it('표시 값(이름·동·지번·city·district·buildYear)은 옛 rn = 1 행과 같은 최신 행에서 꺼낸다', () => {
