@@ -834,9 +834,29 @@ export async function nearbyGroupedForFacility(
   }
 
   const targets: FacilityCategory[] = [category, ...(CROSS_CATEGORY_MAP[category] ?? [])];
-  const groups = await Promise.all(
+  const groups = await nearbyGroupsAt({ lat, lng, radius, limit, targets, ownCategory: category, excludeId, selfKey });
+  return { radius, groups };
+}
+
+/**
+ * 좌표 주변 카테고리별 "개수 + 가까운 limit 곳" (시설 상세·지하철역 상세 "주변 시설" 공용).
+ * ownCategory 그룹에서만 excludeId(자기 id)·selfKey(자기 이름+좌표)를 뺀다.
+ * 일반 카테고리는 nearestInCategory 2단계 조회, ev-charger·wifi 는 묶음 단위 검색.
+ */
+export async function nearbyGroupsAt(params: {
+  lat: number;
+  lng: number;
+  radius: number;
+  limit: number;
+  targets: FacilityCategory[];
+  ownCategory?: FacilityCategory;
+  excludeId?: string;
+  selfKey?: string;
+}): Promise<FacilityNearbyGroup[]> {
+  const { lat, lng, radius, limit, targets, ownCategory, excludeId, selfKey } = params;
+  return Promise.all(
     targets.map(async (cat): Promise<FacilityNearbyGroup> => {
-      const isOwnCategory = cat === category;
+      const isOwnCategory = cat === ownCategory;
       const ownId = isOwnCategory ? excludeId : undefined;
 
       // 충전소·와이파이 장소는 묶음 단위 검색(반경 안 전부 → 자기 제외 → limit)
@@ -863,8 +883,6 @@ export async function nearbyGroupedForFacility(
       return { category: cat, count, exact, items };
     }),
   );
-
-  return { radius, groups };
 }
 
 /**

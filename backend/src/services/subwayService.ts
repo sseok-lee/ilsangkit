@@ -8,6 +8,12 @@ import type { SubwayStation } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT } from './cityMapping.js';
 import { escapeSqlLikeKeyword } from './search/sqlLike.js';
+import {
+  CROSS_CATEGORY_MAP,
+  FACILITY_DETAIL_NEARBY_RADIUS,
+  nearbyGroupsAt,
+  type FacilityNearbyGroup,
+} from './facilityService.js';
 
 const EARTH_RADIUS_M = 6_371_000;
 
@@ -130,6 +136,93 @@ export function serializeStation(station: SubwayStation): SerializedStation {
 
 export async function getStationBySlug(slug: string): Promise<SubwayStation | null> {
   return prisma.subwayStation.findUnique({ where: { nameSlug: slug } });
+}
+
+export interface StationNearbyItem {
+  id: string;
+  /** 원본 역명(끝 "역" 유무 혼재 — 표시는 프론트 withStationSuffix) */
+  name: string;
+  nameSlug: string;
+  category: 'subway';
+  /** 같은 역명으로 묶인 행들의 노선(정렬) */
+  lines: string[];
+  /** 중심에서의 직선거리(m, 정수 반올림) */
+  distance: number;
+}
+
+export interface StationNearbyGroup {
+  category: 'subway';
+  /** 반경 안 역 수(역명 단위, 자기 역 제외) */
+  count: number;
+  exact: boolean;
+  items: StationNearbyItem[];
+}
+
+/** 반경 안 지하철역 행 스캔 상한 — 1km 안 역 행은 많아야 수십 개다 */
+const STATION_SCAN_CAP = 500;
+
+/**
+ * 지하철역 상세 "주변 시설" — 역 좌표 반경 1km, 그룹 = [주변 역, ...CROSS_CATEGORY_MAP.subway].
+ * 응답 형태는 시설 상세 nearby-grouped 와 같다. 관련 시설 그룹은 시설 상세와 같은
+ * nearbyGroupsAt 을 쓴다(자기 제외 없음 — 역은 시설 테이블에 없다).
+ *
+ * @returns 역이 없으면 null, 좌표가 없으면 groups: []
+ */
+export async function nearbyGroupedForStation(
+  slug: string,
+  limit: number,
+): Promise<{ radius: number; groups: Array<StationNearbyGroup | FacilityNearbyGroup> } | null> {
+  const radius = FACILITY_DETAIL_NEARBY_RADIUS;
+  // 페이지(getStationBySlug)와 같은 nameSlug 해석 — 좌표·이름만 가볍게 읽는다
+  const station = await prisma.subwayStation.findUnique({
+    where: { nameSlug: slug },
+    select: { name: true, lat: true, lng: true },
+  });
+  if (!station) return null;
+  const lat = station.lat === null ? NaN : Number(station.lat);
+  const lng = station.lng === null ? NaN : Number(station.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { radius, groups: [] };
+
+  const [stationGroup, facilityGroups] = await Promise.all([
+    nearbyStationGroup(lat, lng, radius, limit, normalizeStationName(station.name)),
+    nearbyGroupsAt({ lat, lng, radius, limit, targets: CROSS_CATEGORY_MAP.subway }),
+  ]);
+  return { radius, groups: [stationGroup, ...facilityGroups] };
+}
+
+/**
+ * 반경 안 역을 역명(끝 "역" 정규화) 단위로 묶는다 — 같은 역의 노선별 행은 노선을 합치고
+ * 가장 가까운 행의 nameSlug·거리를 쓴다. 자기 역(같은 정규화 이름)은 모든 노선 행을 뺀다.
+ */
+async function nearbyStationGroup(
+  lat: number,
+  lng: number,
+  radius: number,
+  limit: number,
+  selfName: string,
+): Promise<StationNearbyGroup> {
+  // findNearbyStations 가 바운딩박스 사전필터 + Haversine + 거리순을 이미 한다
+  const rows = await findNearbyStations(lat, lng, radius, STATION_SCAN_CAP);
+  const groups = new Map<string, { primary: NearbyStation; lines: Set<string> }>();
+  for (const row of rows) {
+    const key = normalizeStationName(row.name);
+    if (key === selfName) continue;
+    const g = groups.get(key);
+    // rows 는 거리 오름차순이라 처음 본 행이 가장 가까운 행이다
+    if (!g) groups.set(key, { primary: row, lines: new Set([row.line]) });
+    else g.lines.add(row.line);
+  }
+  const items = Array.from(groups.values())
+    .slice(0, limit)
+    .map(({ primary, lines }) => ({
+      id: primary.id,
+      name: primary.name,
+      nameSlug: primary.nameSlug,
+      category: 'subway' as const,
+      lines: Array.from(lines).sort(),
+      distance: primary.distance,
+    }));
+  return { category: 'subway', count: groups.size, exact: rows.length < STATION_SCAN_CAP, items };
 }
 
 export interface ListStationsParams {
