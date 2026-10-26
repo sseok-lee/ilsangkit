@@ -147,6 +147,34 @@ export const facilityHandlers = [
     return HttpResponse.json({ success: true, data: { radius, groups } });
   }),
 
+  // 지하철역 상세 "주변 시설" — [주변 역(역명 단위, 자기 제외), ...CROSS_CATEGORY_MAP.subway], 반경 1km
+  http.get(`${API_BASE}/api/subway/stations/:slug/nearby-grouped`, ({ params, request }) => {
+    const { slug } = params as { slug: string };
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 5);
+    if (slug !== 'gangnam') {
+      return HttpResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Station not found' } },
+        { status: 404 },
+      );
+    }
+    const radius = 1000;
+    const stations = [
+      { id: 'subway-D006', name: '신논현', nameSlug: 'sinnonhyeon', category: 'subway', lines: ['9호선', '신분당선'], distance: 726 },
+      { id: 'subway-0221', name: '역삼', nameSlug: 'yeoksam', category: 'subway', lines: ['2호선'], distance: 802 },
+    ];
+    const groups = [
+      { category: 'subway', count: stations.length, exact: true, items: stations.slice(0, limit) },
+      // backend CROSS_CATEGORY_MAP.subway 의 mock 사본. mock 에서는 distance 필드를 직선거리로 본다
+      ...['parking', 'ev-charger', 'toilet', 'market'].map((cat) => {
+        const inside = mockFacilities
+          .filter((f) => f.category === cat && f.distance <= radius)
+          .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+        return { category: cat, count: inside.length, exact: true, items: inside.slice(0, limit) };
+      }),
+    ];
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
   // 시설 상세
   http.get(`${API_BASE}/api/facilities/:category/:id`, ({ params }) => {
     const { category, id } = params;

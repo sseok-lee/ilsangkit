@@ -103,6 +103,28 @@ describe('MSW Facility Handlers', () => {
     });
   });
 
+  describe('GET /api/subway/stations/:slug/nearby-grouped', () => {
+    it('주변 역 → CROSS_CATEGORY_MAP.subway 순서의 groups 배열을 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/subway/stations/gangnam/nearby-grouped?limit=5`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(1000);
+      expect(data.data.groups.map((g: { category: string }) => g.category))
+        .toEqual(['subway', 'parking', 'ev-charger', 'toilet', 'market']);
+      const subway = data.data.groups[0];
+      expect(subway.items.length).toBeGreaterThan(0);
+      expect(subway.items[0]).toMatchObject({ category: 'subway', nameSlug: expect.any(String), lines: expect.any(Array) });
+      expect(subway.items.some((s: { nameSlug: string }) => s.nameSlug === 'gangnam')).toBe(false);
+    });
+
+    it('없는 역은 404', async () => {
+      const response = await fetch(`${API_BASE}/api/subway/stations/nope/nearby-grouped`);
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('POST /api/facilities/search', () => {
     it('should return all facilities without filters', async () => {
       const response = await fetch(`${API_BASE}/api/facilities/search`, {

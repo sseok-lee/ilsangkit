@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { validate } from '../middlewares/validate.js';
+import { validate, validateMultiple } from '../middlewares/validate.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 import {
@@ -8,6 +8,7 @@ import {
   getStationBySlug,
   listStations,
   listStationsGrouped,
+  nearbyGroupedForStation,
   serializeStation,
 } from '../services/subwayService.js';
 import { KOREA_BOUNDS } from '../constants/index.js';
@@ -54,6 +55,29 @@ router.get(
       ? items.filter((s) => s.nameSlug !== params.excludeSlug)
       : items;
     res.json({ success: true, data: { items: filtered.slice(0, params.limit) } });
+  }),
+);
+
+// 지하철역 상세 "주변 시설" 쿼리 — 그룹별 가까운 곳 수
+const StationNearbyGroupedQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(5),
+});
+
+// 지하철역 상세 "주변 시설" — 주변 역(역명 단위) + 관련 시설 카테고리별 개수·가까운 N곳 (반경 1km)
+// GET /api/subway/stations/:slug/nearby-grouped?limit=5
+// 응답은 시설 상세 /api/facilities/:category/:id/nearby-grouped 와 같은 { radius, groups } 형태.
+// 옛 /stations/nearby + POST /api/facilities/search 조합은 구 프론트 호환용으로 남겨 둔다.
+router.get(
+  '/stations/:slug/nearby-grouped',
+  validateMultiple({ params: SlugSchema, query: StationNearbyGroupedQuerySchema }),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const { params, query } = res.locals.validated as {
+      params: z.infer<typeof SlugSchema>;
+      query: z.infer<typeof StationNearbyGroupedQuerySchema>;
+    };
+    const result = await nearbyGroupedForStation(params.slug, query.limit);
+    if (!result) throw new NotFoundError('Station not found');
+    res.json({ success: true, data: result });
   }),
 );
 

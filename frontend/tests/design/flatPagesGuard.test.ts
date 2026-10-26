@@ -15,7 +15,7 @@ export const FILES = [
   'components/facility/detail/DetailFacilityStatus.vue',
   'components/facility/detail/DetailContextLinks.vue',
   'components/facility/detail/DetailNearby.vue',
-  'components/subway/SubwayNearby.vue',
+  'components/subway/SubwayStationNearby.vue',
   'components/facility/detail/FieldGrid.vue',
   'components/facility/DetailRow.vue',
   'components/facility/details/EvChargerDetail.vue',
