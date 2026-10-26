@@ -120,6 +120,24 @@ describe('NearbyFacilities — 구분선 목록 2열 · 카테고리별 실제 �
     expect(subway.findAll('li')).toHaveLength(5)
   })
 
+  it('transit API 상한(10곳)에 닿으면 지하철역 개수를 "이상"으로 표시한다', async () => {
+    const ten = Array.from({ length: 10 }, (_, i) => ({
+      id: `st-${i}`, name: `역${i}`, nameSlug: `st${i}`, line: '1호선', distance: 100 + i * 100,
+    }))
+    mockAsyncData({ grouped: groupedResponse(DEFAULT_GROUPS), transit: { success: true, data: { stations: ten } } })
+    const wrapper = await mountSuspended()
+    expect(sections(wrapper)[0].find('[data-testid="nearby-facility-count"]').text()).toBe('2km 안 10곳 이상')
+  })
+
+  it('큰 개수는 천 단위 쉼표로 표기한다', async () => {
+    mockAsyncData({
+      grouped: groupedResponse({ hospital: { count: 20000, exact: false, items: items('hospital', ['가병원']) } }),
+      transit: { success: true, data: { stations: [] } },
+    })
+    const wrapper = await mountSuspended()
+    expect(sections(wrapper)[0].find('[data-testid="nearby-facility-count"]').text()).toBe('2km 안 20,000곳 이상')
+  })
+
   it('거리와 도보 추정 시간을 함께 표시한다', async () => {
     const wrapper = await mountSuspended()
     const school = sections(wrapper)[1].find('li')

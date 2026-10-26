@@ -137,6 +137,8 @@ const MAX_PER_CATEGORY = 5
 const MOBILE_VISIBLE = 3
 const NEARBY_RADIUS_METERS = 2000
 const RADIUS_LABEL = `${NEARBY_RADIUS_METERS / 1000}km`
+/** transit API(/api/transit/nearby) 응답 상한. 여기에 닿으면 실제로는 더 있을 수 있다. */
+const TRANSIT_API_LIMIT = 10
 
 const ROW_LINK_CLASS =
   'flex items-center justify-between gap-3 min-h-[52px] py-2 hover:bg-primary-50/40 transition-colors duration-200'
@@ -174,7 +176,7 @@ const loading = computed(() => status.value === 'pending' || transitStatus.value
 const expanded = ref<Record<string, boolean>>({})
 
 function countLabel(count: number, exact = true): string {
-  return `${RADIUS_LABEL} 안 ${count.toLocaleString()}곳${exact ? '' : ' 이상'}`
+  return `${RADIUS_LABEL} 안 ${count.toLocaleString('ko-KR')}곳${exact ? '' : ' 이상'}`
 }
 
 const sections = computed<Section[]>(() => {
@@ -185,7 +187,7 @@ const sections = computed<Section[]>(() => {
     out.push({
       key: 'subway',
       label: '지하철역',
-      countLabel: countLabel(stations.length),
+      countLabel: countLabel(stations.length, stations.length < TRANSIT_API_LIMIT),
       rows: stations.slice(0, MAX_PER_CATEGORY).map((s) => ({
         key: s.id,
         name: s.name,
