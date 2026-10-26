@@ -127,6 +127,32 @@ describe('nearbyGroupedForStation', () => {
     expect(subway.items[1]).toMatchObject({ nameSlug: 'yeoksam', lines: ['2호선'] });
   });
 
+  it('주변 역: 링크 slug 는 사이트맵과 같은 대표 행(노선 사전순 첫 행), 거리는 가장 가까운 행', async () => {
+    // 신논현: 신분당선 행이 더 가깝지만 사이트맵 대표는 노선 사전순 첫 행(서울 도시철도 9호선)
+    db.subwayStation = [
+      st('me', '강남', 'gangnam', '2호선', 0),
+      st('b1', '신논현', 'sinnonhyeon-i11d1', '신분당선', 700),
+      st('b2', '신논현', 'sinnonhyeon', '서울 도시철도 9호선', 760),
+    ];
+    const result = await nearbyGroupedForStation('gangnam', 5);
+    const item = result!.groups[0].items[0];
+    expect(item.nameSlug).toBe('sinnonhyeon');
+    expect(item.distance).toBeGreaterThanOrEqual(699);
+    expect(item.distance).toBeLessThanOrEqual(701);
+    expect(item).toMatchObject({ lines: ['서울 도시철도 9호선', '신분당선'] });
+  });
+
+  it('주변 역: 노선이 같으면 nameSlug 사전순(사이트맵과 같은 동률 규칙)', async () => {
+    db.subwayStation = [
+      st('me', '병점', 'byeongjeom', '1호선', 0),
+      st('s1', '세마', 'sema-x2', '1호선', 300),
+      st('s2', '세마', 'sema', '1호선', 400),
+    ];
+    const result = await nearbyGroupedForStation('byeongjeom', 5);
+    expect(result!.groups[0].items[0]).toMatchObject({ nameSlug: 'sema', lines: ['1호선'] });
+    expect(result!.groups[0].items[0].distance).toBeLessThanOrEqual(301);
+  });
+
   it('주변 역: count 는 limit 와 무관한 역명 수, items 는 거리순 limit 개', async () => {
     db.subwayStation = [
       st('me', '병점', 'byeongjeom', '1호선', 0),
