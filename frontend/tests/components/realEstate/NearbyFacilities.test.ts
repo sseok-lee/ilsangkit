@@ -3,21 +3,53 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref, defineComponent, h, Suspense } from 'vue'
 import NearbyFacilities from '~/components/realEstate/NearbyFacilities.vue'
 
-function mockUseAsyncDataWith(data: any, status = 'success') {
-  const result = {
-    data: ref(data),
-    status: ref(status),
-    error: ref(null),
-    refresh: vi.fn(),
-  }
-  ;(globalThis as any).useAsyncData = vi.fn(() => Object.assign(Promise.resolve(result), result))
+type Item = { id: string; name: string; category: string; distance: number }
+
+function items(category: string, names: string[], start = 100): Item[] {
+  return names.map((name, i) => ({ id: `${category}-${i + 1}`, name, category, distance: start + i * 100 }))
 }
 
-async function mountSuspended(props: { lat: number; lng: number }) {
+const STATIONS = [
+  { id: 'st-1', name: '강남', nameSlug: 'gangnam', line: '2호선', distance: 210 },
+  { id: 'st-2', name: '역삼', nameSlug: 'yeoksam', line: '2호선', distance: 650 },
+]
+
+function groupedResponse(groups: Record<string, { count: number; exact: boolean; items: Item[] }>) {
+  return { success: true, data: { radius: 2000, groups } }
+}
+
+const DEFAULT_GROUPS = {
+  school: { count: 14, exact: true, items: [{ id: 'school-1', name: '새봄초등학교', category: 'school', distance: 320 }] },
+  childcare: { count: 64, exact: true, items: [{ id: 'childcare-1', name: '키즈랄라어린이집', category: 'childcare', distance: 26 }] },
+  hospital: {
+    count: 123,
+    exact: false,
+    items: items('hospital', ['가병원', '나병원', '다병원', '라병원', '마병원']),
+  },
+  pharmacy: { count: 0, exact: true, items: [] },
+  park: { count: 2, exact: true, items: items('park', ['가람공원', '하늘공원']) },
+  sports: { count: 1, exact: true, items: items('sports', ['유앤아이센터']) },
+}
+
+function mockAsyncData(opts: {
+  grouped?: unknown
+  transit?: unknown
+  status?: string
+}) {
+  const make = (data: unknown) => {
+    const result = { data: ref(data), status: ref(opts.status ?? 'success'), error: ref(null), refresh: vi.fn() }
+    return Object.assign(Promise.resolve(result), result)
+  }
+  ;(globalThis as any).useAsyncData = vi.fn((key: string) =>
+    key.startsWith('nearby-transit') ? make(opts.transit ?? null) : make(opts.grouped ?? null),
+  )
+}
+
+async function mountSuspended(props: Record<string, unknown> = {}) {
   const wrapper = mount(
     defineComponent({
       render() {
-        return h(Suspense, null, { default: () => h(NearbyFacilities, props) })
+        return h(Suspense, null, { default: () => h(NearbyFacilities, { lat: 37.4979, lng: 127.0276, ...props }) })
       },
     }),
   )
@@ -25,145 +57,151 @@ async function mountSuspended(props: { lat: number; lng: number }) {
   return wrapper
 }
 
-describe('NearbyFacilities', () => {
-  const defaultProps = {
-    lat: 37.4979,
-    lng: 127.0276,
-  }
+function sections(wrapper: Awaited<ReturnType<typeof mountSuspended>>) {
+  return wrapper.findAll('[data-testid="nearby-facility-section"]')
+}
 
-  const mockFacilitiesResponse = {
-    success: true,
-    data: {
-      items: [
-        {
-          id: 'school-1',
-          name: '강남초등학교',
-          category: 'school',
-          address: '서울특별시 강남구',
-          lat: 37.498,
-          lng: 127.0277,
-          distance: 100,
-        },
-        {
-          id: 'hospital-1',
-          name: '강남병원',
-          category: 'hospital',
-          address: '서울특별시 강남구',
-          lat: 37.4981,
-          lng: 127.0278,
-          distance: 200,
-        },
-        {
-          id: 'pharmacy-1',
-          name: '강남약국',
-          category: 'pharmacy',
-          address: '서울특별시 강남구',
-          lat: 37.4982,
-          lng: 127.0279,
-          distance: 300,
-        },
-      ],
-      total: 3,
-    },
-  }
-
+describe('NearbyFacilities — 구분선 목록 2열 · 카테고리별 실제 개수', () => {
   beforeEach(() => {
-    mockUseAsyncDataWith(mockFacilitiesResponse)
+    mockAsyncData({
+      grouped: groupedResponse(DEFAULT_GROUPS),
+      transit: { success: true, data: { stations: STATIONS } },
+    })
   })
 
-  it('lat/lng props를 받아 마운트되는지 확인', async () => {
-    const wrapper = await mountSuspended(defaultProps)
-    expect(wrapper.exists()).toBe(true)
+  it('카테고리별 개수+가까운 곳 API 를 lat/lng 포함 키로 1회 호출한다', async () => {
+    await mountSuspended()
+    const calls = (globalThis as any).useAsyncData.mock.calls.map((c: unknown[]) => c[0])
+    expect(calls).toContain('nearby-facilities-grouped-37.4979-127.0276')
+    expect(calls).toContain('nearby-transit-37.4979-127.0276')
   })
 
-  it('useAsyncData를 올바른 key로 호출하는지 확인', async () => {
-    await mountSuspended(defaultProps)
-    expect((globalThis as any).useAsyncData).toHaveBeenCalledWith(
-      `nearby-facilities-${defaultProps.lat}-${defaultProps.lng}`,
-      expect.any(Function),
+  it('nearby-grouped 엔드포인트를 2km·6개 카테고리·5곳으로 부른다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(groupedResponse(DEFAULT_GROUPS))
+    ;(globalThis as any).$fetch = fetchMock
+    await mountSuspended()
+    const groupedCall = (globalThis as any).useAsyncData.mock.calls.find((c: unknown[]) =>
+      String(c[0]).startsWith('nearby-facilities-grouped'),
     )
+    await groupedCall[1]()
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/facilities/nearby-grouped'), {
+      query: {
+        lat: 37.4979,
+        lng: 127.0276,
+        radius: 2000,
+        categories: 'school,childcare,hospital,pharmacy,park,sports',
+        limit: 5,
+      },
+    })
   })
 
-  it('로딩 중에 스피너를 표시하는지 확인', async () => {
-    mockUseAsyncDataWith(null, 'pending')
-    const wrapper = await mountSuspended(defaultProps)
+  it('지하철역이 맨 위(전체 너비), 그 다음 고정 순서로 나오고 0곳 카테고리는 숨긴다', async () => {
+    const wrapper = await mountSuspended()
+    const headings = sections(wrapper).map((s) => s.find('h3').text())
+    expect(headings).toEqual(['지하철역', '학교', '어린이집', '병원', '공원', '체육시설'])
+    expect(sections(wrapper)[0].classes()).toContain('md:col-span-2')
+    expect(wrapper.text()).not.toContain('약국')
+  })
 
+  it('섹션 머리에 반경 안 실제 개수를 쓰고, 하한값이면 "이상"을 붙인다', async () => {
+    const wrapper = await mountSuspended()
+    const counts = sections(wrapper).map((s) => s.find('[data-testid="nearby-facility-count"]').text())
+    expect(counts).toEqual(['2km 안 2곳', '2km 안 14곳', '2km 안 64곳', '2km 안 123곳 이상', '2km 안 2곳', '2km 안 1곳'])
+  })
+
+  it('지하철역 개수는 transit 결과 전체 길이, 목록은 5곳까지', async () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({
+      id: `st-${i}`, name: `역${i}`, nameSlug: `st${i}`, line: '1호선', distance: 100 + i * 100,
+    }))
+    mockAsyncData({ grouped: groupedResponse(DEFAULT_GROUPS), transit: { success: true, data: { stations: many } } })
+    const wrapper = await mountSuspended()
+    const subway = sections(wrapper)[0]
+    expect(subway.find('[data-testid="nearby-facility-count"]').text()).toBe('2km 안 7곳')
+    expect(subway.findAll('li')).toHaveLength(5)
+  })
+
+  it('거리와 도보 추정 시간을 함께 표시한다', async () => {
+    const wrapper = await mountSuspended()
+    const school = sections(wrapper)[1].find('li')
+    expect(school.text()).toContain('새봄초등학교')
+    expect(school.text()).toContain('320m')
+    expect(school.text()).toContain('도보 약 5분')
+    const childcare = sections(wrapper)[2].find('li')
+    expect(childcare.text()).toContain('26m')
+    expect(childcare.text()).toContain('도보 약 1분')
+  })
+
+  it('시설은 /{category}/{id}, 지하철역은 /subway/{nameSlug} 로 링크한다', async () => {
+    const wrapper = await mountSuspended()
+    expect(sections(wrapper)[0].find('a').attributes('href')).toBe('/subway/gangnam')
+    expect(sections(wrapper)[1].find('a').attributes('href')).toBe('/school/school-1')
+  })
+
+  it('지하철역 행은 노선 색 배지를 이름 앞에 둔다', async () => {
+    const wrapper = await mountSuspended()
+    const badge = sections(wrapper)[0].find('[data-testid="subway-line-badge"]')
+    expect(badge.text()).toBe('2호선')
+    expect(badge.attributes('style')).toContain('background-color')
+  })
+
+  it('4·5번째 행도 DOM 에 렌더하고 모바일에서만 CSS 로 숨긴다', async () => {
+    const wrapper = await mountSuspended()
+    const rows = sections(wrapper)[3].findAll('li')
+    expect(rows).toHaveLength(5)
+    expect(rows.map((r) => r.classes().includes('max-md:hidden'))).toEqual([false, false, false, true, true])
+    expect(rows[4].text()).toContain('마병원')
+  })
+
+  it('모바일 "모두 보기" 버튼은 3곳 초과 섹션에만 있고 aria-expanded 로 토글한다', async () => {
+    const wrapper = await mountSuspended()
+    const buttons = wrapper.findAll('button')
+    expect(buttons).toHaveLength(1)
+    const button = sections(wrapper)[3].find('button')
+    expect(button.attributes('type')).toBe('button')
+    expect(button.classes()).toContain('md:hidden')
+    expect(button.text()).toBe('5곳 모두 보기')
+    expect(button.attributes('aria-expanded')).toBe('false')
+
+    await button.trigger('click')
+    expect(button.attributes('aria-expanded')).toBe('true')
+    expect(sections(wrapper)[3].findAll('li').some((r) => r.classes().includes('max-md:hidden'))).toBe(false)
+
+    await button.trigger('click')
+    expect(button.attributes('aria-expanded')).toBe('false')
+    expect(sections(wrapper)[3].findAll('li')[3].classes()).toContain('max-md:hidden')
+  })
+
+  it('이모지 아이콘·chevron·색 거리 배지를 쓰지 않는다', async () => {
+    const wrapper = await mountSuspended()
+    expect(wrapper.text()).not.toMatch(/\p{Extended_Pictographic}/u)
+    expect(wrapper.html()).not.toContain('chevron_right')
+    expect(wrapper.html()).not.toMatch(/emerald|rounded-2xl bg-white/)
+  })
+
+  it('하단 출처 문구는 항상, 지역 링크는 regionHref 가 있을 때만', async () => {
+    const without = await mountSuspended()
+    expect(without.text()).toContain('공공데이터포털 시설 데이터 · 카테고리별 가까운 순 최대 5곳')
+    expect(without.find('[data-testid="nearby-facilities-region-link"]').exists()).toBe(false)
+
+    const withLink = await mountSuspended({ regionHref: '/seoul/gangnam', regionLabel: '강남구' })
+    const link = withLink.find('[data-testid="nearby-facilities-region-link"]')
+    expect(link.attributes('href')).toBe('/seoul/gangnam')
+    expect(link.text()).toBe('강남구 생활시설 전체 보기 →')
+  })
+
+  it('로딩 중에는 스피너를 표시한다', async () => {
+    mockAsyncData({ status: 'pending' })
+    const wrapper = await mountSuspended()
     expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true)
   })
 
-  it('데이터 로드 후 시설 목록을 표시하는지 확인', async () => {
-    const wrapper = await mountSuspended(defaultProps)
-
-    expect(wrapper.text()).toContain('강남초등학교')
-    expect(wrapper.text()).toContain('강남병원')
-    expect(wrapper.text()).toContain('강남약국')
-  })
-
-  it('거리 정보를 표시하는지 확인', async () => {
-    const wrapper = await mountSuspended(defaultProps)
-
-    expect(wrapper.text()).toMatch(/100\s*m/)
-  })
-
-  it('시설이 없을 때 빈 상태 메시지를 표시하는지 확인', async () => {
-    mockUseAsyncDataWith({ success: true, data: { items: [], total: 0 } })
-
-    const wrapper = await mountSuspended(defaultProps)
-
+  it('시설·역이 모두 없으면 빈 상태 문구를 표시한다', async () => {
+    mockAsyncData({
+      grouped: groupedResponse({ school: { count: 0, exact: true, items: [] } }),
+      transit: { success: true, data: { stations: [] } },
+    })
+    const wrapper = await mountSuspended()
     expect(wrapper.text()).toContain('조건에 맞는 시설이 없습니다')
-  })
-
-  it('DISPLAY_CATEGORIES 순서대로 부동산 핵심 시설이 우선 표시되는지 확인', async () => {
-    mockUseAsyncDataWith({
-      success: true,
-      data: {
-        items: [
-          { id: 'school-1', name: '강남초등학교', category: 'school', address: '서울', lat: 37.498, lng: 127.028, distance: 200 },
-          { id: 'childcare-1', name: '강남어린이집', category: 'childcare', address: '서울', lat: 37.498, lng: 127.028, distance: 300 },
-          { id: 'park-1', name: '강남공원', category: 'park', address: '서울', lat: 37.498, lng: 127.028, distance: 150 },
-          { id: 'sports-1', name: '강남체육센터', category: 'sports', address: '서울', lat: 37.498, lng: 127.028, distance: 400 },
-          { id: 'hospital-1', name: '강남병원', category: 'hospital', address: '서울', lat: 37.498, lng: 127.028, distance: 250 },
-          { id: 'pharmacy-1', name: '강남약국', category: 'pharmacy', address: '서울', lat: 37.498, lng: 127.028, distance: 100 },
-          { id: 'toilet-1', name: '공공화장실', category: 'toilet', address: '서울', lat: 37.498, lng: 127.028, distance: 50 },
-        ],
-        total: 7,
-      },
-    })
-
-    const wrapper = await mountSuspended(defaultProps)
-    const html = wrapper.html()
-
-    expect(html).toContain('강남초등학교')
-    expect(html).toContain('강남어린이집')
-    expect(html).toContain('강남공원')
-    expect(html).toContain('강남체육센터')
-    expect(html).toContain('강남병원')
-    expect(html).toContain('강남약국')
-    // DISPLAY_CATEGORIES에 없는 toilet은 표시되지 않음
-    expect(html).not.toContain('공공화장실')
-  })
-
-  it('여러 카테고리 중 DISPLAY_CATEGORIES 항목만 표시되는지 확인', async () => {
-    mockUseAsyncDataWith({
-      success: true,
-      data: {
-        items: [
-          { id: 'school-1', name: '강남초등학교', category: 'school', address: '서울', lat: 37.498, lng: 127.028, distance: 200 },
-          { id: 'pharmacy-1', name: '강남약국', category: 'pharmacy', address: '서울', lat: 37.498, lng: 127.028, distance: 100 },
-        ],
-        total: 2,
-      },
-    })
-
-    const wrapper = await mountSuspended(defaultProps)
-
-    expect(wrapper.html()).toContain('강남초등학교')
-    expect(wrapper.html()).toContain('강남약국')
-  })
-
-  it('로딩 완료 후 스피너가 사라지는지 확인', async () => {
-    const wrapper = await mountSuspended(defaultProps)
-
-    expect(wrapper.find('[data-testid="loading"]').exists()).toBe(false)
+    expect(sections(wrapper)).toHaveLength(0)
   })
 })

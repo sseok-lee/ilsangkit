@@ -91,6 +91,33 @@ export const facilityHandlers = [
     });
   }),
 
+  // 주변 시설 카테고리별 개수 + 가까운 N곳 (부동산 상세 "주변 생활시설")
+  http.get(`${API_BASE}/api/facilities/nearby-grouped`, ({ request }) => {
+    const url = new URL(request.url);
+    const radius = Number(url.searchParams.get('radius') ?? 2000);
+    const limit = Number(url.searchParams.get('limit') ?? 5);
+    const categories = (url.searchParams.get('categories') ?? '').split(',').filter(Boolean);
+
+    const groups = Object.fromEntries(
+      categories.map((category) => {
+        // mock 에서는 distance 필드를 직선거리로 본다
+        const inside = mockFacilities
+          .filter((f) => f.category === category && f.distance <= radius)
+          .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name, 'ko'));
+        return [
+          category,
+          {
+            count: inside.length,
+            exact: true,
+            items: inside.slice(0, limit).map((f) => ({ id: f.id, name: f.name, category: f.category, distance: f.distance })),
+          },
+        ];
+      }),
+    );
+
+    return HttpResponse.json({ success: true, data: { radius, groups } });
+  }),
+
   // 시설 상세
   http.get(`${API_BASE}/api/facilities/:category/:id`, ({ params }) => {
     const { category, id } = params;

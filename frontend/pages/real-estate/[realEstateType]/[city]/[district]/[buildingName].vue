@@ -396,7 +396,13 @@
         heading="주변 생활시설"
         :subtext="facilitySectionSubtext"
       >
-        <NearbyFacilities v-if="hasMapCoords" :lat="buildingInfo!.lat!" :lng="buildingInfo!.lng!" />
+        <NearbyFacilities
+          v-if="hasMapCoords"
+          :lat="buildingInfo!.lat!"
+          :lng="buildingInfo!.lng!"
+          :region-href="`/${citySlugParam}/${districtSlugParam}`"
+          :region-label="districtName"
+        />
         <EmptyState
           v-else
           icon="search_off"
@@ -1101,7 +1107,7 @@ const locationEmptyDescription = computed(() =>
     : `${buildingName.value}의 좌표가 원본에 등록되지 않아 지도·로드뷰를 표시하지 못합니다. 주소로 직접 찾아보세요.`
 )
 const facilitySectionSubtext = computed(() => {
-  if (hasMapCoords.value) return '부동산 판단에 직결되는 주변 인프라를 한눈에 확인합니다.'
+  if (hasMapCoords.value) return `${buildingName.value}에서 반경 2km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.`
   if (hasReportedAddressAmbiguity.value) return '대표 위치를 고르지 않아 반경 검색을 하지 않습니다.'
   return '좌표가 없어 반경 검색을 할 수 없습니다.'
 })
