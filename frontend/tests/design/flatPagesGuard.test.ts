@@ -82,6 +82,8 @@ export const FILES = [
   'components/realEstate/TransactionTable.vue',
   'components/realEstate/ExactDealFilters.vue',
   'components/realEstate/NearbyFacilities.vue',
+  'components/common/nearby/NearbyPlaceSection.vue',
+  'components/common/nearby/NearbyPlaceRow.vue',
   'components/realEstate/DealPriceChart.vue',
 ]
 

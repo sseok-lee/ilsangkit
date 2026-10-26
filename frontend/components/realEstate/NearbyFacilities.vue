@@ -10,61 +10,24 @@
 
     <template v-else>
       <div class="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-6">
-        <section
+        <NearbyPlaceSection
           v-for="section in sections"
           :key="section.key"
           :class="section.key === 'subway' ? 'md:col-span-2' : ''"
-          :aria-labelledby="`nearby-facility-${section.key}`"
-          data-testid="nearby-facility-section"
+          :section-key="section.key"
+          :label="section.label"
+          :count-label="section.countLabel"
+          :rows="section.rows"
+          :mobile-visible="MOBILE_VISIBLE"
         >
-          <div class="flex items-baseline justify-between gap-3 pb-2 border-b border-ink">
-            <h3 :id="`nearby-facility-${section.key}`" class="text-[15px] font-bold text-strong">{{ section.label }}</h3>
-            <span class="text-xs text-muted tabular-nums" data-testid="nearby-facility-count">{{ section.countLabel }}</span>
-          </div>
-
-          <!-- 4·5번째 행도 SSR HTML 에 렌더하고 모바일에서만 CSS 로 숨긴다(크롤러가 내부 링크를 본다). -->
-          <ul :id="`nearby-facility-list-${section.key}`">
-            <li
-              v-for="(row, index) in section.rows"
-              :key="row.key"
-              class="border-b border-line"
-              :class="{ 'max-md:hidden': index >= MOBILE_VISIBLE && !expanded[section.key] }"
-            >
-              <NuxtLink v-if="row.line" :to="row.url" :class="ROW_LINK_CLASS">
-                <span class="flex flex-1 min-w-0 items-center gap-2">
-                  <span
-                    class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                    :style="{ backgroundColor: lineColor(row.line) }"
-                    data-testid="subway-line-badge"
-                  >{{ row.line }}</span>
-                  <span class="truncate text-[15px] text-ink">{{ row.name }}</span>
-                </span>
-                <span class="shrink-0 text-right tabular-nums">
-                  <span class="block md:inline text-sm font-bold text-strong">{{ row.distance }}m</span>
-                  <span class="block md:inline md:ml-1.5 text-xs text-muted">도보 약 {{ row.walk }}분</span>
-                </span>
-              </NuxtLink>
-              <HardLink v-else :to="row.url" :class="ROW_LINK_CLASS">
-                <span class="flex-1 min-w-0 truncate text-[15px] text-ink">{{ row.name }}</span>
-                <span class="shrink-0 text-right tabular-nums">
-                  <span class="block md:inline text-sm font-bold text-strong">{{ row.distance }}m</span>
-                  <span class="block md:inline md:ml-1.5 text-xs text-muted">도보 약 {{ row.walk }}분</span>
-                </span>
-              </HardLink>
-            </li>
-          </ul>
-
-          <button
-            v-if="section.rows.length > MOBILE_VISIBLE"
-            type="button"
-            class="md:hidden flex w-full items-center justify-center min-h-[44px] text-[13px] font-bold text-primary"
-            :aria-expanded="expanded[section.key] ? 'true' : 'false'"
-            :aria-controls="`nearby-facility-list-${section.key}`"
-            @click="expanded[section.key] = !expanded[section.key]"
-          >
-            {{ expanded[section.key] ? '접기' : `${section.rows.length}곳 모두 보기` }}
-          </button>
-        </section>
+          <template #badge="{ row }">
+            <span
+              class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
+              :style="{ backgroundColor: lineColor(row.badge) }"
+              data-testid="subway-line-badge"
+            >{{ row.badge }}</span>
+          </template>
+        </NearbyPlaceSection>
       </div>
 
       <div class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
@@ -83,13 +46,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import HardLink from '~/components/common/HardLink.vue'
+import { computed } from 'vue'
+import NearbyPlaceSection from '~/components/common/nearby/NearbyPlaceSection.vue'
+import type { NearbyPlaceRowData } from '~/components/common/nearby/NearbyPlaceSection.vue'
 import { emptyFiltered } from '~/utils/uiMessages'
 import { CATEGORY_META } from '~/types/facility'
 import type { FacilityCategory, NearbyGroupedResponse } from '~/types/facility'
 import { lineColor } from '~/utils/subwayLineColors'
-import { walkMinutes } from '~/utils/walkMinutes'
+import { nearbyCountLabel } from '~/utils/nearbyCountLabel'
 import { useApiBase } from '~/composables/useApiBase'
 
 const apiBase = useApiBase()
@@ -103,21 +67,12 @@ interface Station {
   type?: 'subway'
 }
 
-interface Row {
-  key: string
-  name: string
-  url: string
-  distance: number
-  walk: number
-  /** 지하철역만 — 노선 색 배지 */
-  line?: string
-}
-
 interface Section {
   key: string
   label: string
   countLabel: string
-  rows: Row[]
+  /** 지하철역 행만 badge(노선명) — 노선 색 배지 */
+  rows: NearbyPlaceRowData[]
 }
 
 interface Props {
@@ -136,12 +91,8 @@ const MAX_PER_CATEGORY = 5
 /** 모바일에서 처음 보이는 행 수. 나머지는 "모두 보기"로 편다. */
 const MOBILE_VISIBLE = 3
 const NEARBY_RADIUS_METERS = 2000
-const RADIUS_LABEL = `${NEARBY_RADIUS_METERS / 1000}km`
 /** transit API(/api/transit/nearby) 응답 상한. 여기에 닿으면 실제로는 더 있을 수 있다. */
 const TRANSIT_API_LIMIT = 10
-
-const ROW_LINK_CLASS =
-  'flex items-center justify-between gap-3 min-h-[52px] py-2 hover:bg-primary-50/40 transition-colors duration-200'
 
 const { data: transitResponse, status: transitStatus } = await useAsyncData<{ data: { stations: Station[] } }>(
   `nearby-transit-${props.lat}-${props.lng}`,
@@ -173,10 +124,8 @@ const { data: groupedResponse, status } = await useAsyncData<{ data: NearbyGroup
 
 const loading = computed(() => status.value === 'pending' || transitStatus.value === 'pending')
 
-const expanded = ref<Record<string, boolean>>({})
-
 function countLabel(count: number, exact = true): string {
-  return `${RADIUS_LABEL} 안 ${count.toLocaleString('ko-KR')}곳${exact ? '' : ' 이상'}`
+  return nearbyCountLabel(NEARBY_RADIUS_METERS, count, exact)
 }
 
 const sections = computed<Section[]>(() => {
@@ -193,8 +142,7 @@ const sections = computed<Section[]>(() => {
         name: s.name,
         url: `/subway/${s.nameSlug}`,
         distance: s.distance,
-        walk: walkMinutes(s.distance),
-        line: s.line,
+        badge: s.line,
       })),
     })
   }
@@ -212,7 +160,7 @@ const sections = computed<Section[]>(() => {
         name: f.name,
         url: `/${f.category}/${f.id}`,
         distance: f.distance,
-        walk: walkMinutes(f.distance),
+        hard: true,
       })),
     })
   }
