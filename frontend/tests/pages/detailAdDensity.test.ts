@@ -64,7 +64,7 @@ describe('지하철 상세 광고 밀도', () => {
     const heroIndex = source.indexOf('<MobileDetailHeader')
     const infoIndex = source.indexOf('heading="역정보"')
     const locationIndex = source.indexOf('heading="위치·로드뷰"')
-    const nearbyIndex = source.indexOf('<SubwayNearby')
+    const nearbyIndex = source.indexOf('<SubwayStationNearby')
     const relatedIndex = source.indexOf('heading="관련 탐색"')
 
     expect([heroIndex, infoIndex, locationIndex, nearbyIndex, relatedIndex].every((i) => i >= 0)).toBe(true)

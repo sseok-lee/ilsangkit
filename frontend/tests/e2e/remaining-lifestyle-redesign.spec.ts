@@ -460,6 +460,66 @@ test('waste source unresolved requests keep filters on first load and CSR transi
   )
 })
 
+test('지하철역 상세 주변 시설: SSR HTML 에 주변 역·시설 링크, hydrate 후 재호출 없음, 2열·360 넘침 없음', async ({
+  browser,
+  page,
+}, testInfo) => {
+  const route = '/subway/gangnam-lifestyle'
+  // JS 끔 = 크롤러가 받는 SSR HTML. 예전엔 onMounted 클라이언트 조회라 여기 링크가 없었다.
+  const ssrContext = await browser.newContext({
+    javaScriptEnabled: false,
+    serviceWorkers: 'block',
+    baseURL: testInfo.project.use.baseURL,
+  })
+  const ssrPage = await ssrContext.newPage()
+  await ssrPage.goto(route)
+  const ssrBlock = ssrPage.getByTestId('subway-nearby')
+  await expect(ssrBlock.locator('h2')).toHaveText('주변 시설')
+  await expect(ssrBlock.locator('a[href="/subway/sinnonhyeon-lifestyle"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('a[href="/subway/yeoksam-lifestyle"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('a[href="/parking/parking-lifestyle-5"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('a[href="/ev-charger/ev-lifestyle-1"]')).toHaveCount(1)
+  await expect(ssrBlock.locator('#nearby-facility-list-parking > li').nth(3)).toHaveClass(/max-md:hidden/)
+  await ssrContext.close()
+
+  const nearbyRequests: string[] = []
+  page.on('request', (req) => {
+    if (req.url().includes('nearby-grouped') || req.url().includes('/api/subway/stations/nearby')) nearbyRequests.push(req.url())
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(route)
+  await hydrated(page)
+  await page.waitForTimeout(500)
+  // SSR payload 를 그대로 쓰고 브라우저에서 다시 부르지 않는다(옛 클라이언트 조회도 없다)
+  expect(nearbyRequests).toEqual([])
+  const block = page.getByTestId('subway-nearby')
+  await block.scrollIntoViewIfNeeded()
+  await expect(page.getByText('검증강남역에서 반경 1km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.')).toBeVisible()
+  await expect(block.locator('h3')).toHaveText(['주변 지하철역', '주변 공영주차장', '주변 전기차 충전소'])
+  await expect(block.getByTestId('nearby-facility-count')).toHaveText(['1km 안 2곳', '1km 안 25곳', '1km 안 2곳'])
+  const station = block.getByRole('link', { name: /검증신논현역/ })
+  await expect(station.getByTestId('subway-line-badge')).toHaveText(['9호선', '신분당선'])
+  await expect(station).toContainText('726m')
+  await expect(block.getByRole('link', { name: /검증역삼역/ })).not.toContainText('역삼역역')
+  const [subwayBox, parkingBox] = await Promise.all(
+    ['nearby-facility-subway', 'nearby-facility-parking'].map((id) => page.locator(`#${id}`).boundingBox())
+  )
+  expect(Math.abs(subwayBox!.y - parkingBox!.y)).toBeLessThan(2) // 2열
+  const region = block.getByTestId('nearby-facilities-region-link')
+  await expect(region).toHaveAttribute('href', '/seoul/gangnam')
+  await expect(region).toHaveText('강남구 생활시설 전체 보기 →')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(route)
+  await hydrated(page)
+  await block.scrollIntoViewIfNeeded()
+  await expect(block.getByRole('link', { name: /검증주차장4/ })).toBeHidden()
+  await noOverflow(page, `${route}@360`)
+  await page.screenshot({ path: resolve(evidence, 'subway-nearby-360.png'), fullPage: true })
+  await block.getByRole('button', { name: '5곳 모두 보기' }).click()
+  await expect(block.getByRole('link', { name: /검증주차장4/ })).toBeVisible()
+})
+
 test('six lifestyle views fit four widths without hydration errors', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))

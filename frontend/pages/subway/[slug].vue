@@ -163,14 +163,14 @@
 
               <AffiliateBanner />
 
-              <!-- 주변 시설 (다른 지하철역 + 주차장·EV충전·화장실·시장) -->
-              <SubwayNearby
+              <!-- 주변 시설 (주변 역 + 주차장·EV충전·화장실·시장) — SSR 에 링크 포함 -->
+              <SubwayStationNearby
                 section-variant="flat"
-                :nearby-facilities="nearbyStations"
-                :nearby-loading="nearbyLoading"
-                :cross-facilities-grouped="crossFacilitiesGrouped"
-                :cross-loading="crossLoading"
-                :category-meta="categoryMetaForNearby"
+                :groups="nearbyGroupList"
+                :loading="nearbyPending"
+                :station-name="displayName"
+                :region-href="nearbyRegionLink?.href"
+                :region-label="nearbyRegionLink?.label"
               />
 
               <!-- Ad 2: 주변시설 뒤 -->
@@ -269,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import { UI_MESSAGES } from '~/utils/uiMessages'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
@@ -280,7 +280,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import AdBanner from '~/components/ads/AdBanner.vue'
 import DataSourceSection from '~/components/common/DataSourceSection.vue'
 import FacilityRoadview from '~/components/facility/FacilityRoadview.vue'
-import SubwayNearby from '~/components/subway/SubwayNearby.vue'
+import SubwayStationNearby from '~/components/subway/SubwayStationNearby.vue'
 import MobileDetailHeader from '~/components/common/MobileDetailHeader.vue'
 import { lineColor, lineLabel, dedupeLines } from '~/utils/subwayLineColors'
 import { useSubwayStation } from '~/composables/useSubwayStation'
@@ -293,6 +293,8 @@ import { buildOgMapImageUrl, staticOgImageUrl } from '~/utils/ogImageUrl'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { CATEGORY_META } from '~/types/facility'
 import type { Facility, FacilityCategory } from '~/types/facility'
+import type { SubwayNearbyGroup, SubwayNearbyGroupedResponse } from '~/types/subway'
+import { CITY_NAME_TO_SLUG, generateSlug } from '~/composables/useRegions'
 import { CATEGORY_FAQ } from '~/utils/categoryFAQ'
 import { useStructuredData } from '~/composables/useStructuredData'
 
@@ -387,123 +389,37 @@ const regionLink = computed(() => {
 
 const faqItems = computed(() => CATEGORY_FAQ.subway ?? [])
 
-const categoryMetaForNearby = computed(() => ({
-  label: CATEGORY_META.subway.label,
-  icon: CATEGORY_META.subway.icon,
-}))
-
-// 주변 시설 데이터
-const CROSS_CATEGORIES = ['parking', 'ev-charger', 'toilet', 'market'] as const
-const NEARBY_RADIUS = 1000
-
-const nearbyStations = ref<Facility[]>([])
-const nearbyLoading = ref(false)
-const crossFacilitiesGrouped = ref<Array<{ category: FacilityCategory; meta: { label: string; icon?: string }; items: Facility[] }>>([])
-const crossLoading = ref(false)
+// 주변 시설 — 주변 역 + 관련 카테고리별 개수·가까운 5곳(반경 1km)을 1회 호출로 받는다.
+// 시설 상세 [id].vue 와 같은 패턴: lazy 지만 SSR 에서는 resolve 돼 주변 역·시설 링크가
+// SSR HTML 에 들어가고(예전엔 onMounted 클라이언트 조회라 크롤러가 못 봤다), hydrate 때
+// payload 를 재사용해 다시 부르지 않는다. 실패해도 본문은 렌더되고 블록만 빠진다(fail-open).
 const apiBase = useApiBase()
-
-async function fetchNearbyStations() {
-  if (!station.value) return
-  nearbyLoading.value = true
-  try {
-    // 같은 역의 노선별 row가 분리되어 올 수 있으므로 충분히 가져온 뒤 역명 기준 그룹핑한다.
-    const res = await $fetch<{ success: boolean; data: { items: Array<{ id: string; name: string; nameSlug: string; line: string; lat?: number; lng?: number; distance: number }> } }>(
-      `${apiBase}/api/subway/stations/nearby`,
-      {
-        query: {
-          lat: station.value.lat,
-          lng: station.value.lng,
-          radius: NEARBY_RADIUS,
-          limit: 30,
-        },
-      },
+const { data: nearbyGroups, status: nearbyStatus } = await useAsyncData(
+  `subway-nearby-grouped-${slug.value}`,
+  () =>
+    $fetch<{ success: boolean; data: SubwayNearbyGroupedResponse }>(
+      `${apiBase}/api/subway/stations/${slug.value}/nearby-grouped`,
     )
-    if (!res.success || !res.data) return
+      .then((res) => res?.data?.groups ?? [])
+      .catch(() => [] as SubwayNearbyGroup[]),
+  { lazy: true, default: () => [] as SubwayNearbyGroup[] },
+)
 
-    // 역명 끝의 "역" 접미사가 CSV에 일관되지 않게 들어있어 정규화 후 비교/그룹핑
-    const normalize = (n: string) => n.replace(/역$/, '').trim()
-    const currentName = normalize(station.value.name)
-    const groups = new Map<string, { primary: typeof res.data.items[number]; lines: Set<string> }>()
-    for (const item of res.data.items) {
-      const key = normalize(item.name)
-      if (key === currentName) continue // 본인 제외
-      const existing = groups.get(key)
-      if (!existing) {
-        groups.set(key, { primary: item, lines: new Set([item.line]) })
-      } else {
-        existing.lines.add(item.line)
-        if (item.distance < existing.primary.distance) existing.primary = item
-      }
-    }
+const nearbyPending = computed(() => nearbyStatus.value === 'pending')
+const nearbyGroupList = computed<SubwayNearbyGroup[]>(() =>
+  Array.isArray(nearbyGroups.value) ? nearbyGroups.value : [],
+)
 
-    nearbyStations.value = Array.from(groups.values())
-      .sort((a, b) => a.primary.distance - b.primary.distance)
-      .slice(0, 6)
-      .map<Facility>((g) => ({
-        id: g.primary.nameSlug,
-        name: withStationSuffix(g.primary.name),
-        category: 'subway',
-        address: null,
-        roadAddress: null,
-        lat: g.primary.lat ?? 0,
-        lng: g.primary.lng ?? 0,
-        city: '',
-        district: '',
-        distance: g.primary.distance,
-        extras: { lines: Array.from(g.lines).sort() },
-      }))
-  } catch {
-    nearbyStations.value = []
-  } finally {
-    nearbyLoading.value = false
-  }
-}
-
-async function fetchCrossFacilities() {
-  if (!station.value) return
-  crossLoading.value = true
-  try {
-    const results = await Promise.all(
-      CROSS_CATEGORIES.map(async (cat) => {
-        try {
-          const res = await $fetch<{ success: boolean; data: { items: Facility[] } }>(
-            `${apiBase}/api/facilities/search`,
-            {
-              method: 'POST',
-              body: {
-                category: cat,
-                lat: station.value!.lat,
-                lng: station.value!.lng,
-                radius: NEARBY_RADIUS,
-                page: 1,
-                limit: 6,
-              },
-            },
-          )
-          return res.success && res.data ? { cat, items: res.data.items } : { cat, items: [] }
-        } catch {
-          return { cat, items: [] as Facility[] }
-        }
-      }),
-    )
-    crossFacilitiesGrouped.value = results
-      .filter((r) => r.items.length > 0)
-      .map((r) => ({
-        category: r.cat,
-        meta: {
-          label: CATEGORY_META[r.cat]?.label ?? r.cat,
-          icon: CATEGORY_META[r.cat]?.icon,
-        },
-        items: r.items,
-      }))
-  } finally {
-    crossLoading.value = false
-  }
-}
-
-onMounted(() => {
-  void fetchNearbyStations()
-  void fetchCrossFacilities()
+// 하단 "{구·군} 생활시설 전체 보기 →" — 구·군 지역 허브. 구·군 slug 를 못 만들면 생략한다.
+const nearbyRegionLink = computed(() => {
+  const city = station.value?.city
+  const district = station.value?.district
+  if (!city || !district) return null
+  const shortCity = city.replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '')
+  const citySlug = CITY_NAME_TO_SLUG[city] || CITY_NAME_TO_SLUG[shortCity]
+  const districtSlug = generateSlug(district)
+  if (!citySlug || !districtSlug) return null
+  return { href: `/${citySlug}/${districtSlug}`, label: district }
 })
 
 // 길찾기 URL
