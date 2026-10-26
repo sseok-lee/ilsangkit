@@ -4,7 +4,7 @@ import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
 import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/realEstateSummaryStore.js';
 import { parseSearchQueryCached, resolveScope } from './search/searchQueryParser.js';
 import { buildRegionFilter } from './cityMapping.js';
-import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
+import { getLatestDeals, LATEST_DEAL_INDEX, latestDealsKey } from './realEstateLatestDeals.js';
 import { attachRealEstateCanonicalPaths, getDeferredRealEstateIdentity } from './realEstateUrlRegistry.js';
 import {
   attachNearbyAreaDeals,
@@ -1304,6 +1304,105 @@ async function fetchNearbyFromSummary(
   })), type);
 }
 
+// ── 인근 단지 전세/월세 필터(rent + jeonse|wolse) ─────────────────────
+// 옛 구현은 법정동(+동)의 전 기간 해당 rentType 거래를 전부
+//   ROW_NUMBER() OVER (PARTITION BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
+//                      ORDER BY dealYear DESC, dealMonth DESC, COALESCE(dealDay, 0) DESC, id DESC)
+// 로 정렬한 뒤 파티션별 COUNT 와 rn = 1 행을 붙여 ORDER BY 최신 연·월 DESC, 건수 DESC LIMIT n 했다
+// (운영 송도동 전세 1.56s — 시간 대부분이 동 전체 거래의 창 정렬).
+// 지금은
+//   1) 같은 WHERE 로 파티션별 GROUP BY 집계만(COUNT, 최신 연·월) — 정렬 없는 임시 테이블 집계 — 해서 상위 n 개 파티션만 고르고
+//   2) 고른 파티션마다 LATERAL (… ORDER BY 최신순 LIMIT 1) 로 최신 행을 읽는다(왕복 1회). 실행계획은 [buildingName, bjdCode,
+//      dealYear, dealMonth, dealDay] 인덱스로 그 단지 거래만 lookup 한 뒤 filesort 우선순위 큐로 1건을 고른다(역방향 1행
+//      스캔은 아님 — 로컬 상계동 대단지 약 1천 행에 단지당 약 2ms). 동 전체를 창 정렬하던 옛 비용에 비하면 작다.
+//
+// 결과가 옛 구현과 같은 근거:
+// a) 파티션: GROUP BY 식이 옛 PARTITION BY 식과 같고 같은 컬럼 콜레이션으로 묶는다. LATERAL 의 등호 네 개도 같은 콜레이션
+//    비교라 정확히 그 파티션의 행만(옛 WHERE 그대로 함께 걸어) 읽는다.
+// b) 최신 행: 옛 rn = 1 은 (연, 월, COALESCE(일, 0), id) 최대 행이다. LATERAL 도 같은 식 `COALESCE(dealDay, 0) DESC` 로
+//    정렬해 일자 데이터(NULL·0·음수)와 무관하게 같은 순서다. id 는 PK 라 전순서가 되어 고르는 행이 하나로 같다.
+// c) 최신 연·월: rn = 1 행의 (연, 월) = 파티션의 (연, 월) 사전순 최대 = MAX(dealYear * 100 + dealMonth)(월 1~12).
+// d) 표시 값: 옛 counts CTE 는 창 정렬 순서로 물질화된 ranked 를 임시 테이블로 집계해, 파티션에서 처음 만난 행 = rn = 1
+//    행의 값을 GROUP BY 키(buildingName·TRIM(dongName)·COALESCE(TRIM(jibun), ''))와 ANY_VALUE(city·district·buildYear)로
+//    냈다. 그래서 이 값들도 전부 LATERAL 로 읽은 최신 행에서 꺼낸다(파티션 안에서 값이 갈리는 단지도 옛 값과 같다).
+// e) 순서·LIMIT 경계: 정렬 키는 옛과 같은 (최신 연·월 DESC, 건수 DESC) 뿐이다. 그 이상 동률인 단지끼리의 순서와 LIMIT 경계에서
+//    어느 단지가 남는지는 옛 쿼리도 SQL 로 정해져 있지 않았다(실제로는 filesort 우선순위 큐가 입력 순서에 따라 정함 — 파티션
+//    식 순서도 아니다). 그래서 동률 묶음 안 순서·경계 선택은 옛과 다를 수 있고, 그 밖의 결과(어느 (연, 월, 건수) 묶음에 어떤
+//    단지가 몇 개, 각 단지의 값)는 같다. 동률 순서를 결정적으로 고정할지는 별도 결정(현재 동작을 바꾸므로 여기서 추가하지 않음).
+//
+// 인덱스 힌트는 LATEST_DEAL_INDEX(#949)와 같은 이름을 쓴다. 이름이 없는 환경에서는 경고만 나고 무시되어 결과는 같다.
+export function nearbyRentFilteredSql(
+  key: NearbyPropertyKey,
+  bjdCode: string,
+  rentType: Exclude<NearbyRentType, 'all'>,
+  opts: { dongName: string | null; excludeBuildingName: string | null; limitPerType: number },
+): Prisma.Sql {
+  const tableName = RENT_TRANSACTION_TABLE[key];
+  const table = Prisma.raw(`\`${tableName}\``);
+  const hint = Prisma.raw(`/*+ INDEX(lt ${LATEST_DEAL_INDEX[tableName as keyof typeof LATEST_DEAL_INDEX]}) */`);
+  // 옛 SQL 과 같이 rentType 은 리터럴로 둔다(값은 고정 두 가지).
+  const rentTypeValue = Prisma.raw(rentType === 'jeonse' ? "'전세'" : "'월세'");
+  // 옛 WHERE 와 같은 조건. 별칭만 바꿔 1단계(t)·2단계(lt)에 똑같이 건다.
+  const where = (alias: 't' | 'lt'): Prisma.Sql => {
+    const a = Prisma.raw(alias);
+    const dongFilter = opts.dongName
+      ? Prisma.sql`AND TRIM(${a}.dongName) = ${opts.dongName.trim()}`
+      : Prisma.empty;
+    const excludeFilter = opts.excludeBuildingName
+      ? Prisma.sql`AND ${a}.buildingName != ${opts.excludeBuildingName}`
+      : Prisma.empty;
+    return Prisma.sql`${a}.bjdCode = ${bjdCode}
+          AND ${a}.rentType = ${rentTypeValue}
+          ${dongFilter}
+          ${excludeFilter}`;
+  };
+
+  return Prisma.sql`
+      WITH grouped AS (
+        SELECT
+          t.buildingName,
+          t.bjdCode,
+          TRIM(t.dongName) AS dongKey,
+          COALESCE(TRIM(t.jibun), '') AS jibunKey,
+          COUNT(*) AS transactionCount,
+          MAX(t.dealYear * 100 + t.dealMonth) AS latestYm
+        FROM ${table} t
+        WHERE ${where('t')}
+        GROUP BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), '')
+        ORDER BY latestYm DESC, transactionCount DESC
+        LIMIT ${opts.limitPerType}
+      )
+      SELECT
+        latest.buildingName,
+        latest.bjdCode,
+        latest.city,
+        latest.district,
+        TRIM(latest.dongName) AS dongName,
+        COALESCE(TRIM(latest.jibun), '') AS jibun,
+        latest.buildYear,
+        g.transactionCount,
+        latest.deposit AS latestPrice,
+        latest.monthlyRent,
+        latest.dealYear AS latestDealYear,
+        latest.dealMonth AS latestDealMonth
+      FROM grouped g
+      INNER JOIN LATERAL (
+        SELECT ${hint}
+          lt.buildingName, lt.bjdCode, lt.city, lt.district, lt.dongName, lt.jibun, lt.buildYear,
+          lt.deposit, lt.monthlyRent, lt.dealYear, lt.dealMonth
+        FROM ${table} lt
+        WHERE lt.buildingName = g.buildingName
+          AND lt.bjdCode = g.bjdCode
+          AND TRIM(lt.dongName) = g.dongKey
+          AND COALESCE(TRIM(lt.jibun), '') = g.jibunKey
+          AND ${where('lt')}
+        ORDER BY lt.dealYear DESC, lt.dealMonth DESC, COALESCE(lt.dealDay, 0) DESC, lt.id DESC
+        LIMIT 1
+      ) latest ON TRUE
+      ORDER BY g.latestYm DESC, g.transactionCount DESC
+    `;
+}
+
 export async function getNearbyByBjd(
   bjdCode: string,
   mode: NearbyMode,
@@ -1413,25 +1512,10 @@ export async function getNearbyByBjd(
   }
 
   // Rent + 전세/월세 필터: summary 가 rentType 을 구분하지 않으므로 transaction 테이블 raw SQL.
-  // ROW_NUMBER() 윈도우 함수로 단지별 실제 최신 행을 추출하여 정확한 거래일/가격 반환.
   // `?mode=jeonse|wolse` URL 을 SSR 할 때도 타므로 크롤러 노출이 있다(2026-10-17 OCI 부하 시험 DB CPU 1위).
-  // [bjdCode, rentType, dongName] 인덱스로 rentType 까지 좁히고 TRIM(dongName) 은 인덱스 조건 푸시다운으로 거른다.
-  // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다.
+  // sale 과 마찬가지로 3종은 독립이라 병렬로 던진다. SQL 과 옛 구현과의 동등성 근거는 nearbyRentFilteredSql 주석.
   const rentEntries = await Promise.all(NEARBY_PROPERTY_KEYS.map(async (key) => {
-    const tableName = RENT_TRANSACTION_TABLE[key];
-    const dongFilter = dongName
-      ? Prisma.sql`AND TRIM(t.dongName) = ${dongName.trim()}`
-      : Prisma.empty;
-    const excludeFilter = excludeBuildingName
-      ? Prisma.sql`AND t.buildingName != ${excludeBuildingName}`
-      : Prisma.empty;
-    const rentTypeFilter = rentType === 'jeonse'
-      ? Prisma.sql`AND t.rentType = '전세'`
-      : rentType === 'wolse'
-        ? Prisma.sql`AND t.rentType = '월세'`
-        : Prisma.empty;
-
-    // Prisma raw query에서 ANY_VALUE/COUNT/INT 컬럼은 BigInt로 직렬화될 수 있어
+    // Prisma raw query에서 COUNT/INT 컬럼은 BigInt로 직렬화될 수 있어
     // 모든 숫자 컬럼을 bigint | number 로 받고 Number()로 명시적 변환한다.
     const rows = await prisma.$queryRaw<Array<{
       buildingName: string;
@@ -1446,68 +1530,7 @@ export async function getNearbyByBjd(
       monthlyRent: bigint | number | null;
       latestDealYear: bigint | number | null;
       latestDealMonth: bigint | number | null;
-    }>>`
-      WITH ranked AS (
-        SELECT
-          t.id,
-          t.buildingName,
-          t.bjdCode,
-          t.city,
-          t.district,
-          t.dongName,
-          t.jibun,
-          t.buildYear,
-          t.deposit,
-          t.monthlyRent,
-          t.dealYear,
-          t.dealMonth,
-          t.dealDay,
-          ROW_NUMBER() OVER (
-            PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), '')
-            ORDER BY t.dealYear DESC, t.dealMonth DESC, COALESCE(t.dealDay, 0) DESC, t.id DESC
-          ) AS rn
-        FROM \`${Prisma.raw(tableName)}\` t
-        WHERE t.bjdCode = ${bjdCode}
-          ${rentTypeFilter}
-          ${dongFilter}
-          ${excludeFilter}
-      ),
-      counts AS (
-        SELECT
-          buildingName,
-          bjdCode,
-          TRIM(dongName) AS dongName,
-          COALESCE(TRIM(jibun), '') AS jibun,
-          COUNT(*) AS transactionCount,
-          ANY_VALUE(city) AS city,
-          ANY_VALUE(district) AS district,
-          ANY_VALUE(buildYear) AS buildYear
-        FROM ranked
-        GROUP BY buildingName, bjdCode, TRIM(dongName), COALESCE(TRIM(jibun), '')
-      )
-      SELECT
-        c.buildingName,
-        c.bjdCode,
-        c.city,
-        c.district,
-        c.dongName,
-        c.jibun,
-        c.buildYear,
-        c.transactionCount,
-        r.deposit AS latestPrice,
-        r.monthlyRent,
-        r.dealYear AS latestDealYear,
-        r.dealMonth AS latestDealMonth
-      FROM counts c
-      INNER JOIN ranked r
-        ON r.buildingName = c.buildingName
-        AND r.bjdCode = c.bjdCode
-        AND TRIM(r.dongName) = c.dongName
-        AND COALESCE(TRIM(r.jibun), '') = c.jibun
-        AND r.rn = 1
-      ORDER BY r.dealYear DESC, r.dealMonth DESC, c.transactionCount DESC
-      LIMIT ${limitPerType}
-    `;
+    }>>(nearbyRentFilteredSql(key, bjdCode, rentType, { dongName, excludeBuildingName, limitPerType }));
 
     return [key, await withAreaDeals(key, rows.map((r) => ({
       buildingName: r.buildingName,

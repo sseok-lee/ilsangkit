@@ -142,7 +142,7 @@ function install(fx: Fixture) {
       const table = Object.keys(fx.deals ?? {}).find((name) => text.includes(name));
       return table ? fx.deals?.[table] ?? [] : [];
     }
-    if (text.includes('ROW_NUMBER')) return fx.rawRent ?? [];
+    if (text.includes('JOIN LATERAL')) return fx.rawRent ?? [];
     return [];
   });
 }
