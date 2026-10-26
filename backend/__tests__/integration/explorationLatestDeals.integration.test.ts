@@ -3,8 +3,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../src/lib/prisma.js';
 import {
   getLatestDeals,
+  LATEST_DEAL_INDEX,
   latestDealsKey,
 } from '../../src/services/realEstateLatestDeals.js';
+import { kstCalendarToday } from '../../src/lib/kstDate.js';
+import { overviewDateThrough, saleNotCanceled } from '../../src/lib/realEstateDealSql.js';
 import type { BuildingKey, PropertyType } from '../../src/types/realEstateExploration.js';
 
 const PREFIX = `t1-${Date.now().toString(36)}-`;
@@ -115,6 +118,189 @@ describe('exploration latest deals live MySQL integration', () => {
     expect(rentOnly.get(latestDealsKey(key))?.wolse?.monthlyRent).toBe(120);
   });
 });
+
+
+describe('exploration latest deals edge cases match the previous ROW_NUMBER() ranking', () => {
+  beforeAll(async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(FIXED_NOW);
+    await cleanupFixtures();
+    await seedEdgeFixtures();
+  });
+
+  afterAll(async () => {
+    try {
+      await cleanupFixtures();
+    } finally {
+      vi.useRealTimers();
+      await prisma.$disconnect();
+    }
+  });
+
+  it('hints only indexes that exist in the pushed schema', async () => {
+    for (const [table, indexName] of Object.entries(LATEST_DEAL_INDEX)) {
+      const rows = await prisma.$queryRaw<Array<{ columns: string }>>`
+        SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns
+        FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND INDEX_NAME = ${indexName}
+      `;
+      expect(rows[0]?.columns, `${table}.${indexName}`).toBe('buildingName,bjdCode,dealYear,dealMonth,dealDay');
+    }
+  });
+
+  it.each(EDGE_CASES.map((edge) => [edge.name, edge] as const))('%s', async (_name, edge) => {
+    const key = edgeKey(edge.name, edge.keyJibun);
+    const result = (await getLatestDeals([key], 'all')).get(latestDealsKey(key));
+
+    // 옛 구현의 창 함수 SQL 을 그대로 돌린 기준값과 같아야 한다.
+    expect(snapshotOf(result)).toEqual(await previousRankingSnapshot(key));
+    // 그리고 시나리오가 뜻하는 값(고정 기대값)이어야 한다.
+    expect(snapshotOf(result)).toEqual(edge.expected);
+  });
+});
+
+type EdgeSnapshot = {
+  sale: number | null;
+  jeonse: number | null;
+  wolse: number | null;
+};
+
+type EdgeCase = {
+  name: string;
+  keyJibun: string | null;
+  sale: Array<{ day: number | null; month?: number; floor: number; canceled?: boolean; jibun?: string | null }>;
+  rent: Array<{ rentType: string; day: number | null; month?: number; floor: number; monthlyRent?: number | null; jibun?: string | null }>;
+  // 각 칸은 고른 거래의 floor(시나리오 안에서 거래마다 다르게 둔 식별값)
+  expected: EdgeSnapshot;
+};
+
+const EDGE_CASES: EdgeCase[] = [
+  {
+    // 같은 달 일자 NULL 거래보다 일자 있는 거래가 먼저, 일자 NULL 만 있는 최신 달은 그 거래가 최신
+    name: 'deal day NULL sorts after known days in the same month',
+    keyJibun: '1',
+    sale: [{ day: null, floor: 1 }, { day: 5, floor: 2 }, { day: 30, month: 8, floor: 3 }],
+    rent: [{ rentType: '전세', day: null, floor: 4 }, { rentType: '전세', day: 30, month: 8, floor: 5 }],
+    expected: { sale: 2, jeonse: 4, wolse: null },
+  },
+  {
+    name: 'same-day deals resolve to the highest id',
+    keyJibun: '1',
+    sale: [{ day: 10, floor: 1 }, { day: 10, floor: 2 }, { day: 10, floor: 3 }],
+    rent: [{ rentType: '월세', day: 10, floor: 4, monthlyRent: 50 }, { rentType: '월세', day: 10, floor: 5, monthlyRent: 60 }],
+    expected: { sale: 3, jeonse: null, wolse: 5 },
+  },
+  {
+    name: 'canceled latest sale falls back to the previous valid sale',
+    keyJibun: '1',
+    sale: [{ day: 15, floor: 9, canceled: true }, { day: 1, floor: 1 }],
+    rent: [],
+    expected: { sale: 1, jeonse: null, wolse: null },
+  },
+  {
+    // utf8mb4_unicode_ci 는 끝 공백을 무시해 '전세 ' 가 '전세' 파티션의 최신이 되지만,
+    // 응답 매핑은 정확히 '전세' 만 받으므로 전세 칸은 비어 있다(옛 동작 그대로).
+    name: 'trailing-space rent type wins its partition but is not mapped',
+    keyJibun: '1',
+    sale: [],
+    rent: [{ rentType: '전세 ', day: 18, floor: 1 }, { rentType: '전세', day: 1, floor: 2 }],
+    expected: { sale: null, jeonse: null, wolse: null },
+  },
+  {
+    name: 'NULL and empty jibun share one address',
+    keyJibun: null,
+    sale: [{ day: 3, floor: 1, jibun: null }, { day: 9, floor: 2, jibun: '' }],
+    rent: [{ rentType: '전세', day: 9, floor: 3, jibun: null }, { rentType: '전세', day: 3, floor: 4, jibun: '' }],
+    expected: { sale: 2, jeonse: 3, wolse: null },
+  },
+  {
+    name: 'building without wolse keeps wolse empty',
+    keyJibun: '1',
+    sale: [],
+    rent: [{ rentType: '전세', day: 2, floor: 1 }, { rentType: '월세', day: 3, floor: 2, monthlyRent: null }],
+    expected: { sale: null, jeonse: 1, wolse: null },
+  },
+];
+
+function edgeKey(name: string, jibun: string | null): BuildingKey {
+  return {
+    propertyType: 'apt',
+    buildingName: `${PREFIX}edge-${EDGE_CASES.findIndex((edge) => edge.name === name)}`,
+    bjdCode: BJD,
+    dongName: '역삼동',
+    jibun,
+  };
+}
+
+async function seedEdgeFixtures(): Promise<void> {
+  for (const [index, edge] of EDGE_CASES.entries()) {
+    const key = edgeKey(edge.name, edge.keyJibun);
+    // 같은 날 동률은 id 로 갈리므로 순서대로 하나씩 넣는다.
+    for (const [rowIndex, row] of edge.sale.entries()) {
+      await prisma.aptSaleTransaction.create({
+        data: {
+          ...saleData('apt', `edge-${index}-sale-${rowIndex}`, key.buildingName, key.bjdCode,
+            2026, row.month ?? 9, row.day, 100000n + BigInt(row.floor), row.floor, null),
+          jibun: row.jibun === undefined ? key.jibun : row.jibun,
+          ...(row.canceled ? { cancelDealType: '해제' } : {}),
+        },
+      } as never);
+    }
+    for (const [rowIndex, row] of edge.rent.entries()) {
+      await prisma.aptRentTransaction.create({
+        data: {
+          ...rentData('apt', `edge-${index}-rent-${rowIndex}`, key.buildingName, key.bjdCode,
+            '전세', 2026, row.month ?? 9, row.day, 10000n + BigInt(row.floor), row.monthlyRent ?? null, row.floor, null),
+          rentType: row.rentType,
+          jibun: row.jibun === undefined ? key.jibun : row.jibun,
+        },
+      } as never);
+    }
+  }
+}
+
+function snapshotOf(bundle: { sale: { floor: number | null } | null; jeonse: { floor: number | null } | null; wolse: { floor: number | null } | null } | undefined): EdgeSnapshot {
+  return {
+    sale: bundle?.sale?.floor ?? null,
+    jeonse: bundle?.jeonse?.floor ?? null,
+    wolse: bundle?.wolse?.floor ?? null,
+  };
+}
+
+// 성능 개선 전 realEstateLatestDeals.ts 의 창 함수 SQL(주소형 키 조건) — 결과 동등성의 기준값.
+async function previousRankingSnapshot(key: BuildingKey): Promise<EdgeSnapshot> {
+  const today = kstCalendarToday().toISOString().slice(0, 10);
+  const where = Prisma.sql`(t.bjdCode = ${key.bjdCode} AND t.buildingName = ${key.buildingName}
+    AND TRIM(t.dongName) = ${key.dongName?.trim() ?? ''} AND COALESCE(TRIM(t.jibun), '') = ${key.jibun?.trim() ?? ''})`;
+  const sale = await prisma.$queryRaw<Array<{ floor: number }>>`
+    SELECT floor FROM (
+      SELECT t.floor, ROW_NUMBER() OVER (
+        PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), '')
+        ORDER BY t.dealYear DESC, t.dealMonth DESC, t.dealDay IS NULL ASC, t.dealDay DESC, t.id DESC
+      ) AS rn
+      FROM AptSaleTransaction t
+      WHERE ${where} AND ${saleNotCanceled('t')} AND t.dealAmount IS NOT NULL AND ${overviewDateThrough(today, 't')}
+    ) ranked WHERE rn = 1
+  `;
+  const rent = await prisma.$queryRaw<Array<{ floor: number; rentType: string }>>`
+    SELECT floor, rentType FROM (
+      SELECT t.floor, t.rentType, ROW_NUMBER() OVER (
+        PARTITION BY t.buildingName, t.bjdCode, TRIM(t.dongName), COALESCE(TRIM(t.jibun), ''), t.rentType
+        ORDER BY t.dealYear DESC, t.dealMonth DESC, t.dealDay IS NULL ASC, t.dealDay DESC, t.id DESC
+      ) AS rn
+      FROM AptRentTransaction t
+      WHERE ${where}
+        AND ((t.rentType = '전세' AND t.deposit IS NOT NULL)
+          OR (t.rentType = '월세' AND t.deposit IS NOT NULL AND t.monthlyRent IS NOT NULL))
+        AND ${overviewDateThrough(today, 't')}
+    ) ranked WHERE rn = 1
+  `;
+  return {
+    sale: sale[0]?.floor ?? null,
+    jeonse: rent.find((row) => row.rentType === '전세')?.floor ?? null,
+    wolse: rent.find((row) => row.rentType === '월세')?.floor ?? null,
+  };
+}
 
 async function seedFixtures(): Promise<void> {
   for (const propertyType of properties) {

@@ -18,6 +18,7 @@ const tables = {
 } as const;
 
 type SourceTableKind = 'sale' | 'rent';
+type TransactionTable = (typeof tables)[PropertyType][SourceTableKind];
 type RawLatestDealRow = {
   buildingName: string;
   bjdCode: string;
@@ -132,7 +133,7 @@ const LATEST_DEAL_ORDER = Prisma.sql`ORDER BY t.dealYear DESC, t.dealMonth DESC,
 // 단지 거래를 전부 읽는다(로컬 헬리오시티 매매 991행·7~70ms → 힌트 시 역방향 1행·1ms).
 // 옵티마이저 힌트는 FORCE INDEX 와 달리 이름이 없으면 경고만 내고 무시되므로, 환경마다 인덱스
 // 이름이 달라도 쿼리가 깨지지 않고 결과도 같다(속도만 힌트 이전으로 돌아간다).
-const LATEST_DEAL_INDEX: Record<string, string> = {
+export const LATEST_DEAL_INDEX: Record<TransactionTable, string> = {
   AptSaleTransaction: 'AptSaleTransaction_buildingName_bjdCode_dealYear_dealMonth_d_idx',
   AptRentTransaction: 'AptRentTransaction_buildingName_bjdCode_dealYear_dealMonth_d_idx',
   VillaSaleTransaction: 'VillaSaleTransaction_buildingName_bjdCode_dealYear_dealMonth_idx',
@@ -141,7 +142,7 @@ const LATEST_DEAL_INDEX: Record<string, string> = {
   OffitelRentTransaction: 'OffitelRentTransaction_buildingName_bjdCode_dealYear_dealMon_idx',
 };
 
-function latestDealIndexHint(table: string): Prisma.Sql {
+function latestDealIndexHint(table: TransactionTable): Prisma.Sql {
   return Prisma.raw(`/*+ INDEX(t ${LATEST_DEAL_INDEX[table]}) */`);
 }
 
