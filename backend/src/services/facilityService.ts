@@ -33,7 +33,7 @@ export { evChargerStationSearch, getEvChargerStationDetail } from './evChargerSe
 import type { FacilityCategory } from './categoryRegistry.js';
 import { CATEGORY_REGISTRY, ALL_CATEGORIES } from './categoryRegistry.js';
 import { CITY_SLUG_TO_FULL, CITY_SLUG_TO_SHORT, buildRegionFilter, cityVariantList, resolveCitySlug } from './cityMapping.js';
-import { buildWifiGroupId, isWifiGroupId } from './wifiGroup.js';
+import { isWifiGroupId } from './wifiGroup.js';
 import { FULLTEXT_TABLES, canUseFulltext, fulltextIds, fulltextCount, toBooleanPhrase } from './search/fulltextKeyword.js';
 import { bufferViewCount } from './viewCountService.js';
 import { evChargerStationSearch } from './evChargerService.js';
@@ -236,13 +236,18 @@ async function nearestInCategory(params: {
   /** 2단계 select — id·name 은 반드시 포함 */
   select: Record<string, boolean>;
   excludeId?: string;
+  /**
+   * 목록에서만 뺄 이름+좌표 키(자기와 같은 원본 중복 등록). count 는 nearbyGrouped 와 같이
+   * dedupe 전 수라 그대로 센다.
+   */
+  excludeKey?: string;
 }): Promise<{
   count: number;
   exact: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   picked: Array<{ record: any; meters: number }>;
 }> {
-  const { cat, lat, lng, radius, limit, select, excludeId } = params;
+  const { cat, lat, lng, radius, limit, select, excludeId, excludeKey } = params;
   const model = CATEGORY_REGISTRY[cat].model();
 
   // 1단계: id·lat·lng 만 읽는다. name 을 같이 select 하면 @@index([lat, lng]) 커버링을
@@ -271,7 +276,7 @@ async function nearestInCategory(params: {
 
   // 2단계: 가까운 후보 limit*3 개씩 id 로 레코드를 붙인다. 같은 이름+같은 좌표 중복을
   // 접고 나서 모자라면 다음 묶음을 이어서 가져온다(후보 소진까지).
-  const seen = new Set<string>();
+  const seen = new Set<string>(excludeKey ? [excludeKey] : []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const picked: Array<{ record: any; meters: number }> = [];
   let cursor = 0;
@@ -753,31 +758,55 @@ export interface FacilityNearbyGroup {
   items: FacilityItem[];
 }
 
-/** 상세 시설의 좌표 + 목록에서 뺄 자기 id. 시설이 없으면 null. */
+function toCoord(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 상세 시설의 좌표 + 목록에서 뺄 자기 id·자기 이름+좌표 키. 시설이 없으면 null.
+ * 좌표만 가볍게 읽는다 — getDetail 은 행 전체·include 를 읽고 조회수를 올린다.
+ */
 async function facilityNearbyAnchor(
   category: FacilityCategory,
   id: string,
-): Promise<{ lat: number | null; lng: number | null; excludeId: string } | null> {
-  // 충전소(statId)·와이파이 장소 그룹은 묶음 상세가 대표 좌표를 정한다
-  if (category === 'ev-charger' || (category === 'wifi' && isWifiGroupId(id))) {
-    const detail = await getDetail(category, id);
-    if (!detail) return null;
-    return { lat: detail.lat ?? null, lng: detail.lng ?? null, excludeId: id };
+): Promise<{ lat: number | null; lng: number | null; excludeId: string; selfKey?: string } | null> {
+  // 충전소: 상세(getEvChargerStationDetail)와 같은 대표 좌표 = chgerId 순 첫 충전기
+  if (category === 'ev-charger') {
+    const first = await prisma.evCharger.findFirst({
+      where: { statId: id },
+      orderBy: { chgerId: 'asc' },
+      select: { lat: true, lng: true },
+    });
+    if (!first) return null;
+    return { lat: toCoord(first.lat), lng: toCoord(first.lng), excludeId: id };
   }
 
-  // 일반 시설은 좌표만 읽는다(getDetail 은 조회수를 올리고 include 가 무겁다)
-  const record = await CATEGORY_REGISTRY[category].model().findUnique({
-    where: { id },
-    select: { id: true, name: true, city: true, district: true, address: true, lat: true, lng: true },
-  });
+  // 와이파이 장소 그룹: 상세(getWifiGroupDetail)와 같은 대표 좌표 = 좌표 있는 AP 들의 평균
+  if (category === 'wifi' && isWifiGroupId(id)) {
+    const agg = await prisma.wifi.aggregate({
+      where: { groupId: id },
+      _count: { _all: true },
+      _avg: { lat: true, lng: true },
+    });
+    if (agg._count._all === 0) return null;
+    return { lat: toCoord(agg._avg.lat), lng: toCoord(agg._avg.lng), excludeId: id };
+  }
+
+  const select: Record<string, boolean> = { id: true, name: true, lat: true, lng: true };
+  if (category === 'wifi') select.groupId = true;
+  const record = await CATEGORY_REGISTRY[category].model().findUnique({ where: { id }, select });
   if (!record) return null;
-  const lat = record.lat === null || record.lat === undefined ? null : Number(record.lat);
-  const lng = record.lng === null || record.lng === undefined ? null : Number(record.lng);
-  // 옛 와이파이 AP 상세: 목록은 장소 그룹 단위라 자기가 속한 그룹 id 를 뺀다
-  const excludeId = category === 'wifi'
-    ? buildWifiGroupId({ name: record.name ?? '', city: record.city ?? '', district: record.district ?? '', address: record.address ?? null })
-    : id;
-  return { lat, lng, excludeId };
+  const lat = toCoord(record.lat);
+  const lng = toCoord(record.lng);
+  // 옛 와이파이 AP 상세: 목록은 장소 그룹 단위(그룹 키 COALESCE(groupId, id))라 그 키를 뺀다
+  const excludeId = category === 'wifi' ? String(record.groupId ?? id) : id;
+  // 자기와 이름+좌표가 같은 원본 중복 등록도 목록에서 뺀다(nearestInCategory 의 dedupe 키와 같은 형식)
+  const selfKey = lat !== null && lng !== null
+    ? `${String(record.name ?? '')}|${lat.toFixed(5)}|${lng.toFixed(5)}`
+    : undefined;
+  return { lat, lng, excludeId, selfKey };
 }
 
 /**
@@ -799,7 +828,7 @@ export async function nearbyGroupedForFacility(
 
   const anchor = await facilityNearbyAnchor(category, id);
   if (!anchor) return null;
-  const { lat, lng, excludeId } = anchor;
+  const { lat, lng, excludeId, selfKey } = anchor;
   if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     return { radius, groups: [] };
   }
@@ -807,7 +836,8 @@ export async function nearbyGroupedForFacility(
   const targets: FacilityCategory[] = [category, ...(CROSS_CATEGORY_MAP[category] ?? [])];
   const groups = await Promise.all(
     targets.map(async (cat): Promise<FacilityNearbyGroup> => {
-      const ownId = cat === category ? excludeId : undefined;
+      const isOwnCategory = cat === category;
+      const ownId = isOwnCategory ? excludeId : undefined;
 
       // 충전소·와이파이 장소는 묶음 단위 검색(반경 안 전부 → 자기 제외 → limit)
       if (cat === 'ev-charger' || cat === 'wifi') {
@@ -824,6 +854,7 @@ export async function nearbyGroupedForFacility(
 
       const { count, exact, picked } = await nearestInCategory({
         cat, lat, lng, radius, limit, select: buildListSelect(cat), excludeId: ownId,
+        excludeKey: isOwnCategory ? selfKey : undefined,
       });
       const items = picked.map(({ record, meters }) => ({
         ...toFacilityItem(record, cat),

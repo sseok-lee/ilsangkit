@@ -295,6 +295,7 @@ describe('DetailPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/facilities\/toilet\/toilet-1\/nearby-grouped$/)
 
+    expect(wrapper.find('[data-testid="facility-nearby"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('주변 시설')
     expect(wrapper.text()).toContain('강남역 공중화장실에서 반경 1km 안의 시설입니다.')
     expect(wrapper.text()).toContain('역삼역 화장실') // 같은 카테고리
@@ -306,11 +307,26 @@ describe('DetailPage', () => {
   })
 
   it('주변 시설 API 가 실패해도 페이지는 렌더되고 블록만 빠진다', async () => {
-    ;nuxtGlobals.$fetch = vi.fn().mockRejectedValue(new Error('down'))
-    mockUseAsyncDataWith({ success: true, data: mockFacility })
-    await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+    nuxtGlobals.$fetch = vi.fn().mockRejectedValue(new Error('down'))
+    // 주변 시설 키는 실제 핸들러 결과(실패 → catch)를 data 로 쓴다
+    nuxtGlobals.useAsyncData = vi.fn((key: string, handler?: () => Promise<unknown>) => {
+      const isNearby = typeof key === 'string' && key.startsWith('nearby-grouped-')
+      const data = ref<unknown>(isNearby ? null : { success: true, data: mockFacility })
+      const result = { data, status: ref('success'), error: ref(null), refresh: vi.fn(), pending: ref(false) }
+      const settled = isNearby && handler ? handler().then((v) => { data.value = v; return result }) : Promise.resolve(result)
+      return Object.assign(settled, result)
+    })
+
+    const wrapper = await mountSuspended(DetailPage, { global: { stubs: globalStubs } })
+
     const nearbyCall = nuxtGlobals.useAsyncData.mock.calls.find((c: unknown[]) => String(c[0]).startsWith('nearby-grouped-'))
     await expect(nearbyCall[1]()).resolves.toEqual([])
+    // 본문은 그대로
+    expect(wrapper.find('h1').text()).toBe('강남역 공중화장실')
+    expect(wrapper.text()).toContain('서울특별시 강남구 강남대로 396')
+    // 주변 시설 블록만 없다
+    expect(wrapper.find('[data-testid="facility-nearby"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('반경 1km 안의 시설입니다')
   })
 
   it('네트워크/서버 에러 시 404를 반환하지 않음 (SEO 보호)', async () => {

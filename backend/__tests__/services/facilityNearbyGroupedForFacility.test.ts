@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 type Row = Record<string, unknown> & { id: string; name: string; lat: number | null; lng: number | null };
 
-const { db, mockStationSearch, mockWifiSearch, mockStationDetail, mockWifiGroupDetail } = vi.hoisted(() => ({
+const { db, mockStationSearch, mockWifiSearch, mockStationDetail, mockWifiGroupDetail, mockBufferView } = vi.hoisted(() => ({
+  mockBufferView: vi.fn(),
   /** 카테고리(prisma 모델 키)별 행 */
   db: {} as Record<string, Row[]>,
   mockStationSearch: vi.fn(),
@@ -26,6 +27,19 @@ vi.mock('../../src/lib/prisma.js', () => {
       return rows.filter((r) => r.lat !== null).map((r) => ({ id: r.id, lat: r.lat, lng: r.lng }));
     }),
     findUnique: vi.fn(async (arg: { where: { id: string } }) => (db[key] ?? []).find((r) => r.id === arg.where.id) ?? null),
+    // ev-charger: statId 로 첫 충전기(chgerId 순) 좌표
+    findFirst: vi.fn(async (arg: { where: Record<string, unknown> }) => {
+      const [[field, value]] = Object.entries(arg.where);
+      return (db[key] ?? []).filter((r) => r[field] === value).sort((a, b) => String(a.chgerId ?? '').localeCompare(String(b.chgerId ?? '')))[0] ?? null;
+    }),
+    // wifi 그룹: groupId 행들의 좌표 평균(NULL 제외)
+    aggregate: vi.fn(async (arg: { where: Record<string, unknown> }) => {
+      const [[field, value]] = Object.entries(arg.where);
+      const rows = (db[key] ?? []).filter((r) => r[field] === value);
+      const located = rows.filter((r) => r.lat !== null && r.lng !== null);
+      const avg = (k: 'lat' | 'lng') => (located.length ? located.reduce((sum, r) => sum + (r[k] as number), 0) / located.length : null);
+      return { _count: { _all: rows.length }, _avg: { lat: avg('lat'), lng: avg('lng') } };
+    }),
     count: vi.fn(),
     update: vi.fn(),
   });
@@ -53,8 +67,12 @@ vi.mock('../../src/services/wifiService.js', async (importOriginal) => ({
   getWifiGroupDetail: mockWifiGroupDetail,
 }));
 
+vi.mock('../../src/services/viewCountService.js', () => ({
+  bufferViewCount: mockBufferView,
+  flushViewCounts: vi.fn(),
+}));
+
 import { nearbyGroupedForFacility } from '../../src/services/facilityService.js';
-import { buildWifiGroupId } from '../../src/services/wifiGroup.js';
 
 // 중심 (37.5, 127.0). 이 위도에서 경도 0.001° ≈ 88m.
 const CENTER = { lat: 37.5, lng: 127.0 };
@@ -81,6 +99,7 @@ beforeEach(() => {
   mockWifiSearch.mockReset().mockResolvedValue({ items: [], total: 0, page: 1, totalPages: 0 });
   mockStationDetail.mockReset();
   mockWifiGroupDetail.mockReset();
+  mockBufferView.mockReset();
 });
 
 describe('nearbyGroupedForFacility', () => {
@@ -161,37 +180,84 @@ describe('nearbyGroupedForFacility', () => {
     expect(ev.items[0].extras).toEqual({ rapidCount: 2, slowCount: 4 });
   });
 
-  it('현재 카테고리가 ev-charger 면 충전소 상세 좌표를 쓰고 자기 충전소(statId)를 뺀다', async () => {
-    mockStationDetail.mockResolvedValue({ id: 'ME01', lat: 37.5, lng: 127.0 });
+  it('현재 카테고리가 ev-charger 면 첫 충전기 좌표를 가볍게 읽고 자기 충전소(statId)를 뺀다', async () => {
+    db.evCharger = [
+      { ...row('c2', '충전소', 0), statId: 'ME01', chgerId: '02', lat: 37.6 },
+      { ...row('c1', '충전소', 0), statId: 'ME01', chgerId: '01' },
+    ];
     mockStationSearch.mockResolvedValue({
       items: [station('ME01', 0), station('s2', 200)], total: 2, page: 1, totalPages: 1,
     });
     const result = await nearbyGroupedForFacility('ev-charger', 'ME01', 5);
+    expect(mockStationSearch).toHaveBeenCalledWith(expect.objectContaining({ lat: CENTER.lat, lng: CENTER.lng }));
     expect(result!.groups[0]).toMatchObject({ category: 'ev-charger', count: 1 });
     expect(result!.groups[0].items.map((i) => i.id)).toEqual(['s2']);
+    expect(mockStationDetail).not.toHaveBeenCalled();
   });
 
-  it('wifi 는 장소 단위 검색을 쓰고, 현재가 그룹 id 면 그 id 를 뺀다', async () => {
-    mockWifiGroupDetail.mockResolvedValue({ id: 'wifi-g0123456789ab', lat: 37.5, lng: 127.0 });
+  it('없는 충전소·와이파이 그룹은 null', async () => {
+    expect(await nearbyGroupedForFacility('ev-charger', 'NOPE', 5)).toBeNull();
+    expect(await nearbyGroupedForFacility('wifi', 'wifi-g000000000000', 5)).toBeNull();
+  });
+
+  it('wifi 는 장소 단위 검색을 쓰고, 현재가 그룹 id 면 그룹 좌표 평균을 쓰고 그 id 를 뺀다', async () => {
+    db.wifi = [
+      { ...row('wifi-111111111111', '병점도서관', 0), groupId: 'wifi-g0123456789ab', lat: 37.499 },
+      { ...row('wifi-222222222222', '병점도서관', 0), groupId: 'wifi-g0123456789ab', lat: 37.501 },
+    ];
     mockWifiSearch.mockResolvedValue({
       items: [wifiGroup('wifi-g0123456789ab', 0), wifiGroup('wifi-gaaaaaaaaaaaa', 150)], total: 2, page: 1, totalPages: 1,
     });
     const result = await nearbyGroupedForFacility('wifi', 'wifi-g0123456789ab', 5);
-    expect(mockWifiSearch).toHaveBeenCalledWith(expect.objectContaining({ radius: 1000, page: 1 }));
+    const call = mockWifiSearch.mock.calls[0][0];
+    expect(call).toMatchObject({ radius: 1000, page: 1, lng: CENTER.lng });
+    expect(call.lat).toBeCloseTo(37.5, 6);
     expect(result!.groups[0]).toMatchObject({ category: 'wifi', count: 1 });
     expect(result!.groups[0].items.map((i) => i.id)).toEqual(['wifi-gaaaaaaaaaaaa']);
     expect(result!.groups[0].items[0].extras).toEqual({ installLocation: '1층 로비' });
+    expect(mockWifiGroupDetail).not.toHaveBeenCalled();
   });
 
-  it('wifi 옛 AP id 상세면 그 AP 가 속한 장소 그룹 id 를 뺀다', async () => {
-    const ap = row('wifi-0123456789ab', '병점도서관', 0, { address: '경기도 화성시 병점동 1' });
-    db.wifi = [ap];
-    const ownGroup = buildWifiGroupId({ name: ap.name, city: ap.city as string, district: ap.district as string, address: ap.address as string });
+  it('옛 wifi AP 상세면 그룹 키 COALESCE(groupId, id) 로 자기를 뺀다', async () => {
+    // groupId 가 있는 AP → 그 그룹 id 를 뺀다
+    db.wifi = [{ ...row('wifi-0123456789ab', '병점도서관', 0), groupId: 'wifi-gcccccccccccc' }];
     mockWifiSearch.mockResolvedValue({
-      items: [wifiGroup(ownGroup, 30), wifiGroup('wifi-gbbbbbbbbbbbb', 150)], total: 2, page: 1, totalPages: 1,
+      items: [wifiGroup('wifi-gcccccccccccc', 30), wifiGroup('wifi-gbbbbbbbbbbbb', 150)], total: 2, page: 1, totalPages: 1,
     });
-    const result = await nearbyGroupedForFacility('wifi', 'wifi-0123456789ab', 5);
+    let result = await nearbyGroupedForFacility('wifi', 'wifi-0123456789ab', 5);
     expect(result!.groups[0].count).toBe(1);
     expect(result!.groups[0].items.map((i) => i.id)).toEqual(['wifi-gbbbbbbbbbbbb']);
+
+    // groupId 가 NULL 인 AP → 그룹 키가 자기 id 다
+    db.wifi = [{ ...row('wifi-0123456789ab', '병점도서관', 0), groupId: null }];
+    mockWifiSearch.mockResolvedValue({
+      items: [wifiGroup('wifi-0123456789ab', 0), wifiGroup('wifi-gbbbbbbbbbbbb', 150)], total: 2, page: 1, totalPages: 1,
+    });
+    result = await nearbyGroupedForFacility('wifi', 'wifi-0123456789ab', 5);
+    expect(result!.groups[0].count).toBe(1);
+    expect(result!.groups[0].items.map((i) => i.id)).toEqual(['wifi-gbbbbbbbbbbbb']);
+  });
+
+  it('자기와 이름+좌표가 같은 원본 중복 레코드는 목록에서 뺀다(count 는 #944 와 같이 dedupe 전 수)', async () => {
+    db.pharmacy = [row('me', '캐슬약국', 0), row('dup', '캐슬약국', 0), row('p2', '온누리약국', 300)];
+    const result = await nearbyGroupedForFacility('pharmacy', 'me', 5);
+    expect(result!.groups[0].items.map((i) => i.id)).toEqual(['p2']);
+    expect(result!.groups[0].count).toBe(2);
+  });
+
+  it('어떤 카테고리에서도 조회수를 올리지 않는다', async () => {
+    db.pharmacy = [row('me', '캐슬약국', 0)];
+    db.evCharger = [{ ...row('c1', '충전소', 0), statId: 'ME01', chgerId: '01' }];
+    db.wifi = [
+      { ...row('wifi-111111111111', '도서관', 0), groupId: 'wifi-g0123456789ab' },
+      { ...row('wifi-0123456789ab', '병점도서관', 0), groupId: null },
+    ];
+    await nearbyGroupedForFacility('pharmacy', 'me', 5);
+    await nearbyGroupedForFacility('ev-charger', 'ME01', 5);
+    await nearbyGroupedForFacility('wifi', 'wifi-g0123456789ab', 5);
+    await nearbyGroupedForFacility('wifi', 'wifi-0123456789ab', 5);
+    expect(mockBufferView).not.toHaveBeenCalled();
+    expect(mockStationDetail).not.toHaveBeenCalled();
+    expect(mockWifiGroupDetail).not.toHaveBeenCalled();
   });
 });
