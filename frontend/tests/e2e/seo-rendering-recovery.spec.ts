@@ -39,6 +39,13 @@ async function blockBrowserApi(page: Page) {
   return { blocked, payloads }
 }
 
+// #940: 주변 단지는 NearbyComplexList 행(단지명은 heading 아님)으로 렌더된다. 활성 패널의 행 링크로 찾는다.
+function nearbyRowLink(page: Page, name: string) {
+  return page
+    .locator('#nearby [role="tabpanel"] [data-testid="nearby-row"] a')
+    .filter({ has: page.getByText(name, { exact: true }) })
+}
+
 async function blockExternalOnly(page: Page) {
   await page.route('**/*', (route) => {
     const url = new URL(route.request().url())
@@ -119,17 +126,14 @@ test('HardLink nearby card starts a new document and hydrates with API blocked',
       req.resourceType() === 'document' &&
       decodeURI(req.url()).includes('이웃아파트')
   )
-  await page
-    .getByRole('link')
-    .filter({ has: page.getByRole('heading', { name: '이웃아파트', exact: true }) })
-    .click()
+  await nearbyRowLink(page, '이웃아파트').click()
   await documentRequest
   await hydrated(page)
   await expect(page.locator('h1').first()).toContainText('이웃아파트')
   expect(
     await page.evaluate(() => (window as Window & { documentMarker?: boolean }).documentMarker)
   ).toBeUndefined()
-  await expect(page.getByRole('heading', { name: '회복아파트', exact: true })).toBeVisible()
+  await expect(nearbyRowLink(page, '회복아파트')).toBeVisible()
 })
 
 test('시설 상세 주변 시설: SSR HTML 링크, 1440 2열 목록, 360 접기·가로 넘침 없음', async ({
@@ -254,7 +258,7 @@ test('failed SSR nearby retries once and recovers on the unchanged query', async
     '회복된이웃'
   )
   await hydrated(page)
-  await expect(page.getByRole('heading', { name: '회복된이웃', exact: true })).toBeVisible()
+  await expect(nearbyRowLink(page, '회복된이웃')).toBeVisible()
   expect(retries).toBe(1)
 })
 
@@ -280,16 +284,16 @@ test('rent filter keeps the document and rejects a late prior-mode nearby respon
   })
   try {
     await page.getByLabel('거래 유형').selectOption('wolse')
-    await expect(page.getByRole('heading', { name: '이웃아파트', exact: true })).toHaveCount(0)
+    await expect(nearbyRowLink(page, '이웃아파트')).toHaveCount(0)
     await page.getByLabel('거래 유형').selectOption('jeonse')
-    await expect(page.getByRole('heading', { name: '새전세이웃', exact: true })).toBeVisible()
+    await expect(nearbyRowLink(page, '새전세이웃')).toBeVisible()
     releaseWolse()
     await hydrated(page)
     expect(
       await page.evaluate(() => (window as Window & { documentMarker?: boolean }).documentMarker)
     ).toBe(true)
     await expect(page.getByRole('heading', { name: /주변 아파트 전세가/ })).toBeVisible()
-    await expect(page.getByRole('heading', { name: '늦은월세이웃', exact: true })).toHaveCount(0)
+    await expect(nearbyRowLink(page, '늦은월세이웃')).toHaveCount(0)
   } finally {
     releaseWolse()
   }
@@ -309,19 +313,19 @@ test('rent filter failure clears the prior query, then a genuine empty response 
   })
   await page.goto(rent)
   await hydrated(page)
-  await expect(page.getByRole('heading', { name: '이웃아파트', exact: true })).toBeVisible()
+  await expect(nearbyRowLink(page, '이웃아파트')).toBeVisible()
   const request = page.waitForRequest(
     (req) => req.url().includes('/api/real-estate/nearby') && req.url().includes('rentType=wolse')
   )
   await page.getByLabel('거래 유형').selectOption('wolse')
   await request
-  await expect(page.getByRole('heading', { name: '이웃아파트', exact: true })).toHaveCount(0)
+  await expect(nearbyRowLink(page, '이웃아파트')).toHaveCount(0)
   const response = page.waitForResponse(
     (res) => res.url().includes('/api/real-estate/nearby') && res.url().includes('rentType=jeonse')
   )
   await page.getByLabel('거래 유형').selectOption('jeonse')
   expect((await response).status()).toBe(200)
-  await expect(page.getByRole('heading', { name: '이웃아파트', exact: true })).toHaveCount(0)
+  await expect(nearbyRowLink(page, '이웃아파트')).toHaveCount(0)
 })
 
 test('normal hydration records the warning baseline without claiming all warnings fixed', async ({
