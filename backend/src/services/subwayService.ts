@@ -184,14 +184,24 @@ export async function nearbyGroupedForStation(
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { radius, groups: [] };
 
   const [stationGroup, facilityGroups] = await Promise.all([
-    nearbyStationGroup(lat, lng, radius, limit, normalizeStationName(station.name)),
+    nearbyStationGroup(lat, lng, radius, limit, nearbyStationKey(station.name)),
     nearbyGroupsAt({ lat, lng, radius, limit, targets: CROSS_CATEGORY_MAP.subway }),
   ]);
   return { radius, groups: [stationGroup, ...facilityGroups] };
 }
 
 /**
- * 반경 안 역을 역명(끝 "역" 정규화) 단위로 묶는다 — 같은 역의 노선별 행은 노선을 합치고,
+ * "주변 역" 전용 역명 키 — 끝 괄호 부기 제거 → 끝 "역" 제거 → trim.
+ * 원본에 "왕십리(성동구청)"·"왕십리역", "서울역"·"서울역(경의선)"처럼 같은 역이 다른 표기로
+ * 섞여 있어 자기 역이 주변 역에 나오던 것을 막는다. 이름만 같은 다른 역(신촌 2호선·경의중앙선)도
+ * 합쳐지지만 허용한다. 사이트맵 그룹핑(normalizeStationName)은 출력 불변을 위해 따로 둔다.
+ */
+function nearbyStationKey(name: string): string {
+  return name.replace(/\s*\([^)]*\)\s*$/, '').trim().replace(/역$/, '').trim();
+}
+
+/**
+ * 반경 안 역을 역명(nearbyStationKey) 단위로 묶는다 — 같은 역의 노선별 행은 노선을 합치고,
  * 거리는 가장 가까운 행, 링크 slug 는 사이트맵과 같은 대표 행(isRepresentativeStationRow)을 쓴다.
  * 자기 역(같은 정규화 이름)은 모든 노선 행을 뺀다.
  */
@@ -207,7 +217,7 @@ async function nearbyStationGroup(
   // nearest = 거리 기준 행, primary = 링크 slug 기준 행(사이트맵 대표 — isRepresentativeStationRow)
   const groups = new Map<string, { nearest: NearbyStation; primary: NearbyStation; lines: Set<string> }>();
   for (const row of rows) {
-    const key = normalizeStationName(row.name);
+    const key = nearbyStationKey(row.name);
     if (key === selfName) continue;
     const g = groups.get(key);
     // rows 는 거리 오름차순이라 처음 본 행이 가장 가까운 행이다
@@ -322,10 +332,6 @@ interface GroupAccumulator {
 }
 
 /**
- * 역명 정규화 — CSV에 "가산디지털단지" / "가산디지털단지역"처럼 끝 "역" 유무가 섞여 들어오므로
- * 그룹핑 키로 사용할 때는 항상 끝의 "역"을 제거해 동일 키로 만든다.
- */
-/**
  * 같은 역 그룹의 대표 행 규칙 — 노선 사전순 첫 행, 동률이면 nameSlug 사전순(URL 안정성).
  * listStationsGrouped(사이트맵·목록 grouped)와 상세 "주변 역" 링크가 같은 규칙을 쓰도록 한곳에 둔다.
  * @returns a 가 b 보다 대표로 앞서면 true
@@ -337,6 +343,10 @@ export function isRepresentativeStationRow(
   return a.line < b.line || (a.line === b.line && a.nameSlug < b.nameSlug);
 }
 
+/**
+ * 역명 정규화 — CSV에 "가산디지털단지" / "가산디지털단지역"처럼 끝 "역" 유무가 섞여 들어오므로
+ * 그룹핑 키로 사용할 때는 항상 끝의 "역"을 제거해 동일 키로 만든다.
+ */
 function normalizeStationName(name: string): string {
   return name.replace(/역$/, '').trim();
 }

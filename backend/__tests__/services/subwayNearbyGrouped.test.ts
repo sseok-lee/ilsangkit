@@ -153,6 +153,33 @@ describe('nearbyGroupedForStation', () => {
     expect(result!.groups[0].items[0].distance).toBeLessThanOrEqual(301);
   });
 
+  it('주변 역: 끝 괄호 부기명은 떼고 비교 — 왕십리(성동구청) 페이지에서 왕십리역 행은 자기 역', async () => {
+    db.subwayStation = [
+      st('me', '왕십리(성동구청)', 'wangsimni', '2호선', 0),
+      st('w2', '왕십리역', 'wangsimni-k210', '수인분당선', 40),
+      st('w3', '왕십리', 'wangsimni-5', '5호선', 60),
+      st('h1', '행당', 'haengdang', '5호선', 700),
+    ];
+    const result = await nearbyGroupedForStation('wangsimni', 5);
+    const subway = result!.groups[0];
+    expect(subway.items.map((i) => i.nameSlug)).toEqual(['haengdang']);
+    expect(subway.count).toBe(1);
+  });
+
+  it('주변 역: 서울역 페이지에서 서울역(경의선) 행은 자기 역, 다른 역의 괄호 부기 행은 한 역으로 합친다', async () => {
+    db.subwayStation = [
+      st('me', '서울역', 'seoul-station', '1호선', 0),
+      st('s2', '서울역(경의선)', 'seoul-station-gyeongui', '경의선', 80),
+      st('c1', '청량리(서울시립대입구)', 'cheongnyangni', '1호선', 600),
+      st('c2', '청량리역', 'cheongnyangni-k117', '수인분당선', 650),
+    ];
+    const result = await nearbyGroupedForStation('seoul-station', 5);
+    const subway = result!.groups[0];
+    expect(subway.count).toBe(1);
+    expect(subway.items).toHaveLength(1);
+    expect(subway.items[0]).toMatchObject({ nameSlug: 'cheongnyangni', lines: ['1호선', '수인분당선'] });
+  });
+
   it('주변 역: count 는 limit 와 무관한 역명 수, items 는 거리순 limit 개', async () => {
     db.subwayStation = [
       st('me', '병점', 'byeongjeom', '1호선', 0),
