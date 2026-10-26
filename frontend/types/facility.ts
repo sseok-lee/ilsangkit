@@ -934,3 +934,25 @@ export interface TrashDetails {
 // Vue 템플릿용 - 모든 상세 타입의 프로퍼티를 optional로 통합
 // 런타임 안전성은 템플릿의 v-if 카테고리 가드가 보장
 export type FacilityDetailsAll = ToiletDetails & WifiDetails & ClothesDetails & ParkingDetails & AedDetails & LibraryDetails & HospitalDetails & PharmacyDetails & TrashDetails & ParkDetails & SchoolDetails & MarketDetails & ChildcareDetails & EvChargerDetails & SportsDetails
+
+// 주변 시설 카테고리별 개수 + 가까운 N곳 (GET /api/facilities/nearby-grouped)
+export interface NearbyGroupedItem {
+  id: string
+  name: string
+  category: FacilityCategory
+  /** 직선거리(m, 정수) */
+  distance: number
+}
+
+export interface NearbyGroupedEntry {
+  /** 반경 안 시설 수. exact=false 면 하한값. */
+  count: number
+  exact: boolean
+  /** 거리 오름차순 최대 limit 곳 */
+  items: NearbyGroupedItem[]
+}
+
+export interface NearbyGroupedResponse {
+  radius: number
+  groups: Partial<Record<FacilityCategory, NearbyGroupedEntry>>
+}

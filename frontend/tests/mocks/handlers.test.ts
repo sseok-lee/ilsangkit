@@ -66,6 +66,23 @@ describe('MSW Facility Handlers', () => {
     });
   });
 
+  describe('GET /api/facilities/nearby-grouped', () => {
+    it('요청한 카테고리마다 count/exact/items 를 돌려준다', async () => {
+      const response = await fetch(`${API_BASE}/api/facilities/nearby-grouped?lat=37.4979&lng=127.0276&radius=2000&categories=toilet,school&limit=1`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.radius).toBe(2000);
+      expect(Object.keys(data.data.groups)).toEqual(['toilet', 'school']);
+      expect(data.data.groups.toilet.count).toBeGreaterThanOrEqual(1);
+      expect(data.data.groups.toilet.items).toHaveLength(1);
+      expect(data.data.groups.toilet.items[0]).toEqual({
+        id: 'toilet-1', name: '강남역 공중화장실', category: 'toilet', distance: 120,
+      });
+    });
+  });
+
   describe('POST /api/facilities/search', () => {
     it('should return all facilities without filters', async () => {
       const response = await fetch(`${API_BASE}/api/facilities/search`, {

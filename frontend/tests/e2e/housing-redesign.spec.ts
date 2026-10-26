@@ -715,6 +715,52 @@ test('주변 단지는 유형 탭·같은 면적 최근가 2열 리스트로 SSR
   await attachCapture(testInfo, capture)
 })
 
+test('주변 생활시설은 카테고리별 실제 개수·도보 시간 목록으로 SSR 되고 360px에서 넘치지 않는다', async ({
+  page,
+}, testInfo) => {
+  const capture = captureRuntime(page)
+  await stubKakaoMaps(page)
+  await blockExternalNetwork(page)
+  await configureFixtureApi(page, { reset: true })
+
+  // SSR HTML: 4·5번째 행도 링크째 들어 있고 모바일에서는 클래스로만 숨긴다
+  const html = await (await page.request.get(salePath)).text()
+  expect(html).toContain('href="/school/fixture-school-5"')
+  expect(html.match(/<li[^>]*>(?:(?!<\/li>)[\s\S])*?\/school\/fixture-school-4/)?.[0]).toContain('max-md:hidden')
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  const facilities = page.getByTestId('nearby-facilities')
+  await facilities.scrollIntoViewIfNeeded()
+  await expect(facilities.locator('h3')).toHaveText(['지하철역', '학교', '어린이집', '병원'])
+  await expect(page.getByText('회복아파트에서 반경 2km 안의 시설입니다. 거리는 직선거리, 도보 시간은 추정입니다.')).toBeVisible()
+  await expect(facilities.getByTestId('nearby-facility-count')).toHaveText([
+    '2km 안 1곳', '2km 안 14곳', '2km 안 64곳', '2km 안 20,000곳 이상',
+  ])
+  await expect(facilities.getByRole('link', { name: /역삼초등학교/ })).toContainText('26m')
+  await expect(facilities.getByRole('link', { name: /역삼초등학교/ })).toContainText('도보 약 1분')
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeVisible()
+  await expect(facilities.getByRole('button', { name: /모두 보기/ })).toBeHidden()
+  await expect(facilities.getByTestId('nearby-facilities-region-link')).toHaveAttribute('href', '/seoul/gangnam')
+  await expect(facilities.getByTestId('nearby-facilities-region-link')).toContainText('강남구 생활시설 전체 보기 →')
+
+  await page.setViewportSize({ width: 360, height: 900 })
+  await page.goto(salePath)
+  await hydrated(page)
+  await facilities.scrollIntoViewIfNeeded()
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeHidden()
+  const more = facilities.getByRole('button', { name: '5곳 모두 보기' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  const overflow = await viewportOverflowEvidence(page)
+  expect(overflow, JSON.stringify(overflow, null, 2)).toMatchObject({ documentWidth: overflow.viewport })
+  await page.screenshot({ path: `${screenshotDir}/${testInfo.project.name}-360-nearby-facilities.png`, fullPage: false })
+  await more.click()
+  await expect(facilities.getByRole('button', { name: '접기' })).toHaveAttribute('aria-expanded', 'true')
+  await expect(facilities.getByRole('link', { name: /진선여자고등학교/ })).toBeVisible()
+  await attachCapture(testInfo, capture)
+})
+
 test('여섯 부동산 유형과 nearby rentType, SEO 상태가 fixture API로 검증된다', async ({
   page,
 }, testInfo) => {

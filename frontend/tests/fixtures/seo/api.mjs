@@ -454,6 +454,25 @@ createServer(async (req, res) => {
 
   if (path === '/api/facilities/hospital/hospital-seo-fixture') return ok(res, facility)
   if (path.endsWith('/nearby-counts')) return ok(res, { radius: 300, counts: {} })
+  if (path === '/api/facilities/nearby-grouped') {
+    const fixtureItems = (category, names) =>
+      names.map((name, i) => ({ id: `fixture-${category}-${i + 1}`, name, category, distance: 26 + i * 147 }))
+    return ok(res, {
+      radius: 2000,
+      groups: {
+        school: { count: 14, exact: true, items: fixtureItems('school', ['역삼초등학교', '도성초등학교', '진선여자중학교', '역삼중학교', '진선여자고등학교']) },
+        childcare: { count: 64, exact: true, items: fixtureItems('childcare', ['역삼어린이집']) },
+        hospital: { count: 20000, exact: false, items: fixtureItems('hospital', ['강남연세내과의원', '테헤란정형외과의원']) },
+        pharmacy: { count: 0, exact: true, items: [] },
+      },
+    })
+  }
+  if (path === '/api/transit/nearby')
+    return ok(res, {
+      stations: [
+        { id: 'fixture-st-1', name: '역삼', nameSlug: 'yeoksam', line: '2호선', distance: 320, type: 'subway' },
+      ],
+    })
   if (path.includes('/guides') || path.includes('/blog') || path.endsWith('/search'))
     return ok(res, { items: [], total: 0 })
   if (path.endsWith('/price-analysis')) return ok(res, null)
