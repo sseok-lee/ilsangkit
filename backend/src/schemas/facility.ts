@@ -61,6 +61,27 @@ export const NearbyCountsSchema = z.object({
 
 export type NearbyCountsInput = z.infer<typeof NearbyCountsSchema>;
 
+// 주변 시설 카테고리별 개수 + 가까운 N곳 (GET /api/facilities/nearby-grouped)
+// 부동산 상세 "주변 생활시설" 섹션용. categories 는 nearby-counts 와 같은 콤마 파싱이되 필수.
+export const NearbyGroupedSchema = z.object({
+  lat: NearbyCountsSchema.shape.lat,
+  lng: NearbyCountsSchema.shape.lng,
+  radius: z.coerce
+    .number()
+    .int()
+    .min(NEARBY_SUMMARY.MIN_RADIUS_METERS)
+    .max(NEARBY_SUMMARY.MAX_RADIUS_METERS)
+    .default(NEARBY_SUMMARY.MAX_RADIUS_METERS),
+  categories: z
+    .string()
+    .max(200)
+    .transform((v) => v.split(',').map((c) => c.trim()).filter(Boolean))
+    .pipe(z.array(NearbyCountCategorySchema).min(1).max(13)),
+  limit: z.coerce.number().int().min(1).max(10).default(5),
+});
+
+export type NearbyGroupedInput = z.infer<typeof NearbyGroupedSchema>;
+
 // 시설 검색 요청 스키마
 export const FacilitySearchSchema = z
   .object({

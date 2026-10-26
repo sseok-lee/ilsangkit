@@ -10,8 +10,10 @@ import {
   RegionAllFacilitiesParamsSchema,
   RegionFacilitiesQuerySchema,
   NearbyCountsSchema,
+  NearbyGroupedSchema,
   NearbyCountCategorySchema,
   type NearbyCountsInput,
+  type NearbyGroupedInput,
 } from '../schemas/facility.js';
 import { FacilityBrowseSchema, type FacilityBrowseInput } from '../schemas/facilityBrowse.js';
 import * as facilityService from '../services/facilityService.js';
@@ -100,6 +102,28 @@ router.get(
     });
     res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800');
     res.json({ success: true, data: { radius, counts } });
+  })
+);
+
+// 주변 시설 카테고리별 개수 + 가까운 N곳
+// GET /api/facilities/nearby-grouped?lat=&lng=&radius=2000&categories=school,park&limit=5
+//
+// 부동산 상세 "주변 생활시설" 섹션용. POST /search(전 카테고리 가까운 100곳)를 나눠 쓰면
+// 화장실·주차장이 많은 동네에서 학교·공원이 빠지고 헤더 개수가 보이는 수(≤5)가 된다.
+router.get(
+  '/nearby-grouped',
+  validate(NearbyGroupedSchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { lat, lng, radius, categories, limit } = req.query as unknown as NearbyGroupedInput;
+    const groups = await facilityService.nearbyGrouped({
+      lat,
+      lng,
+      radius,
+      categories: categories as FacilityCategory[],
+      limit,
+    });
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1800');
+    res.json({ success: true, data: { radius, groups } });
   })
 );
 

@@ -106,6 +106,21 @@ export interface NearbyCountEntry {
   exact: boolean;
 }
 
+/** search()와 동일한 바운딩박스 사전 필터 — 원(반경)을 감싸는 위경도 사각형. */
+function nearbyApproxBounds(
+  lat: number,
+  lng: number,
+  radius: number,
+): { lat: { gte: number; lte: number }; lng: { gte: number; lte: number } } {
+  const radiusKm = radius / 1000;
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
+  return {
+    lat: { gte: lat - latDelta, lte: lat + latDelta },
+    lng: { gte: lng - lngDelta, lte: lng + lngDelta },
+  };
+}
+
 /**
  * 좌표 주변의 카테고리별 시설 "개수"만 센다. 목록은 만들지 않는다.
  *
@@ -130,15 +145,7 @@ export async function countNearby(params: {
   categories: FacilityCategory[];
 }): Promise<Record<string, NearbyCountEntry>> {
   const { lat, lng, radius, categories } = params;
-
-  // search()와 동일한 바운딩박스 사전 필터
-  const radiusKm = radius / 1000;
-  const latDelta = radiusKm / 111;
-  const lngDelta = radiusKm / (111 * Math.cos(toRad(lat)));
-  const approxBounds = {
-    lat: { gte: lat - latDelta, lte: lat + latDelta },
-    lng: { gte: lng - lngDelta, lte: lng + lngDelta },
-  };
+  const approxBounds = nearbyApproxBounds(lat, lng, radius);
 
   const entries = await Promise.all(
     categories.map(async (cat): Promise<[string, NearbyCountEntry]> => {
@@ -161,6 +168,78 @@ export async function countNearby(params: {
         if (haversineDistance(lat, lng, rLat, rLng) * 1000 <= radius) count++;
       }
       return [cat, { count, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP }];
+    }),
+  );
+
+  return Object.fromEntries(entries);
+}
+
+export interface NearbyGroupedItem {
+  id: string;
+  name: string;
+  category: FacilityCategory;
+  /** 중심에서의 직선거리(m, 정수 반올림) */
+  distance: number;
+}
+
+export interface NearbyGroupedEntry extends NearbyCountEntry {
+  /** 거리 오름차순(동률이면 이름순) 최대 limit 곳 */
+  items: NearbyGroupedItem[];
+}
+
+/**
+ * 좌표 주변의 카테고리별 "개수 + 가까운 N곳". 부동산 상세 "주변 생활시설" 용.
+ *
+ * POST /search 로 전 카테고리 가까운 100곳을 받아 나누면 화장실·주차장이 많은 동네에서
+ * 학교·공원이 잘려 나가고, 헤더 개수도 보이는 수(≤5)가 된다. 여기서는 카테고리마다
+ * 따로 훑어 count 는 countNearby 와 같은 의미(dedupe 전 반경 안 수)로, items 는
+ * 같은 이름+같은 좌표 중복만 접어 가까운 순으로 자른다.
+ */
+export async function nearbyGrouped(params: {
+  lat: number;
+  lng: number;
+  radius: number;
+  categories: FacilityCategory[];
+  limit: number;
+}): Promise<Record<string, NearbyGroupedEntry>> {
+  const { lat, lng, radius, categories, limit } = params;
+  const approxBounds = nearbyApproxBounds(lat, lng, radius);
+
+  const entries = await Promise.all(
+    categories.map(async (cat): Promise<[string, NearbyGroupedEntry]> => {
+      const rows: Array<{ id: unknown; name: unknown; lat: unknown; lng: unknown }> = await CATEGORY_REGISTRY[cat]
+        .model()
+        .findMany({
+          where: approxBounds,
+          select: { id: true, name: true, lat: true, lng: true },
+          take: NEARBY_SUMMARY.SCAN_CAP,
+        });
+
+      const inside: Array<{ id: string; name: string; lat: number; lng: number; meters: number }> = [];
+      for (const r of rows) {
+        // Decimal → Number (countNearby 와 같은 이유), NULL 좌표는 건너뛴다
+        if (r.lat === null || r.lng === null) continue;
+        const rLat = Number(r.lat);
+        const rLng = Number(r.lng);
+        if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue;
+        const meters = haversineDistance(lat, lng, rLat, rLng) * 1000;
+        if (meters <= radius) inside.push({ id: String(r.id), name: String(r.name ?? ''), lat: rLat, lng: rLng, meters });
+      }
+
+      inside.sort((a, b) => a.meters - b.meters || a.name.localeCompare(b.name, 'ko'));
+
+      const seen = new Set<string>();
+      const items: NearbyGroupedItem[] = [];
+      for (const f of inside) {
+        if (items.length >= limit) break;
+        // dedupeByLocation 과 같은 키 — 같은 이름+같은 좌표만 접는다
+        const key = `${f.name}|${f.lat.toFixed(5)}|${f.lng.toFixed(5)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        items.push({ id: f.id, name: f.name, category: cat, distance: Math.round(f.meters) });
+      }
+
+      return [cat, { count: inside.length, exact: rows.length < NEARBY_SUMMARY.SCAN_CAP, items }];
     }),
   );
 
