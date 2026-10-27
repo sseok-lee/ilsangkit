@@ -9,9 +9,7 @@
   <nav
     aria-label="현재 지도 위치"
     data-testid="map-location-path"
-    :class="variant === 'pill'
-      ? 'inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-full border border-line bg-white/95 px-3 shadow-card-2'
-      : 'flex min-w-0 max-w-full items-center overflow-hidden'"
+    class="inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-full border border-line bg-white/95 px-3 shadow-card-2"
   >
     <ol class="flex min-w-0 max-w-full items-center gap-0.5 text-sm">
       <li v-for="(crumb, i) in crumbs" :key="`${i}-${crumb.label}`" class="flex min-w-0 items-center gap-0.5">
@@ -36,12 +34,9 @@
 <script setup lang="ts">
 import type { MapPathCrumb } from '~/utils/mapLocationPath'
 
-withDefaults(defineProps<{
+defineProps<{
   crumbs: MapPathCrumb[]
-  variant?: 'pill' | 'plain'
-}>(), {
-  variant: 'plain',
-})
+}>()
 
 const emit = defineEmits<{ navigate: [MapPathCrumb] }>()
 </script>

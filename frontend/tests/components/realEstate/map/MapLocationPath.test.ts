@@ -40,13 +40,11 @@ describe('MapLocationPath', () => {
       { label: '전남·광주', href: '/real-estate/apt-sale/jeonnamgwangju', level: 9, city: '전남광주통합특별시' },
       { label: '아주아주긴이름의어느읍면동행정구역', href: null, level: null },
     ]
-    for (const variant of ['pill', 'plain'] as const) {
-      const w = mount(MapLocationPath, { props: { crumbs: long, variant } })
-      expect(w.find('nav').classes()).toEqual(expect.arrayContaining(['min-w-0', 'max-w-full', 'overflow-hidden']))
-      const current = w.find('[aria-current="location"]')
-      expect(current.classes()).toContain('min-w-0')
-      expect(current.find('span.truncate').text()).toBe('아주아주긴이름의어느읍면동행정구역')
-      for (const li of w.findAll('li')) expect(li.classes()).toContain('min-w-0')
-    }
+    const w = mount(MapLocationPath, { props: { crumbs: long } })
+    expect(w.find('nav').classes()).toEqual(expect.arrayContaining(['min-w-0', 'max-w-full', 'overflow-hidden', 'rounded-full']))
+    const current = w.find('[aria-current="location"]')
+    expect(current.classes()).toContain('min-w-0')
+    expect(current.find('span.truncate').text()).toBe('아주아주긴이름의어느읍면동행정구역')
+    for (const li of w.findAll('li')) expect(li.classes()).toContain('min-w-0')
   })
 })

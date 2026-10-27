@@ -56,6 +56,12 @@
             <MapFilterBar :type="type" @update:type="onTypeChange" />
           </div>
           <!--
+            지도 쪽 요소 묶음(필터바 제외). 모바일 목록이 덮고 있는 동안 inert 로 탭 순서·스크린리더에서 뺀다.
+            display:contents 라 박스가 없어 안쪽 absolute 요소의 기준(map-canvas-panel)은 그대로다.
+            닫힘이 기본이라 SSR 에는 inert 속성이 없다(`|| undefined` — false 를 문자열로 찍지 않게).
+          -->
+          <div data-testid="map-layer" class="contents" :inert="mobileListOpen || undefined">
+          <!--
             범례는 단지 단계에서만 뜬다 — 지역 단계 핀은 전부 같은 색(평당가 집계)이라 구분할 게 없다.
             모바일은 필터바 아래, 데스크톱은 지도 좌상단. 지도 위 평면 요소라 그림자 대신 테두리로 구분한다.
           -->
@@ -76,11 +82,14 @@
             v-if="locationPath"
             class="absolute bottom-[108px] left-1/2 z-20 max-w-[calc(100%-32px)] -translate-x-1/2 lg:bottom-6"
           >
-            <MapLocationPath variant="pill" :crumbs="locationPath" @navigate="onCrumb" />
+            <MapLocationPath :crumbs="locationPath" @navigate="onCrumb" />
           </div>
           <button
             type="button"
+            ref="listOpenRef"
             data-testid="map-list-open"
+            aria-controls="map-mobile-list"
+            :aria-expanded="mobileListOpen ? 'true' : 'false'"
             class="absolute bottom-[56px] left-1/2 z-20 inline-flex min-h-[44px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-primary bg-primary px-5 text-sm font-semibold text-white lg:hidden"
             @click="openMobileList"
           >
@@ -119,6 +128,7 @@
               <div class="w-full h-full bg-background-light animate-pulse" />
             </template>
           </ClientOnly>
+          </div>
         </div>
       </div>
     </div>
@@ -133,14 +143,17 @@
       height:auto!important 를 주입하는데, inset 박스는 그 주입과 무관하게 크기가 확정된다.
     -->
     <div
+      id="map-mobile-list"
       v-show="mobileListOpen"
       ref="mobileListRef"
       data-testid="map-mobile-list"
       class="absolute inset-0 z-30 bg-white lg:hidden"
+      @keydown.esc="closeMobileList"
     >
       <div class="absolute inset-x-0 top-16 bottom-0 border-t border-line">
         <!-- pb-20: 목록 끝 출처 푸터가 아래 떠 있는 '지도 보기' 버튼에 가리지 않게 스크롤 여유를 둔다. -->
         <MapSidebar
+          ref="mobileSidebarRef"
           class="pb-20"
           :items="sidebarItems"
           :granularity="granularity"
@@ -162,9 +175,10 @@
       </div>
       <button
         type="button"
+        ref="listCloseRef"
         data-testid="map-list-close"
         class="absolute bottom-6 left-1/2 inline-flex min-h-[44px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-primary bg-primary px-5 text-sm font-semibold text-white"
-        @click="mobileListOpen = false"
+        @click="closeMobileList"
       >
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 18 3.8 20.6V6.6L9 4m0 14 6 2.6m-6-2.6V4m6 16.6 5.2-2.6V4L15 6.6m0 14V6.6M15 6.6 9 4" />
@@ -222,17 +236,28 @@ const listRegion = ref<{ city: string; district?: string } | null>(null)
 /** 모바일 전체 화면 목록이 열렸는지. 해시에 싣지 않는다 — 공유 링크는 늘 지도 화면으로 연다. */
 const mobileListOpen = ref(false)
 const mobileListRef = ref<HTMLElement | null>(null)
+const mobileSidebarRef = ref<{ $el: HTMLElement } | null>(null)
+const listOpenRef = ref<HTMLButtonElement | null>(null)
+const listCloseRef = ref<HTMLButtonElement | null>(null)
 
 /**
- * 목록을 열면 지도에서 고른 단지 행으로 스크롤한다. 고른 게 없으면 목록 맨 위 그대로다.
- * 열기 직전까지 display:none 이라 v-show 가 풀린 다음 틱에 찾아야 위치가 잡힌다.
+ * 목록을 열면 포커스를 '지도 보기'로 옮기고(지도 쪽은 inert 가 된다), 지도에서 고른 단지 행이 있으면
+ * 그 행으로 스크롤한다. 열기 직전까지 display:none 이라 v-show 가 풀린 다음 틱에 찾아야 위치가 잡힌다.
  */
 async function openMobileList(): Promise<void> {
   mobileListOpen.value = true
-  if (!selectedKey.value) return
   await nextTick()
+  listCloseRef.value?.focus()
+  if (!selectedKey.value) return
   const row = mobileListRef.value?.querySelector<HTMLElement>('[data-testid="map-sidebar-item"] a[aria-current="true"]')
   row?.scrollIntoView?.({ block: 'center' })
+}
+
+/** 목록을 닫고 포커스를 '목록 보기'로 돌려준다(inert 가 풀린 다음 틱에야 포커스를 받을 수 있다). */
+async function closeMobileList(): Promise<void> {
+  mobileListOpen.value = false
+  await nextTick()
+  listOpenRef.value?.focus()
 }
 
 /**
@@ -361,6 +386,13 @@ watch(granularity, () => {
   selectedKey.value = null
 })
 
+// 목록 단위(시·도→구·군→동→단지)나 고른 지역이 바뀌면 모바일 목록은 완전히 다른 목록이 된다 —
+// 이전 스크롤 위치에 머물면 새 목록 중간부터 보이므로 맨 위로 올린다. 같은 단위 안의 팬·줌은 그대로 둔다.
+watch([granularity, listRegion], () => {
+  const el = mobileSidebarRef.value?.$el
+  if (el) el.scrollTop = 0
+})
+
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 /** 첫 조회를 지도 idle 에 미뤄 둔 상태인지(해시·저장 위치 복원). */
 let deferredFetch = false
@@ -383,7 +415,10 @@ let viewVersion = 0
 const isDesktop = ref<boolean | null>(null)
 let desktopMq: MediaQueryList | null = null
 function applyIsDesktop(): void {
-  if (desktopMq) isDesktop.value = desktopMq.matches
+  if (!desktopMq) return
+  isDesktop.value = desktopMq.matches
+  // 모바일 목록을 연 채 데스크톱 폭으로 넓히면 목록은 CSS 로 사라지지만 지도 쪽 inert 가 남는다 — 닫아 둔다.
+  if (desktopMq.matches) mobileListOpen.value = false
 }
 
 // SSR 은 항상 시/도 목록을 렌더한다(하이드레이션 일치). 해시는 마운트 후에만 읽어
