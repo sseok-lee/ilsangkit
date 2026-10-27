@@ -4,6 +4,7 @@ import type { DealSnapshot } from '~/types/realEstateExploration'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { itemKey } from '~/composables/useRealEstateMap'
 import { cityDisplayName } from '~/utils/regionChips'
+import type { RentPriceKind } from '~/utils/mapFilters'
 
 const DEALS_UNAVAILABLE_MESSAGE = '거래 정보를 불러오지 못했습니다'
 const NO_DEAL_MESSAGE = '거래 없음'
@@ -29,20 +30,23 @@ function isRentBundle(bundle: NonNullable<MapBuildingItem['latestDeals']>, type:
 
 /**
  * 마커가 보여주는 그 거래. 매매는 sale, 전월세는 전세·월세 중 더 최근 것이다.
+ * 전월세 지도에서 가격 필터로 전세·월세 한쪽을 골랐으면(rentKind) 그쪽 거래다 — "전세 3~5억"
+ * 으로 거른 단지에 월세 핀이 뜨면 왜 걸렸는지 읽을 수 없다.
  * 라벨 문자열(formatPriceLabel)과 "1년 넘은 거래" 판정(buildingMarkerTone)이 같은 거래를
  * 봐야 하므로 선택 규칙을 여기 한 곳에 둔다.
  */
-function shownDeal(item: MapBuildingItem, type: string): DealSnapshot | null {
+function shownDeal(item: MapBuildingItem, type: string, rentKind: RentPriceKind | null = null): DealSnapshot | null {
   const bundle = item.latestDeals
   if (!bundle) return null
-  return isRentBundle(bundle, type) ? latestRentDeal(bundle.jeonse, bundle.wolse) : bundle.sale
+  if (!isRentBundle(bundle, type)) return bundle.sale
+  return rentKind ? bundle[rentKind] : latestRentDeal(bundle.jeonse, bundle.wolse)
 }
 
 /**
  * 건물 마커 라벨. 여섯 지도 유형은 latestDeals bundle 만 신뢰한다.
  * bundle 자체가 없으면 로드 실패, bundle 안의 null 슬롯은 확인된 거래 없음이다.
  */
-export function formatPriceLabel(item: MapBuildingItem, type = ''): string {
+export function formatPriceLabel(item: MapBuildingItem, type = '', rentKind: RentPriceKind | null = null): string {
   const bundle = item.latestDeals
   if (!bundle) return DEALS_UNAVAILABLE_MESSAGE
 
@@ -50,7 +54,7 @@ export function formatPriceLabel(item: MapBuildingItem, type = ''): string {
     return bundle.sale?.amount == null ? NO_DEAL_MESSAGE : formatManwon(bundle.sale.amount)
   }
 
-  const deal = latestRentDeal(bundle.jeonse, bundle.wolse)
+  const deal = shownDeal(item, type, rentKind)
   if (!deal) return NO_DEAL_MESSAGE
   if (deal.kind === 'jeonse') {
     return deal.deposit == null ? NO_DEAL_MESSAGE : `전세 ${formatManwon(deal.deposit)}`
@@ -75,10 +79,15 @@ export function isDealOlderThanYear(deal: DealSnapshot, now: Date = new Date()):
  * 로드 실패(회색). 로드 실패도 회색인 이유: 값이 없는 핀이 최신 거래와 같은 색이면 "최근에
  * 거래된 단지"로 읽힌다. 문구(거래 정보를 불러오지 못했습니다)는 그대로라 원인은 구분된다.
  */
-export function buildingMarkerTone(item: MapBuildingItem, type = '', now: Date = new Date()): 'recent' | 'muted' {
-  const label = formatPriceLabel(item, type)
+export function buildingMarkerTone(
+  item: MapBuildingItem,
+  type = '',
+  now: Date = new Date(),
+  rentKind: RentPriceKind | null = null,
+): 'recent' | 'muted' {
+  const label = formatPriceLabel(item, type, rentKind)
   if (label === NO_DEAL_MESSAGE || label === DEALS_UNAVAILABLE_MESSAGE) return 'muted'
-  const deal = shownDeal(item, type)
+  const deal = shownDeal(item, type, rentKind)
   return deal && !isDealOlderThanYear(deal, now) ? 'recent' : 'muted'
 }
 
@@ -350,7 +359,7 @@ export function useMapOverlays() {
     map: any,
     items: MapItem[],
     handlers: OverlayHandlers = {},
-    opts: { type?: string; selectedKey?: string | null; now?: Date } = {},
+    opts: { type?: string; selectedKey?: string | null; now?: Date; rentKind?: RentPriceKind | null } = {},
   ): void {
     // import.meta.server 극성 사용(useKakaoMap.ts:124 컨벤션과 동일): 실제 Nuxt 빌드에서는
     // server/client 가 항상 서로 반대이므로 프로덕션 동작은 !client 와 완전히 동일하다.
@@ -375,13 +384,14 @@ export function useMapOverlays() {
     const type = opts.type ?? ''
     const isRent = type.endsWith('-rent')
     const now = opts.now ?? new Date()
+    const rentKind = isRent ? opts.rentKind ?? null : null
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kakao = (window as any).kakao
     if (!kakao?.maps) return
 
     const labelOf = (item: MapItem): { name: string; price: string } => isBuildingItem(item)
-      ? { name: item.buildingName, price: formatPriceLabel(item, type) }
+      ? { name: item.buildingName, price: formatPriceLabel(item, type, rentKind) }
       : { name: regionDisplayName(item), price: formatPyeongLabel(item) }
 
     // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. 우선순위(선택 > 거래 수) 순으로
@@ -466,7 +476,7 @@ export function useMapOverlays() {
       if (!pos) continue
       const building = isBuildingItem(item)
       const { name, price } = labelOf(item)
-      const muted = building && buildingMarkerTone(item, type, now) === 'muted'
+      const muted = building && buildingMarkerTone(item, type, now, rentKind) === 'muted'
 
       let el: HTMLElement
       if (isSelected(item)) {

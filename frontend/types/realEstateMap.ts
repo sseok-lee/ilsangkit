@@ -67,6 +67,8 @@ export interface MapResponse {
     items: MapItem[]
     total: number
     exact: boolean
+    /** 면적·가격 필터를 단지 단계에 적용했을 때만 온다. approximate=후보 상한(거래 많은 순)에서 잘림 */
+    filter?: { scanned: number; approximate: boolean }
   }
 }
 

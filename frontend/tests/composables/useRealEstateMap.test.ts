@@ -201,21 +201,21 @@ describe('첫 화면 위치 — 해시 > 저장된 마지막 위치 > 서울 구
 
   it('해시도 저장값도 없으면 서울 — 데스크톱 level 9, 모바일 level 10(둘 다 구·군 밴드)', () => {
     expect(resolveInitialMapState({}, null, { desktop: true })).toEqual({
-      type: null, level: DEFAULT_MAP_VIEW.desktopLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng, source: 'default',
+      type: null, level: DEFAULT_MAP_VIEW.desktopLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng, filter: { area: null, price: null, priceKind: null }, source: 'default',
     })
     expect(resolveInitialMapState({}, null, { desktop: false }).level).toBe(DEFAULT_MAP_VIEW.mobileLevel)
     expect([DEFAULT_MAP_VIEW.desktopLevel, DEFAULT_MAP_VIEW.mobileLevel].every((l) => l >= 9 && l <= 10)).toBe(true)
   })
 
   it('저장값이 있으면 그 자리에서 시작한다', () => {
-    expect(resolveInitialMapState({}, SAVED, { desktop: true })).toEqual({ ...SAVED, source: 'saved' })
+    expect(resolveInitialMapState({}, SAVED, { desktop: true })).toEqual({ ...SAVED, filter: { area: null, price: null, priceKind: null }, source: 'saved' })
   })
 
   it('해시가 있으면 저장값보다 우선하고, 빠진 필드는 저장값이 아니라 기본값(서울)으로 채운다', () => {
     expect(resolveInitialMapState({ type: 'apt-rent', level: 4, lat: 37.5, lng: 127.05 }, SAVED, { desktop: true }))
-      .toEqual({ type: 'apt-rent', level: 4, lat: 37.5, lng: 127.05, source: 'hash' })
+      .toEqual({ type: 'apt-rent', level: 4, lat: 37.5, lng: 127.05, filter: { area: null, price: null, priceKind: null }, source: 'hash' })
     expect(resolveInitialMapState({ lat: 37.5, lng: 127.05 }, SAVED, { desktop: false }))
-      .toEqual({ type: null, level: DEFAULT_MAP_VIEW.mobileLevel, lat: 37.5, lng: 127.05, source: 'hash' })
+      .toEqual({ type: null, level: DEFAULT_MAP_VIEW.mobileLevel, lat: 37.5, lng: 127.05, filter: { area: null, price: null, priceKind: null }, source: 'hash' })
   })
 })
 
@@ -234,5 +234,92 @@ describe('마지막 위치 저장소', () => {
     expect(() => saveMapState({ type: 'apt-sale', level: 7, lat: 37.5, lng: 127 })).not.toThrow()
     spy.mockRestore()
     set.mockRestore()
+  })
+})
+
+describe('면적·가격 필터 — 해시·저장·요청', () => {
+  const bounds = { swLat: 37.48, swLng: 127.02, neLat: 37.52, neLng: 127.07 }
+  const OK = (granularity: string, extra: Record<string, unknown> = {}) => ({
+    success: true, data: { granularity, items: [], total: 0, exact: true, ...extra },
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('필터가 없으면 해시가 예전과 글자까지 같다', () => {
+    const s = { type: 'apt-sale', level: 5, lat: 37.5, lng: 127.03 }
+    expect(buildMapHash({ ...s, filter: { area: null, price: null, priceKind: null } })).toBe(buildMapHash(s))
+    expect(buildMapHash(s)).toBe('#type=apt-sale&level=5&lat=37.5&lng=127.03')
+  })
+
+  it('필터를 해시에 싣고 왕복한다(공유 링크)', () => {
+    const h = buildMapHash({
+      type: 'apt-rent', level: 5, lat: 37.5, lng: 127.03,
+      filter: { area: '60-85', price: '30000-50000', priceKind: 'jeonse' },
+    })
+    expect(h).toBe('#type=apt-rent&level=5&lat=37.5&lng=127.03&area=60-85&price=30000-50000&pk=jeonse')
+    expect(parseMapHash(h)).toEqual({
+      type: 'apt-rent', level: 5, lat: 37.5, lng: 127.03, area: '60-85', price: '30000-50000', priceKind: 'jeonse',
+    })
+  })
+
+  it('해시의 필터가 저장된 필터보다 우선하고, 해시가 없으면 저장된 필터로 시작한다', () => {
+    const saved = { type: 'apt-sale', level: 5, lat: 37.5, lng: 127, filter: { area: '135-', price: null, priceKind: null } }
+    expect(resolveInitialMapState({ type: 'apt-sale', area: '0-60' }, saved, { desktop: true }).filter)
+      .toEqual({ area: '0-60', price: null, priceKind: null })
+    expect(resolveInitialMapState({}, saved, { desktop: true }).filter)
+      .toEqual({ area: '135-', price: null, priceKind: null })
+  })
+
+  it('마지막 위치와 함께 필터를 저장·복원하고, 유형에 안 맞는 저장 필터는 버린다', () => {
+    saveMapState({ type: 'apt-rent', level: 5, lat: 37.5, lng: 127, filter: { area: '60-85', price: '50-100', priceKind: 'wolse' } })
+    expect(readSavedMapState()?.filter).toEqual({ area: '60-85', price: '50-100', priceKind: 'wolse' })
+    expect(parseSavedMapState(JSON.stringify({ type: 'apt-sale', level: 5, lat: 37.5, lng: 127, filter: { price: '50-100', priceKind: 'wolse' } })))
+      .toEqual({ type: 'apt-sale', level: 5, lat: 37.5, lng: 127 })
+  })
+
+  it('필터가 없으면 요청 파라미터가 예전과 같다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(OK('building'))
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'building', level: 5 })
+    await map.fetchNow(bounds, 5)
+    expect(Object.keys(fetchMock.mock.calls[0][1].params).sort())
+      .toEqual(['level', 'neLat', 'neLng', 'prev', 'swLat', 'swLng'])
+  })
+
+  it('단지 단계에서 필터를 바꾸면 그 필터로 바로 다시 조회하고 응답 메타를 둔다', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(OK('building'))
+      .mockResolvedValueOnce(OK('building', { total: 3, filter: { scanned: 400, approximate: true } }))
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({ type: 'apt-rent', items: [], granularity: 'building', level: 5 })
+    await map.fetchNow(bounds, 5)
+    map.setFilter({ area: '60-85', price: '30000-50000', priceKind: 'jeonse' }, bounds)
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][1].params).toMatchObject({ area: '60-85', price: '30000-50000', priceKind: 'jeonse' })
+    expect(map.filterMeta.value).toEqual({ scanned: 400, approximate: true })
+  })
+
+  it('집계 단계에서 필터를 바꾸면 다시 조회하지 않는다(서버가 무시하므로 결과가 같다)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(OK('district'))
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'district', level: 9 })
+    map.setFilter({ area: '60-85', price: null, priceKind: null }, bounds)
+    await flushPromises()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(map.filter.value.area).toBe('60-85')
+  })
+
+  it('유형을 바꾸면 맞지 않는 가격 필터는 초기화하고 면적은 유지한다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue(OK('building')))
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'district', level: 9 })
+    map.setFilter({ area: '85-135', price: '90000-150000', priceKind: null }, bounds)
+    map.setType('apt-rent', bounds)
+    await flushPromises()
+    expect(map.filter.value).toEqual({ area: '85-135', price: null, priceKind: null })
   })
 })
