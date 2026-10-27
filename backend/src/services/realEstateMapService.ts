@@ -254,44 +254,61 @@ async function buildRegions(type: string, level: RegionLevel): Promise<MapRegion
   // 갖고 있어(2026-08 운영 실측) 평균이 안정적이다.
   const isDong = level === 'dong';
 
-  const groupCols = isDong
-    ? 't.city, t.district, t.dongName'
-    : level === 'city'
-      ? 't.city'
-      : 't.city, t.district';
+  // 최근 3개월 거래를 [dealYear, dealMonth] 인덱스로 먼저 범위 스캔해 지역별로 집계한다.
+  // 힌트가 없으면 옵티마이저가 Region(272행) → t 를 [city, district, buildingName, bjdCode]
+  // ref 로 조인해 구마다 **전 기간** 거래를 읽은 뒤 날짜로 버렸다(운영 콜드 빌드 apt-rent
+  // district 76초). 옵티마이저 힌트는 이름이 없는 환경에서 경고만 내고 무시되므로 결과는 같다.
+  const dateIndexHint = `/*+ INDEX(t ${table}_dealYear_dealMonth_idx) */`;
 
-  const selectName = isDong
-    ? 't.city AS name, t.district AS district, t.dongName AS dong'
-    : level === 'city'
-      ? 't.city AS name, NULL AS district, NULL AS dong'
-      : 't.city AS name, t.district AS district, NULL AS dong';
+  const priceAgg = `ROUND(AVG(t.${priceCol} / (t.exclusiveArea / ${PYEONG_M2}))) AS avgPricePerPyeong`;
 
-  const joinCoord = isDong
-    ? ''
-    : level === 'city'
-      ? `JOIN (SELECT city, AVG(lat) AS lat, AVG(lng) AS lng FROM Region GROUP BY city) r
-           ON r.city = t.city`
-      : `JOIN Region r ON r.city = t.city AND r.district = t.district`;
-
-  // 좌표 컬럼과 GROUP BY 꼬리가 동/그 외에서 다르다. 동은 집계 함수라 GROUP BY 에
-  // 넣지 않고, 그 외는 JOIN 으로 가져온 상수라 GROUP BY 에 넣어야 한다.
-  const coordCols = isDong ? 'AVG(t.lat) AS lat, AVG(t.lng) AS lng' : 'r.lat AS lat, r.lng AS lng';
-  const groupTail = isDong ? '' : ', r.lat, r.lng';
-
-  // 좌표 없는 거래(0.1%)가 AVG 에 섞이면 동 중심이 흔들린다. 동일 때만 건다 —
-  // city/district 는 좌표를 Region 에서 가져오므로 거래 좌표와 무관하다.
-  const coordFilter = isDong ? 'AND t.lat IS NOT NULL AND t.lng IS NOT NULL' : '';
-
-  const sql = `
-    SELECT ${selectName},
-           ${coordCols},
-           ROUND(AVG(t.${priceCol} / (t.exclusiveArea / ${PYEONG_M2}))) AS avgPricePerPyeong,
+  let sql: string;
+  if (isDong) {
+    // 좌표 없는 거래(0.1%)가 AVG 에 섞이면 동 중심이 흔들린다 — 동만 좌표 필터를 건다.
+    // Region 조인이 없으므로 원래 쿼리에 인덱스 힌트만 더한 형태다.
+    sql = `
+    SELECT ${dateIndexHint}
+           t.city AS name, t.district AS district, t.dongName AS dong,
+           AVG(t.lat) AS lat, AVG(t.lng) AS lng,
+           ${priceAgg},
            COUNT(*) AS transactionCount
     FROM ${table} t
-    ${joinCoord}
-    WHERE t.exclusiveArea > 0 ${rentFilter} ${coordFilter} AND ${dateSql}
-    GROUP BY ${groupCols}${groupTail}
+    WHERE t.exclusiveArea > 0 ${rentFilter} AND t.lat IS NOT NULL AND t.lng IS NOT NULL AND ${dateSql}
+    GROUP BY t.city, t.district, t.dongName
   `;
+  } else {
+    // 동등성 근거 — 옛 쿼리는 t JOIN r 후 GROUP BY (t 지역 키, r.lat, r.lng) 였다.
+    //  - district: Region 은 @@unique([city, district]) 라 t 한 행에 r 이 최대 1행 → 조인이 행을
+    //    불리지 않는다. city: r 이 GROUP BY city 파생이라 마찬가지로 최대 1행.
+    //  - 그래서 "조인 후 집계" 와 "집계 후 조인" 은 같은 행 집합에 같은 AVG/COUNT 식을 적용한다.
+    //    매칭되는 r 이 없는 지역(내부 조인으로 빠지던 것)은 여기서도 내부 조인으로 빠진다.
+    //  - AVG 는 DECIMAL 정확 연산이라 스캔 순서가 바뀌어도 값이 같다(SUM/COUNT 로 쪼개지 않는다).
+    const aggKeys = level === 'city' ? 't.city' : 't.city, t.district';
+    const joinCoord =
+      level === 'city'
+        ? `JOIN (SELECT city, AVG(lat) AS lat, AVG(lng) AS lng FROM Region GROUP BY city) r
+           ON r.city = a.city`
+        : `JOIN Region r ON r.city = a.city AND r.district = a.district`;
+    const selectName =
+      level === 'city'
+        ? 'a.city AS name, NULL AS district, NULL AS dong'
+        : 'a.city AS name, a.district AS district, NULL AS dong';
+    sql = `
+    SELECT ${selectName},
+           r.lat AS lat, r.lng AS lng,
+           a.avgPricePerPyeong, a.transactionCount
+    FROM (
+      SELECT ${dateIndexHint}
+             ${aggKeys},
+             ${priceAgg},
+             COUNT(*) AS transactionCount
+      FROM ${table} t
+      WHERE t.exclusiveArea > 0 ${rentFilter} AND ${dateSql}
+      GROUP BY ${aggKeys}
+    ) a
+    ${joinCoord}
+  `;
+  }
 
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(sql, ...dateParams);
 
