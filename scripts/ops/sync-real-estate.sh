@@ -129,7 +129,9 @@ echo "[step:summary-end]"
 echo "[step:area-start]"
 AREA_EXIT=0
 run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRealEstateAreaSummary.js" || AREA_EXIT=$?
-if [ "$AREA_EXIT" -ne 0 ]; then
+if [ "$AREA_EXIT" -eq 75 ]; then
+  echo "[info] 면적 부분 진행 저장; 다음 실행에서 재개 (거래/V2 성공 보존)"
+elif [ "$AREA_EXIT" -ne 0 ]; then
   echo "[warn] 면적 증분 실패(exit=$AREA_EXIT); 거래=$TRANSACTION_EXIT V2=$SUMMARY_EXIT 결과 유지"
 fi
 echo "[step:area-end]"
@@ -173,7 +175,7 @@ run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeSubscription
 echo "[step:subscription-geocode-end]"
 
 set +x
-if [ "$REAL_ESTATE_SYNC_EXIT" -eq 0 ] && [ "$AREA_EXIT" -ne 0 ]; then REAL_ESTATE_SYNC_EXIT=6; fi
+if [ "$REAL_ESTATE_SYNC_EXIT" -eq 0 ] && [ "$AREA_EXIT" -ne 0 ] && [ "$AREA_EXIT" -ne 75 ]; then REAL_ESTATE_SYNC_EXIT=6; fi
 write_status "$REAL_ESTATE_SYNC_EXIT"
 if [ "$REAL_ESTATE_SYNC_EXIT" -ne 0 ]; then
   echo "[warn] 부동산 writer 단계에서 실패가 발생했다(exit=$REAL_ESTATE_SYNC_EXIT). 전체 작업은 완료했지만 실패로 종료한다."

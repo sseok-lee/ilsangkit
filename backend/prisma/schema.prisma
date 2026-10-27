@@ -2179,6 +2179,15 @@ model RealEstateAreaSummaryState {
   readyAt            DateTime?
   incrementalThrough DateTime?
   incrementalDateThrough String? @db.Char(10)
+  incrementalJob Json?
 
   @@id([type, scope])
+}
+
+/// 일일 면적 갱신에서 아직 계산하지 않은 키. 요약 upsert와 삭제를 같은 트랜잭션으로 커밋한다.
+model RealEstateAreaSummaryWork {
+  type String @db.VarChar(20)
+  buildingKey String @db.Char(64)
+
+  @@id([type, buildingKey])
 }

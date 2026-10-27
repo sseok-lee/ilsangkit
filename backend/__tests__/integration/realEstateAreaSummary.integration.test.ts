@@ -1,8 +1,10 @@
 import { makeBuildingKey } from '../../src/lib/realEstateBuildingIdentity.js';
 import { refreshBuildingAreaSummariesIncremental } from '../../src/services/realEstateAreaIncrementalService.js';
+import { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../src/lib/prisma.js';
+import * as areaWriter from '../../src/services/realEstateAreaSummaryService.js';
 import { AREA_BANDS, refreshBuildingAreaSummariesUnlocked } from '../../src/services/realEstateAreaSummaryService.js';
 import { getLatestDeals, latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
 import { fetchBuildings } from '../../src/services/realEstateMapService.js';
@@ -102,7 +104,7 @@ describe('면적 요약 MySQL 동등성', () => {
         }
       } finally {
         await prisma.realEstateAreaSummaryState.deleteMany({ where: { type, scope: '' } });
-        if (previousState) await prisma.realEstateAreaSummaryState.create({ data: previousState });
+        if (previousState) await prisma.realEstateAreaSummaryState.create({ data: { ...previousState, incrementalJob: previousState.incrementalJob ?? Prisma.DbNull } });
       }
     }
   });
@@ -141,7 +143,51 @@ describe('면적 요약 MySQL 동등성', () => {
       vi.restoreAllMocks();
       vi.setSystemTime(new Date('2026-10-27T03:00Z'));
       await prisma.realEstateAreaSummaryState.deleteMany({ where: { type, scope: '' } });
-      if (previous) await prisma.realEstateAreaSummaryState.create({ data: previous });
+      if (previous) await prisma.realEstateAreaSummaryState.create({ data: { ...previous, incrementalJob: previous.incrementalJob ?? Prisma.DbNull } });
+    }
+  }, 30000);
+
+  it('실제 DB에서 요약·작업 체크포인트가 함께 롤백되고, 예산 뒤 다음 날 남은 배치만 재개한다', async () => {
+    const type = 'apt-sale';
+    const previous = await prisma.realEstateAreaSummaryState.findUnique({ where: { type_scope: { type, scope: '' } } });
+    const keys: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      const identity = { ...keyFor('apt'), buildingName: `${PREFIX}resume-${i}` };
+      const buildingKey = makeBuildingKey(identity); keys.push(buildingKey);
+      await prisma.realEstateBuildingSummaryV2.create({ data: { type, buildingKey, buildingName: identity.buildingName, bjdCode: BJD, city: '테스트시', district: '테스트구', dongName: identity.dongName, jibun: '1', transactionCount: 0 } });
+    }
+    const job = { version: 1, mode: 'incremental', phase: 'work', runId: '22222222-2222-2222-2222-222222222222', upper: '2026-10-27T02:00:00.000Z', lower: '2026-10-26T00:00:00.000Z', dateThrough: '2026-10-27', metadataCursor: '', sourceTime: '2026-10-26T00:00:00.000Z', sourceId: 0, maturityDay: '2026-10-28', maturityId: 0, fullCursor: '', remaining: 40, processed: 0, partialDays: 0, lastPartialDate: null };
+    const baseline = { type, scope: '', runId: job.runId, lastBuildingKey: '', startedAt: new Date('2026-10-26T00:00Z'), dateThrough: '2026-10-26', completedAt: new Date(), readyAt: new Date(), incrementalThrough: new Date('2026-10-26T00:00Z'), incrementalDateThrough: '2026-10-26', incrementalJob: job };
+    await prisma.realEstateAreaSummaryState.upsert({ where: { type_scope: { type, scope: '' } }, create: baseline, update: baseline });
+    await prisma.realEstateAreaSummaryWork.createMany({ data: keys.map((buildingKey) => ({ type, buildingKey })) });
+    try {
+      const original = areaWriter.writeAreaSummaryBatch;
+      const fail = vi.spyOn(areaWriter, 'writeAreaSummaryBatch').mockImplementationOnce((t, rows, date, run, checkpoint) => original(t, rows, date, run, async (tx) => {
+        await checkpoint!(tx); throw new Error('after checkpoint rollback');
+      }));
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].status).toBe('failed');
+      fail.mockRestore();
+      expect(await prisma.realEstateBuildingAreaSummary.count({ where: { type, buildingKey: { in: keys } } })).toBe(0);
+      expect(await prisma.realEstateAreaSummaryWork.count({ where: { type } })).toBe(40);
+      expect((await prisma.realEstateAreaSummaryState.findUniqueOrThrow({ where: { type_scope: { type, scope: '' } } })).incrementalJob).toMatchObject({ processed: 0 });
+      let clock = Date.now();
+      const timer = vi.spyOn(Date, 'now').mockImplementation(() => clock += 10);
+      const partial = (await refreshBuildingAreaSummariesIncremental([type], { budgetMs: 50 }))[0];
+      timer.mockRestore();
+      expect(partial.status).toBe('partial'); expect(partial.buildings).toBe(25);
+      const firstRows = await prisma.realEstateBuildingAreaSummary.findMany({ where: { type, buildingKey: { in: keys } }, orderBy: [{ buildingKey: 'asc' }, { areaBand: 'asc' }] });
+      expect(firstRows).toHaveLength(125);
+      expect(await prisma.realEstateAreaSummaryWork.count({ where: { type } })).toBe(15);
+      vi.setSystemTime(new Date('2026-10-28T03:00Z'));
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0]).toMatchObject({ status: 'complete', buildings: 15 });
+      expect(await prisma.realEstateBuildingAreaSummary.findMany({ where: { type, buildingKey: { in: firstRows.map((r) => r.buildingKey) } }, orderBy: [{ buildingKey: 'asc' }, { areaBand: 'asc' }] })).toEqual(firstRows);
+      const done = await prisma.realEstateAreaSummaryState.findUniqueOrThrow({ where: { type_scope: { type, scope: '' } } });
+      expect(done.incrementalThrough?.toISOString()).toBe(job.upper); expect(done.incrementalJob).toBeNull();
+    } finally {
+      vi.restoreAllMocks(); vi.setSystemTime(new Date('2026-10-27T03:00Z'));
+      await prisma.realEstateAreaSummaryWork.deleteMany({ where: { type } });
+      await prisma.realEstateAreaSummaryState.deleteMany({ where: { type, scope: '' } });
+      if (previous) await prisma.realEstateAreaSummaryState.create({ data: { ...previous, incrementalJob: previous.incrementalJob ?? Prisma.DbNull } });
     }
   }, 30000);
 

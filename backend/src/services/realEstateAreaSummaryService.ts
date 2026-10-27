@@ -130,7 +130,7 @@ async function refreshType(type: string, options: AreaSummaryOptions, batchSize:
     throw new Error('Area summary coverage changed; restart backfill with --restart');
   }
   await prisma.$executeRawUnsafe(
-    'UPDATE RealEstateAreaSummaryState SET completedAt = NOW(3), readyAt = NOW(3), incrementalThrough = startedAt, incrementalDateThrough = dateThrough WHERE type = ? AND scope = ? AND runId = ?', type, scope, runId,
+    'UPDATE RealEstateAreaSummaryState SET completedAt = NOW(3), readyAt = NOW(3), incrementalThrough = startedAt, incrementalDateThrough = dateThrough, incrementalJob = NULL WHERE type = ? AND scope = ? AND runId = ?', type, scope, runId,
   );
   const result = { type, buildings, writtenRows, deletedRows, elapsedMs: Date.now() - started };
   console.info(`[AreaSummary] complete ${type}/${scope || '*'} ${JSON.stringify(result)}`);
@@ -143,7 +143,9 @@ export function backfillDeadline(until?: string, now = new Date()): Date | undef
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(until)) throw new Error('until must be HH:MM (KST)');
   const [hour, minute] = until.split(':').map(Number);
   const at = new Date(kstCalendarToday(now).getTime() + (hour * 60 + minute - 540) * 60000);
-  if (at.getTime() < now.getTime()) at.setUTCDate(at.getUTCDate() + 1);
+  const kstMinute = (now.getUTCHours() * 60 + now.getUTCMinutes() + 540) % 1440;
+  // 이른 새벽에 마감을 이미 지났다면 내일로 넘겨 03:00 cron을 침범하지 않는다.
+  if (at.getTime() < now.getTime() && kstMinute >= 330) at.setUTCDate(at.getUTCDate() + 1);
   return at;
 }
 export class AreaSummaryPausedError extends Error {

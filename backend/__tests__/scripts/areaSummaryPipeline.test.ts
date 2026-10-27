@@ -12,7 +12,7 @@ describe('일일 거래/V2/면적 단계 격리', () => {
     expect(script).toContain('transaction_exit=%s\\nsummary_exit=%s\\narea_exit=%s');
     expect(script).not.toContain('backfillRealEstateAreaSummary.js');
   });
-  it.each([0, 6, 124, 137])('면적 exit=%i여도 거래/V2 성공을 보존하고 종료 코드를 구분한다', (code) => {
+  it.each([0, 6, 75, 124, 137])('면적 exit=%i여도 거래/V2 성공을 보존하고 종료 코드를 구분한다', (code) => {
     const result = execFileSync('bash', ['-c', `run_backend_node_timed() { return ${code}; }
 ACTIVE_BACKEND_DIR=/unused
 TRANSACTION_EXIT=0
@@ -21,6 +21,6 @@ REAL_ESTATE_SYNC_EXIT=0
 ${area}
 ${aggregate}
 printf 'RESULT=%s,%s,%s,%s' "$TRANSACTION_EXIT" "$SUMMARY_EXIT" "$AREA_EXIT" "$REAL_ESTATE_SYNC_EXIT"`], { encoding: 'utf8' });
-    expect(result).toContain(`RESULT=0,0,${code},${code ? 6 : 0}`);
+    expect(result).toContain(`RESULT=0,0,${code},${code && code !== 75 ? 6 : 0}`);
   });
 });

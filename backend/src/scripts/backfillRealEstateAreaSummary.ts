@@ -6,12 +6,14 @@ import { installRuntimeGuard } from './_runtimeGuard.js';
 
 /** --type apt-rent --bjd-code 11680 --until 02:15 --batch-size 25 --pause-ms 100
  * bjd-code는 V2의 정확한 값(접두어 검색 아님). 미완료 실행은 기본 재개, --restart만 초기화한다.
- * until은 다음 KST HH:MM, 5분 여유로 중단(exit 75). cron 전에 여유 있는 시각을 지정한다.
+ * 기본 마감은 02:15이며 --no-until만 의도적으로 해제한다.
+ * until은 다음 KST HH:MM(새벽 마감 경과 시 당일 중단), 5분 여유로 중단(exit 75). cron 전에 여유 있는 시각을 지정한다.
  */
 export function parseAreaSummaryArgs(args: string[]): AreaSummaryOptions {
-  const options: AreaSummaryOptions = {};
+  const options: AreaSummaryOptions = { until: '02:15' };
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
+    if (flag === '--no-until') { options.until = undefined; continue; }
     if (flag === '--restart') { options.resume = false; continue; }
     if (flag === '--resume') { options.resume = true; continue; }
     const value = args[++i];

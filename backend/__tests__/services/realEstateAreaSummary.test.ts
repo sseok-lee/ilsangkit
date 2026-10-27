@@ -95,7 +95,7 @@ describe('단지×면적 요약 갱신', () => {
 
   it('CLI는 유형·지역·재개 옵션을 파싱하고 알 수 없는 인자를 거부한다', () => {
     expect(parseAreaSummaryArgs(['--type', 'apt-sale,villa-sale', '--bjd-code', '11680', '--resume', '--batch-size', '10', '--pause-ms', '20']))
-      .toEqual({ types: ['apt-sale', 'villa-sale'], bjdCode: '11680', resume: true, batchSize: 10, pauseMs: 20 });
+      .toEqual({ until: '02:15', types: ['apt-sale', 'villa-sale'], bjdCode: '11680', resume: true, batchSize: 10, pauseMs: 20 });
     expect(() => parseAreaSummaryArgs(['--type'])).toThrow();
     expect(() => parseAreaSummaryArgs(['--typo', 'x'])).toThrow();
   });
@@ -136,4 +136,16 @@ describe('같은 요약의 기록 생략', () => {
     queryRaw.mockResolvedValue(oldRows(null));
     expect(await writeAreaSummaryBatch('apt-sale', [{ ...row, jibun: '' }], '2026-10-27', 'run')).toBe(5);
   });
+});
+
+it('CLI 기본 마감과 의도적 해제를 제공한다', () => {
+  expect(parseAreaSummaryArgs([])).toEqual({ until: '02:15' });
+  expect(parseAreaSummaryArgs(['--no-until'])).toEqual({ until: undefined });
+});
+
+it('기본 마감을 지난 새벽에는 내일로 넘겨 cron을 막지 않는다', () => {
+  const now = new Date('2026-10-27T17:20:00Z');
+  const deadline = backfillDeadline('02:15', now)!;
+  expect(deadline.toISOString()).toBe('2026-10-27T17:15:00.000Z');
+  expect(deadline.getTime()).toBeLessThan(now.getTime());
 });
