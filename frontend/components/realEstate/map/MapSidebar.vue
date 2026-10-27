@@ -204,7 +204,7 @@ const props = withDefaults(defineProps<{
   pending: boolean
   type: string
   /**
-   * 이 사본에 출처 표기를 렌더할지. 데스크톱(aside)과 모바일(바텀시트)에 같은 MapSidebar 가
+   * 이 사본에 출처 표기를 렌더할지. 데스크톱(aside)과 모바일(전체 화면 목록)에 같은 MapSidebar 가
    * 항상 둘 다 마운트되므로(하나는 CSS 로만 숨김) 게이트가 필요하다 — 그냥 두면 2벌 생긴다.
    * 기본값은 false 다. true 로 두면 게이트를 잊은 호출부에서 조용히 2벌이 된다.
    */

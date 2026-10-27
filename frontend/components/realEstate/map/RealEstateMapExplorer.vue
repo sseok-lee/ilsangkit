@@ -50,10 +50,17 @@
           />
         </aside>
 
-        <div class="map-canvas-panel" :style="mobileCanvasStyle">
-          <div class="absolute top-2 left-2 right-2 z-20 lg:hidden">
+        <div class="map-canvas-panel">
+          <!-- z-40: 모바일 목록 화면(z-30)이 덮여도 필터는 그 위에 남아 목록에서도 유형을 바꿀 수 있다. -->
+          <div class="absolute top-2 left-2 right-2 z-40 lg:hidden">
             <MapFilterBar :type="type" @update:type="onTypeChange" />
           </div>
+          <!--
+            지도 쪽 요소 묶음(필터바 제외). 모바일 목록이 덮고 있는 동안 inert 로 탭 순서·스크린리더에서 뺀다.
+            display:contents 라 박스가 없어 안쪽 absolute 요소의 기준(map-canvas-panel)은 그대로다.
+            닫힘이 기본이라 SSR 에는 inert 속성이 없다(`|| undefined` — false 를 문자열로 찍지 않게).
+          -->
+          <div data-testid="map-layer" class="contents" :inert="mobileListOpen || undefined">
           <!--
             범례는 단지 단계에서만 뜬다 — 지역 단계 핀은 전부 같은 색(평당가 집계)이라 구분할 게 없다.
             모바일은 필터바 아래, 데스크톱은 지도 좌상단. 지도 위 평면 요소라 그림자 대신 테두리로 구분한다.
@@ -66,13 +73,43 @@
             <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-primary" aria-hidden="true" />최근 1년 거래</span>
             <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-faint" aria-hidden="true" />1년 넘은 거래·거래 없음</span>
           </div>
-          <!-- 현재 위치 경로(데스크톱). 모바일은 하단 시트 머리에 같은 경로를 둔다. -->
+          <!--
+            지도 하단 가운데 쌓임(모바일, 아래부터): 카카오 로고·축척(지도 SDK, 바닥 약 24px) → 출처 한 줄 →
+            '목록 보기' → 위치 경로 알약. 데스크톱은 출처가 왼쪽 목록 끝에 늘 보이므로 알약만 bottom-6 에 둔다.
+            셋 다 지도 위 평면 요소라 그림자 없이 테두리로 구분한다.
+          -->
           <div
             v-if="locationPath"
-            class="absolute bottom-6 left-1/2 z-20 hidden max-w-[calc(100%-32px)] -translate-x-1/2 lg:block"
+            class="absolute bottom-[108px] left-1/2 z-20 max-w-[calc(100%-32px)] -translate-x-1/2 lg:bottom-6"
           >
-            <MapLocationPath variant="pill" :crumbs="locationPath" @navigate="onCrumb" />
+            <MapLocationPath :crumbs="locationPath" @navigate="onCrumb" />
           </div>
+          <button
+            type="button"
+            ref="listOpenRef"
+            data-testid="map-list-open"
+            aria-controls="map-mobile-list"
+            :aria-expanded="mobileListOpen ? 'true' : 'false'"
+            class="absolute bottom-[56px] left-1/2 z-20 inline-flex min-h-[44px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-primary bg-primary px-5 text-sm font-semibold text-white lg:hidden"
+            @click="openMobileList"
+          >
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M8 6h12M8 12h12M8 18h12" />
+              <path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3" />
+            </svg>
+            목록 보기
+          </button>
+          <!--
+            출처 한 줄(모바일). 목록 끝 푸터(공공누리 전문·원본 링크)는 목록 화면에 그대로 있고,
+            지도만 보는 동안에도 출처가 화면에서 사라지지 않게 짧게 요약해 둔다.
+            bottom-7 은 카카오 로고·축척 줄(바닥 약 24px) 바로 위다 — 겹치지 않는다.
+          -->
+          <p
+            data-testid="map-source-line"
+            class="pointer-events-none absolute bottom-7 left-1/2 z-20 max-w-[calc(100%-16px)] -translate-x-1/2 truncate rounded border border-line bg-white/90 px-2 py-0.5 text-[10px] leading-tight text-muted lg:hidden"
+          >
+            국토교통부 실거래가<template v-if="sourceDate"> · {{ sourceDate }} 동기화</template> · 공공누리(KOGL) 가공
+          </p>
           <ClientOnly>
             <RealEstateMapCanvas
               ref="canvasRef"
@@ -91,44 +128,74 @@
               <div class="w-full h-full bg-background-light animate-pulse" />
             </template>
           </ClientOnly>
+          </div>
         </div>
       </div>
     </div>
 
-    <MapBottomSheet v-model:expanded="bottomSheetExpanded">
-      <template v-if="locationPath" #header>
-        <MapLocationPath :crumbs="locationPath" @navigate="onCrumb" />
-      </template>
-      <MapSidebar
-        :items="sidebarItems"
-        :granularity="granularity"
-        :total="total"
-        :exact="exact"
-        :pending="pending"
-        :type="type"
-        :show-footer="isDesktop === false"
-        :selected-key="selectedKey"
-        :error="visibleError"
-        :list-href="listHref"
-        :list-label="listLabel"
-        :active-city="activeCity"
-        @hover="hoveredKey = $event"
-        @select="onSelect"
-        @select-city="onCityChip"
-        @retry="retryAll"
-      />
-    </MapBottomSheet>
+    <!--
+      모바일 전체 화면 목록. 지도는 숨기지 않고 그 위를 덮는다 — 지도 컨테이너 크기가 바뀌지 않으니
+      카카오 relayout 이 필요 없고, 목록을 닫으면 보던 자리 그대로다.
+      v-if 가 아니라 v-show 다: 닫혀 있어도 SSR HTML 에 시·도 칩·지역·단지 링크가 그대로 남아야 한다
+      (모바일 우선 색인). 필터바(z-40)는 이 층(z-30) 위에 남으므로 목록은 그 아래(top-16)부터 시작한다.
+
+      높이는 h-* 대신 inset 으로 준다: 목록 안에 광고가 다시 들어오면 AdSense 가 조상마다
+      height:auto!important 를 주입하는데, inset 박스는 그 주입과 무관하게 크기가 확정된다.
+    -->
+    <div
+      id="map-mobile-list"
+      v-show="mobileListOpen"
+      ref="mobileListRef"
+      data-testid="map-mobile-list"
+      class="absolute inset-0 z-30 bg-white lg:hidden"
+      @keydown.esc="closeMobileList"
+    >
+      <div class="absolute inset-x-0 top-16 bottom-0 border-t border-line">
+        <!-- pb-20: 목록 끝 출처 푸터가 아래 떠 있는 '지도 보기' 버튼에 가리지 않게 스크롤 여유를 둔다. -->
+        <MapSidebar
+          ref="mobileSidebarRef"
+          class="pb-20"
+          :items="sidebarItems"
+          :granularity="granularity"
+          :total="total"
+          :exact="exact"
+          :pending="pending"
+          :type="type"
+          :show-footer="isDesktop === false"
+          :selected-key="selectedKey"
+          :error="visibleError"
+          :list-href="listHref"
+          :list-label="listLabel"
+          :active-city="activeCity"
+          @hover="hoveredKey = $event"
+          @select="onSelect"
+          @select-city="onCityChip"
+          @retry="retryAll"
+        />
+      </div>
+      <button
+        type="button"
+        ref="listCloseRef"
+        data-testid="map-list-close"
+        class="absolute bottom-6 left-1/2 inline-flex min-h-[44px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-primary bg-primary px-5 text-sm font-semibold text-white"
+        @click="closeMobileList"
+      >
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18 3.8 20.6V6.6L9 4m0 14 6 2.6m-6-2.6V4m6 16.6 5.2-2.6V4L15 6.6m0 14V6.6M15 6.6 9 4" />
+        </svg>
+        지도 보기
+      </button>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 // onMounted 를 명시 import 한다 — 이 컴포넌트는 테스트에서 직접 mount 되므로
 // auto-import 에 기대면 로컬은 통과하고 CI 에서만 ReferenceError 가 난다.
-import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
-import MapBottomSheet from './MapBottomSheet.vue'
 import MapLocationPath from './MapLocationPath.vue'
 import {
   useRealEstateMap, itemKey, buildMapHash, parseMapHash,
@@ -143,6 +210,8 @@ import { buildMapLocationPath, type MapPathCrumb } from '~/utils/mapLocationPath
 import { SIDO_CENTERS, cityDisplayName, type SidoChip } from '~/utils/regionChips'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
+import { useSyncStatus } from '~/composables/useSyncStatus'
+import { RE_STALE_DAYS, formatDotDate, isSyncStale } from '~/utils/syncFreshness'
 
 const props = defineProps<{
   initialType: string
@@ -164,10 +233,33 @@ const restoring = ref(false)
 const canvasRef = ref<{ retry: () => Promise<void> } | null>(null)
 const canvasError = ref<string | null>(null)
 const listRegion = ref<{ city: string; district?: string } | null>(null)
-const bottomSheetExpanded = ref(false)
-const mobileCanvasStyle = computed(() => ({
-  '--sheet-cover': bottomSheetExpanded.value ? '75dvh' : '38dvh',
-}))
+/** 모바일 전체 화면 목록이 열렸는지. 해시에 싣지 않는다 — 공유 링크는 늘 지도 화면으로 연다. */
+const mobileListOpen = ref(false)
+const mobileListRef = ref<HTMLElement | null>(null)
+const mobileSidebarRef = ref<{ $el: HTMLElement } | null>(null)
+const listOpenRef = ref<HTMLButtonElement | null>(null)
+const listCloseRef = ref<HTMLButtonElement | null>(null)
+
+/**
+ * 목록을 열면 포커스를 '지도 보기'로 옮기고(지도 쪽은 inert 가 된다), 지도에서 고른 단지 행이 있으면
+ * 그 행으로 스크롤한다. 열기 직전까지 display:none 이라 v-show 가 풀린 다음 틱에 찾아야 위치가 잡힌다.
+ */
+async function openMobileList(): Promise<void> {
+  mobileListOpen.value = true
+  await nextTick()
+  listCloseRef.value?.focus()
+  if (!selectedKey.value) return
+  const row = mobileListRef.value?.querySelector<HTMLElement>('[data-testid="map-sidebar-item"] a[aria-current="true"]')
+  row?.scrollIntoView?.({ block: 'center' })
+}
+
+/** 목록을 닫고 포커스를 '목록 보기'로 돌려준다(inert 가 풀린 다음 틱에야 포커스를 받을 수 있다). */
+async function closeMobileList(): Promise<void> {
+  mobileListOpen.value = false
+  await nextTick()
+  listOpenRef.value?.focus()
+}
+
 /**
  * 펼쳐진 건물 마커의 키. null 이면 전부 접힌 상태다.
  * 형식은 useRealEstateMap.itemKey 의 건물 분기와 같다 — `buildingName|district`.
@@ -186,6 +278,17 @@ const {
 })
 
 const visibleError = computed(() => canvasError.value ?? error.value)
+
+/**
+ * 지도 화면 출처 한 줄의 동기화 날짜. MapSidebar 푸터와 같은 규칙이다 — 현재 유형의 값(camelCase 키)을 쓰고,
+ * 신선도 한계(RE_STALE_DAYS)를 넘었으면 날짜를 숨긴다. sync-status 는 클라이언트에서만 받으므로 SSR 은 날짜 없이 그린다.
+ */
+const { syncStatus } = useSyncStatus()
+const sourceDate = computed(() => {
+  const key = type.value.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+  const at = syncStatus.value?.[key] ?? null
+  return at && !isSyncStale(at, RE_STALE_DAYS) ? formatDotDate(at) : null
+})
 
 /**
  * 유형별 전국 시·도 집계. 좌측 목록은 시·도 16곳을 항상 다 보여주는데, 지도 응답은 뷰포트
@@ -283,6 +386,18 @@ watch(granularity, () => {
   selectedKey.value = null
 })
 
+/**
+ * 모바일 목록 스크롤을 맨 위로. 목록 단위(시·도→구·군→동→단지)가 바뀌거나 지역을 실제로 옮기면
+ * (시·도 칩·위치 경로·지역 행) 완전히 다른 목록이 되어 이전 위치에 머물면 새 목록 중간부터 보인다.
+ * listRegion 을 watch 하지 않는다 — 단지 행 첫 탭(선택)도 listRegion 에 새 객체를 넣어, 두 번째 탭(상세)
+ * 직전에 목록이 맨 위로 튄다. 같은 단위 안의 팬·줌·단지 선택은 스크롤을 그대로 둔다.
+ */
+function resetListScroll(): void {
+  const el = mobileSidebarRef.value?.$el
+  if (el) el.scrollTop = 0
+}
+watch(granularity, resetListScroll)
+
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 /** 첫 조회를 지도 idle 에 미뤄 둔 상태인지(해시·저장 위치 복원). */
 let deferredFetch = false
@@ -292,7 +407,7 @@ let deferredFetch = false
  */
 let viewVersion = 0
 
-// MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
+// MapSidebar 가 데스크톱 aside 와 모바일 전체 화면 목록 두 사본으로 항상 동시에 마운트된다
 // (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 출처 표기가
 // 2벌 생기지 않도록 실제로 보이는 뷰포트 쪽에만 showFooter=true 를 내려준다.
 // 초기값 null 은 "아직 모른다"를 뜻하며, 두 사본 모두 `isDesktop === true` / `=== false`
@@ -305,7 +420,10 @@ let viewVersion = 0
 const isDesktop = ref<boolean | null>(null)
 let desktopMq: MediaQueryList | null = null
 function applyIsDesktop(): void {
-  if (desktopMq) isDesktop.value = desktopMq.matches
+  if (!desktopMq) return
+  isDesktop.value = desktopMq.matches
+  // 모바일 목록을 연 채 데스크톱 폭으로 넓히면 목록은 CSS 로 사라지지만 지도 쪽 inert 가 남는다 — 닫아 둔다.
+  if (desktopMq.matches) mobileListOpen.value = false
 }
 
 // SSR 은 항상 시/도 목록을 렌더한다(하이드레이션 일치). 해시는 마운트 후에만 읽어
@@ -333,7 +451,7 @@ onMounted(() => {
   if (import.meta.server) return
 
   // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
-  // aside 는 `lg:flex`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
+  // aside 는 `lg:flex`, 모바일 목록은 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
   desktopMq = typeof window.matchMedia === 'function'
     ? window.matchMedia('(min-width: 1024px)')
     : null
@@ -455,6 +573,7 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
  */
 function onSelect(item: MapItem): void {
   viewVersion += 1
+  if (!('buildingName' in item)) resetListScroll()
   if ('buildingName' in item) {
     listRegion.value = { city: item.city, district: item.district }
   } else if (granularity.value === 'city') {
@@ -487,6 +606,7 @@ function onSelect(item: MapItem): void {
 function onCrumb(crumb: MapPathCrumb): void {
   if (crumb.level == null) return
   viewVersion += 1
+  resetListScroll()
   if (crumb.level === 13) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
@@ -506,6 +626,7 @@ function onCrumb(crumb: MapPathCrumb): void {
  */
 async function onCityChip(chip: SidoChip | null): Promise<void> {
   const version = ++viewVersion
+  resetListScroll()
   if (!chip) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
@@ -535,7 +656,7 @@ defineExpose({ selectedKey })
   position: absolute;
   top: 0;
   right: 0;
-  bottom: calc(var(--sheet-cover) + 20px);
+  bottom: 0;
   left: 0;
   min-height: 0;
 }

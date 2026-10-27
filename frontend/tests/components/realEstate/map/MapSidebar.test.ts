@@ -514,7 +514,7 @@ describe('MapSidebar 출처 표기', () => {
     })
   }
 
-  // MapSidebar 는 데스크톱 aside 와 모바일 바텀시트 두 사본이 항상 동시에 마운트된다
+  // MapSidebar 는 데스크톱 aside 와 모바일 전체 화면 목록 두 사본이 항상 동시에 마운트된다
   // (안 보이는 쪽은 CSS hidden 일 뿐 DOM 에 남는다). 기본값이 true 면 두 사본이 모두 그린다.
   it('기본값은 렌더하지 않는다', () => {
     const w = mount(MapSidebar, {
