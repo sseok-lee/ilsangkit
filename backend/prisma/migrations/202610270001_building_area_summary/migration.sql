@@ -19,7 +19,7 @@ CREATE TABLE `RealEstateBuildingAreaSummary` (
   `refreshRunId` CHAR(36) NOT NULL,
   `updatedAt` DATETIME(3) NOT NULL,
   PRIMARY KEY (`type`, `buildingKey`, `areaBand`),
-  KEY `re_area_type_band_lat_lng_idx` (`type`, `areaBand`, `lat`, `lng`),
+  KEY `re_area_type_band_lat_lng_idx` (`type`, `areaBand`, `lat`, `lng`, `saleAmount`, `jeonseDeposit`, `wolseMonthlyRent`, `transactionCount`),
   KEY `re_area_type_bjd_key_idx` (`type`, `bjdCode`, `buildingKey`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

@@ -2163,7 +2163,7 @@ model RealEstateBuildingAreaSummary {
   updatedAt          DateTime  @updatedAt
 
   @@id([type, buildingKey, areaBand])
-  @@index([type, areaBand, lat, lng], map: "re_area_type_band_lat_lng_idx")
+  @@index([type, areaBand, lat, lng, saleAmount, jeonseDeposit, wolseMonthlyRent, transactionCount], map: "re_area_type_band_lat_lng_idx")
   @@index([type, bjdCode, buildingKey], map: "re_area_type_bjd_key_idx")
 }
 

@@ -77,6 +77,11 @@ describe('fetchBuildings 필터 경로', () => {
     }
     expect(calls[2][0]).toContain(`LIMIT ${BUILDING_LIMIT}`);
     expect(calls[2][0]).toContain('ORDER BY transactionCount DESC');
+    // 밀집 뷰포트에서도 JSON·주소는 상위 200개를 결정한 뒤 읽어야 한다.
+    const candidates = calls[2][0].split('FROM (')[1]?.split(') picked')[0];
+    expect(candidates).toContain(`LIMIT ${BUILDING_LIMIT}`);
+    expect(candidates).not.toContain('latestDeals');
+    expect(calls[2][0]).toContain('JOIN RealEstateBuildingAreaSummary s');
     expect(r).toMatchObject({ total: 854, exact: false });
     expect(r).not.toHaveProperty('filter');
     expect(r.items[0].latestDeals).toEqual(latestDeals);

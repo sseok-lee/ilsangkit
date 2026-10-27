@@ -233,9 +233,16 @@ async function fetchFilteredBuildings(type: string, bounds: Bounds, filter: MapF
   }
   const from = 'RealEstateBuildingAreaSummary FORCE INDEX (re_area_type_band_lat_lng_idx)';
   const counts = await prisma.$queryRawUnsafe<Array<{ cnt: bigint | number }>>(`SELECT COUNT(*) AS cnt FROM ${from} WHERE ${where}`, ...params);
+  // 밀집 지역의 수만 단지 JSON을 정렬하지 않는다. 커버링 인덱스에서 200개 키를 고른 뒤
+  // PK로 상세 행만 읽는다. LIMIT가 있어 derived table을 합쳐 풀어 읽지 않는다.
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `SELECT buildingKey, buildingName, bjdCode, city, district, dongName, jibun, lat, lng, transactionCount, latestDeals
-     FROM ${from} WHERE ${where} ORDER BY transactionCount DESC LIMIT ${BUILDING_LIMIT}`, ...params,
+    `SELECT s.buildingKey, s.buildingName, s.bjdCode, s.city, s.district, s.dongName, s.jibun,
+            s.lat, s.lng, s.transactionCount, s.latestDeals
+     FROM (SELECT type, buildingKey, areaBand, transactionCount
+       FROM ${from} WHERE ${where} ORDER BY transactionCount DESC LIMIT ${BUILDING_LIMIT}) picked
+     JOIN RealEstateBuildingAreaSummary s
+       ON s.type = picked.type AND s.buildingKey = picked.buildingKey AND s.areaBand = picked.areaBand
+     ORDER BY picked.transactionCount DESC`, ...params,
   );
   const total = Number(counts[0]?.cnt ?? 0);
   const items = rows.map((r) => {

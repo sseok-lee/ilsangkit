@@ -237,7 +237,7 @@ export const AREA_SUMMARY_TABLES: ExpectedTable[] = [
   \`refreshRunId\` CHAR(36) NOT NULL,
   \`updatedAt\` DATETIME(3) NOT NULL,
   PRIMARY KEY (\`type\`, \`buildingKey\`, \`areaBand\`),
-  KEY \`re_area_type_band_lat_lng_idx\` (\`type\`, \`areaBand\`, \`lat\`, \`lng\`),
+  KEY \`re_area_type_band_lat_lng_idx\` (\`type\`, \`areaBand\`, \`lat\`, \`lng\`, \`saleAmount\`, \`jeonseDeposit\`, \`wolseMonthlyRent\`, \`transactionCount\`),
   KEY \`re_area_type_bjd_key_idx\` (\`type\`, \`bjdCode\`, \`buildingKey\`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
     columns: [
@@ -262,7 +262,7 @@ export const AREA_SUMMARY_TABLES: ExpectedTable[] = [
     ],
     indexes: [
       { name: 'PRIMARY', unique: true, columns: ['type', 'buildingKey', 'areaBand'] },
-      { name: 're_area_type_band_lat_lng_idx', unique: false, columns: ['type', 'areaBand', 'lat', 'lng'] },
+      { name: 're_area_type_band_lat_lng_idx', unique: false, columns: ['type', 'areaBand', 'lat', 'lng', 'saleAmount', 'jeonseDeposit', 'wolseMonthlyRent', 'transactionCount'] },
       { name: 're_area_type_bjd_key_idx', unique: false, columns: ['type', 'bjdCode', 'buildingKey'] },
     ],
     checks: [],
