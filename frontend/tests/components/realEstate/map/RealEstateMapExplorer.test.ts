@@ -315,7 +315,6 @@ describe('RealEstateMapExplorer 레이아웃', () => {
           },
           MapFilterBar: { name: 'MapFilterBar', template: '<div />', props: ['type'] },
           RealEstateMapCanvas: { name: 'RealEstateMapCanvas', template: '<div />', props: ['items', 'center', 'level'] },
-          MapBottomSheet: { name: 'MapBottomSheet', template: '<div><slot /></div>', props: ['expanded'], emits: ['update:expanded'] },
           ClientOnly: { template: '<div><slot /></div>' },
         },
       },
@@ -341,9 +340,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     // 1448px 로 늘어나고 스크롤이 죽었다 — absolute inset-0 은 height 프로퍼티 자체를
     // 쓰지 않으므로(section 이 이미 fixed=positioned 라 containing block) 그 주입과
     // 무관하다.
-    // `section > div` 는 MapBottomSheet 스텁의 루트(`<div><slot /></div>`)도 매칭해
-    // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — lg:flex 클래스를 가진 쪽을
-    // 명시적으로 골라 그 우연에 기대지 않게 한다.
+    // section 바로 아래 div 가 늘어나도 첫 매치에 기대지 않도록 absolute+flex-col 쪽을 명시적으로 고른다.
     const cls = mountForLayout()
       .findAll('section > div')
       .find((d) => d.classes().includes('absolute') && d.classes().includes('flex-col'))
@@ -371,11 +368,11 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     expect(sidebar.classes()).toContain('w-full')
   })
 
-  it('지도 영역은 하단 시트 위까지만 차지한다 — 모바일 SDK 출처가 시트에 가려지지 않는다', () => {
+  it('지도 영역은 모바일에서도 필터 아래 남은 화면을 꽉 채운다 — 하단 시트 몫을 비워 두지 않는다', () => {
     const w = mountForLayout()
     const mapArea = w.find('.map-canvas-panel')
     expect(mapArea.exists()).toBe(true)
-    expect(mapArea.attributes('style')).toContain('--sheet-cover: 38dvh')
+    expect(mapArea.attributes('style') ?? '').not.toContain('--sheet-cover')
     expect(mapArea.classes().some((c) => c.startsWith('h-') || c.includes('60vh'))).toBe(false)
   })
 
@@ -395,7 +392,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
       await nextTick()
 
       const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
-      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.find('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
 
       expect(desktopSidebar.props('showFooter')).toBe(true)
       expect(mobileSidebar.props('showFooter')).toBe(false)
@@ -407,7 +404,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
       await nextTick()
 
       const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
-      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.find('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
 
       expect(desktopSidebar.props('showFooter')).toBe(false)
       expect(mobileSidebar.props('showFooter')).toBe(true)
@@ -687,8 +684,8 @@ describe('RealEstateMapExplorer — 범례·위치 경로', () => {
 
   it('시·도 단계 위치 경로는 "전국"', () => {
     const paths = mountExplorer().findAll('[data-testid="map-location-path"]')
-    // 데스크톱(지도 하단)·모바일(시트 머리) 두 자리
-    expect(paths).toHaveLength(2)
+    // 지도 하단 가운데 알약 한 자리 — 모바일·데스크톱 공용
+    expect(paths).toHaveLength(1)
     for (const p of paths) expect(p.text()).toBe('전국')
   })
 
@@ -885,5 +882,69 @@ describe('RealEstateMapExplorer — 첫 화면 위치와 시·도 칩', () => {
     const nation = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a')[0]
     await nation.trigger('click')
     expect(w.findComponent(CanvasStub).props('level')).toBe(13)
+  })
+})
+
+// 모바일(lg 미만)은 하단 시트 없이 지도가 화면을 채우고, '목록 보기'로 전체 화면 목록을 덮어 연다.
+// 목록은 v-show 로만 숨긴다 — SSR HTML 에 시·도 칩·지역 링크가 그대로 남아야 한다(모바일 우선 색인).
+describe('RealEstateMapExplorer — 모바일 지도/목록 전환', () => {
+  afterEach(() => {
+    window.location.hash = ''
+  })
+
+  const isHidden = (el: { attributes: (k: string) => string | undefined }) =>
+    /display:\s*none/.test(el.attributes('style') ?? '')
+
+  it('기본은 지도 화면이다 — 목록은 숨겨져 있지만 DOM 에 시·도 링크가 그대로 있다', () => {
+    const w = mountExplorer()
+    const list = w.get('[data-testid="map-mobile-list"]')
+    expect(isHidden(list)).toBe(true)
+    expect(list.classes()).toContain('lg:hidden')
+    expect(list.html()).toContain('href="/real-estate/apt-sale/seoul"')
+    expect(list.html()).toContain('data-testid="map-sido-chips"')
+    expect(w.find('[data-testid="canvas"]').exists()).toBe(true)
+  })
+
+  it("'목록 보기'로 목록을 열고 '지도 보기'로 돌아온다 — 지도는 숨기지 않고 목록이 위를 덮는다", async () => {
+    const w = mountExplorer()
+    const open = w.get('[data-testid="map-list-open"]')
+    expect(open.text()).toContain('목록 보기')
+    expect(open.classes()).toContain('lg:hidden')
+    expect(open.classes()).toContain('min-h-[44px]')
+
+    await open.trigger('click')
+    expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(false)
+    // 지도 패널은 그대로 보인다(크기 불변 → 카카오 relayout 불필요)
+    expect(isHidden(w.get('.map-canvas-panel'))).toBe(false)
+
+    const close = w.get('[data-testid="map-list-close"]')
+    expect(close.text()).toContain('지도 보기')
+    expect(close.classes()).toContain('min-h-[44px]')
+    await close.trigger('click')
+    expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(true)
+  })
+
+  it('지도 화면 하단에 출처 한 줄을 항상 보인다(모바일 전용)', () => {
+    const line = mountExplorer().get('[data-testid="map-source-line"]')
+    expect(line.classes()).toContain('lg:hidden')
+    expect(line.classes()).toContain('truncate')
+    expect(line.text()).toContain('국토교통부')
+    expect(line.text()).toContain('공공누리')
+  })
+
+  it('위치 경로 알약은 모바일에서도 지도 위에 보인다', () => {
+    const w = mountExplorer()
+    const path = w.get('[data-testid="map-location-path"]')
+    const wrap = path.element.parentElement!
+    expect(wrap.className).not.toMatch(/(^|\s)hidden(\s|$)/)
+    expect(w.get('[data-testid="map-mobile-list"]').find('[data-testid="map-location-path"]').exists()).toBe(false)
+  })
+
+  it('데스크톱 사이드바(aside)는 그대로다 — 토글 상태와 무관하게 lg:flex', async () => {
+    const w = mountExplorer()
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const aside = w.get('aside')
+    expect(aside.classes()).toEqual(expect.arrayContaining(['hidden', 'lg:flex', 'lg:w-[360px]']))
+    expect(isHidden(aside)).toBe(false)
   })
 })

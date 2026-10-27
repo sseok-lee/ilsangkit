@@ -15,7 +15,6 @@ const SCAN_FILES = ['app.vue', 'error.vue', 'assets/css/main.css']
 const IGNORED = new Set(['pages/msw-demo.vue'])
 
 const ALLOW: Array<{ file: string; token: string; count: number; reason: string }> = [
-  { file: 'components/realEstate/map/MapBottomSheet.vue', token: 'shadow-[0_-4px_16px_rgba(0,0,0,0.12)]', count: 1, reason: '지도 위 바닥 시트 — 위쪽으로 드리워야 경계가 보임' },
   { file: 'composables/useKakaoMap.ts', token: 'shadow-md', count: 1, reason: '지도 내부 마커 알약' },
   { file: 'components/map/FacilityMap.vue', token: 'box-shadow: 0 1px 4px rgb(0 0 0 / 0.2)', count: 1, reason: '지도 내부 현재 위치 점' },
   { file: 'assets/css/main.css', token: 'shadow-[0_1px_3px_rgba(21,33,59,0.18)]', count: 1, reason: '지도 내부 가격 라벨·지역 버블' },
