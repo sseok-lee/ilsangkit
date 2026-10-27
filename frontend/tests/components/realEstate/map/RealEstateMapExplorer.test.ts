@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { MapItem } from '~/types/realEstateMap'
@@ -25,6 +25,11 @@ const DONG_ITEMS: MapItem[] = [
   { name: '서울', district: '강북구', dong: '미아동', lat: 37.63, lng: 127.02,
     avgPricePerPyeong: 3225, transactionCount: 42 },
 ]
+
+// 테스트마다 마운트를 푼다. 남겨 두면 앞 테스트의 디바운스 조회(onMapIdle 250ms)·유형 전환 조회가 뒤 테스트
+// 도중에 전역 $fetch 목 응답(data:{})을 받아 items=undefined 로 다시 그리다 깨진다
+// (CI: 'props.items is not iterable' Unhandled Rejection 2건).
+enableAutoUnmount(afterEach)
 
 // syncHash 가 마지막 위치를 localStorage 에 저장한다 — 앞 테스트의 저장값이 다음 테스트의
 // 첫 위치(저장 위치 복원)로 새어 들지 않게 매번 비운다.
@@ -959,7 +964,6 @@ describe('RealEstateMapExplorer — 모바일 지도/목록 전환', () => {
     await flushPromises()
     expect(open.attributes('aria-expanded')).toBe('false')
     expect(document.activeElement).toBe(open.element)
-    w.unmount()
   })
 
   it('목록이 열린 동안 지도 쪽(필터바 제외)은 inert 이고, 처음(SSR)엔 inert 속성이 없다', async () => {
