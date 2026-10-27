@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
-  buildingMarkerTone, cityDisplayName, formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatRegionLabel,
+  buildingMarkerTone, formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatRegionLabel,
   formatWolseLabel, getRentDisplay, isDealOlderThanYear, overlayPriority, useMapOverlays,
 } from '~/composables/useMapOverlays'
 import type { MapBuildingItem, MapRegionItem } from '~/types/realEstateMap'
+import { cityDisplayName } from '~/utils/regionChips'
 import type { DealSnapshot, LatestDeals } from '~/types/realEstateExploration'
 
 function saleDeal(amount: number): DealSnapshot {
@@ -299,6 +300,12 @@ describe('지역 핀 라벨 — 이름 + 평당가', () => {
   it('통합시 풀네임은 목록과 같은 짧은 이름으로', () => {
     expect(cityDisplayName('전남광주통합특별시')).toBe('전남·광주')
     expect(cityDisplayName('서울')).toBe('서울')
+  })
+
+  it('정식명(서울특별시·경기도)도 칩 라벨로 맞춘다', () => {
+    expect(cityDisplayName('서울특별시')).toBe('서울')
+    expect(cityDisplayName('경기도')).toBe('경기')
+    expect(cityDisplayName('어딘가')).toBe('어딘가')
   })
 })
 
@@ -818,22 +825,30 @@ describe('useMapOverlays', () => {
       expect(gangwon.opts.content.style.getPropertyValue('--tail-x')).toBe('15%')
     })
 
-    it('경기 시·도 핀은 서울을 가리지 않게 경기 남동부 안쪽에 찍고, 클릭 시 넘기는 항목 좌표는 그대로다', () => {
+    it('실좌표 회귀: 경기가 거래가 많아 먼저 자리를 잡아도, 서울 좌표가 그 말풍선 안이면 경기가 아래로 비켜 서울·경기 둘 다 보인다', () => {
+      // 전국 뷰(level 13, 1440px)의 근사 투영: 경도 1° ≈ 80px, 위도 1° ≈ 100px. 좌표·거래 수는 로컬 실측.
+      const level13 = {
+        id: 'level13',
+        getProjection: () => ({
+          containerPointFromCoords: (ll: FakeLatLng) => ({ x: (ll.lng - 124) * 80, y: (39 - ll.lat) * 100 }),
+        }),
+      }
       const { renderOverlays } = useMapOverlays()
-      const onClick = vi.fn()
-      const gyeonggi = regionItem({ name: '경기', avgPricePerPyeong: 2403, transactionCount: 16325, lat: 37.43, lng: 127.03 })
-      renderOverlays(fakeMap, [gyeonggi, regionItem({ name: '서울', avgPricePerPyeong: 4999, lat: 37.55, lng: 126.99 })], { onClick })
-      expect(created[0].opts.position.lat).toBe(37.2)
-      expect(created[0].opts.position.lng).toBe(127.4)
-      expect(created[1].opts.position.lat).toBe(37.55)
-      created[0].opts.content.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      expect(onClick).toHaveBeenCalledWith(gyeonggi)
-    })
-
-    it('구·군·동 단계 항목은 앵커를 바꾸지 않는다', () => {
-      const { renderOverlays } = useMapOverlays()
-      renderOverlays(fakeMap, [regionItem({ name: '경기', district: '수원시', lat: 37.26, lng: 127.03 })])
-      expect(created[0].opts.position.lat).toBe(37.26)
+      renderOverlays(level13, [
+        regionItem({ name: '경기', avgPricePerPyeong: 2403, transactionCount: 16325, lat: 37.43, lng: 127.03 }),
+        regionItem({ name: '서울', avgPricePerPyeong: 4999, transactionCount: 4459, lat: 37.55, lng: 126.99 }),
+        regionItem({ name: '인천', avgPricePerPyeong: 1878, transactionCount: 3261, lat: 37.51, lng: 126.64 }),
+      ])
+      const byName = Object.fromEntries(created.map((o) => {
+        const el = o.opts.content as HTMLElement
+        return [el.querySelector('.map-region-bubble-name')?.textContent ?? el.title, o]
+      }))
+      expect(byName['서울'].opts.content.className).toContain('map-region-bubble')
+      expect(byName['경기'].opts.content.className).toContain('map-region-bubble')
+      expect(byName['경기'].opts.yAnchor).toBe(0)
+      // 핀 좌표는 서버 좌표 그대로다 — 뷰포트 판정과 핀 위치가 어긋나지 않는다.
+      expect(byName['경기'].opts.position.lat).toBe(37.43)
+      expect(byName['서울'].opts.position.lat).toBe(37.55)
     })
 
     it('단지 단계: 선택된 단지 > 거래 많은 단지 순으로 자리를 잡는다', () => {

@@ -11,23 +11,24 @@
     aria-label="현재 지도 위치"
     data-testid="map-location-path"
     :class="variant === 'pill'
-      ? 'inline-flex max-w-full items-center rounded-full border border-line bg-white/95 px-3 shadow-card-2'
-      : 'flex min-w-0 items-center'"
+      ? 'inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-full border border-line bg-white/95 px-3 shadow-card-2'
+      : 'flex min-w-0 max-w-full items-center overflow-hidden'"
   >
-    <ol class="flex min-w-0 items-center gap-0.5 text-sm">
+    <ol class="flex min-w-0 max-w-full items-center gap-0.5 text-sm">
       <li v-for="(crumb, i) in crumbs" :key="`${i}-${crumb.label}`" class="flex min-w-0 items-center gap-0.5">
-        <span v-if="i > 0" class="px-0.5 text-faint" aria-hidden="true">›</span>
+        <span v-if="i > 0" class="shrink-0 px-0.5 text-faint" aria-hidden="true">›</span>
+        <!-- 말줄임은 안쪽 span 에 건다 — flex 컨테이너의 텍스트에는 text-overflow 가 먹지 않는다. -->
         <a
           v-if="crumb.href && crumb.level != null"
           :href="crumb.href"
-          class="inline-flex min-h-[44px] items-center truncate px-1 font-medium text-primary hover:underline"
+          class="flex min-h-[44px] min-w-0 items-center px-1 font-medium text-primary hover:underline"
           @click.exact.prevent="emit('navigate', crumb)"
-        >{{ crumb.label }}</a>
+        ><span class="truncate">{{ crumb.label }}</span></a>
         <span
           v-else
-          class="inline-flex min-h-[44px] items-center truncate px-1 font-bold text-ink"
+          class="flex min-h-[44px] min-w-0 items-center px-1 font-bold text-ink"
           aria-current="location"
-        >{{ crumb.label }}</span>
+        ><span class="truncate">{{ crumb.label }}</span></span>
       </li>
     </ol>
   </nav>

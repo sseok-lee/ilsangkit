@@ -585,10 +585,74 @@ describe('RealEstateMapExplorer — 시·도 목록은 뷰포트 밖 지역도 �
     await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
     await flushPromises()
 
-    const nationalCalls = fetchMock.mock.calls.filter(([url, o]) =>
-      String(url).includes('/villa-sale/map') && o.params.level === 13 && o.params.swLat === 33 && o.params.neLng === 132)
-    expect(nationalCalls.length).toBeGreaterThanOrEqual(1)
+    const nationalCalls = (t: string) => fetchMock.mock.calls.filter(([url, o]) =>
+      String(url).includes(`/${t}/map`) && o.params.level === 13 && o.params.swLat === 33 && o.params.neLng === 132 && o.params.prev === undefined)
+    // 초기 유형은 SSR initialItems 를 재사용해 전국 호출이 없다.
+    expect(nationalCalls('apt-sale')).toHaveLength(0)
+    expect(nationalCalls('villa-sale')).toHaveLength(1)
     expect(sidebarRowText(w, '제주')).toContain('900만/평')
+
+    // 같은 유형으로 시·도 단계에 다시 들어와도(지역 이동 후 복귀) 다시 받지 않는다.
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 34.2, swLng: 125.9, neLat: 38.6, neLng: 129.7 }, 13, { lat: 36.4, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    expect(nationalCalls('villa-sale')).toHaveLength(1)
+  })
+
+  it('첫 화면(초기 유형)은 전국 집계를 다시 요청하지 않는다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [SEOUL], granularity: 'city', total: 1, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await flushPromises()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('전국 집계가 빈 목록(백엔드 일시 실패)이면 저장하지 않고 다음 시·도 단계 진입 때 다시 받는다', async () => {
+    let nationalCount = 0
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: { params: { level: number; swLat: number; prev?: string } }) => {
+      const national = opts.params.prev === undefined && opts.params.level === 13 && opts.params.swLat === 33
+      if (national) nationalCount += 1
+      const items = national ? (nationalCount === 1 ? [] : [SEOUL, { ...JEJU, avgPricePerPyeong: 900 }]) : [SEOUL]
+      return Promise.resolve({ success: true, data: { items, granularity: 'city', total: items.length, exact: true } })
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await flushPromises()
+    expect(nationalCount).toBe(1)
+    expect(sidebarRowText(w, '제주')).not.toContain('900만/평')
+
+    // 구·군 단계로 들어갔다가 시·도 단계로 돌아오면 다시 받는다.
+    fetchMock.mockImplementationOnce(() => Promise.resolve({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } }))
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37, swLng: 126.5, neLat: 38, neLng: 127.5 }, 9, { lat: 37.5, lng: 127 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }, 13, { lat: 36.5, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    expect(nationalCount).toBe(2)
+    expect(sidebarRowText(w, '제주')).toContain('900만/평')
+  })
+
+  it('유형을 바꾼 직후 이전 유형의 값이 목록에 섞이지 않는다', async () => {
+    let resolveViewport: (v: unknown) => void = () => {}
+    vi.stubGlobal('$fetch', vi.fn().mockImplementation(() => new Promise((r) => { resolveViewport = r })))
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await nextTick()
+    // 새 유형 응답 전: 아파트 매매 값(5,117만/평·1,553만/평)이 빌라 목록에 남아 있으면 안 된다.
+    expect(sidebarRowText(w, '서울')).not.toContain('5,117만/평')
+    expect(sidebarRowText(w, '제주')).not.toContain('1,553만/평')
+    resolveViewport({ success: true, data: { items: [], granularity: 'city', total: 0, exact: true } })
   })
 })
 

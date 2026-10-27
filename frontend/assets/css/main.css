@@ -432,8 +432,9 @@
     --pin-fill: var(--faint);
   }
 
+  /* 회색 위 흰색 80%는 약 3.8:1 이라 10.5px 글자에 모자란다. 이름도 흰색 그대로(약 4.9:1). */
   .map-price-label--muted .map-price-label-name {
-    @apply text-white/80;
+    @apply text-white;
   }
 
   .map-price-label:hover {

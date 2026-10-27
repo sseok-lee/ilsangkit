@@ -3,8 +3,7 @@ import { isBuildingItem, type MapBuildingItem, type MapItem, type MapRegionItem 
 import type { DealSnapshot } from '~/types/realEstateExploration'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { itemKey } from '~/composables/useRealEstateMap'
-import { SIDO_CHIPS } from '~/utils/regionChips'
-import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
+import { cityDisplayName } from '~/utils/regionChips'
 
 const DEALS_UNAVAILABLE_MESSAGE = '거래 정보를 불러오지 못했습니다'
 const NO_DEAL_MESSAGE = '거래 없음'
@@ -135,16 +134,6 @@ export function formatPyeongLabel(item: MapRegionItem): string {
   return `${formatManwon(item.avgPricePerPyeong)}/평`
 }
 
-/**
- * 시·도 표시 이름. API 의 name 은 DB city 원값이라 대부분 축약형('서울')이지만 통합시는
- * 풀네임('전남광주통합특별시')이다 — 지도 핀에 그대로 쓰면 다른 핀보다 세 배 길어진다.
- * 목록(MapSidebar)이 쓰는 SIDO_CHIPS 라벨('전남·광주')과 맞춘다.
- */
-export function cityDisplayName(name: string): string {
-  const chip = SIDO_CHIPS.find((c) => c.label === name || CITY_SLUG_MAP[c.slug] === name)
-  return chip?.label ?? name
-}
-
 /** 지역 핀의 이름. 동 단계는 동, 구·군 단계는 구·군, 시·도 단계는 시·도 이름이다. */
 export function regionDisplayName(item: MapRegionItem): string {
   return item.dong ?? item.district ?? cityDisplayName(item.name)
@@ -233,24 +222,9 @@ const REGION_PLACEMENTS: Placement[] = [
   { x: 0.85, below: true },
 ]
 
-/**
- * 시·도 핀을 찍을 자리를 바꾸는 표. 경기는 서울을 둘러싸고 있어 구·군 평균 좌표(서버 값,
- * 로컬 실측 37.43, 127.03)가 서울(37.55, 126.99) 바로 아래 — 화면 17px — 에 찍힌다. 그러면
- * 서울 좌표가 경기 말풍선 안에 들어가 서울은 어느 자리로도 비껴 갈 수 없다(거래는 경기가
- * 서울의 약 3.7배라 경기가 먼저 자리를 잡는다). 경기 핀만 경기 남동부(용인·이천 사이) 안쪽으로
- * 옮긴다. 핀 위치만 바꾸고, 핀을 눌렀을 때 이동하는 좌표(item.lat/lng)는 그대로다.
- */
-const CITY_PIN_ANCHORS: Record<string, { lat: number; lng: number }> = {
-  경기: { lat: 37.2, lng: 127.4 },
-}
-
-/** 핀을 찍을 좌표. 시·도 항목만 CITY_PIN_ANCHORS 로 바뀐다. */
+/** 핀을 찍을 좌표. 좌표 없는 항목(집계 폴백)은 null. */
 function pinPosition(item: MapItem): { lat: number; lng: number } | null {
   if (item.lat == null || item.lng == null) return null
-  if (!isBuildingItem(item) && item.district == null && item.dong == null) {
-    const anchor = CITY_PIN_ANCHORS[cityDisplayName(item.name)]
-    if (anchor) return anchor
-  }
   return { lat: item.lat, lng: item.lng }
 }
 
@@ -423,7 +397,36 @@ export function useMapOverlays() {
     const collapsed = new Set<MapItem>()
     const placements = new Map<MapItem, Placement>()
     if (projection) {
-      const placed: Box[] = []
+      interface Placed { item: MapItem; pt: { x: number; y: number }; size: { w: number; h: number }; box: Box; movable: boolean }
+      const placed: Placed[] = []
+      const fits = (box: Box, except?: Placed) => !placed.some((p) => p !== except && intersects(p.box, box))
+      const commit = (entry: Placed, place: Placement) => {
+        entry.box = boxAt(entry.pt, entry.size, place)
+        if (place === DEFAULT_PLACEMENT) placements.delete(entry.item)
+        else placements.set(entry.item, place)
+      }
+
+      /**
+       * 자리를 못 찾은 지역 핀을 위해, 그 자리를 막고 있는 앞선 지역 핀 하나를 다른 후보 자리로
+       * 옮겨 본다(한 단계 양보). 서울을 둘러싼 경기처럼 큰 지역의 좌표가 작은 지역 좌표 바로 옆에
+       * 찍히면, 먼저 자리를 잡은 쪽 말풍선 안에 뒤엣것의 좌표가 들어가 뒤엣것은 어느 자리로도
+       * 못 간다(로컬 실측: 경기 좌표가 서울 아래 17px, 거래는 경기가 3.7배). 앞선 핀이 아래로
+       * 비켜 주면 둘 다 보인다. 이름별 예외 좌표 없이 모든 지역 단계에 같은 규칙이 적용된다.
+       */
+      const placeByYielding = (pt: Placed['pt'], size: Placed['size']): { place: Placement; blocker: Placed; alt: Placement } | null => {
+        for (const place of REGION_PLACEMENTS) {
+          const box = boxAt(pt, size, place)
+          const blockers = placed.filter((p) => intersects(p.box, box))
+          if (blockers.length !== 1 || !blockers[0].movable) continue
+          const blocker = blockers[0]
+          for (const alt of REGION_PLACEMENTS) {
+            const altBox = boxAt(blocker.pt, blocker.size, alt)
+            if (!intersects(altBox, box) && fits(altBox, blocker)) return { place, blocker, alt }
+          }
+        }
+        return null
+      }
+
       for (const item of overlayPriority(items, selectedKey)) {
         const pos = pinPosition(item)
         if (!pos) continue
@@ -434,20 +437,25 @@ export function useMapOverlays() {
         const building = isBuildingItem(item)
         const size = building ? buildingBoxSize(name, price, selected) : regionBoxSize(name, price)
         if (selected) {
-          placed.push(boxAt(pt, size, DEFAULT_PLACEMENT))
+          placed.push({ item, pt, size, box: boxAt(pt, size, DEFAULT_PLACEMENT), movable: false })
           continue
         }
         const candidates = building ? [DEFAULT_PLACEMENT] : REGION_PLACEMENTS
-        const fit = candidates.find((place) => {
-          const box = boxAt(pt, size, place)
-          return !placed.some((p) => intersects(p, box))
-        })
-        if (!fit) {
+        const fit = candidates.find((place) => fits(boxAt(pt, size, place)))
+        const entry: Placed = { item, pt, size, box: boxAt(pt, size, DEFAULT_PLACEMENT), movable: !building }
+        if (fit) {
+          commit(entry, fit)
+          placed.push(entry)
+          continue
+        }
+        const yielded = building ? null : placeByYielding(pt, size)
+        if (!yielded) {
           collapsed.add(item)
           continue
         }
-        placed.push(boxAt(pt, size, fit))
-        if (fit !== DEFAULT_PLACEMENT) placements.set(item, fit)
+        commit(yielded.blocker, yielded.alt)
+        commit(entry, yielded.place)
+        placed.push(entry)
       }
     }
 

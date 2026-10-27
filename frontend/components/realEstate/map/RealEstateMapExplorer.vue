@@ -197,7 +197,10 @@ async function ensureNationalCityItems(t: string): Promise<void> {
       },
     })
     const list = res?.data?.items
-    if (res?.data?.granularity === 'city' && Array.isArray(list)) {
+    // 빈 배열은 저장하지 않는다 — 백엔드는 집계가 실패하면 200 + 빈 목록을 주고 캐시하지 않는다
+    // (일시 장애). 저장하면 그 유형은 새로고침 전까지 다시 받지 않아 제주 '—'가 되살아난다.
+    // 저장하지 않으면 다음 시·도 단계 진입·유형 전환 때 다시 받는다.
+    if (res?.data?.granularity === 'city' && Array.isArray(list) && list.length > 0) {
       nationalCityItems.value = {
         ...nationalCityItems.value,
         [t]: list.filter((i) => !isBuildingItem(i)) as MapRegionItem[],

@@ -1,5 +1,5 @@
 import { isBuildingItem, type Granularity, type MapItem } from '~/types/realEstateMap'
-import { cityDisplayName } from '~/composables/useMapOverlays'
+import { cityDisplayName } from '~/utils/regionChips'
 import { explorationListHref } from '~/utils/explorationNavigation'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 

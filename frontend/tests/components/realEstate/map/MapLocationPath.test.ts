@@ -33,4 +33,20 @@ describe('MapLocationPath', () => {
     const w = mount(MapLocationPath, { props: { crumbs: CRUMBS } })
     for (const a of w.findAll('a')) expect(a.classes()).toContain('min-h-[44px]')
   })
+
+  it('긴 이름은 칸 안쪽 글자에서 말줄임되고, 경로 전체가 부모 폭을 넘지 않게 줄어든다', () => {
+    const long: MapPathCrumb[] = [
+      { label: '전국', href: '/real-estate/apt-sale', level: 13 },
+      { label: '전남·광주', href: '/real-estate/apt-sale/jeonnamgwangju', level: 9, city: '전남광주통합특별시' },
+      { label: '아주아주긴이름의어느읍면동행정구역', href: null, level: null },
+    ]
+    for (const variant of ['pill', 'plain'] as const) {
+      const w = mount(MapLocationPath, { props: { crumbs: long, variant } })
+      expect(w.find('nav').classes()).toEqual(expect.arrayContaining(['min-w-0', 'max-w-full', 'overflow-hidden']))
+      const current = w.find('[aria-current="location"]')
+      expect(current.classes()).toContain('min-w-0')
+      expect(current.find('span.truncate').text()).toBe('아주아주긴이름의어느읍면동행정구역')
+      for (const li of w.findAll('li')) expect(li.classes()).toContain('min-w-0')
+    }
+  })
 })

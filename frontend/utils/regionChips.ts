@@ -1,5 +1,6 @@
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import { normalizeWasteAreaCity } from '~/utils/wasteAreaQuery'
+import { toCitySlugByDistrict } from '~/utils/realEstateUrl'
 
 export interface SidoChip {
   slug: string
@@ -29,6 +30,17 @@ export const SIDO_CHIPS: SidoChip[] = [
   { slug: 'jeju', label: '제주' },
   { slug: 'jeonnamgwangju', label: '전남·광주' },
 ]
+
+/**
+ * 시·도 표시 이름. 지도 API 의 name 은 DB city 원값이라 대부분 축약형('서울')이지만 통합시는
+ * 풀네임('전남광주통합특별시')이고, 다른 경로에서는 '서울특별시'·'경기도' 같은 정식명도 온다.
+ * slug 로 정규화한 뒤 칩 라벨('서울', '전남·광주')로 맞춘다 — 지도 핀·위치 경로가 목록과 같은
+ * 이름을 쓰게. 칩에 없는 값(레거시 광주/전남 등)은 받은 그대로 둔다.
+ */
+export function cityDisplayName(name: string): string {
+  const slug = toCitySlugByDistrict(name, '')
+  return SIDO_CHIPS.find((c) => c.slug === slug || c.label === name)?.label ?? name
+}
 
 /**
  * 지역 칩 slug → 시설 검색 API 용 한글 city명.
