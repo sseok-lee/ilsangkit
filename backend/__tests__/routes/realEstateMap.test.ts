@@ -250,3 +250,55 @@ describe('GET /api/real-estate/:type/map (라우트)', () => {
     expect(typeof res.body.data.exact).toBe('boolean');
   });
 });
+
+describe('GET /api/real-estate/:type/map — 면적·가격 필터', () => {
+  const BBOX = 'swLat=37.48&swLng=127.02&neLat=37.52&neLng=127.07';
+
+  it('필터가 없으면 fetchBuildings 를 예전과 같은 인자(두 개)로 부르고 응답에 filter 가 없다', async () => {
+    mockFetchBuildings.mockResolvedValueOnce({ items: [], total: 0, exact: true });
+    const res = await request(app).get(`/api/real-estate/apt-sale/map?level=5&${BBOX}`);
+    expect(res.status).toBe(200);
+    expect(mockFetchBuildings).toHaveBeenCalledTimes(1);
+    expect(mockFetchBuildings.mock.calls[0]).toHaveLength(2);
+    expect(res.body.data).toEqual({ granularity: 'building', items: [], total: 0, exact: true });
+  });
+
+  it('단지 단계에서는 해석한 필터를 넘기고 filter 메타를 싣는다', async () => {
+    mockFetchBuildings.mockResolvedValueOnce({
+      items: [], total: 3, exact: false, filter: { scanned: 400, approximate: true },
+    });
+    const res = await request(app)
+      .get(`/api/real-estate/apt-rent/map?level=5&${BBOX}&area=60-85&price=30000-50000&priceKind=jeonse`);
+    expect(res.status).toBe(200);
+    expect(mockFetchBuildings.mock.calls[0][2]).toEqual({
+      area: { min: 60, max: 85 },
+      price: { kind: 'jeonse', range: { min: 30000, max: 50000 } },
+    });
+    expect(res.body.data.filter).toEqual({ scanned: 400, approximate: true });
+  });
+
+  it('집계 단계(시·도/구·군/동)에서는 필터를 무시한다', async () => {
+    const res = await request(app)
+      .get(`/api/real-estate/apt-sale/map?level=8&${BBOX}&area=60-85&price=0-30000`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.granularity).toBe('dong');
+    expect(mockFetchRegions).toHaveBeenCalledWith('apt-sale', 'dong', expect.any(Object));
+    expect(mockFetchRegions.mock.calls[0]).toHaveLength(3);
+    expect(mockFetchBuildings).not.toHaveBeenCalled();
+    expect(res.body.data).not.toHaveProperty('filter');
+  });
+
+  it('구간 id 가 아니면 422', async () => {
+    const res = await request(app).get(`/api/real-estate/apt-sale/map?level=5&${BBOX}&area=50-70`);
+    expect(res.status).toBe(422);
+  });
+
+  it('유형과 짝이 안 맞는 가격 필터는 422 (집계 단계여도 검증은 한다)', async () => {
+    const noKind = await request(app).get(`/api/real-estate/apt-rent/map?level=5&${BBOX}&price=0-10000`);
+    expect(noKind.status).toBe(422);
+    const saleWithKind = await request(app)
+      .get(`/api/real-estate/apt-sale/map?level=12&${BBOX}&price=0-30000&priceKind=jeonse`);
+    expect(saleWithKind.status).toBe(422);
+    expect(mockFetchBuildings).not.toHaveBeenCalled();
+  });
+});

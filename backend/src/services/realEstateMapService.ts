@@ -5,9 +5,17 @@ import { recentMonthsCondition } from '../lib/sargableDate.js';
 import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
+import { inRange, type MapFilter } from '../schemas/realEstateMap.js';
 
 /** 건물 마커 상한. 카카오 CustomOverlay 는 DOM 노드라 이 이상은 렌더가 무겁다. */
 export const BUILDING_LIMIT = 200;
+
+/**
+ * 필터를 걸 때 먼저 뽑는 후보 단지 수(뷰포트 안 거래 많은 순). 후보마다 최근 거래를 키별
+ * LIMIT 1 갈래로 읽으므로 이 값이 곧 쿼리 비용 상한이다 — 갈래 수 = 후보(매매) / 후보×2(전월세).
+ * 후보가 이보다 많은 뷰포트는 "거래 많은 상위 N곳 중"으로 근사한다(응답 approximate=true).
+ */
+export const FILTER_CANDIDATE_LIMIT = 400;
 
 export interface Bounds {
   swLat: number;
@@ -63,7 +71,11 @@ function dealScopeForRealEstateType(type: string): DealScope {
   return type.endsWith('-sale') ? 'sale' : 'rent';
 }
 
-async function enrichMapBuildings(type: string, items: MapBuildingItem[]): Promise<MapBuildingItem[]> {
+async function enrichMapBuildings(
+  type: string,
+  items: MapBuildingItem[],
+  area: MapFilter['area'] = null,
+): Promise<MapBuildingItem[]> {
   if (items.length === 0) return items;
   const keys: BuildingKey[] = items.map((item) => ({
     propertyType: propertyTypeFromRealEstateType(type),
@@ -72,7 +84,9 @@ async function enrichMapBuildings(type: string, items: MapBuildingItem[]): Promi
     dongName: item.dongName,
     jibun: item.jibun ?? null,
   }));
-  const bundles = await getLatestDeals(keys, dealScopeForRealEstateType(type));
+  const bundles = area
+    ? await getLatestDeals(keys, dealScopeForRealEstateType(type), { area })
+    : await getLatestDeals(keys, dealScopeForRealEstateType(type));
   return items.map((item, index) => ({
     ...item,
     latestDeals: bundles.get(latestDealsKey(keys[index]))!,
@@ -154,11 +168,44 @@ export function __resetIndexWarningForTest(): void {
   warnedMissingIndex = false;
 }
 
+/**
+ * 필터 판정. 핀·목록이 보여주는 latestDeals(취소 제외·기준일 이전·면적 필터면 그 면적의 최근
+ * 거래)로만 판정한다 — 요약 테이블의 latestPrice 는 취소 거래를 빼지 않아 핀 값과 어긋날 수 있다.
+ * - 면적만: 그 면적 거래가 하나라도 있는 단지(매매=sale, 전월세=전세 또는 월세)
+ * - 가격: 고른 종류의 거래가 그 구간인 단지(매매 거래금액 / 전세 보증금 / 월세 월세액)
+ */
+export function matchesMapFilter(deals: LatestDeals, type: string, filter: MapFilter): boolean {
+  const isSale = type.endsWith('-sale');
+  if (!filter.price) return isSale ? deals.sale != null : deals.jeonse != null || deals.wolse != null;
+  const { kind, range } = filter.price;
+  const value = kind === 'sale'
+    ? deals.sale?.amount
+    : kind === 'jeonse'
+      ? deals.jeonse?.deposit
+      : deals.wolse?.monthlyRent;
+  return value != null && inRange(value, range);
+}
+
+export interface FetchBuildingsResult {
+  items: MapBuildingItem[];
+  total: number;
+  exact: boolean;
+  /** 필터를 적용했을 때만 붙는다. 필터 없는 응답 모양은 예전과 같다. */
+  filter?: {
+    /** 최근 거래를 확인한 후보 단지 수(뷰포트 안 거래 많은 순) */
+    scanned: number;
+    /** 뷰포트 단지가 후보 상한보다 많아 total 이 "상위 scanned 곳 중" 개수라는 뜻 */
+    approximate: boolean;
+  };
+}
+
 export async function fetchBuildings(
   type: string,
   bounds: Bounds,
-): Promise<{ items: MapBuildingItem[]; total: number; exact: boolean }> {
+  filter: MapFilter | null = null,
+): Promise<FetchBuildingsResult> {
   assertKnownType(type);
+  if (filter) return fetchFilteredBuildings(type, bounds, filter);
 
   const where = `type = ? AND lat IS NOT NULL AND lng IS NOT NULL
       AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
@@ -192,6 +239,51 @@ export async function fetchBuildings(
   }), type);
 
   return { items: await enrichMapBuildings(type, items), total, exact: total <= BUILDING_LIMIT };
+}
+
+/**
+ * 필터 경로. 요약 테이블에는 면적이 없어서 SQL 한 번으로 걸러낼 수 없다:
+ * 1) 뷰포트 후보를 거래 많은 순으로 FILTER_CANDIDATE_LIMIT+1 개 뽑는다(+1 은 잘림 판정용)
+ * 2) 후보마다 최근 거래(면적 필터면 그 면적의 최근 거래)를 키별 LIMIT 1 로 읽는다
+ * 3) 조건에 맞는 단지만 남겨 거래 많은 순 그대로 BUILDING_LIMIT 개까지 낸다
+ * total 은 후보 중 맞는 단지 수다. 후보가 잘렸으면(approximate) 실제 뷰포트 전체보다 적을 수 있다.
+ * canonicalPath 는 남은 단지에만 붙인다(후보 전체에 붙이면 버릴 행까지 조회한다).
+ */
+async function fetchFilteredBuildings(type: string, bounds: Bounds, filter: MapFilter): Promise<FetchBuildingsResult> {
+  const where = `type = ? AND lat IS NOT NULL AND lng IS NOT NULL
+      AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
+  const params = [type, bounds.swLat, bounds.neLat, bounds.swLng, bounds.neLng];
+  const summaryTable = mapSummaryTable();
+
+  const rows = await queryWithIndexHint<Record<string, unknown>>(
+    (hint) => `SELECT ${mapSelectColumns(summaryTable)}
+     FROM ${summaryTable}${hint}
+     WHERE ${where}
+     ORDER BY transactionCount DESC
+     LIMIT ${FILTER_CANDIDATE_LIMIT + 1}`,
+    params,
+  );
+  const approximate = rows.length > FILTER_CANDIDATE_LIMIT;
+  const candidates = rows.slice(0, FILTER_CANDIDATE_LIMIT).map((r) => {
+    const s = serializeRow(r) as Record<string, unknown>;
+    return {
+      ...s,
+      lat: s.lat == null ? null : Number(s.lat),
+      lng: s.lng == null ? null : Number(s.lng),
+      latestDeals: { sale: null, jeonse: null, wolse: null },
+    } as MapBuildingItem;
+  });
+
+  const enriched = await enrichMapBuildings(type, candidates, filter.area);
+  const matched = enriched.filter((item) => matchesMapFilter(item.latestDeals, type, filter));
+  const items = await attachRealEstateCanonicalPaths(matched.slice(0, BUILDING_LIMIT), type);
+
+  return {
+    items,
+    total: matched.length,
+    exact: !approximate && matched.length <= BUILDING_LIMIT,
+    filter: { scanned: candidates.length, approximate },
+  };
 }
 
 // ─────────────────────────────────────────────

@@ -40,7 +40,7 @@ import {
   type DetailQueryInput,
 } from '../schemas/realEstateDetail.js';
 import { HomeMarketQuerySchema, type HomeMarketQueryInput } from '../schemas/homeMarket.js';
-import { MapQuerySchema, resolveGranularity, type MapQueryInput } from '../schemas/realEstateMap.js';
+import { MapQuerySchema, resolveGranularity, resolveMapFilter, type MapQueryInput } from '../schemas/realEstateMap.js';
 import {
   getDetailOverview,
   getDetailPage,
@@ -288,11 +288,18 @@ router.get(
   validate(MapQuerySchema, 'query'),
   asyncHandler(async (req: Request, res: Response) => {
     const { type } = req.params as { type: string };
-    const { level, swLat, swLng, neLat, neLng, prev } = req.query as unknown as MapQueryInput;
+    const { level, swLat, swLng, neLat, neLng, prev, area, price, priceKind } = req.query as unknown as MapQueryInput;
 
     const granularity = resolveGranularity(level, prev);
+    // 면적·가격 필터는 단지 단계에만 적용한다. 집계 단계(시·도/구·군/동)는 값만 검증하고 무시한다.
+    const filter = resolveMapFilter(type, { area, price, priceKind });
 
     if (granularity === 'building') {
+      if (filter) {
+        const { items, total, exact, filter: meta } = await fetchBuildings(type, { swLat, swLng, neLat, neLng }, filter);
+        res.json({ success: true, data: { granularity, items, total, exact, filter: meta } });
+        return;
+      }
       const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng });
       res.json({ success: true, data: { granularity, items, total, exact } });
       return;
