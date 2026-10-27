@@ -57,4 +57,14 @@ describe('MapBottomSheet', () => {
     expect(scroller.classes()).toContain('bottom-0')
     expect(scroller.classes().some((c) => /^h-\[/.test(c))).toBe(false)
   })
+
+  it('header 슬롯(위치 경로)은 손잡이 아래 시트 머리에 놓이고, 목록은 그 아래에서 시작한다', () => {
+    const w = mount(MapBottomSheet, {
+      slots: { header: '<nav data-testid="sheet-header">서울 › 서초구</nav>', default: '<div>목록</div>' },
+    })
+    expect(w.find('[data-testid="sheet-header"]').exists()).toBe(true)
+    const scroller = w.get('.overflow-y-auto')
+    expect(scroller.classes()).toContain('top-[84px]')
+    expect(scroller.find('[data-testid="sheet-header"]').exists()).toBe(false)
+  })
 })

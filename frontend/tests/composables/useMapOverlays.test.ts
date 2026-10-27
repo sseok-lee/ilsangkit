@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatWolseLabel, getRentDisplay, useMapOverlays } from '~/composables/useMapOverlays'
+import {
+  buildingMarkerTone, formatJeonseLabel, formatPriceLabel, formatPyeongLabel, formatRegionLabel,
+  formatWolseLabel, getRentDisplay, isDealOlderThanYear, overlayPriority, useMapOverlays,
+} from '~/composables/useMapOverlays'
 import type { MapBuildingItem, MapRegionItem } from '~/types/realEstateMap'
+import { cityDisplayName } from '~/utils/regionChips'
 import type { DealSnapshot, LatestDeals } from '~/types/realEstateExploration'
 
 function saleDeal(amount: number): DealSnapshot {
@@ -58,6 +62,17 @@ function regionItem(over: Partial<MapRegionItem>): MapRegionItem {
     ...over,
   }
 }
+
+/** 단지 핀의 가격 줄 / 단지명 줄. */
+function priceOf(el: HTMLElement): string | null {
+  return el.querySelector('.map-price-label-price')?.textContent ?? null
+}
+function nameOf(el: HTMLElement): string | null {
+  return el.querySelector('.map-price-label-name')?.textContent ?? null
+}
+
+/** 픽스처 거래일(2026-08)이 최근 1년 안에 들도록 고정한 기준일. */
+const NOW = new Date(2026, 9, 27)
 
 describe('formatPriceLabel', () => {
   it('매매 마커는 latestDeals.sale 금액을 보여준다', () => {
@@ -241,6 +256,74 @@ describe('formatPyeongLabel', () => {
   })
 })
 
+describe('단지 핀 색 구분 — 계약일 기준 1년', () => {
+  const dealOn = (y: number, m: number, d: number | null): DealSnapshot => ({ ...saleDeal(50000), dealYear: y, dealMonth: m, dealDay: d })
+
+  it('정확히 1년 전 같은 날은 아직 1년 안쪽, 그 전날부터 1년 넘음', () => {
+    expect(isDealOlderThanYear(dealOn(2025, 10, 27), NOW)).toBe(false)
+    expect(isDealOlderThanYear(dealOn(2025, 10, 26), NOW)).toBe(true)
+  })
+
+  it('계약일(일)이 없으면 그 달 말일로 본다 — 모르는 날짜를 오래된 쪽으로 몰지 않는다', () => {
+    expect(isDealOlderThanYear(dealOn(2025, 10, null), NOW)).toBe(false)
+    expect(isDealOlderThanYear(dealOn(2025, 9, null), NOW)).toBe(true)
+  })
+
+  it('최근 거래는 recent, 1년 넘은 거래·거래 없음·로드 실패는 muted', () => {
+    expect(buildingMarkerTone(saleBuilding(50000), 'apt-sale', NOW)).toBe('recent')
+    expect(buildingMarkerTone(building({ latestDeals: deals({ sale: dealOn(2024, 11, 7) }) }), 'apt-sale', NOW)).toBe('muted')
+    expect(buildingMarkerTone(building({ latestDeals: deals() }), 'apt-sale', NOW)).toBe('muted')
+    expect(buildingMarkerTone(building({ latestDeals: undefined }), 'apt-sale', NOW)).toBe('muted')
+  })
+
+  it('전월세는 핀에 보이는 거래(전세·월세 중 최근)의 날짜로 판정한다', () => {
+    const oldJeonse = { ...jeonseDeal(30000), dealYear: 2024, dealMonth: 1, dealDay: 1 }
+    expect(buildingMarkerTone(rentBuilding({ jeonse: oldJeonse, wolse: wolseDeal(1000, 50) }), 'apt-rent', NOW)).toBe('recent')
+    expect(buildingMarkerTone(rentBuilding({ jeonse: oldJeonse, wolse: null }), 'apt-rent', NOW)).toBe('muted')
+  })
+})
+
+describe('지역 핀 라벨 — 이름 + 평당가', () => {
+  it('시·도는 이름과 평당가를 한 줄로', () => {
+    expect(formatRegionLabel(regionItem({ name: '서울', avgPricePerPyeong: 5117 }))).toBe('서울 5,117만/평')
+  })
+
+  it('값이 없어도 이름은 남긴다', () => {
+    expect(formatRegionLabel(regionItem({ name: '제주', avgPricePerPyeong: null }))).toBe('제주 —')
+  })
+
+  it('구·군 단계는 구·군 이름, 동 단계는 동 이름', () => {
+    expect(formatRegionLabel(regionItem({ district: '강남구', avgPricePerPyeong: 8000 }))).toBe('강남구 8,000만/평')
+    expect(formatRegionLabel(regionItem({ district: '강남구', dong: '개포동', avgPricePerPyeong: 9000 }))).toBe('개포동 9,000만/평')
+  })
+
+  it('통합시 풀네임은 목록과 같은 짧은 이름으로', () => {
+    expect(cityDisplayName('전남광주통합특별시')).toBe('전남·광주')
+    expect(cityDisplayName('서울')).toBe('서울')
+  })
+
+  it('정식명(서울특별시·경기도)도 칩 라벨로 맞춘다', () => {
+    expect(cityDisplayName('서울특별시')).toBe('서울')
+    expect(cityDisplayName('경기도')).toBe('경기')
+    expect(cityDisplayName('어딘가')).toBe('어딘가')
+  })
+})
+
+describe('overlayPriority — 겹칠 때 자리 잡는 순서', () => {
+  it('거래 많은 순, 같으면 원래 순서', () => {
+    const a = regionItem({ name: '경기', transactionCount: 50 })
+    const b = regionItem({ name: '서울', transactionCount: 500 })
+    const c = regionItem({ name: '인천', transactionCount: 50 })
+    expect(overlayPriority([a, b, c]).map((i) => (i as MapRegionItem).name)).toEqual(['서울', '경기', '인천'])
+  })
+
+  it('선택된 단지가 거래 수보다 먼저다', () => {
+    const big = saleBuilding(10000, { buildingName: 'BIG', transactionCount: 900 })
+    const sel = saleBuilding(10000, { buildingName: 'SEL', transactionCount: 1 })
+    expect(overlayPriority([big, sel], 'SEL|1168010300').map((i) => (i as MapBuildingItem).buildingName)).toEqual(['SEL', 'BIG'])
+  })
+})
+
 describe('useMapOverlays', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let created: any[]
@@ -302,10 +385,10 @@ describe('useMapOverlays', () => {
       const classes = created.map((o) => o.opts.content.className)
       expect(classes).toEqual(['map-price-label', 'map-price-dot', 'map-price-dot'])
       // 라벨은 첫 번째(우선순위 최상)가 가져간다
-      expect(created[0].opts.content.textContent).toBe('5억')
-      // 점은 텍스트를 비우고 값은 title 로 남긴다
+      expect(priceOf(created[0].opts.content)).toBe('5억')
+      // 점은 텍스트를 비우고 이름·값은 title 로 남긴다
       expect(created[1].opts.content.textContent).toBe('')
-      expect(created[1].opts.content.title).toBe('6억')
+      expect(created[1].opts.content.title).toBe('B 6억')
     })
 
     it('충분히 떨어진 라벨은 모두 남는다', () => {
@@ -338,14 +421,14 @@ describe('useMapOverlays', () => {
     const [bOverlay, rOverlay] = created
 
     expect(bOverlay.opts.content.className).toBe('map-price-label')
-    expect(bOverlay.opts.content.textContent).toBe(formatPriceLabel(b))
+    expect(priceOf(bOverlay.opts.content)).toBe(formatPriceLabel(b))
     expect(bOverlay.opts.position).toBeInstanceOf(FakeLatLng)
     expect(bOverlay.opts.position.lat).toBe(b.lat)
     expect(bOverlay.opts.position.lng).toBe(b.lng)
     expect(bOverlay.setMapCalls).toEqual([fakeMap])
 
     expect(rOverlay.opts.content.className).toBe('map-region-bubble')
-    expect(rOverlay.opts.content.textContent).toBe(formatPyeongLabel(r))
+    expect(rOverlay.opts.content.textContent).toBe(`서울${formatPyeongLabel(r)}`)
     expect(rOverlay.opts.position.lat).toBe(r.lat)
     expect(rOverlay.opts.position.lng).toBe(r.lng)
     expect(rOverlay.setMapCalls).toEqual([fakeMap])
@@ -364,8 +447,8 @@ describe('useMapOverlays', () => {
       }),
     ], {}, { type: 'apt-sale' })
 
-    expect(created[0].opts.content.textContent).toBe('거래 없음')
-    expect(created[1].opts.content.textContent).toBe('거래 정보를 불러오지 못했습니다')
+    expect(priceOf(created[0].opts.content)).toBe('거래 없음')
+    expect(priceOf(created[1].opts.content)).toBe('거래 정보를 불러오지 못했습니다')
   })
 
   it('lat 또는 lng 가 null 인 아이템은 건너뛰고, 주변 아이템은 그대로 렌더된다', () => {
@@ -378,8 +461,8 @@ describe('useMapOverlays', () => {
     renderOverlays(fakeMap, [skippedLat, skippedLng, okBuilding, okRegion], {}, { type: 'apt-sale' })
 
     expect(created).toHaveLength(2)
-    expect(created[0].opts.content.textContent).toBe(formatPriceLabel(okBuilding))
-    expect(created[1].opts.content.textContent).toBe(formatPyeongLabel(okRegion))
+    expect(priceOf(created[0].opts.content)).toBe(formatPriceLabel(okBuilding))
+    expect(created[1].opts.content.textContent).toContain(formatPyeongLabel(okRegion))
   })
 
   it('clear-before-render: 이전 호출의 오버레이는 전부 setMap(null) 되고 최신 호출분만 남는다', () => {
@@ -424,7 +507,7 @@ describe('useMapOverlays', () => {
     expect(created).toHaveLength(3)
     const overlayC = created[2]
     expect(overlayC.setMapCalls).toEqual([fakeMap])
-    expect(overlayC.opts.content.textContent).toBe(formatPriceLabel(c))
+    expect(priceOf(overlayC.opts.content)).toBe(formatPriceLabel(c))
   })
 
   it('클릭/호버 핸들러가 올바른 아이템으로 호출된다 — mouseleave 는 null 을 전달한다', () => {
@@ -454,19 +537,18 @@ describe('useMapOverlays', () => {
       return created[i].opts.content as HTMLElement
     }
 
-    it('선택하지 않으면 라벨은 한 줄이다 — 두 줄이면 겹쳐서 접히는 마커가 늘어난다', () => {
+    it('선택하지 않으면 단지명·가격 두 줄 말풍선이고 상세 링크는 없다', () => {
       const { renderOverlays } = useMapOverlays()
       const item = rentBuilding(
         { jeonse: jeonseDeal(96000), wolse: wolseDeal(75000, 340) },
         { buildingName: '은마' },
       )
-      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: null })
+      renderOverlays(fakeMap, [item], {}, { type: 'apt-rent', selectedKey: null, now: NOW })
       const el = contentOf(0)
       expect(el.className).toContain('map-price-label')
       expect(el.querySelector('a')).toBeNull()
-      // 한 줄이다: 자식 엘리먼트(<br> 등)가 전혀 없고, textContent 가 라벨 문자열과 정확히 같다.
-      expect(el.children.length).toBe(0)
-      expect(el.textContent).toBe(formatPriceLabel(item, 'apt-rent'))
+      expect(nameOf(el)).toBe('은마')
+      expect(priceOf(el)).toBe(formatPriceLabel(item, 'apt-rent'))
     })
 
     it('선택된 항목은 전세·월세와 상세 링크를 펼친다', () => {
@@ -643,6 +725,152 @@ describe('useMapOverlays', () => {
       const { renderOverlays } = useMapOverlays()
       renderOverlays(fakeMap, [regionItem({ avgPricePerPyeong: 7732 })])
       expect(contentOf(0).className).toContain('map-region-bubble')
+    })
+  })
+  describe('A안 말풍선 핀', () => {
+    const projMap = {
+      id: 'proj-map',
+      getProjection: () => ({
+        containerPointFromCoords: (ll: FakeLatLng) => ({ x: ll.lng, y: ll.lat }),
+      }),
+    }
+
+    it('단지명은 텍스트로만 들어간다 — 마크업이 섞여도 요소로 해석되지 않는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      const evil = '<img src=x onerror=alert(1)>래미안'
+      renderOverlays(fakeMap, [saleBuilding(50000, { buildingName: evil })], {}, { type: 'apt-sale', now: NOW })
+      const el: HTMLElement = created[0].opts.content
+      expect(el.querySelector('img')).toBeNull()
+      expect(nameOf(el)).toBe(evil)
+    })
+
+    it('전월세 핀은 기존 접두 규칙 그대로("전세 …", "보 …/월 …")', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [
+        rentBuilding({ jeonse: jeonseDeal(30000) }, { buildingName: '전세집', lat: 1, lng: 1 }),
+        rentBuilding({ wolse: wolseDeal(10000, 80) }, { buildingName: '월세집', lat: 2, lng: 2 }),
+      ], {}, { type: 'apt-rent', now: NOW })
+      expect(priceOf(created[0].opts.content)).toBe('전세 3억')
+      expect(priceOf(created[1].opts.content)).toBe('보 1억/월 80만')
+    })
+
+    it('1년 넘은 거래·거래 없음은 같은 모양의 회색 핀', () => {
+      const { renderOverlays } = useMapOverlays()
+      const old = { ...saleDeal(216500), dealYear: 2024, dealMonth: 11, dealDay: 7 }
+      renderOverlays(fakeMap, [
+        saleBuilding(50000, { buildingName: '최근', lat: 1, lng: 1 }),
+        building({ buildingName: '신동아', latestDeals: deals({ sale: old }), lat: 2, lng: 2 }),
+        building({ buildingName: '빈집', latestDeals: deals(), lat: 3, lng: 3 }),
+      ], {}, { type: 'apt-sale', now: NOW })
+      expect(created.map((o) => o.opts.content.className)).toEqual([
+        'map-price-label',
+        'map-price-label map-price-label--muted',
+        'map-price-label map-price-label--muted',
+      ])
+      expect(priceOf(created[1].opts.content)).toBe('21억 6,500만')
+      expect(nameOf(created[2].opts.content)).toBe('빈집')
+      expect(priceOf(created[2].opts.content)).toBe('거래 없음')
+    })
+
+    it('지역 핀은 이름과 평당가 두 조각, 값이 없으면 이름 + —', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(fakeMap, [
+        regionItem({ name: '서울', avgPricePerPyeong: 5117, lat: 1, lng: 1 }),
+        regionItem({ name: '제주', avgPricePerPyeong: null, lat: 2, lng: 2 }),
+      ])
+      const [seoul, jeju] = created.map((o) => o.opts.content as HTMLElement)
+      expect(seoul.querySelector('.map-region-bubble-name')?.textContent).toBe('서울')
+      expect(seoul.querySelector('.map-region-bubble-price')?.textContent).toBe('5,117만/평')
+      expect(jeju.querySelector('.map-region-bubble-name')?.textContent).toBe('제주')
+      expect(jeju.querySelector('.map-region-bubble-price')?.textContent).toBe('—')
+    })
+
+    it('지역 핀이 겹치면 거래 많은 지역이 기본 자리를 갖고, 밀린 지역은 아래로 비껴 놓인다 — 가까운 시·도끼리 한쪽이 숨지 않는다', () => {
+      // 서버는 뷰포트 중심에서 가까운 순으로 준다. 인천이 앞에 와도 거래 많은 서울이 기본 자리(좌표 위)를 가져야 한다.
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(projMap, [
+        regionItem({ name: '인천', avgPricePerPyeong: 1878, transactionCount: 300, lat: 100, lng: 100 }),
+        regionItem({ name: '서울', avgPricePerPyeong: 5117, transactionCount: 900, lat: 100, lng: 100 }),
+      ])
+      const [incheon, seoul] = created
+      expect(seoul.opts.content.className).toBe('map-region-bubble')
+      expect(seoul.opts.yAnchor).toBe(1)
+      expect(incheon.opts.content.className).toBe('map-region-bubble map-region-bubble--below')
+      expect(incheon.opts.yAnchor).toBe(0)
+      expect(incheon.opts.content.querySelector('.map-region-bubble-name')?.textContent).toBe('인천')
+    })
+
+    it('비껴 놓을 자리까지 다 차면 그때 점으로 접는다(거래 적은 지역부터)', () => {
+      // 같은 좌표면 위·아래 두 자리뿐이다(좌우로 민 자리도 가운데 핀과 겹친다).
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(projMap, ['가', '나', '다'].map((name, i) =>
+        regionItem({ name, avgPricePerPyeong: 1000, transactionCount: 100 - i, lat: 100, lng: 100 })))
+      expect(created.map((o) => o.opts.content.className)).toEqual([
+        'map-region-bubble', 'map-region-bubble map-region-bubble--below', 'map-price-dot',
+      ])
+      expect(created[2].opts.content.title).toBe('다 1,000만/평')
+    })
+
+    it('옆 핀과 살짝 겹치면 좌우로 민 자리에 꼬리를 옮겨 놓는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      // 서울 위·아래를 이미 다른 핀이 차지한 상태에서, 오른쪽으로 약간 떨어진 강원은 좌표 오른쪽으로 민다.
+      renderOverlays(projMap, [
+        regionItem({ name: '서울', avgPricePerPyeong: 1000, transactionCount: 900, lat: 100, lng: 100 }),
+        regionItem({ name: '인천', avgPricePerPyeong: 1000, transactionCount: 800, lat: 100, lng: 100 }),
+        regionItem({ name: '강원', avgPricePerPyeong: 1000, transactionCount: 10, lat: 100, lng: 200 }),
+      ])
+      const gangwon = created[2]
+      expect(gangwon.opts.content.className).toBe('map-region-bubble')
+      expect(gangwon.opts.xAnchor).toBe(0.15)
+      expect(gangwon.opts.content.style.getPropertyValue('--tail-x')).toBe('15%')
+    })
+
+    it('실좌표 회귀: 경기가 거래가 많아 먼저 자리를 잡아도, 서울 좌표가 그 말풍선 안이면 경기가 아래로 비켜 서울·경기 둘 다 보인다', () => {
+      // 전국 뷰(level 13, 1440px)의 근사 투영: 경도 1° ≈ 80px, 위도 1° ≈ 100px. 좌표·거래 수는 로컬 실측.
+      const level13 = {
+        id: 'level13',
+        getProjection: () => ({
+          containerPointFromCoords: (ll: FakeLatLng) => ({ x: (ll.lng - 124) * 80, y: (39 - ll.lat) * 100 }),
+        }),
+      }
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(level13, [
+        regionItem({ name: '경기', avgPricePerPyeong: 2403, transactionCount: 16325, lat: 37.43, lng: 127.03 }),
+        regionItem({ name: '서울', avgPricePerPyeong: 4999, transactionCount: 4459, lat: 37.55, lng: 126.99 }),
+        regionItem({ name: '인천', avgPricePerPyeong: 1878, transactionCount: 3261, lat: 37.51, lng: 126.64 }),
+      ])
+      const byName = Object.fromEntries(created.map((o) => {
+        const el = o.opts.content as HTMLElement
+        return [el.querySelector('.map-region-bubble-name')?.textContent ?? el.title, o]
+      }))
+      expect(byName['서울'].opts.content.className).toContain('map-region-bubble')
+      expect(byName['경기'].opts.content.className).toContain('map-region-bubble')
+      expect(byName['경기'].opts.yAnchor).toBe(0)
+      // 핀 좌표는 서버 좌표 그대로다 — 뷰포트 판정과 핀 위치가 어긋나지 않는다.
+      expect(byName['경기'].opts.position.lat).toBe(37.43)
+      expect(byName['서울'].opts.position.lat).toBe(37.55)
+    })
+
+    it('단지 단계: 선택된 단지 > 거래 많은 단지 순으로 자리를 잡는다', () => {
+      const { renderOverlays } = useMapOverlays()
+      renderOverlays(projMap, [
+        saleBuilding(50000, { buildingName: 'BIG', transactionCount: 900, lat: 100, lng: 100 }),
+        saleBuilding(60000, { buildingName: 'MID', transactionCount: 400, lat: 100, lng: 100 }),
+        saleBuilding(70000, { buildingName: 'SEL', transactionCount: 1, lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale', selectedKey: 'SEL|1168010300', now: NOW })
+      const classes = created.map((o) => o.opts.content.className)
+      // 그리는 순서는 원래 순서 + 선택 맨 뒤, 자리는 선택이 먼저 잡아 나머지는 점이 된다.
+      expect(classes).toEqual(['map-price-dot', 'map-price-dot', 'map-popup'])
+
+      created = []
+      renderOverlays(projMap, [
+        saleBuilding(60000, { buildingName: 'MID', transactionCount: 400, lat: 100, lng: 100 }),
+        saleBuilding(50000, { buildingName: 'BIG', transactionCount: 900, lat: 100, lng: 100 }),
+      ], {}, { type: 'apt-sale', now: NOW })
+      expect(created.map((o) => [nameOf(o.opts.content) ?? o.opts.content.title, o.opts.content.className])).toEqual([
+        ['MID 6억', 'map-price-dot'],
+        ['BIG', 'map-price-label'],
+      ])
     })
   })
 })

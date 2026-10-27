@@ -50,6 +50,96 @@ export function buildMapHash(s: { type: string; level: number; lat: number; lng:
 }
 
 /**
+ * 해시도 저장된 위치도 없을 때의 첫 화면 — 서울 구·군 단위.
+ *
+ * level 은 백엔드 resolveGranularity 의 구·군 밴드(9~10) 안이다. 데스크톱은 9 — 지도 영역
+ * (약 1,080×740px)에 서울 25개 구가 다 들어오고 확대 쪽 경계(8)와 한 칸 떨어져 있다. 모바일은
+ * 지도 폭이 390px 안팎이라 9 에서는 서울 동서가 다 안 보여 10 으로 한 칸 더 축소한다. 10 은
+ * city 에서 확대해 들어올 때(prev=city) 히스테리시스로 city 가 유지되는 칸이지만, 첫 화면은
+ * SSR 이 구·군 집계를 주고 prev=district 로 요청하므로 구·군으로 해석된다.
+ */
+export const DEFAULT_MAP_VIEW = {
+  type: 'apt-sale',
+  lat: 37.5665,
+  lng: 126.978,
+  desktopLevel: 9,
+  mobileLevel: 10,
+} as const
+
+/** SSR 첫 화면 집계 범위(서울 시계). /real-estate 페이지의 useAsyncData 가 쓴다. */
+export const SEOUL_BOUNDS: MapBounds = { swLat: 37.41, swLng: 126.76, neLat: 37.72, neLng: 127.19 }
+
+const SAVED_MAP_STATE_KEY = 'ilsangkit:real-estate-map:last'
+
+export interface MapViewState {
+  type: string
+  level: number
+  lat: number
+  lng: number
+}
+
+/**
+ * 저장된 지도 위치 검증. 유형이 6종이 아니거나, level 이 1~14 정수가 아니거나, 좌표가 한국
+ * 범위 밖이면 null — 깨진 값으로 시작하면 지도가 바다로 튀거나 백엔드가 422 를 낸다.
+ */
+export function parseSavedMapState(raw: string | null): MapViewState | null {
+  if (!raw) return null
+  try {
+    const v = JSON.parse(raw) as Partial<MapViewState>
+    if (typeof v.type !== 'string' || !(MAP_TYPES as string[]).includes(v.type)) return null
+    if (typeof v.level !== 'number' || !Number.isInteger(v.level) || v.level < 1 || v.level > 14) return null
+    if (typeof v.lat !== 'number' || typeof v.lng !== 'number') return null
+    if (!(v.lat >= KOREA_BOUNDS.LAT_MIN && v.lat <= KOREA_BOUNDS.LAT_MAX)) return null
+    if (!(v.lng >= KOREA_BOUNDS.LNG_MIN && v.lng <= KOREA_BOUNDS.LNG_MAX)) return null
+    return { type: v.type, level: v.level, lat: v.lat, lng: v.lng }
+  } catch {
+    return null
+  }
+}
+
+/** 마지막 지도 위치 읽기. 사생활 모드·저장소 차단이면 null. */
+export function readSavedMapState(): MapViewState | null {
+  if (import.meta.server || typeof window === 'undefined') return null
+  try {
+    return parseSavedMapState(window.localStorage.getItem(SAVED_MAP_STATE_KEY))
+  } catch {
+    return null
+  }
+}
+
+/** 마지막 지도 위치 저장. 실패해도 조용히 넘어간다 — 다음 방문에 서울로 시작할 뿐이다. */
+export function saveMapState(state: MapViewState): void {
+  if (import.meta.server || typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(SAVED_MAP_STATE_KEY, JSON.stringify(state))
+  } catch {
+    // 저장소 차단·용량 초과
+  }
+}
+
+/**
+ * 첫 화면 위치 결정: 해시 > 저장된 마지막 위치 > 서울 구·군 단위.
+ *
+ * 해시는 공유 링크라 항상 이긴다. 해시에 일부 필드만 있으면 빠진 필드는 기본값(서울)으로 채운다
+ * — 저장값과 섞지 않는다(남이 보낸 링크에 내 마지막 유형이 섞이면 안 된다). type 이 null 이면
+ * 지금 유형을 그대로 둔다.
+ */
+export function resolveInitialMapState(
+  hash: MapHashState,
+  saved: MapViewState | null,
+  opts: { desktop: boolean },
+): { type: string | null; level: number; lat: number; lng: number; source: 'hash' | 'saved' | 'default' } {
+  const defaultLevel = opts.desktop ? DEFAULT_MAP_VIEW.desktopLevel : DEFAULT_MAP_VIEW.mobileLevel
+  const hasHash = hash.type != null || hash.level != null || (hash.lat != null && hash.lng != null)
+  if (hasHash) {
+    const center = hash.lat != null && hash.lng != null ? { lat: hash.lat, lng: hash.lng } : DEFAULT_MAP_VIEW
+    return { type: hash.type ?? null, level: hash.level ?? defaultLevel, lat: center.lat, lng: center.lng, source: 'hash' }
+  }
+  if (saved) return { ...saved, source: 'saved' }
+  return { type: null, level: defaultLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng, source: 'default' }
+}
+
+/**
  * 목록·오버레이의 Vue :key. 건물은 같은 구에 같은 이름이 있을 수 있으므로
  * 백엔드가 제공하는 주소 단위 buildingKey 로 구분한다. 지역 항목은 같은 구 안의 동들이
  * name(시/도)·district(구·군)가 모두 같으므로 dong 까지 넣어야 고유해진다.
@@ -64,11 +154,13 @@ export function useRealEstateMap(initial: {
   type: string
   items: MapItem[]
   granularity: Granularity
+  /** 첫 level. 없으면 전국(13). SSR 집계의 level 과 맞춰야 첫 요청의 prev 히스테리시스가 맞는다. */
+  level?: number
 }) {
   const apiBase = useApiBase()
 
   const type = ref(initial.type)
-  const level = ref(13)
+  const level = ref(initial.level ?? 13)
   const granularity = ref<Granularity>(initial.granularity)
   const items = ref<MapItem[]>(initial.items) as Ref<MapItem[]>
   const total = ref(initial.items.length)
@@ -133,7 +225,11 @@ export function useRealEstateMap(initial: {
     }, DEBOUNCE_MS)
   }
 
-  function setType(next: string, bounds: MapBounds): void {
+  /**
+   * opts.fetch=false 는 유형만 바꾸고 조회는 지도 첫 idle 에 맡긴다 — 저장된 위치로 시작할 때
+   * 아직 실제 bounds 를 모르는 상태에서 전국 bbox 로 (단지 단계면 무거운) 조회를 보내지 않기 위해서다.
+   */
+  function setType(next: string, bounds: MapBounds, opts: { fetch?: boolean } = {}): void {
     const changedType = next !== type.value
     type.value = next
     if (changedType) {
@@ -143,6 +239,7 @@ export function useRealEstateMap(initial: {
       error.value = null
     }
     clearTimer()
+    if (opts.fetch === false) return
     void fetchNow(bounds, level.value)
   }
 

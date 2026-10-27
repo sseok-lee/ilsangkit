@@ -466,3 +466,48 @@ test('normal empty search is distinct from transient failures', async ({ page, r
   await waitForSearch(page, '부동산 51곳, 생활시설 42곳')
   await expect(page.getByText('검증 아파트 공통 01')).toBeVisible()
 })
+
+// 첫 화면 = 서울 구·군 단위(운영자 결정 2026-10-27). SSR 도 서울 구·군 집계라 첫 화면과 서버 HTML 이
+// 같고, 시·도 16곳 링크는 목록 상단 칩으로 SSR 에 남는다. 저장된 마지막 위치가 있으면 그 유형으로 시작한다.
+test('/real-estate first view is Seoul districts in SSR, keeps 16 province links, and hydrates without warnings', async ({ page, request }) => {
+  const html = await (await request.get('/real-estate')).text()
+  for (const slug of ['seoul', 'busan', 'gyeonggi', 'jeju', 'jeonnamgwangju']) {
+    expect(html).toContain(`href="/real-estate/apt-sale/${slug}"`)
+  }
+  expect(html).toContain('href="/real-estate/apt-sale/seoul/gangnam"')
+  expect(html).toContain('data-testid="map-sido-chips"')
+
+  const hydrationMessages: string[] = []
+  page.on('console', (message) => {
+    if (/hydration/i.test(message.text())) hydrationMessages.push(message.text())
+  })
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await blockExternalNetwork(page)
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 960 })
+    await page.goto('/real-estate')
+    await hydrated(page)
+    await expect(page.locator('[data-testid="map-sido-chips"]').first().locator('a')).toHaveCount(17)
+    await expectNoOverflow(page)
+  }
+  expect(hydrationMessages).toEqual([])
+  expect(pageErrors).toEqual([])
+})
+
+test('/real-estate returning visitor starts from the saved type without hydration warnings', async ({ page }) => {
+  const hydrationMessages: string[] = []
+  page.on('console', (message) => {
+    if (/hydration/i.test(message.text())) hydrationMessages.push(message.text())
+  })
+  await blockExternalNetwork(page)
+  await page.addInitScript(() => {
+    window.localStorage.setItem('ilsangkit:real-estate-map:last', JSON.stringify({ type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }))
+  })
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.goto('/real-estate')
+  await hydrated(page)
+  await expect(page.locator('button[aria-label="매물 유형 선택"]:visible')).toContainText('빌라')
+  await expect(page.locator('button[aria-label="거래 유형 선택"]:visible')).toContainText('전월세')
+  expect(hydrationMessages).toEqual([])
+})

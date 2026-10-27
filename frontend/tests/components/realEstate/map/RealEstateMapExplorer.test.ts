@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
@@ -25,6 +25,12 @@ const DONG_ITEMS: MapItem[] = [
   { name: '서울', district: '강북구', dong: '미아동', lat: 37.63, lng: 127.02,
     avgPricePerPyeong: 3225, transactionCount: 42 },
 ]
+
+// syncHash 가 마지막 위치를 localStorage 에 저장한다 — 앞 테스트의 저장값이 다음 테스트의
+// 첫 위치(저장 위치 복원)로 새어 들지 않게 매번 비운다.
+beforeEach(() => {
+  window.localStorage.clear()
+})
 
 function mountExplorer() {
   return mount(RealEstateMapExplorer, {
@@ -530,5 +536,354 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
       vi.unstubAllGlobals()
       window.location.hash = ''
     }
+  })
+})
+
+// 운영 실측: 모바일 첫 화면 목록에서 제주가 "—"(데스크톱 1,553만/평). 좁은 지도 뷰포트에
+// 제주가 안 들어와 지도 응답에 빠진 걸 목록이 "데이터 없음"으로 그렸다.
+describe('RealEstateMapExplorer — 시·도 목록은 뷰포트 밖 지역도 전국 집계 값으로 채운다', () => {
+  const SEOUL = { name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 5117, transactionCount: 900 }
+  const JEJU = { name: '제주', district: null, dong: null, lat: 33.38, lng: 126.55, avgPricePerPyeong: 1553, transactionCount: 40 }
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center'], emits: ['idle', 'select', 'hover'] }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.location.hash = ''
+  })
+
+  function sidebarRowText(w: ReturnType<typeof mount>, label: string): string {
+    const sidebar = w.findAllComponents({ name: 'MapSidebar' })[0]
+    return sidebar.findAll('[data-testid="map-sidebar-item"]').map((r) => r.text()).find((t) => t.startsWith(label)) ?? ''
+  }
+
+  it('모바일 뷰포트 응답에 제주가 없어도 목록의 제주는 — 가 아니다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({
+      success: true, data: { items: [SEOUL], granularity: 'city', total: 1, exact: true },
+    }))
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    // 390px 폭 지도의 전국 뷰 — 제주(33.38)가 남쪽 경계 밖이다.
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 34.2, swLng: 125.9, neLat: 38.6, neLng: 129.7 }, 13, { lat: 36.4, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+
+    expect(sidebarRowText(w, '제주')).toContain('1,553만/평')
+    expect(sidebarRowText(w, '서울')).toContain('5,117만/평')
+    // 지도 핀은 여전히 뷰포트 응답만 쓴다.
+    expect(w.findComponent(CanvasStub).props('items')).toEqual([SEOUL])
+  })
+
+  it('다른 유형으로 바꾸면 그 유형의 전국 시·도 집계를 한 번 받아 채운다', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: { params: { level: number; swLat: number } }) => {
+      const national = opts.params.level === 13 && opts.params.swLat === 33
+      return Promise.resolve({
+        success: true,
+        data: { items: national ? [SEOUL, { ...JEJU, avgPricePerPyeong: 900 }] : [SEOUL], granularity: 'city', total: 1, exact: true },
+      })
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await flushPromises()
+
+    const nationalCalls = (t: string) => fetchMock.mock.calls.filter(([url, o]) =>
+      String(url).includes(`/${t}/map`) && o.params.level === 13 && o.params.swLat === 33 && o.params.neLng === 132 && o.params.prev === undefined)
+    // 초기 유형은 SSR initialItems 를 재사용해 전국 호출이 없다.
+    expect(nationalCalls('apt-sale')).toHaveLength(0)
+    expect(nationalCalls('villa-sale')).toHaveLength(1)
+    expect(sidebarRowText(w, '제주')).toContain('900만/평')
+
+    // 같은 유형으로 시·도 단계에 다시 들어와도(지역 이동 후 복귀) 다시 받지 않는다.
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 34.2, swLng: 125.9, neLat: 38.6, neLng: 129.7 }, 13, { lat: 36.4, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    expect(nationalCalls('villa-sale')).toHaveLength(1)
+  })
+
+  it('첫 화면(초기 유형)은 전국 집계를 다시 요청하지 않는다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [SEOUL], granularity: 'city', total: 1, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await flushPromises()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('전국 집계가 빈 목록(백엔드 일시 실패)이면 저장하지 않고 다음 시·도 단계 진입 때 다시 받는다', async () => {
+    let nationalCount = 0
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: { params: { level: number; swLat: number; prev?: string } }) => {
+      const national = opts.params.prev === undefined && opts.params.level === 13 && opts.params.swLat === 33
+      if (national) nationalCount += 1
+      const items = national ? (nationalCount === 1 ? [] : [SEOUL, { ...JEJU, avgPricePerPyeong: 900 }]) : [SEOUL]
+      return Promise.resolve({ success: true, data: { items, granularity: 'city', total: items.length, exact: true } })
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await flushPromises()
+    expect(nationalCount).toBe(1)
+    expect(sidebarRowText(w, '제주')).not.toContain('900만/평')
+
+    // 구·군 단계로 들어갔다가 시·도 단계로 돌아오면 다시 받는다.
+    fetchMock.mockImplementationOnce(() => Promise.resolve({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } }))
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37, swLng: 126.5, neLat: 38, neLng: 127.5 }, 9, { lat: 37.5, lng: 127 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }, 13, { lat: 36.5, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    expect(nationalCount).toBe(2)
+    expect(sidebarRowText(w, '제주')).toContain('900만/평')
+  })
+
+  it('유형을 바꾼 직후 이전 유형의 값이 목록에 섞이지 않는다', async () => {
+    let resolveViewport: (v: unknown) => void = () => {}
+    vi.stubGlobal('$fetch', vi.fn().mockImplementation(() => new Promise((r) => { resolveViewport = r })))
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await nextTick()
+    // 새 유형 응답 전: 아파트 매매 값(5,117만/평·1,553만/평)이 빌라 목록에 남아 있으면 안 된다.
+    expect(sidebarRowText(w, '서울')).not.toContain('5,117만/평')
+    expect(sidebarRowText(w, '제주')).not.toContain('1,553만/평')
+    resolveViewport({ success: true, data: { items: [], granularity: 'city', total: 0, exact: true } })
+  })
+})
+
+describe('RealEstateMapExplorer — 범례·위치 경로', () => {
+  const GANGNAM: MapItem = {
+    buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: '1168010300', lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
+    latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+  }
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center'], emits: ['idle', 'select', 'hover'] }
+
+  it('범례는 단지 단계에서만 보인다', () => {
+    const building = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [GANGNAM], initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    const legend = building.find('[data-testid="map-legend"]')
+    expect(legend.exists()).toBe(true)
+    expect(legend.text()).toContain('최근 1년 거래')
+    expect(legend.text()).toContain('1년 넘은 거래·거래 없음')
+
+    const city = mountExplorer()
+    expect(city.find('[data-testid="map-legend"]').exists()).toBe(false)
+  })
+
+  it('시·도 단계 위치 경로는 "전국"', () => {
+    const paths = mountExplorer().findAll('[data-testid="map-location-path"]')
+    // 데스크톱(지도 하단)·모바일(시트 머리) 두 자리
+    expect(paths).toHaveLength(2)
+    for (const p of paths) expect(p.text()).toBe('전국')
+  })
+
+  it('단지 단계 위치 경로는 전국 › 서울 › 강남구 › 개포동, 상위 칸을 누르면 그 단계 level 로 올린다', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [GANGNAM], initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    const path = w.findAll('[data-testid="map-location-path"]')[0]
+    expect(path.text().replace(/\s+/g, '')).toBe('전국›서울›강남구›개포동')
+
+    const district = path.findAll('a').find((a) => a.text() === '강남구')!
+    expect(district.attributes('href')).toBe('/real-estate/apt-sale/seoul/gangnam')
+    await district.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(7)
+
+    await path.findAll('a').find((a) => a.text() === '전국')!.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(13)
+  })
+})
+
+// 첫 화면 = 서울 구·군 단위(운영자 결정 2026-10-27). 해시 > 저장 위치 > 서울.
+describe('RealEstateMapExplorer — 첫 화면 위치와 시·도 칩', () => {
+  const SEOUL_DISTRICTS: MapItem[] = [
+    { name: '서울', district: '강남구', dong: null, lat: 37.5172, lng: 127.0473, avgPricePerPyeong: 6820, transactionCount: 140 },
+    { name: '서울', district: '서초구', dong: null, lat: 37.4837, lng: 127.0324, avgPricePerPyeong: 6450, transactionCount: 120 },
+  ]
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center', 'type'], emits: ['idle', 'select', 'hover', 'load-error', 'loaded'] }
+  const KEY = 'ilsangkit:real-estate-map:last'
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.location.hash = ''
+  })
+
+  function mountSeoul() {
+    return mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: SEOUL_DISTRICTS, initialGranularity: 'district' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+  }
+
+  it('해시·저장값이 없으면 서울 구·군 단위에서 시작한다(데스크톱 9, 모바일 10) — 조회는 지도 idle 에 맡긴다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    stubDesktopViewport(true)
+    const desktop = mountSeoul()
+    await flushPromises()
+    expect(desktop.findComponent(CanvasStub).props('level')).toBe(9)
+    expect(desktop.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5665, lng: 126.978 })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    stubDesktopViewport(false)
+    const mobile = mountSeoul()
+    await flushPromises()
+    expect(mobile.findComponent(CanvasStub).props('level')).toBe(10)
+  })
+
+  it('저장된 마지막 위치로 시작한다 — 유형도 바꾸되 전국 bbox 조회를 보내지 않고, 첫 조회 전엔 위치 경로를 숨긴다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    window.localStorage.setItem(KEY, JSON.stringify({ type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }))
+    const w = mountSeoul()
+    await flushPromises()
+    const canvas = w.findComponent(CanvasStub)
+    expect(canvas.props('level')).toBe(5)
+    expect(canvas.props('center')).toEqual({ lat: 35.18, lng: 129.07 })
+    expect(canvas.props('type')).toBe('villa-rent')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="map-location-path"]').exists()).toBe(false)
+  })
+
+  it('깨지거나 한국 밖인 저장값은 무시하고 서울에서 시작한다', async () => {
+    stubDesktopViewport(true)
+    for (const raw of ['{깨진', JSON.stringify({ type: 'apt-sale', level: 5, lat: 51.5, lng: 0 })]) {
+      window.localStorage.setItem(KEY, raw)
+      const w = mountSeoul()
+      await flushPromises()
+      expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5665, lng: 126.978 })
+      expect(w.findComponent(CanvasStub).props('level')).toBe(9)
+    }
+  })
+
+  it('해시가 있으면 저장값보다 우선한다', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify({ type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }))
+    window.location.hash = '#level=4&lat=37.5&lng=127.05'
+    const w = mountSeoul()
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5, lng: 127.05 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(4)
+    expect(w.findComponent(CanvasStub).props('type')).toBe('apt-sale')
+  })
+
+  it('저장 위치가 SSR 과 같은 자리·같은 유형이면 위치 경로를 숨기지 않는다', async () => {
+    stubDesktopViewport(true)
+    window.localStorage.setItem(KEY, JSON.stringify({ type: 'apt-sale', level: 9, lat: 37.5665, lng: 126.978 }))
+    const w = mountSeoul()
+    await flushPromises()
+    expect(w.find('[data-testid="map-location-path"]').exists()).toBe(true)
+  })
+
+  it('해시로 들어오면 유형만 바꾸고 전국 범위 조회를 보내지 않는다 — 조회는 지도 첫 idle 1회', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'building', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    window.location.hash = '#type=villa-rent&level=4&lat=37.5&lng=127.05'
+    const w = mountSeoul()
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('type')).toBe('villa-rent')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37.49, swLng: 127.04, neLat: 37.51, neLng: 127.06 }, 4, { lat: 37.5, lng: 127.05 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][1].params).toMatchObject({ level: 4, swLat: 37.49, neLng: 127.06 })
+  })
+
+  it('복원 위치로 시작했는데 지도가 못 뜨면 그때 한 번 조회한다 — 목록이 서울 것으로 남지 않게', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'city', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    window.location.hash = '#type=apt-rent&level=13&lat=36.5&lng=127.8'
+    const w = mountSeoul()
+    await flushPromises()
+    expect(fetchMock).not.toHaveBeenCalled()
+    await w.findComponent(CanvasStub).vm.$emit('load-error', 'sdk blocked')
+    await flushPromises()
+    const viewport = fetchMock.mock.calls.filter(([url]) => String(url).includes('/apt-rent/map'))
+    expect(viewport.length).toBeGreaterThanOrEqual(1)
+    expect(viewport[0][1].params.level).toBe(13)
+  })
+
+  it('시·도 칩: 전국 집계에 없는 시·도는 대표 좌표로 옮긴다 — 목록 지역과 지도가 어긋나지 않게', async () => {
+    stubDesktopViewport(true)
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ success: true, data: { items: [{ name: '서울', district: null, dong: null, lat: 37.55, lng: 126.99, avgPricePerPyeong: 1, transactionCount: 1 }], granularity: 'city', total: 1, exact: true } }))
+    const w = mountSeoul()
+    await flushPromises()
+    await w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a').find((a) => a.text() === '세종')!.trigger('click')
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 36.48, lng: 127.289 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(9)
+  })
+
+  it('시·도 칩: 좌표를 기다리는 동안 지도를 움직이면 늦은 응답이 그 위치를 덮어쓰지 않는다', async () => {
+    stubDesktopViewport(true)
+    let resolveNational: (v: unknown) => void = () => {}
+    vi.stubGlobal('$fetch', vi.fn().mockImplementation((_url: string, opts: { params: { level: number; prev?: string } }) =>
+      opts.params.prev === undefined
+        ? new Promise((r) => { resolveNational = r })
+        : Promise.resolve({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } })))
+    const w = mountSeoul()
+    await flushPromises()
+    await w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a').find((a) => a.text() === '부산')!.trigger('click')
+    // 사용자가 지도를 끌어 다른 곳으로 옮긴다
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37.3, swLng: 126.9, neLat: 37.4, neLng: 127.1 }, 8, { lat: 37.35, lng: 127.0 })
+    resolveNational({ success: true, data: { items: [{ name: '부산', district: null, dong: null, lat: 35.15, lng: 129.06, avgPricePerPyeong: 1, transactionCount: 1 }], granularity: 'city', total: 1, exact: true } })
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.35, lng: 127.0 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(8)
+  })
+
+  it('지도 idle 마다 마지막 위치를 저장한다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } }))
+    const w = mountSeoul()
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37, swLng: 126.5, neLat: 38, neLng: 127.5 }, 8, { lat: 37.51, lng: 127.02 })
+    expect(JSON.parse(window.localStorage.getItem(KEY)!)).toEqual({ type: 'apt-sale', level: 8, lat: 37.51, lng: 127.02 })
+  })
+
+  it('목록 상단 시·도 칩: 전국 + 16개 시·도 링크가 SSR DOM 에 있고, 현재 시·도를 강조한다', () => {
+    const w = mountSeoul()
+    const chips = w.findAll('[data-testid="map-sido-chips"]')[0]
+    const hrefs = chips.findAll('a').map((a) => a.attributes('href'))
+    expect(hrefs).toHaveLength(17)
+    expect(hrefs[0]).toBe('/real-estate/apt-sale')
+    expect(hrefs).toContain('/real-estate/apt-sale/seoul')
+    expect(hrefs).toContain('/real-estate/apt-sale/jeju')
+    expect(hrefs).toContain('/real-estate/apt-sale/jeonnamgwangju')
+    expect(chips.find('[aria-current="true"]').text()).toBe('서울')
+    // 구·군 행도 SSR 링크로 남는다
+    expect(w.html()).toContain('/real-estate/apt-sale/seoul/gangnam')
+  })
+
+  it('시·도 칩을 누르면 전국 시·도 집계의 좌표로 그 시·도의 구·군 단위로 옮긴다', async () => {
+    stubDesktopViewport(true)
+    const BUSAN = { name: '부산', district: null, dong: null, lat: 35.15, lng: 129.06, avgPricePerPyeong: 1790, transactionCount: 3447 }
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ success: true, data: { items: [BUSAN], granularity: 'city', total: 1, exact: true } }))
+    const w = mountSeoul()
+    await flushPromises()
+    const busan = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a').find((a) => a.text() === '부산')!
+    await busan.trigger('click')
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 35.15, lng: 129.06 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(9)
+
+    const nation = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a')[0]
+    await nation.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(13)
   })
 })

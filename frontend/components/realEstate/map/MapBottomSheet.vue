@@ -24,7 +24,11 @@
       퍼센트/calc 높이는 그 즉시 무력화되지만, top+bottom 인셋은 부모(fixed 시트)와
       동일한 원리로 height 값과 무관하게 박스를 확정한다.
     -->
-    <div class="absolute inset-x-0 top-11 bottom-0 overflow-y-auto">
+    <!-- 시트 머리: 지도 현재 위치 경로. 접힌 상태에서도 보여 "지금 어디를 보는지"를 알린다. -->
+    <div v-if="$slots.header" class="absolute inset-x-0 top-10 flex h-11 min-w-0 items-center overflow-hidden border-b border-line px-3">
+      <slot name="header" />
+    </div>
+    <div class="absolute inset-x-0 bottom-0 overflow-y-auto" :class="$slots.header ? 'top-[84px]' : 'top-11'">
       <slot />
     </div>
   </div>
