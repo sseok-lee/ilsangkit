@@ -4,9 +4,6 @@ import {
   KOREA_BOUNDS, MAP_TYPES, isBuildingItem,
   type Granularity, type MapBounds, type MapItem, type MapResponse,
 } from '~/types/realEstateMap'
-import {
-  EMPTY_MAP_FILTER, mapFilterParams, sanitizeMapFilter, type MapFilterState, type RentPriceKind,
-} from '~/utils/mapFilters'
 
 const DEBOUNCE_MS = 250
 
@@ -26,10 +23,6 @@ export interface MapHashState {
   level?: number
   lat?: number
   lng?: number
-  /** 면적·가격 필터(구간 id 문자열 그대로). 유형에 맞는지는 sanitizeMapFilter 가 거른다. */
-  area?: string
-  price?: string
-  priceKind?: RentPriceKind
 }
 
 export function parseMapHash(hash: string): MapHashState {
@@ -43,17 +36,7 @@ export function parseMapHash(hash: string): MapHashState {
     const v = p.get(k)
     if (v !== null && v !== '' && Number.isFinite(Number(v))) out[k] = Number(v)
   }
-  const area = p.get('area')
-  const price = p.get('price')
-  const pk = p.get('pk')
-  if (area) out.area = area
-  if (price) out.price = price
-  if (pk === 'jeonse' || pk === 'wolse') out.priceKind = pk
   return out
-}
-
-function hashFilter(h: MapHashState): Partial<MapFilterState> {
-  return { area: h.area ?? null, price: h.price ?? null, priceKind: h.priceKind ?? null }
 }
 
 /**
@@ -62,13 +45,8 @@ function hashFilter(h: MapHashState): Partial<MapFilterState> {
  * 2026-08-02 에 같은 계열로 프론트가 힙 한계에 도달해 하루 12~24회 SIGABRT 크래시했다.
  * 해시는 서버로 전송되지 않아 캐시 키에 영향이 없고 canonical 도 갈라지지 않는다.
  */
-export function buildMapHash(s: { type: string; level: number; lat: number; lng: number; filter?: MapFilterState }): string {
-  // 필터는 고른 것만 붙인다 — 필터 없는 해시는 예전과 글자까지 같다.
-  const f = s.filter
-  const extra = (f?.area ? `&area=${f.area}` : '')
-    + (f?.price ? `&price=${f.price}` : '')
-    + (f?.price && f.priceKind ? `&pk=${f.priceKind}` : '')
-  return `#type=${s.type}&level=${s.level}&lat=${s.lat}&lng=${s.lng}${extra}`
+export function buildMapHash(s: { type: string; level: number; lat: number; lng: number }): string {
+  return `#type=${s.type}&level=${s.level}&lat=${s.lat}&lng=${s.lng}`
 }
 
 /**
@@ -98,8 +76,6 @@ export interface MapViewState {
   level: number
   lat: number
   lng: number
-  /** 마지막 필터. 없으면 필터 없음. 유형에 안 맞는 값은 읽을 때 버린다. */
-  filter?: MapFilterState
 }
 
 /**
@@ -115,10 +91,7 @@ export function parseSavedMapState(raw: string | null): MapViewState | null {
     if (typeof v.lat !== 'number' || typeof v.lng !== 'number') return null
     if (!(v.lat >= KOREA_BOUNDS.LAT_MIN && v.lat <= KOREA_BOUNDS.LAT_MAX)) return null
     if (!(v.lng >= KOREA_BOUNDS.LNG_MIN && v.lng <= KOREA_BOUNDS.LNG_MAX)) return null
-    const out: MapViewState = { type: v.type, level: v.level, lat: v.lat, lng: v.lng }
-    const f = sanitizeMapFilter(v.type, v.filter)
-    if (f.area || f.price) out.filter = f
-    return out
+    return { type: v.type, level: v.level, lat: v.lat, lng: v.lng }
   } catch {
     return null
   }
@@ -146,7 +119,6 @@ export function saveMapState(state: MapViewState): void {
 
 /**
  * 첫 화면 위치 결정: 해시 > 저장된 마지막 위치 > 서울 구·군 단위.
- * 필터도 같은 쪽에서 가져온다(해시가 있으면 해시의 필터만, 없으면 저장된 필터).
  *
  * 해시는 공유 링크라 항상 이긴다. 해시에 일부 필드만 있으면 빠진 필드는 기본값(서울)으로 채운다
  * — 저장값과 섞지 않는다(남이 보낸 링크에 내 마지막 유형이 섞이면 안 된다). type 이 null 이면
@@ -156,28 +128,15 @@ export function resolveInitialMapState(
   hash: MapHashState,
   saved: MapViewState | null,
   opts: { desktop: boolean },
-): {
-  type: string | null; level: number; lat: number; lng: number
-  filter: Partial<MapFilterState>; source: 'hash' | 'saved' | 'default'
-} {
+): { type: string | null; level: number; lat: number; lng: number; source: 'hash' | 'saved' | 'default' } {
   const defaultLevel = opts.desktop ? DEFAULT_MAP_VIEW.desktopLevel : DEFAULT_MAP_VIEW.mobileLevel
   const hasHash = hash.type != null || hash.level != null || (hash.lat != null && hash.lng != null)
-    || hash.area != null || hash.price != null
   if (hasHash) {
     const center = hash.lat != null && hash.lng != null ? { lat: hash.lat, lng: hash.lng } : DEFAULT_MAP_VIEW
-    return {
-      type: hash.type ?? null, level: hash.level ?? defaultLevel, lat: center.lat, lng: center.lng,
-      filter: hashFilter(hash), source: 'hash',
-    }
+    return { type: hash.type ?? null, level: hash.level ?? defaultLevel, lat: center.lat, lng: center.lng, source: 'hash' }
   }
-  if (saved) {
-    const { filter, ...view } = saved
-    return { ...view, filter: filter ?? { ...EMPTY_MAP_FILTER }, source: 'saved' }
-  }
-  return {
-    type: null, level: defaultLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng,
-    filter: { ...EMPTY_MAP_FILTER }, source: 'default',
-  }
+  if (saved) return { ...saved, source: 'saved' }
+  return { type: null, level: defaultLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng, source: 'default' }
 }
 
 /**
@@ -209,8 +168,6 @@ export function useRealEstateMap(initial: {
   const pending = ref(false)
   const error = ref<string | null>(null)
   const hoveredKey = ref<string | null>(null)
-  /** 단지 단계 면적·가격 필터. 서버는 집계 단계에서 무시한다. */
-  const filter = ref<MapFilterState>({ ...EMPTY_MAP_FILTER })
 
   // 빠르게 드래그하면 나중 요청이 먼저 도착한다. 시퀀스로 stale 응답을 버린다.
   let seq = 0
@@ -238,8 +195,6 @@ export function useRealEstateMap(initial: {
           // 현재 표시 단위를 함께 보낸다. 서버는 무상태라 이걸 받아야 히스테리시스가 걸린다.
           // 없으면 경계(10↔11, 7↔8)에서 좌측 목록과 마커가 왕복하며 깜빡인다.
           prev: granularity.value,
-          // 고른 필터만 붙는다. 필터가 없으면 예전 요청과 같은 URL 이다.
-          ...mapFilterParams(filter.value),
         },
       })
       if (mySeq !== seq) return // stale
@@ -251,10 +206,7 @@ export function useRealEstateMap(initial: {
     } catch (e) {
       // 화면을 비우지 않는다. 직전 결과를 유지한다.
       if (mySeq !== seq) return
-      const apiError = e as { data?: { error?: { code?: string; message?: string } } }
-      error.value = apiError?.data?.error?.code === 'MAP_FILTERS_PREPARING'
-        ? apiError.data.error.message ?? '면적·가격 필터를 준비 중입니다.'
-        : e instanceof Error ? e.message : '지도 데이터를 불러오지 못했습니다.'
+      error.value = e instanceof Error ? e.message : '지도 데이터를 불러오지 못했습니다.'
     } finally {
       if (mySeq === seq) pending.value = false
     }
@@ -280,8 +232,6 @@ export function useRealEstateMap(initial: {
   function setType(next: string, bounds: MapBounds, opts: { fetch?: boolean } = {}): void {
     const changedType = next !== type.value
     type.value = next
-    // 유형에 안 맞는 가격 필터(매매 구간 ↔ 전월세 구간)는 버린다. 면적은 공통이라 유지된다.
-    filter.value = sanitizeMapFilter(next, filter.value)
     if (changedType) {
       items.value = []
       total.value = 0
@@ -290,19 +240,6 @@ export function useRealEstateMap(initial: {
     }
     clearTimer()
     if (opts.fetch === false) return
-    void fetchNow(bounds, level.value)
-  }
-
-  /**
-   * 필터 변경. 서버가 필터를 단지 단계에서만 쓰므로 집계 단계에서는 다시 조회하지 않는다 —
-   * 결과가 같다. 확대해 단지 단계에 들어가는 순간의 idle 조회가 필터를 싣는다.
-   */
-  function setFilter(next: Partial<MapFilterState>, bounds: MapBounds = lastBounds, opts: { fetch?: boolean } = {}): void {
-    const sanitized = sanitizeMapFilter(type.value, next)
-    if (sanitized.area === filter.value.area && sanitized.price === filter.value.price && sanitized.priceKind === filter.value.priceKind) return
-    filter.value = sanitized
-    if (opts.fetch === false || granularity.value !== 'building') return
-    clearTimer()
     void fetchNow(bounds, level.value)
   }
 
@@ -329,8 +266,6 @@ export function useRealEstateMap(initial: {
     pending: readonly(pending),
     error: readonly(error),
     hoveredKey,
-    filter: readonly(filter),
-    setFilter,
     isBuilding: computed(() => granularity.value === 'building'),
     setType,
     setLevel,

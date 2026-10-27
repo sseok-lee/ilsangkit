@@ -1,5 +1,3 @@
-import { ServiceUnavailableError } from '../lib/errors.js';
-import { areaBandFor } from './realEstateAreaSummaryService.js';
 import { prisma } from '../lib/prisma.js';
 import { readSummaryMode, summaryTableFor, type SummaryTable } from '../lib/realEstateSummaryStore.js';
 import { TABLE_NAME_MAP, serializeRow } from './realEstateService.js';
@@ -7,7 +5,6 @@ import { recentMonthsCondition } from '../lib/sargableDate.js';
 import { getLatestDeals, latestDealsKey } from './realEstateLatestDeals.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 import type { BuildingKey, DealScope, LatestDeals, PropertyType } from '../types/realEstateExploration.js';
-import { type MapFilter } from '../schemas/realEstateMap.js';
 
 /** 건물 마커 상한. 카카오 CustomOverlay 는 DOM 노드라 이 이상은 렌더가 무겁다. */
 export const BUILDING_LIMIT = 200;
@@ -66,10 +63,7 @@ function dealScopeForRealEstateType(type: string): DealScope {
   return type.endsWith('-sale') ? 'sale' : 'rent';
 }
 
-async function enrichMapBuildings(
-  type: string,
-  items: MapBuildingItem[],
-): Promise<MapBuildingItem[]> {
+async function enrichMapBuildings(type: string, items: MapBuildingItem[]): Promise<MapBuildingItem[]> {
   if (items.length === 0) return items;
   const keys: BuildingKey[] = items.map((item) => ({
     propertyType: propertyTypeFromRealEstateType(type),
@@ -160,20 +154,11 @@ export function __resetIndexWarningForTest(): void {
   warnedMissingIndex = false;
 }
 
-export interface FetchBuildingsResult {
-  items: MapBuildingItem[];
-  total: number;
-  exact: boolean;
-
-}
-
 export async function fetchBuildings(
   type: string,
   bounds: Bounds,
-  filter: MapFilter | null = null,
-): Promise<FetchBuildingsResult> {
+): Promise<{ items: MapBuildingItem[]; total: number; exact: boolean }> {
   assertKnownType(type);
-  if (filter) return fetchFilteredBuildings(type, bounds, filter);
 
   const where = `type = ? AND lat IS NOT NULL AND lng IS NOT NULL
       AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
@@ -207,60 +192,6 @@ export async function fetchBuildings(
   }), type);
 
   return { items: await enrichMapBuildings(type, items), total, exact: total <= BUILDING_LIMIT };
-}
-
-/** 필터 경로는 준비 상태와 면적 요약만 읽는다. 최근 거래 원본 조회로 폴백하지 않는다. */
-async function fetchFilteredBuildings(type: string, bounds: Bounds, filter: MapFilter): Promise<FetchBuildingsResult> {
-  const state = await prisma.$queryRawUnsafe<Array<{ readyAt: Date | null }>>(
-    "SELECT readyAt FROM RealEstateAreaSummaryState WHERE type = ? AND scope = ''", type,
-  );
-  if (!state[0]?.readyAt) {
-    throw new ServiceUnavailableError('면적·가격 필터를 준비 중입니다. 잠시 후 다시 시도해 주세요.', 'MAP_FILTERS_PREPARING');
-  }
-  let where = `type = ? AND areaBand = ? AND lat IS NOT NULL AND lng IS NOT NULL
-      AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`;
-  const params: unknown[] = [type, areaBandFor(filter.area), bounds.swLat, bounds.neLat, bounds.swLng, bounds.neLng];
-  if (filter.price) {
-    const column = { sale: 'saleAmount', jeonse: 'jeonseDeposit', wolse: 'wolseMonthlyRent' }[filter.price.kind];
-    const { min, max } = filter.price.range;
-    where += ` AND ${column} IS NOT NULL`;
-    if (min != null) { where += ` AND ${column} > ?`; params.push(min); }
-    if (max != null) { where += ` AND ${column} <= ?`; params.push(max); }
-  } else {
-    where += type.endsWith('-sale')
-      ? ' AND saleAmount IS NOT NULL'
-      : ' AND (jeonseDeposit IS NOT NULL OR wolseMonthlyRent IS NOT NULL)';
-  }
-  const from = 'RealEstateBuildingAreaSummary FORCE INDEX (re_area_type_band_lat_lng_idx)';
-  const counts = await prisma.$queryRawUnsafe<Array<{ cnt: bigint | number }>>(`SELECT COUNT(*) AS cnt FROM ${from} WHERE ${where}`, ...params);
-  // 밀집 지역의 수만 단지 JSON을 정렬하지 않는다. 커버링 인덱스에서 200개 키를 고른 뒤
-  // PK로 상세 행만 읽는다. LIMIT가 있어 derived table을 합쳐 풀어 읽지 않는다.
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `SELECT s.buildingKey, s.buildingName, s.bjdCode, s.city, s.district, s.dongName, s.jibun,
-            s.lat, s.lng, s.transactionCount, s.latestDeals
-     FROM (SELECT type, buildingKey, areaBand, transactionCount
-       FROM ${from} WHERE ${where} ORDER BY transactionCount DESC LIMIT ${BUILDING_LIMIT}) picked
-     JOIN RealEstateBuildingAreaSummary s
-       ON s.type = picked.type AND s.buildingKey = picked.buildingKey AND s.areaBand = picked.areaBand
-     ORDER BY picked.transactionCount DESC`, ...params,
-  );
-  const total = Number(counts[0]?.cnt ?? 0);
-  const items = rows.map((r) => {
-    const s = serializeRow(r) as Record<string, unknown>;
-    const deals = (typeof r.latestDeals === 'string' ? JSON.parse(r.latestDeals) : r.latestDeals) as LatestDeals;
-    const dateKey = (d: LatestDeals['sale']): number | null => d ? d.dealYear * 10000 + d.dealMonth * 100 + (d.dealDay ?? 1) : null;
-    const latest = deals.sale ?? ((dateKey(deals.jeonse) ?? 0) >= (dateKey(deals.wolse) ?? 0) ? deals.jeonse : deals.wolse);
-    return {
-      ...s, lat: s.lat == null ? null : Number(s.lat), lng: s.lng == null ? null : Number(s.lng),
-      latestPrice: latest?.amount ?? latest?.deposit ?? null,
-      monthlyRent: latest?.kind === 'jeonse' ? 0 : latest?.monthlyRent ?? null,
-      latestDealYear: latest?.dealYear ?? null, latestDealMonth: latest?.dealMonth ?? null, latestDealDay: latest?.dealDay ?? null,
-      jeonseDeposit: deals.jeonse?.deposit ?? null, jeonseDealKey: dateKey(deals.jeonse),
-      wolseDeposit: deals.wolse?.deposit ?? null, wolseMonthlyRent: deals.wolse?.monthlyRent ?? null, wolseDealKey: dateKey(deals.wolse),
-      latestDeals: deals,
-    } as MapBuildingItem;
-  });
-  return { items: await attachRealEstateCanonicalPaths(items, type), total, exact: total <= BUILDING_LIMIT };
 }
 
 // ─────────────────────────────────────────────

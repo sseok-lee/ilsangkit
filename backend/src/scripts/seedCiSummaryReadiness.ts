@@ -193,11 +193,6 @@ export async function runCiSummaryReadinessSeed(): Promise<{
   try {
     await seedCiRealEstateSources(prisma as unknown as PrismaWithRealEstateSources);
     const report = await prepareRealEstateSummaryV2();
-    if (report.complete) {
-      // 기존 ready V2를 검증만 한 경우에도 새 지도 필터 테이블은 채워야 한다.
-      const { refreshBuildingAreaSummaries } = await import('../services/realEstateAreaSummaryService.js');
-      await refreshBuildingAreaSummaries();
-    }
     const countRows = await prisma.$queryRaw<
       Array<{ cnt: bigint }>
     >`SELECT COUNT(*) AS cnt FROM RealEstateBuildingSummaryV2`;

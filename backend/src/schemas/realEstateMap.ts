@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { KOREA_BOUNDS } from '../constants/index.js';
-import { ValidationError } from '../lib/errors.js';
 
 export type Granularity = 'city' | 'district' | 'dong' | 'building';
 
@@ -65,75 +64,6 @@ export function resolveGranularity(level: number, prev?: Granularity): Granulari
   return base;
 }
 
-// ── 단지 단계 필터 구간 ─────────────────────────────────────────────
-// 구간 id 는 "하한-상한"(만원·㎡). 의미는 "하한 초과 ~ 상한 이하"이고, 하한 0 은 하한 없음
-// (첫 구간 "N 이하"), 상한이 비면 상한 없음("N 초과")이다. 프론트 utils/mapFilters.ts 와 같아야 한다.
-
-/** 전용면적(㎡): 60 이하 / 60~85 / 85~135 / 135 초과 */
-export const AREA_BUCKETS = ['0-60', '60-85', '85-135', '135-'] as const;
-
-export type PriceKind = 'sale' | 'jeonse' | 'wolse';
-
-/** 가격 구간(만원). 매매=거래금액, 전세=보증금, 월세=월세액. */
-export const PRICE_BUCKETS = {
-  sale: ['0-30000', '30000-60000', '60000-90000', '90000-150000', '150000-250000', '250000-'],
-  jeonse: ['0-10000', '10000-30000', '30000-50000', '50000-80000', '80000-'],
-  wolse: ['0-50', '50-100', '100-'],
-} as const satisfies Record<PriceKind, readonly string[]>;
-
-const ALL_PRICE_BUCKETS = [
-  ...new Set([...PRICE_BUCKETS.sale, ...PRICE_BUCKETS.jeonse, ...PRICE_BUCKETS.wolse]),
-] as [string, ...string[]];
-
-/** 하한 초과 ~ 상한 이하. null 은 그쪽 끝이 열려 있다는 뜻이다. */
-export interface ValueRange {
-  min: number | null;
-  max: number | null;
-}
-
-export interface MapFilter {
-  area: ValueRange | null;
-  price: { kind: PriceKind; range: ValueRange } | null;
-}
-
-export function bucketRange(id: string): ValueRange {
-  const [lo, hi] = id.split('-');
-  const min = Number(lo);
-  return { min: min > 0 ? min : null, max: hi ? Number(hi) : null };
-}
-
-export function inRange(value: number, range: ValueRange): boolean {
-  return (range.min == null || value > range.min) && (range.max == null || value <= range.max);
-}
-
-/**
- * 쿼리의 필터 값을 유형에 맞춰 해석한다. 아무 필터도 없으면 null — 호출부는 이때 기존 경로를
- * 그대로 타야 한다(필터 없는 응답은 예전과 완전히 같아야 한다).
- *
- * 매매는 priceKind 없이 price 만, 전월세는 priceKind(jeonse|wolse) + price 를 함께 받는다.
- * 짝이 안 맞거나 그 종류의 구간이 아니면 ValidationError(422).
- */
-export function resolveMapFilter(
-  type: string,
-  q: { area?: string; price?: string; priceKind?: 'jeonse' | 'wolse' },
-): MapFilter | null {
-  const isSale = type.endsWith('-sale');
-  let price: MapFilter['price'] = null;
-  if (q.priceKind && isSale) throw new ValidationError('매매 지도에는 priceKind 를 쓰지 않습니다');
-  if (q.priceKind && !q.price) throw new ValidationError('priceKind 는 price 와 함께 보내야 합니다');
-  if (q.price) {
-    const kind: PriceKind | undefined = isSale ? 'sale' : q.priceKind;
-    if (!kind) throw new ValidationError('전월세 가격 필터에는 priceKind(jeonse|wolse) 가 필요합니다');
-    if (!(PRICE_BUCKETS[kind] as readonly string[]).includes(q.price)) {
-      throw new ValidationError(`${kind} 가격 구간이 아닙니다: ${q.price}`);
-    }
-    price = { kind, range: bucketRange(q.price) };
-  }
-  const area = q.area ? bucketRange(q.area) : null;
-  if (!area && !price) return null;
-  return { area, price };
-}
-
 const lat = z.coerce
   .number()
   .min(KOREA_BOUNDS.LAT_MIN, '한국 영역 외 좌표입니다')
@@ -151,11 +81,6 @@ export const MapQuerySchema = z
     neLat: lat,
     neLng: lng,
     prev: z.enum(['city', 'district', 'dong', 'building']).optional(),
-    // 단지 단계 필터(선택). 값은 아래 구간 id 만 받는다. 유형과의 짝(매매 가격 vs 전월세
-    // priceKind)은 유형이 path 에 있어 여기서 못 본다 — 라우트가 resolveMapFilter 로 확인한다.
-    area: z.enum(AREA_BUCKETS).optional(),
-    price: z.enum(ALL_PRICE_BUCKETS).optional(),
-    priceKind: z.enum(['jeonse', 'wolse']).optional(),
   })
   .refine((d) => d.swLat <= d.neLat && d.swLng <= d.neLng, {
     message: 'sw 좌표는 ne 좌표보다 작거나 같아야 합니다',

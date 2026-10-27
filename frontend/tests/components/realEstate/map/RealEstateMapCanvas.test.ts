@@ -283,7 +283,7 @@ describe('RealEstateMapCanvas', () => {
 
       expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
       const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
-      expect(overlayOpts).toEqual({ type: 'villa-rent', selectedKey: '은마|1168010100' , rentKind: null })
+      expect(overlayOpts).toEqual({ type: 'villa-rent', selectedKey: '은마|1168010100' })
     })
 
     it('items 가 바뀌면(items watch 경로) 그 호출도 현재 type/selectedKey 를 넘긴다', async () => {
@@ -300,7 +300,7 @@ describe('RealEstateMapCanvas', () => {
       const [, itemsArg, , overlayOpts] = mocks.renderOverlays.mock.calls[0]
       // Vue 는 배열 prop 을 내부적으로 감싸므로(reference 불일치) 값 동등성으로 비교한다.
       expect(itemsArg).toEqual(nextItems)
-      expect(overlayOpts).toEqual({ type: 'apt-rent', selectedKey: '도곡렉슬|1168011800' , rentKind: null })
+      expect(overlayOpts).toEqual({ type: 'apt-rent', selectedKey: '도곡렉슬|1168011800' })
     })
 
     it('selectedKey 가 바뀌면(selectedKey watch 경로) 그 호출이 새 키를 넘긴다', async () => {
@@ -312,7 +312,7 @@ describe('RealEstateMapCanvas', () => {
 
       expect(mocks.renderOverlays).toHaveBeenCalledTimes(1)
       const [, , , overlayOpts] = mocks.renderOverlays.mock.calls[0]
-      expect(overlayOpts).toEqual({ type: 'apt-sale', selectedKey: '신동아|1168011500' , rentKind: null })
+      expect(overlayOpts).toEqual({ type: 'apt-sale', selectedKey: '신동아|1168011500' })
     })
   })
 })
