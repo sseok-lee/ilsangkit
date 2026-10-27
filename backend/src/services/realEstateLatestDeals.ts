@@ -59,6 +59,8 @@ export interface AreaRange {
 }
 
 export interface LatestDealsOptions {
+  /** 백필 재개 시 최초 실행의 기준일을 유지한다. */
+  dateThrough?: string;
   /**
    * 주면 "그 면적 구간 안에서의" 최근 거래를 고른다(지도 면적 필터). 없으면 기존과 같은 SQL 이다.
    * 갈래마다 같은 인덱스 역방향 스캔에 면적 조건만 더해, 조건에 맞는 첫 행에서 멈춘다.
@@ -77,7 +79,7 @@ export async function getLatestDeals(
   }
   if (keys.length === 0) return result;
 
-  const today = kstCalendarToday().toISOString().slice(0, 10);
+  const today = options.dateThrough ?? kstCalendarToday().toISOString().slice(0, 10);
   const grouped = groupKeysByProperty(keys);
   for (const [propertyType, propertyKeys] of grouped) {
     if (scope === 'sale' || scope === 'all') {

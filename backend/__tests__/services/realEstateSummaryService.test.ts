@@ -18,7 +18,10 @@ vi.mock('../../src/lib/prisma.js', () => {
   return { prisma, default: prisma };
 });
 
+vi.mock('../../src/services/realEstateAreaSummaryService.js', () => ({ refreshBuildingAreaSummariesUnlocked: vi.fn().mockResolvedValue([]) }));
+
 import { refreshSummary, refreshAllSummaries, refreshAddressSummaries, refreshSummariesForActiveMode } from '../../src/services/realEstateSummaryService.js';
+import { refreshBuildingAreaSummariesUnlocked } from '../../src/services/realEstateAreaSummaryService.js';
 import { TABLE_NAME_MAP } from '../../src/services/realEstateService.js';
 
 function inventoryResult(sql: string) {
@@ -40,6 +43,7 @@ describe('refreshSummary (city-chunked)', () => {
   let lockDir: string;
 
   beforeEach(() => {
+    vi.mocked(refreshBuildingAreaSummariesUnlocked).mockReset().mockResolvedValue([]);
     lockDir = mkdtempSync(join(tmpdir(), 'summary-lock-'));
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();
@@ -66,9 +70,19 @@ describe('refreshSummary (city-chunked)', () => {
     // must fail inside its transaction rather than commit URLs that cannot resolve.
     const result = await refreshAddressSummaries(['apt-sale']);
     expect(result.complete).toBe(false);
+    expect(refreshBuildingAreaSummariesUnlocked).not.toHaveBeenCalled();
     expect(result.batches).toEqual([expect.objectContaining({
       type: 'apt-sale', city: '서울', status: 'failed', rowCount: 0,
     })]);
+  });
+
+  it('V2 유형 완료 뒤에 면적 요약을 갱신하고 실패하면 전체 완료로 보고하지 않는다', async () => {
+    mockExecuteRawUnsafe.mockResolvedValue(1);
+    vi.mocked(refreshBuildingAreaSummariesUnlocked).mockRejectedValueOnce(new Error('area failed'));
+    const result = await refreshAddressSummaries(['apt-sale']);
+    expect(refreshBuildingAreaSummariesUnlocked).toHaveBeenCalledWith({ types: ['apt-sale'] });
+    expect(result.complete).toBe(false);
+    expect(result.batches).toContainEqual(expect.objectContaining({ city: '*area*', status: 'failed', error: expect.stringContaining('area failed') }));
   });
 
   it('알 수 없는 타입은 throw', async () => {
@@ -442,6 +456,7 @@ describe('refreshAllSummaries', () => {
   let lockDir: string;
 
   beforeEach(() => {
+    vi.mocked(refreshBuildingAreaSummariesUnlocked).mockReset().mockResolvedValue([]);
     lockDir = mkdtempSync(join(tmpdir(), 'summary-lock-'));
     process.env.REAL_ESTATE_WRITE_LOCK_DIR = lockDir;
     mockExecuteRawUnsafe.mockReset();

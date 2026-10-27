@@ -1,3 +1,4 @@
+import { refreshBuildingAreaSummariesUnlocked } from './realEstateAreaSummaryService.js';
 import { prisma } from '../lib/prisma.js';
 import { readSummaryMode, type SummaryReadMode } from '../lib/realEstateSummaryStore.js';
 import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
@@ -271,7 +272,15 @@ export async function refreshAddressSummariesUnlocked(types: string[] = Object.k
   const batches: SummaryBatchResult[] = [];
   for (const type of types) {
     try {
-      batches.push(...await refreshAddressSummaryType(type));
+      const refreshed = await refreshAddressSummaryType(type);
+      batches.push(...refreshed);
+      if (refreshed.every((batch) => batch.status === 'complete')) {
+        try {
+          await refreshBuildingAreaSummariesUnlocked({ types: [type] });
+        } catch (error) {
+          batches.push({ type, city: '*area*', rowCount: 0, status: 'failed', error: String(error) });
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[SummaryV2] ${type} city inventory failed:`, error);

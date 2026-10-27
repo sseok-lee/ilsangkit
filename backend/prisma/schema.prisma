@@ -2140,3 +2140,43 @@ model FacilityGone {
   @@index([category])
   @@index([goneAt])
 }
+
+/// 지도 필터 전용. 전체(0) 및 면적 구간(1~4)의 최근 거래를 요청 전에 계산한다.
+model RealEstateBuildingAreaSummary {
+  type               String    @db.VarChar(20)
+  buildingKey        String    @db.Char(64)
+  areaBand           Int
+  buildingName       String    @db.VarChar(200)
+  bjdCode            String    @db.VarChar(10)
+  city               String    @db.VarChar(50)
+  district           String    @db.VarChar(50)
+  dongName           String    @db.VarChar(50)
+  jibun              String?   @db.VarChar(20)
+  lat                Decimal?  @db.Decimal(10, 7)
+  lng                Decimal?  @db.Decimal(10, 7)
+  transactionCount   Int       @default(0)
+  saleAmount         BigInt?
+  jeonseDeposit      Int?
+  wolseMonthlyRent   Int?
+  latestDeals        Json
+  refreshRunId       String    @db.Char(36)
+  updatedAt          DateTime  @updatedAt
+
+  @@id([type, buildingKey, areaBand])
+  @@index([type, areaBand, lat, lng], map: "re_area_type_band_lat_lng_idx")
+  @@index([type, bjdCode, buildingKey], map: "re_area_type_bjd_key_idx")
+}
+
+/// scope 빈 문자열=유형 전체, 그 외=백필 법정동 코드. 전체 완료만 지도 준비 완료로 쓴다.
+model RealEstateAreaSummaryState {
+  type               String    @db.VarChar(20)
+  scope              String    @db.VarChar(10)
+  runId              String    @db.Char(36)
+  lastBuildingKey    String    @db.Char(64)
+  dateThrough        String    @db.Char(10)
+  startedAt          DateTime
+  completedAt        DateTime?
+  readyAt            DateTime?
+
+  @@id([type, scope])
+}
