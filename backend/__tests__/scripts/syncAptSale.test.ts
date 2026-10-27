@@ -1,5 +1,6 @@
 // @TASK Phase2-2 - 아파트 매매 동기화 스크립트 테스트 (TDD)
 
+import { Prisma } from '@prisma/client';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -259,6 +260,17 @@ describe('syncAptSaleByLawd', () => {
 
     expect(mockFetch).toHaveBeenCalledOnce();
     expect(mockUpsert).toHaveBeenCalledOnce();
+    const persisted = { ...mockUpsert.mock.calls[0][0].create, id: 1, exclusiveArea: new Prisma.Decimal('84.9900') };
+    mockFindUnique.mockResolvedValue(persisted);
+    mockUpsert.mockClear();
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xmlResponse });
+    await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap);
+    expect(mockUpsert).not.toHaveBeenCalled();
+    // 같은 sourceId의 취소는 실제 변경이므로 syncedAt 신호를 새로 남긴다.
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xmlResponse.replace('</item>', '<cdealType>해제</cdealType></item>') });
+    await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap);
+    expect(mockUpsert).toHaveBeenCalledOnce();
+
   });
 
   // 회귀 방지: 이 함수가 넘겨받은 stats 대신 지역 변수에 집계하던 탓에

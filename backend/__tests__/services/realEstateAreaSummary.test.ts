@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const { query, execute, executeRaw, transaction, latest } = vi.hoisted(() => ({
-  query: vi.fn(), execute: vi.fn(), executeRaw: vi.fn(), transaction: vi.fn(), latest: vi.fn(),
+const { query, queryRaw, execute, executeRaw, transaction, latest } = vi.hoisted(() => ({
+  queryRaw: vi.fn(), query: vi.fn(), execute: vi.fn(), executeRaw: vi.fn(), transaction: vi.fn(), latest: vi.fn(),
 }));
 vi.mock('../../src/lib/prisma.js', () => ({ prisma: {
-  $queryRawUnsafe: query, $executeRawUnsafe: execute, $transaction: transaction,
+  $queryRaw: queryRaw, $queryRawUnsafe: query, $executeRawUnsafe: execute, $transaction: transaction,
 } }));
 vi.mock('../../src/services/realEstateLatestDeals.js', async (orig) => ({
   ...await orig<typeof import('../../src/services/realEstateLatestDeals.js')>(), getLatestDeals: latest,
 }));
-import { AREA_BANDS, areaBandFor, refreshBuildingAreaSummariesUnlocked as refresh } from '../../src/services/realEstateAreaSummaryService.js';
+import * as areaService from '../../src/services/realEstateAreaIncrementalService.js';
+import { AREA_BANDS, areaBandFor, backfillDeadline, assertBeforeDeadline, AreaSummaryPausedError, writeAreaSummaryBatch, refreshBuildingAreaSummariesUnlocked as refresh } from '../../src/services/realEstateAreaSummaryService.js';
 import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
 import { bucketRange } from '../../src/schemas/realEstateMap.js';
 import { parseAreaSummaryArgs } from '../../src/scripts/backfillRealEstateAreaSummary.js';
@@ -18,6 +19,7 @@ const sale = { kind: 'sale', amount: 10000, deposit: null, monthlyRent: null, ex
 beforeEach(() => {
   vi.resetAllMocks();
   execute.mockResolvedValue(0);
+  queryRaw.mockResolvedValue([]);
   transaction.mockImplementation((cb) => cb({ $executeRaw: executeRaw, $executeRawUnsafe: execute }));
   latest.mockImplementation((keys: BuildingKey[]) => Promise.resolve(new Map(keys.map((k) => [latestDealsKey(k), { sale, jeonse: null, wolse: null }]))));
 });
@@ -55,7 +57,7 @@ describe('단지×면적 요약 갱신', () => {
   it('지역별 미완료 커서·실행 기준일을 재사용하고 지역 밖은 정리하지 않는다', async () => {
     query.mockResolvedValueOnce([{ runId: 'old', lastBuildingKey: 'b'.repeat(64), dateThrough: '2026-09-01', completedAt: null }])
       .mockResolvedValueOnce([row]).mockResolvedValueOnce([]).mockResolvedValueOnce([{ sourceCount: 1, summaryCount: 5 }]);
-    await refresh({ types: ['apt-rent'], bjdCode: '11680', resume: true, pauseMs: 0 });
+    await refresh({ types: ['apt-rent'], bjdCode: '11680', pauseMs: 0 });
     expect(query.mock.calls[1].slice(1)).toEqual(['apt-rent', 'b'.repeat(64), '11680']);
     expect(latest.mock.calls[0].slice(1)).toEqual(['rent', { area: null, dateThrough: '2026-09-01' }]);
     expect(execute.mock.calls.some((c) => c[0].includes('INSERT INTO RealEstateAreaSummaryState'))).toBe(false);
@@ -96,5 +98,42 @@ describe('단지×면적 요약 갱신', () => {
       .toEqual({ types: ['apt-sale', 'villa-sale'], bjdCode: '11680', resume: true, batchSize: 10, pauseMs: 20 });
     expect(() => parseAreaSummaryArgs(['--type'])).toThrow();
     expect(() => parseAreaSummaryArgs(['--typo', 'x'])).toThrow();
+  });
+});
+
+describe('일일 갱신 분리와 백필 시간 경계', () => {
+  it('일일 증분 진입점이 존재한다', () => {
+    expect(areaService).toHaveProperty('refreshBuildingAreaSummariesIncremental');
+  });
+  it('until과 명시적 restart를 받는다', () => {
+    expect(parseAreaSummaryArgs(['--until', '02:30', '--restart'])).toEqual({ until: '02:30', resume: false });
+  });
+});
+
+
+describe('백필 시간 경계', () => {
+  it('서버 TZ와 무관하게 다음 KST 시각을 계산한다', () => {
+    expect(areaService).toBeDefined();
+    expect(backfillDeadline('02:30', new Date('2026-10-27T16:00Z'))?.toISOString()).toBe('2026-10-27T17:30:00.000Z');
+    expect(() => backfillDeadline('25:00')).toThrow();
+  });
+  it('마감 5분 전에는 배치 시작 전에 멈춘다', () => {
+    expect(() => assertBeforeDeadline(new Date(Date.now() + 4 * 60000))).toThrow(AreaSummaryPausedError);
+  });
+});
+
+
+describe('같은 요약의 기록 생략', () => {
+  function oldRows(jibun: string | null) {
+    return AREA_BANDS.map((_, areaBand) => ({ ...row, areaBand, jibun, saleAmount: 10000, jeonseDeposit: null, wolseMonthlyRent: null, latestDeals: { sale, jeonse: null, wolse: null } }));
+  }
+  it('내용이 같으면 트랜잭션도 열지 않는다', async () => {
+    queryRaw.mockResolvedValue(oldRows('1'));
+    expect(await writeAreaSummaryBatch('apt-sale', [row], '2026-10-27', 'run')).toBe(0);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('NULL과 빈 문자열 메타데이터는 다르므로 전파한다', async () => {
+    queryRaw.mockResolvedValue(oldRows(null));
+    expect(await writeAreaSummaryBatch('apt-sale', [{ ...row, jibun: '' }], '2026-10-27', 'run')).toBe(5);
   });
 });

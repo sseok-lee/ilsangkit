@@ -278,6 +278,8 @@ export const AREA_SUMMARY_TABLES: ExpectedTable[] = [
   \`startedAt\` DATETIME(3) NOT NULL,
   \`completedAt\` DATETIME(3) NULL,
   \`readyAt\` DATETIME(3) NULL,
+  \`incrementalThrough\` DATETIME(3) NULL,
+  \`incrementalDateThrough\` CHAR(10) NULL,
   PRIMARY KEY (\`type\`, \`scope\`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
     columns: [
@@ -289,6 +291,8 @@ export const AREA_SUMMARY_TABLES: ExpectedTable[] = [
       { name: 'startedAt', type: 'datetime(3)', nullable: false },
       { name: 'completedAt', type: 'datetime(3)', nullable: true },
       { name: 'readyAt', type: 'datetime(3)', nullable: true },
+      { name: 'incrementalThrough', type: 'datetime(3)', nullable: true },
+      { name: 'incrementalDateThrough', type: 'char(10)', nullable: true },
     ],
     indexes: [
       { name: 'PRIMARY', unique: true, columns: ['type', 'scope'] },

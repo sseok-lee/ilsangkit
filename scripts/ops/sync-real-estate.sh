@@ -28,7 +28,7 @@ find "$LOG_DIR" -name '*.log' -mtime +14 -delete
 
 STARTED_AT="$(date '+%F %T')"
 write_status() {
-  printf 'started=%s\nfinished=%s\nexit=%s\n' "$STARTED_AT" "$(date '+%F %T')" "$1" > "$STATUS_FILE.tmp"
+  printf 'started=%s\nfinished=%s\nexit=%s\ntransaction_exit=%s\nsummary_exit=%s\narea_exit=%s\n' "$STARTED_AT" "$(date '+%F %T')" "$1" "${TRANSACTION_EXIT:-not-run}" "${SUMMARY_EXIT:-not-run}" "${AREA_EXIT:-not-run}" > "$STATUS_FILE.tmp"
   mv "$STATUS_FILE.tmp" "$STATUS_FILE"
 }
 
@@ -93,6 +93,8 @@ for SCRIPT in syncAptSale syncAptRent syncVillaSale syncVillaRent syncOffitelSal
   echo "[step:loop-${SCRIPT}-end]"
 done
 
+TRANSACTION_EXIT=$REAL_ESTATE_SYNC_EXIT
+
 # 좌표 없는 건물 지오코딩 (카카오 API rate limit 감안 45분)
 echo "[step:geocode-start]"
 run_backend_node_timed 45m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeRealEstate.js" \
@@ -121,6 +123,16 @@ case "$SUMMARY_EXIT" in
   *) echo "[warn] Summary 갱신 실패 (exit=$SUMMARY_EXIT) — 전 타입이 어제 값으로 남는다."; REAL_ESTATE_SYNC_EXIT=4 ;;
 esac
 echo "[step:summary-end]"
+
+# 면적은 일일 증분만 실행한다. 별도 25분 watchdog / 바깥 30분 예산.
+# 실패해도 거래·V2 성공 상태를 보존하고 전체 종료 코드 6으로 구분한다.
+echo "[step:area-start]"
+AREA_EXIT=0
+run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRealEstateAreaSummary.js" || AREA_EXIT=$?
+if [ "$AREA_EXIT" -ne 0 ]; then
+  echo "[warn] 면적 증분 실패(exit=$AREA_EXIT); 거래=$TRANSACTION_EXIT V2=$SUMMARY_EXIT 결과 유지"
+fi
+echo "[step:area-end]"
 
 # 청약 분양정보 동기화. 지오코딩은 느려 맨 마지막 격리 단계로 미룬다(아래).
 echo "[step:subscription-start]"
@@ -161,6 +173,7 @@ run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/geocodeSubscription
 echo "[step:subscription-geocode-end]"
 
 set +x
+if [ "$REAL_ESTATE_SYNC_EXIT" -eq 0 ] && [ "$AREA_EXIT" -ne 0 ]; then REAL_ESTATE_SYNC_EXIT=6; fi
 write_status "$REAL_ESTATE_SYNC_EXIT"
 if [ "$REAL_ESTATE_SYNC_EXIT" -ne 0 ]; then
   echo "[warn] 부동산 writer 단계에서 실패가 발생했다(exit=$REAL_ESTATE_SYNC_EXIT). 전체 작업은 완료했지만 실패로 종료한다."

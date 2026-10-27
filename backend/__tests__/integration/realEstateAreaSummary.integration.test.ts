@@ -1,3 +1,5 @@
+import { makeBuildingKey } from '../../src/lib/realEstateBuildingIdentity.js';
+import { refreshBuildingAreaSummariesIncremental } from '../../src/services/realEstateAreaIncrementalService.js';
 import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../src/lib/prisma.js';
@@ -12,7 +14,7 @@ const PREFIX = `area-summary-${Date.now().toString(36)}-`;
 const properties: PropertyType[] = ['apt', 'villa', 'offitel'];
 const types = properties.flatMap((p) => [`${p}-sale`, `${p}-rent`]);
 const keyFor = (p: PropertyType): BuildingKey => ({ propertyType: p, buildingName: `${PREFIX}${p}`, bjdCode: BJD, dongName: '테스트동', jibun: '1' });
-const hashFor = (p: PropertyType) => createHash('sha256').update(`${PREFIX}${p}`).digest('hex');
+const hashFor = (p: PropertyType) => makeBuildingKey(keyFor(p));
 const models = {
   apt: [prisma.aptSaleTransaction, prisma.aptRentTransaction],
   villa: [prisma.villaSaleTransaction, prisma.villaRentTransaction],
@@ -35,7 +37,7 @@ beforeAll(async () => {
   await cleanup();
   for (const p of properties) {
     const k = keyFor(p);
-    const base = { buildingName: k.buildingName, bjdCode: BJD, city: '테스트시', district: '테스트구', dongName: '테스트동', jibun: '1', dealYear: 2026, dealMonth: 10, dealDay: 1, lat: 37.5, lng: 127, buildYear: 2000 };
+    const base = { buildingName: k.buildingName, bjdCode: BJD, city: '테스트시', district: '테스트구', dongName: '테스트동', jibun: '1', syncedAt: new Date('2026-10-25T00:00Z'), dealYear: 2026, dealMonth: 10, dealDay: 1, lat: 37.5, lng: 127, buildYear: 2000 };
     for (const [i, area] of [60, 60.01, 85, 85.01, 135, 135.01, null].entries()) {
       await models[p][0].create({ data: { ...base, sourceId: `${PREFIX}${p}-sale-${i}`, exclusiveArea: area, floor: i, dealAmount: BigInt(10000 + i) } } as never);
       for (const rentType of ['전세', '월세']) {
@@ -104,6 +106,44 @@ describe('면적 요약 MySQL 동등성', () => {
       }
     }
   });
+
+  it('증분: 한 거래·동일값 무기록·취소·미래 도래·새 단지·삭제', async () => {
+    const type = 'apt-sale';
+    const previous = await prisma.realEstateAreaSummaryState.findUnique({ where: { type_scope: { type, scope: '' } } });
+    const baseline = { type, scope: '', runId: '11111111-1111-1111-1111-111111111111', lastBuildingKey: '', dateThrough: '2026-10-27', startedAt: new Date('2026-10-26T00:00Z'), completedAt: new Date(), readyAt: new Date(), incrementalThrough: new Date('2026-10-27T02:00Z'), incrementalDateThrough: '2026-10-27' };
+    const extra = { ...keyFor('apt'), buildingName: `${PREFIX}new` };
+    const extraHash = makeBuildingKey(extra);
+    process.env.REAL_ESTATE_WRITE_LOCK_DIR = `${process.cwd()}/../.omc/integration-locks`;
+    await (await import('node:fs/promises')).mkdir(process.env.REAL_ESTATE_WRITE_LOCK_DIR, { recursive: true });
+    try {
+      await prisma.realEstateAreaSummaryState.upsert({ where: { type_scope: { type, scope: '' } }, create: baseline, update: baseline });
+      const unchangedBefore = await prisma.realEstateBuildingAreaSummary.findMany({ where: { type } });
+      const noChange = (await refreshBuildingAreaSummariesIncremental([type]))[0];
+      expect(noChange).toMatchObject({ buildings: 0, writtenRows: 0 });
+      expect(await prisma.realEstateBuildingAreaSummary.findMany({ where: { type } })).toEqual(unchangedBefore);
+      const source = await prisma.aptSaleTransaction.findFirstOrThrow({ where: { sourceId: `${PREFIX}apt-sale-2` } });
+      await prisma.aptSaleTransaction.update({ where: { id: source.id }, data: { dealAmount: 99999n, syncedAt: new Date() } });
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0]).toMatchObject({ buildings: 1, writtenRows: 1 });
+      const saved = await prisma.realEstateBuildingAreaSummary.findMany({ where: { type } });
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].writtenRows).toBe(0);
+      expect(await prisma.realEstateBuildingAreaSummary.findMany({ where: { type } })).toEqual(saved);
+      await prisma.aptSaleTransaction.update({ where: { id: source.id }, data: { cancelDealType: '해제', syncedAt: new Date() } });
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].writtenRows).toBeGreaterThan(0);
+      // 오래 전에 입력한 미래 거래가 기준일 도래만으로 최신값이 된다.
+      await prisma.aptSaleTransaction.create({ data: { bjdCode: extra.bjdCode, dongName: extra.dongName, jibun: extra.jibun, sourceId: `${PREFIX}maturity`, city: '테스트시', district: '테스트구', dealYear: 2026, dealMonth: 10, dealDay: 28, exclusiveArea: 84, dealAmount: 77777n, syncedAt: new Date('2026-10-25T00:00Z'), buildingName: keyFor('apt').buildingName } } as never);
+      vi.setSystemTime(new Date('2026-10-28T03:00Z'));
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].writtenRows).toBeGreaterThan(0);
+      await prisma.realEstateBuildingSummaryV2.create({ data: { type, buildingKey: extraHash, buildingName: extra.buildingName, bjdCode: BJD, city: '테스트시', district: '테스트구', dongName: extra.dongName, jibun: '1', transactionCount: 0 } });
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].writtenRows).toBe(5);
+      await prisma.realEstateBuildingSummaryV2.delete({ where: { type_buildingKey: { type, buildingKey: extraHash } } });
+      expect((await refreshBuildingAreaSummariesIncremental([type]))[0].deletedRows).toBe(5);
+    } finally {
+      vi.restoreAllMocks();
+      vi.setSystemTime(new Date('2026-10-27T03:00Z'));
+      await prisma.realEstateAreaSummaryState.deleteMany({ where: { type, scope: '' } });
+      if (previous) await prisma.realEstateAreaSummaryState.create({ data: previous });
+    }
+  }, 30000);
 
   it('소스 요약에서 사라진 단지는 완료 후 정리되고 다른 지역은 유지된다', async () => {
     const type = 'apt-sale';

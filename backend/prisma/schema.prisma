@@ -2177,6 +2177,8 @@ model RealEstateAreaSummaryState {
   startedAt          DateTime
   completedAt        DateTime?
   readyAt            DateTime?
+  incrementalThrough DateTime?
+  incrementalDateThrough String? @db.Char(10)
 
   @@id([type, scope])
 }

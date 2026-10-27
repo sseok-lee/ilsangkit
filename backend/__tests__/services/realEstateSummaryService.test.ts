@@ -76,13 +76,13 @@ describe('refreshSummary (city-chunked)', () => {
     })]);
   });
 
-  it('V2 유형 완료 뒤에 면적 요약을 갱신하고 실패하면 전체 완료로 보고하지 않는다', async () => {
+  it('면적 계산이 실패하거나 지연되어도 V2의 6유형 갱신을 호출하지 못하게 막지 않는다', async () => {
     mockExecuteRawUnsafe.mockResolvedValue(1);
-    vi.mocked(refreshBuildingAreaSummariesUnlocked).mockRejectedValueOnce(new Error('area failed'));
-    const result = await refreshAddressSummaries(['apt-sale']);
-    expect(refreshBuildingAreaSummariesUnlocked).toHaveBeenCalledWith({ types: ['apt-sale'] });
-    expect(result.complete).toBe(false);
-    expect(result.batches).toContainEqual(expect.objectContaining({ city: '*area*', status: 'failed', error: expect.stringContaining('area failed') }));
+    vi.mocked(refreshBuildingAreaSummariesUnlocked).mockRejectedValue(new Error('area failed'));
+    const result = await refreshAddressSummaries(Object.keys(TABLE_NAME_MAP));
+    expect(result.complete).toBe(true);
+    expect(result.batches).toHaveLength(6);
+    expect(refreshBuildingAreaSummariesUnlocked).not.toHaveBeenCalled();
   });
 
   it('알 수 없는 타입은 throw', async () => {
