@@ -1003,5 +1003,6 @@ describe('RealEstateMapExplorer — 면적·가격 필터', () => {
     expect(fetchMock.mock.calls.length).toBe(calls)
     expect(w.find('[data-testid="map-filter-deferred"]').text()).toBe('단지 단계에서 적용')
     expect(w.find('[data-testid="map-filter-empty-overlay"]').exists()).toBe(false)
+    expect(w.find('[data-testid="map-filter-deferred-mobile"]').text()).toBe('면적·가격 필터는 단지 단계에서 적용')
   })
 })

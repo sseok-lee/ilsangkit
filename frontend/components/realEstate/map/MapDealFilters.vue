@@ -41,11 +41,15 @@
         >
           초기화
         </button>
-        <!-- 집계 단계에서는 필터가 아직 안 걸린다. 칩은 그대로 두고 언제 걸리는지만 알린다. -->
+        <!--
+          집계 단계에서는 필터가 아직 안 걸린다. 칩은 그대로 두고 언제 걸리는지만 알린다.
+          데스크톱만 칩 옆에 둔다 — 모바일은 칩 줄이 가로로 넘쳐 이 글이 화면 밖으로 밀리므로
+          Explorer 가 필터 줄 아래에 따로 띄운다.
+        -->
         <span
           v-if="active && !applied"
           data-testid="map-filter-deferred"
-          class="shrink-0 whitespace-nowrap px-1.5 text-[11px] text-muted sm:text-xs"
+          class="hidden shrink-0 whitespace-nowrap px-1.5 text-xs text-muted lg:inline"
         >단지 단계에서 적용</span>
       </div>
     </div>

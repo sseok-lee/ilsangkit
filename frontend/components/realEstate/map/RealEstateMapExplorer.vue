@@ -62,6 +62,14 @@
             <MapFilterBar class="shrink-0" :type="type" @update:type="onTypeChange" />
             <MapDealFilters :type="type" :filter="filter" :applied="granularity === 'building'" @update:filter="onFilterChange" />
           </div>
+          <!-- 모바일: 집계 단계에서 필터가 걸려 있으면 필터 줄 아래에 안내(범례는 단지 단계에서만 떠 겹치지 않는다). -->
+          <p
+            v-if="filterActive && granularity !== 'building'"
+            data-testid="map-filter-deferred-mobile"
+            class="pointer-events-none absolute left-2 top-[68px] z-20 rounded-lg border border-line bg-white/95 px-2.5 py-1.5 text-[11px] font-medium text-muted lg:hidden"
+          >
+            면적·가격 필터는 단지 단계에서 적용
+          </p>
           <!-- 필터 결과 0곳. 목록에도 같은 안내가 있다(모바일은 시트가 접혀 있을 수 있어 지도 위에도 둔다). -->
           <div
             v-if="showFilterEmpty"
