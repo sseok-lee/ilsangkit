@@ -26,6 +26,7 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useKakaoMap } from '~/composables/useKakaoMap'
 import { useMapOverlays } from '~/composables/useMapOverlays'
 import type { MapBounds, MapItem } from '~/types/realEstateMap'
+import type { RentPriceKind } from '~/utils/mapFilters'
 
 const props = defineProps<{
   items: MapItem[]
@@ -33,6 +34,8 @@ const props = defineProps<{
   level: number
   type: string
   selectedKey: string | null
+  /** 전월세 가격 필터로 고른 종류. 핀이 그 종류의 거래를 보여준다. */
+  rentKind?: RentPriceKind | null
 }>()
 
 const emit = defineEmits<{
@@ -88,7 +91,7 @@ async function initializeMap(): Promise<void> {
     renderOverlays(map.value, props.items, {
       onClick: (i) => emit('select', i),
       onHover: (i) => emit('hover', i),
-    }, { type: props.type, selectedKey: props.selectedKey })
+    }, { type: props.type, selectedKey: props.selectedKey, rentKind: props.rentKind ?? null })
     emit('loaded')
     emitIdle()
   } catch (e) {
@@ -113,20 +116,20 @@ watch(
     renderOverlays(map.value, items, {
       onClick: (i) => emit('select', i),
       onHover: (i) => emit('hover', i),
-    }, { type: props.type, selectedKey: props.selectedKey })
+    }, { type: props.type, selectedKey: props.selectedKey, rentKind: props.rentKind ?? null })
   },
 )
 
 // 선택이 바뀌면 라벨↔펼침 카드가 달라지므로 다시 그린다. items 는 그대로라
-// 위 watch 가 발화하지 않는다.
+// 위 watch 가 발화하지 않는다. 핀이 보여줄 전월세 종류(rentKind)가 바뀔 때도 같다.
 watch(
-  () => props.selectedKey,
+  () => [props.selectedKey, props.rentKind],
   () => {
     if (import.meta.server || !map.value) return
     renderOverlays(map.value, props.items, {
       onClick: (i) => emit('select', i),
       onHover: (i) => emit('hover', i),
-    }, { type: props.type, selectedKey: props.selectedKey })
+    }, { type: props.type, selectedKey: props.selectedKey, rentKind: props.rentKind ?? null })
   },
 )
 

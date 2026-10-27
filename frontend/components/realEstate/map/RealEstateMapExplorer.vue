@@ -9,7 +9,10 @@
         <div class="min-w-[136px]">
           <p class="text-xl font-extrabold tracking-[-0.02em] text-ink">부동산 실거래가</p>
         </div>
-        <MapFilterBar :type="type" @update:type="onTypeChange" />
+        <div class="flex min-w-0 items-center gap-2">
+          <MapFilterBar :type="type" @update:type="onTypeChange" />
+          <MapDealFilters :type="type" :filter="filter" :applied="granularity === 'building'" @update:filter="onFilterChange" />
+        </div>
         <div class="ml-auto inline-flex rounded-xl border border-line bg-background-light p-1 text-sm font-semibold text-ink">
           <button type="button" class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-line bg-white px-4 text-primary" aria-current="page">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -43,16 +46,40 @@
             :list-href="listHref"
             :list-label="listLabel"
             :active-city="activeCity"
+            :filter-active="filterActive"
             @hover="hoveredKey = $event"
             @select="onSelect"
             @select-city="onCityChip"
             @retry="retryAll"
+            @reset-filter="onFilterChange({ ...EMPTY_MAP_FILTER })"
           />
         </aside>
 
         <div class="map-canvas-panel" :style="mobileCanvasStyle">
-          <div class="absolute top-2 left-2 right-2 z-20 lg:hidden">
-            <MapFilterBar :type="type" @update:type="onTypeChange" />
+          <!-- 모바일: 유형·거래 메뉴 옆에 면적·가격 칩. 칩 줄은 남는 폭 안에서 가로로 스크롤된다. -->
+          <div class="absolute top-2 left-2 right-2 z-20 flex items-start gap-1.5 lg:hidden">
+            <MapFilterBar class="shrink-0" :type="type" @update:type="onTypeChange" />
+            <MapDealFilters :type="type" :filter="filter" :applied="granularity === 'building'" @update:filter="onFilterChange" />
+          </div>
+          <!-- 모바일: 집계 단계에서 필터가 걸려 있으면 필터 줄 아래에 안내(범례는 단지 단계에서만 떠 겹치지 않는다). -->
+          <p
+            v-if="filterActive && granularity !== 'building'"
+            data-testid="map-filter-deferred-mobile"
+            class="pointer-events-none absolute left-2 top-[68px] z-20 rounded-lg border border-line bg-white/95 px-2.5 py-1.5 text-[11px] font-medium text-muted lg:hidden"
+          >
+            면적·가격 필터는 단지 단계에서 적용
+          </p>
+          <!-- 필터 결과 0곳. 목록에도 같은 안내가 있다(모바일은 시트가 접혀 있을 수 있어 지도 위에도 둔다). -->
+          <div
+            v-if="showFilterEmpty"
+            data-testid="map-filter-empty-overlay"
+            class="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-lg border border-line bg-white px-3 text-sm text-ink"
+          >
+            <span>조건에 맞는 단지가 없습니다</span>
+            <span class="text-faint" aria-hidden="true">·</span>
+            <button type="button" class="min-h-[44px] px-1 font-semibold text-primary" @click="onFilterChange({ ...EMPTY_MAP_FILTER })">
+              필터 초기화
+            </button>
           </div>
           <!--
             범례는 단지 단계에서만 뜬다 — 지역 단계 핀은 전부 같은 색(평당가 집계)이라 구분할 게 없다.
@@ -81,6 +108,7 @@
               :level="level"
               :type="type"
               :selected-key="selectedKey"
+              :rent-kind="rentKind"
               @idle="onIdle"
               @select="onSelect"
               @hover="hoveredKey = $event ? itemKey($event) : null"
@@ -112,10 +140,12 @@
         :list-href="listHref"
         :list-label="listLabel"
         :active-city="activeCity"
+        :filter-active="filterActive"
         @hover="hoveredKey = $event"
         @select="onSelect"
         @select-city="onCityChip"
         @retry="retryAll"
+        @reset-filter="onFilterChange({ ...EMPTY_MAP_FILTER })"
       />
     </MapBottomSheet>
   </section>
@@ -130,6 +160,8 @@ import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
 import MapLocationPath from './MapLocationPath.vue'
+import MapDealFilters from './MapDealFilters.vue'
+import { EMPTY_MAP_FILTER, isMapFilterActive, type MapFilterState } from '~/utils/mapFilters'
 import {
   useRealEstateMap, itemKey, buildMapHash, parseMapHash,
   DEFAULT_MAP_VIEW, readSavedMapState, saveMapState, resolveInitialMapState,
@@ -174,7 +206,7 @@ const mobileCanvasStyle = computed(() => ({
  */
 const selectedKey = ref<string | null>(null)
 const {
-  type, level, granularity, items, total, exact, pending, error,
+  filter, setFilter, type, level, granularity, items, total, exact, pending, error,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
   hoveredKey, setType, setLevel, onMapIdle, retry, fetchNow,
@@ -186,6 +218,17 @@ const {
 })
 
 const visibleError = computed(() => canvasError.value ?? error.value)
+
+const filterActive = computed(() => isMapFilterActive(filter.value))
+/** 전월세 가격 필터로 고른 종류. 핀이 그 종류의 최근 거래를 보여준다. */
+const rentKind = computed(() =>
+  type.value.endsWith('-rent') && filter.value.price ? filter.value.priceKind : null,
+)
+/** 단지 단계에서 필터 결과가 0곳. 조회 중·오류일 때는 띄우지 않는다(직전 결과·오류 안내가 우선). */
+const showFilterEmpty = computed(() =>
+  filterActive.value && granularity.value === 'building' && !pending.value && !visibleError.value
+  && (items.value ?? []).length === 0,
+)
 
 /**
  * 유형별 전국 시·도 집계. 좌측 목록은 시·도 16곳을 항상 다 보여주는데, 지도 응답은 뷰포트
@@ -345,7 +388,10 @@ onMounted(() => {
     // 전국 집계로 SSR 한 경우(예전 계약): 해시만 반영한다.
     if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
     if (h.level != null) setLevel(h.level)
-    if (h.type != null) setType(h.type, lastBounds)
+    // 필터는 유형을 정한 뒤 넣고(유형에 안 맞는 가격 구간은 버려진다), 조회는 그다음 한 번만 한다.
+    if (h.type != null) setType(h.type, lastBounds, { fetch: false })
+    setFilter({ area: h.area ?? null, price: h.price ?? null, priceKind: h.priceKind ?? null }, lastBounds, { fetch: false })
+    if (h.type != null || h.area != null || h.price != null) void fetchNow(lastBounds, level.value)
     return
   }
 
@@ -357,6 +403,8 @@ onMounted(() => {
   // 해시·저장 어느 쪽이든 유형만 바꾸고 조회는 지도 첫 idle(실제 bounds)에 맡긴다 — 아직 bounds 를
   // 모르는 지금 보내면 전국 bbox 로 나가고(단지 단계면 무거운 쿼리) 곧 idle 조회로 덮인다.
   if (typeChanged) setType(init.type!, lastBounds, { fetch: false })
+  // 필터는 유형을 정한 뒤에 넣는다(유형에 안 맞는 가격 구간은 여기서 버려진다). 조회는 idle 이 한다.
+  setFilter(init.filter, lastBounds, { fetch: false })
   // SSR(서울 구·군, 같은 유형)과 다른 화면으로 시작할 때만 첫 조회 전까지 경로를 숨기고,
   // 지도가 끝내 못 뜨면(onCanvasLoadError) 그때 한 번 조회한다.
   if (init.source !== 'default' && (moved || typeChanged)) {
@@ -372,11 +420,15 @@ onBeforeUnmount(() => {
 function syncHash(): void {
   if (import.meta.server) return
   // 쿼리스트링이 아니라 해시다 — swr 캐시 키 분기 방지(설계문서 5.6)
+  const f = filter.value as MapFilterState
   history.replaceState(null, '', buildMapHash({
-    type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng,
+    type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng, filter: f,
   }))
-  // 재방문 때 이 자리에서 다시 시작한다(해시 없이 /real-estate 로 들어올 때).
-  saveMapState({ type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng })
+  // 재방문 때 이 자리·이 필터로 다시 시작한다(해시 없이 /real-estate 로 들어올 때).
+  saveMapState({
+    type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng,
+    ...(isMapFilterActive(f) ? { filter: { ...f } } : {}),
+  })
 }
 
 // mapCenter 는 RealEstateMapCanvas 가 getCenter() 로 올려보낸 지도의 실제 중심이다.
@@ -396,6 +448,13 @@ function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: n
 function onTypeChange(next: string): void {
   setType(next, lastBounds)
   // 다른 목록으로 갈아타므로 이전 선택 키는 의미가 없다.
+  selectedKey.value = null
+  syncHash()
+}
+
+/** 면적·가격 필터 변경. 단지 단계면 바로 다시 조회하고(집계 단계는 서버가 무시하므로 생략), 해시·저장값을 갱신한다. */
+function onFilterChange(next: MapFilterState): void {
+  setFilter(next, lastBounds)
   selectedKey.value = null
   syncHash()
 }

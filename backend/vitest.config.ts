@@ -12,6 +12,7 @@ export default defineConfig({
     environment: 'node',
     include: ['__tests__/**/*.test.ts'],
     exclude: [
+      '__tests__/integration/realEstateAreaSummary.integration.test.ts',
       '__tests__/rentalPriceStats.test.ts',
       '__tests__/integration/remainingBrowse.integration.test.ts',
       '__tests__/integration/housingRedesign.integration.test.ts',

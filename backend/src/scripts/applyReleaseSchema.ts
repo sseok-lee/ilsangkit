@@ -214,7 +214,111 @@ CREATE TABLE \`RealEstatePublicUrlState\` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 `;
 
+export const AREA_SUMMARY_TABLES: ExpectedTable[] = [
+  {
+    name: 'RealEstateBuildingAreaSummary',
+    createSql: `CREATE TABLE \`RealEstateBuildingAreaSummary\` (
+  \`type\` VARCHAR(20) NOT NULL,
+  \`buildingKey\` CHAR(64) NOT NULL,
+  \`areaBand\` INTEGER NOT NULL,
+  \`buildingName\` VARCHAR(200) NOT NULL,
+  \`bjdCode\` VARCHAR(10) NOT NULL,
+  \`city\` VARCHAR(50) NOT NULL,
+  \`district\` VARCHAR(50) NOT NULL,
+  \`dongName\` VARCHAR(50) NOT NULL,
+  \`jibun\` VARCHAR(20) NULL,
+  \`lat\` DECIMAL(10,7) NULL,
+  \`lng\` DECIMAL(10,7) NULL,
+  \`transactionCount\` INTEGER NOT NULL DEFAULT 0,
+  \`saleAmount\` BIGINT NULL,
+  \`jeonseDeposit\` INTEGER NULL,
+  \`wolseMonthlyRent\` INTEGER NULL,
+  \`latestDeals\` JSON NOT NULL,
+  \`refreshRunId\` CHAR(36) NOT NULL,
+  \`updatedAt\` DATETIME(3) NOT NULL,
+  PRIMARY KEY (\`type\`, \`buildingKey\`, \`areaBand\`),
+  KEY \`re_area_type_band_lat_lng_idx\` (\`type\`, \`areaBand\`, \`lat\`, \`lng\`, \`saleAmount\`, \`jeonseDeposit\`, \`wolseMonthlyRent\`, \`transactionCount\`),
+  KEY \`re_area_type_bjd_key_idx\` (\`type\`, \`bjdCode\`, \`buildingKey\`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    columns: [
+      { name: 'type', type: 'varchar(20)', nullable: false },
+      { name: 'buildingKey', type: 'char(64)', nullable: false },
+      { name: 'areaBand', type: 'int', nullable: false },
+      { name: 'buildingName', type: 'varchar(200)', nullable: false },
+      { name: 'bjdCode', type: 'varchar(10)', nullable: false },
+      { name: 'city', type: 'varchar(50)', nullable: false },
+      { name: 'district', type: 'varchar(50)', nullable: false },
+      { name: 'dongName', type: 'varchar(50)', nullable: false },
+      { name: 'jibun', type: 'varchar(20)', nullable: true },
+      { name: 'lat', type: 'decimal(10,7)', nullable: true },
+      { name: 'lng', type: 'decimal(10,7)', nullable: true },
+      { name: 'transactionCount', type: 'int', nullable: false, default: '0' },
+      { name: 'saleAmount', type: 'bigint', nullable: true },
+      { name: 'jeonseDeposit', type: 'int', nullable: true },
+      { name: 'wolseMonthlyRent', type: 'int', nullable: true },
+      { name: 'latestDeals', type: 'json', nullable: false },
+      { name: 'refreshRunId', type: 'char(36)', nullable: false },
+      { name: 'updatedAt', type: 'datetime(3)', nullable: false },
+    ],
+    indexes: [
+      { name: 'PRIMARY', unique: true, columns: ['type', 'buildingKey', 'areaBand'] },
+      { name: 're_area_type_band_lat_lng_idx', unique: false, columns: ['type', 'areaBand', 'lat', 'lng', 'saleAmount', 'jeonseDeposit', 'wolseMonthlyRent', 'transactionCount'] },
+      { name: 're_area_type_bjd_key_idx', unique: false, columns: ['type', 'bjdCode', 'buildingKey'] },
+    ],
+    checks: [],
+  },
+  {
+    name: 'RealEstateAreaSummaryState',
+    createSql: `CREATE TABLE \`RealEstateAreaSummaryState\` (
+  \`type\` VARCHAR(20) NOT NULL,
+  \`scope\` VARCHAR(10) NOT NULL,
+  \`runId\` CHAR(36) NOT NULL,
+  \`lastBuildingKey\` CHAR(64) NOT NULL,
+  \`dateThrough\` CHAR(10) NOT NULL,
+  \`startedAt\` DATETIME(3) NOT NULL,
+  \`completedAt\` DATETIME(3) NULL,
+  \`readyAt\` DATETIME(3) NULL,
+  \`incrementalThrough\` DATETIME(3) NULL,
+  \`incrementalDateThrough\` CHAR(10) NULL,
+  \`incrementalJob\` JSON NULL,
+  PRIMARY KEY (\`type\`, \`scope\`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    columns: [
+      { name: 'type', type: 'varchar(20)', nullable: false },
+      { name: 'scope', type: 'varchar(10)', nullable: false },
+      { name: 'runId', type: 'char(36)', nullable: false },
+      { name: 'lastBuildingKey', type: 'char(64)', nullable: false },
+      { name: 'dateThrough', type: 'char(10)', nullable: false },
+      { name: 'startedAt', type: 'datetime(3)', nullable: false },
+      { name: 'completedAt', type: 'datetime(3)', nullable: true },
+      { name: 'readyAt', type: 'datetime(3)', nullable: true },
+      { name: 'incrementalThrough', type: 'datetime(3)', nullable: true },
+      { name: 'incrementalDateThrough', type: 'char(10)', nullable: true },
+      { name: 'incrementalJob', type: 'json', nullable: true },
+    ],
+    indexes: [
+      { name: 'PRIMARY', unique: true, columns: ['type', 'scope'] },
+    ],
+    checks: [],
+  },
+  {
+    name: 'RealEstateAreaSummaryWork',
+    createSql: `CREATE TABLE \`RealEstateAreaSummaryWork\` (
+  \`type\` VARCHAR(20) NOT NULL,
+  \`buildingKey\` CHAR(64) NOT NULL,
+  PRIMARY KEY (\`type\`, \`buildingKey\`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    columns: [
+      { name: 'type', type: 'varchar(20)', nullable: false },
+      { name: 'buildingKey', type: 'char(64)', nullable: false },
+    ],
+    indexes: [{ name: 'PRIMARY', unique: true, columns: ['type', 'buildingKey'] }],
+    checks: [],
+  },
+];
+
 export const SUMMARY_V2_TABLES: ExpectedTable[] = [
+  ...AREA_SUMMARY_TABLES,
   {
     name: 'RealEstateBuildingSummaryV2',
     createSql: SUMMARY_V2_SQL,

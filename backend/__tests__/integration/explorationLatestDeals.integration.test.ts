@@ -99,6 +99,26 @@ describe('exploration latest deals live MySQL integration', () => {
     }
   });
 
+  it('면적 범위를 주면 그 면적 안의 최근 유효 거래를 고른다(취소·미래·무효 날짜는 여전히 제외)', async () => {
+    const key = buildingKey('apt');
+
+    // 60 초과 ~ 85 이하: 최신(면적 없음) 대신 84.92㎡ 거래, 전월세는 해당 면적 거래 없음
+    const mid = (await getLatestDeals([key], 'all', { area: { min: 60, max: 85 } })).get(latestDealsKey(key));
+    expect(mid?.sale).toMatchObject({ amount: 125000, exclusiveArea: 84.92, floor: 3 });
+    expect(mid?.jeonse).toBeNull();
+    expect(mid?.wolse).toBeNull();
+
+    // 60 이하: 매매는 없음, 전세 59.98(미래 거래 제외)·월세 49.5
+    const small = (await getLatestDeals([key], 'all', { area: { min: null, max: 60 } })).get(latestDealsKey(key));
+    expect(small?.sale).toBeNull();
+    expect(small?.jeonse).toMatchObject({ deposit: 70000, exclusiveArea: 59.98, floor: 4 });
+    expect(small?.wolse).toMatchObject({ monthlyRent: 120, exclusiveArea: 49.5 });
+
+    // 85 초과 ~ 135 이하: 100㎡ 행은 취소·미래·무효 날짜뿐이라 없음
+    const large = (await getLatestDeals([key], 'sale', { area: { min: 85, max: 135 } })).get(latestDealsKey(key));
+    expect(large?.sale).toBeNull();
+  });
+
   it('keeps same-name buildings isolated by bjdCode and honors sale/rent scopes', async () => {
     const key = buildingKey('apt');
     const otherBjdKey: BuildingKey = {
