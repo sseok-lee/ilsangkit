@@ -296,8 +296,8 @@ router.get(
 
     if (granularity === 'building') {
       if (filter) {
-        const { items, total, exact, filter: meta } = await fetchBuildings(type, { swLat, swLng, neLat, neLng }, filter);
-        res.json({ success: true, data: { granularity, items, total, exact, filter: meta } });
+        const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng }, filter);
+        res.json({ success: true, data: { granularity, items, total, exact } });
         return;
       }
       const { items, total, exact } = await fetchBuildings(type, { swLat, swLng, neLat, neLng });

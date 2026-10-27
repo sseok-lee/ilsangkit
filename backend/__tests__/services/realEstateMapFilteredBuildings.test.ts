@@ -18,7 +18,7 @@ vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
 }));
 
 import {
-  fetchBuildings, matchesMapFilter, BUILDING_LIMIT, FILTER_CANDIDATE_LIMIT,
+  fetchBuildings, BUILDING_LIMIT,
 } from '../../src/services/realEstateMapService.js';
 import { latestDealsKey } from '../../src/services/realEstateLatestDeals.js';
 import { resolveMapFilter } from '../../src/schemas/realEstateMap.js';
@@ -57,88 +57,49 @@ beforeEach(() => {
   mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
 });
 
-describe('matchesMapFilter', () => {
-  const sale = { sale: deal('sale', { amount: 150000 }), jeonse: null, wolse: null };
-  const rent = {
-    sale: null,
-    jeonse: deal('jeonse', { deposit: 50000 }),
-    wolse: deal('wolse', { deposit: 5000, monthlyRent: 100 }),
-  };
-
-  it('매매 가격은 거래금액, 경계는 상한 이하', () => {
-    expect(matchesMapFilter(sale, 'apt-sale', resolveMapFilter('apt-sale', { price: '90000-150000' })!)).toBe(true);
-    expect(matchesMapFilter(sale, 'apt-sale', resolveMapFilter('apt-sale', { price: '150000-250000' })!)).toBe(false);
-  });
-
-  it('전세는 보증금, 월세는 월세액으로 판정한다', () => {
-    expect(matchesMapFilter(rent, 'apt-rent', resolveMapFilter('apt-rent', { price: '30000-50000', priceKind: 'jeonse' })!)).toBe(true);
-    expect(matchesMapFilter(rent, 'apt-rent', resolveMapFilter('apt-rent', { price: '50000-80000', priceKind: 'jeonse' })!)).toBe(false);
-    expect(matchesMapFilter(rent, 'apt-rent', resolveMapFilter('apt-rent', { price: '50-100', priceKind: 'wolse' })!)).toBe(true);
-    expect(matchesMapFilter(rent, 'apt-rent', resolveMapFilter('apt-rent', { price: '100-', priceKind: 'wolse' })!)).toBe(false);
-  });
-
-  it('고른 종류의 거래가 없으면 제외', () => {
-    const onlyWolse = { ...rent, jeonse: null };
-    expect(matchesMapFilter(onlyWolse, 'apt-rent', resolveMapFilter('apt-rent', { price: '0-10000', priceKind: 'jeonse' })!)).toBe(false);
-  });
-
-  it('면적만이면 그 면적 거래가 있는 단지(전월세는 전세·월세 중 하나라도)', () => {
-    const area = resolveMapFilter('apt-rent', { area: '60-85' })!;
-    expect(matchesMapFilter({ sale: null, jeonse: null, wolse: rent.wolse }, 'apt-rent', area)).toBe(true);
-    expect(matchesMapFilter({ sale: null, jeonse: null, wolse: null }, 'apt-rent', area)).toBe(false);
-    expect(matchesMapFilter({ sale: null, jeonse: null, wolse: null }, 'apt-sale', resolveMapFilter('apt-sale', { area: '60-85' })!)).toBe(false);
-  });
-});
-
 describe('fetchBuildings 필터 경로', () => {
-  it('후보를 상한+1 개 뽑고, 면적 범위를 최근 거래 조회에 넘긴다', async () => {
-    queryRawUnsafe.mockResolvedValueOnce([row(1), row(2), row(3)]);
-    stubDeals({ 단지1: { sale: deal('sale', { amount: 80000 }) }, 단지3: { sale: deal('sale', { amount: 70000 }) } });
-
+  it('요약만 COUNT/목록 조회하고 거래 테이블은 읽지 않는다', async () => {
+    const latestDeals = { sale: deal('sale', { amount: 80000 }), jeonse: null, wolse: null };
+    queryRawUnsafe.mockResolvedValueOnce([{ readyAt: new Date() }])
+      .mockResolvedValueOnce([{ cnt: 854n }])
+      .mockResolvedValueOnce([{ ...row(1), latestDeals }]);
     const r = await fetchBuildings('apt-sale', BOUNDS, resolveMapFilter('apt-sale', { area: '60-85', price: '60000-90000' }));
+    expect(mockGetLatestDeals).not.toHaveBeenCalled();
+    const calls = queryRawUnsafe.mock.calls;
+    expect(calls).toHaveLength(3);
+    for (const call of calls.slice(1)) {
+      expect(call[0]).toContain('RealEstateBuildingAreaSummary');
+      expect(call[0]).not.toMatch(/Transaction|ROW_NUMBER/);
+      expect(call[0]).toContain('areaBand = ?');
+      expect(call[0]).toContain('saleAmount > ?');
+      expect(call[0]).toContain('saleAmount <= ?');
+      expect(call.slice(1)).toEqual(['apt-sale', 2, 37.46, 37.54, 127, 127.1, 60000, 90000]);
+    }
+    expect(calls[2][0]).toContain(`LIMIT ${BUILDING_LIMIT}`);
+    expect(calls[2][0]).toContain('ORDER BY transactionCount DESC');
+    expect(r).toMatchObject({ total: 854, exact: false });
+    expect(r).not.toHaveProperty('filter');
+    expect(r.items[0].latestDeals).toEqual(latestDeals);
+  });
 
-    // COUNT 쿼리 없이 목록 한 번
+  it.each([
+    ['villa-rent', { price: '0-10000', priceKind: 'jeonse' as const }, 'jeonseDeposit <= ?', 10000],
+    ['apt-rent', { price: '100-', priceKind: 'wolse' as const }, 'wolseMonthlyRent > ?', 100],
+  ])('가격만이면 전체 구간 0과 종류별 가격 컬럼: %s', async (type, q, column, amount) => {
+    queryRawUnsafe.mockResolvedValueOnce([{ readyAt: new Date() }]).mockResolvedValueOnce([{ cnt: 0 }]).mockResolvedValueOnce([]);
+    const r = await fetchBuildings(type, BOUNDS, resolveMapFilter(type, q));
+    expect(queryRawUnsafe.mock.calls[1][0]).toContain(column);
+    expect(queryRawUnsafe.mock.calls[1].slice(1)).toEqual([type, 0, 37.46, 37.54, 127, 127.1, amount]);
+    expect(r).toEqual({ items: [], total: 0, exact: true });
+    expect(mockGetLatestDeals).not.toHaveBeenCalled();
+  });
+
+  it('백필 전에는 503 준비 중이며 거래 조회로 폴백하지 않는다', async () => {
+    queryRawUnsafe.mockResolvedValueOnce([]);
+    await expect(fetchBuildings('apt-sale', BOUNDS, resolveMapFilter('apt-sale', { area: '135-' })))
+      .rejects.toMatchObject({ statusCode: 503, code: 'MAP_FILTERS_PREPARING' });
     expect(queryRawUnsafe).toHaveBeenCalledTimes(1);
-    const sql = queryRawUnsafe.mock.calls[0][0] as string;
-    expect(sql).toContain('ORDER BY transactionCount DESC');
-    expect(sql).toContain(`LIMIT ${FILTER_CANDIDATE_LIMIT + 1}`);
-    expect(sql).toContain('FORCE INDEX');
-    expect(mockGetLatestDeals.mock.calls[0][1]).toBe('sale');
-    expect(mockGetLatestDeals.mock.calls[0][2]).toEqual({ area: { min: 60, max: 85 } });
-    // 거래 많은 순 유지, 조건 안 맞는 단지2 제외
-    expect(r.items.map((i) => i.buildingName)).toEqual(['단지1', '단지3']);
-    expect(r.items[0].latestDeals.sale?.amount).toBe(80000);
-    expect(r).toMatchObject({ total: 2, exact: true, filter: { scanned: 3, approximate: false } });
-  });
-
-  it('가격만이면 면적 옵션 없이 조회한다(핀과 같은 최근 거래로 판정)', async () => {
-    queryRawUnsafe.mockResolvedValueOnce([row(1)]);
-    stubDeals({ 단지1: { jeonse: deal('jeonse', { deposit: 9000 }) } });
-    const r = await fetchBuildings('villa-rent', BOUNDS, resolveMapFilter('villa-rent', { price: '0-10000', priceKind: 'jeonse' }));
-    expect(mockGetLatestDeals.mock.calls[0]).toHaveLength(2);
-    expect(mockGetLatestDeals.mock.calls[0][1]).toBe('rent');
-    expect(r.total).toBe(1);
-  });
-
-  it('후보가 상한을 넘으면 상한까지만 조회하고 approximate', async () => {
-    queryRawUnsafe.mockResolvedValueOnce(Array.from({ length: FILTER_CANDIDATE_LIMIT + 1 }, (_, i) => row(i)));
-    stubDeals({});
-    const r = await fetchBuildings('apt-sale', BOUNDS, resolveMapFilter('apt-sale', { area: '135-' }));
-    expect(mockGetLatestDeals.mock.calls[0][0]).toHaveLength(FILTER_CANDIDATE_LIMIT);
-    expect(r).toMatchObject({ items: [], total: 0, exact: false, filter: { scanned: FILTER_CANDIDATE_LIMIT, approximate: true } });
-  });
-
-  it('맞는 단지가 많아도 BUILDING_LIMIT 개까지만 내고, canonicalPath 는 낸 단지에만 붙인다', async () => {
-    queryRawUnsafe.mockResolvedValueOnce(Array.from({ length: 300 }, (_, i) => row(i)));
-    mockGetLatestDeals.mockImplementation((keys: BuildingKey[]) => Promise.resolve(new Map(keys.map((k) => [
-      latestDealsKey(k), { sale: deal('sale', { amount: 10000 }), jeonse: null, wolse: null },
-    ]))));
-    const r = await fetchBuildings('apt-sale', BOUNDS, resolveMapFilter('apt-sale', { price: '0-30000' }));
-    expect(r.items).toHaveLength(BUILDING_LIMIT);
-    expect(r.total).toBe(300);
-    expect(r.exact).toBe(false);
-    expect(r.filter?.approximate).toBe(false);
-    expect(mockAttachCanonicalPaths.mock.calls[0][0]).toHaveLength(BUILDING_LIMIT);
+    expect(mockGetLatestDeals).not.toHaveBeenCalled();
   });
 
   it('필터가 없으면 기존 경로 — COUNT 후 목록, 최근 거래는 옵션 없이, 응답에 filter 없음', async () => {

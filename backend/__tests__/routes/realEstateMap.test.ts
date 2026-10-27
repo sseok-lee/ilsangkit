@@ -263,9 +263,9 @@ describe('GET /api/real-estate/:type/map — 면적·가격 필터', () => {
     expect(res.body.data).toEqual({ granularity: 'building', items: [], total: 0, exact: true });
   });
 
-  it('단지 단계에서는 해석한 필터를 넘기고 filter 메타를 싣는다', async () => {
+  it('단지 단계에서는 해석한 필터를 넘기고 정확한 전체 개수를 싣는다', async () => {
     mockFetchBuildings.mockResolvedValueOnce({
-      items: [], total: 3, exact: false, filter: { scanned: 400, approximate: true },
+      items: [], total: 3, exact: false,
     });
     const res = await request(app)
       .get(`/api/real-estate/apt-rent/map?level=5&${BBOX}&area=60-85&price=30000-50000&priceKind=jeonse`);
@@ -274,7 +274,7 @@ describe('GET /api/real-estate/:type/map — 면적·가격 필터', () => {
       area: { min: 60, max: 85 },
       price: { kind: 'jeonse', range: { min: 30000, max: 50000 } },
     });
-    expect(res.body.data.filter).toEqual({ scanned: 400, approximate: true });
+    expect(res.body.data).toEqual({ granularity: 'building', items: [], total: 3, exact: false });
   });
 
   it('집계 단계(시·도/구·군/동)에서는 필터를 무시한다', async () => {
