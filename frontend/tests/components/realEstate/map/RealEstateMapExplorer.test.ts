@@ -532,3 +532,110 @@ describe('RealEstateMapExplorer — 마커 선택 토글', () => {
     }
   })
 })
+
+// 운영 실측: 모바일 첫 화면 목록에서 제주가 "—"(데스크톱 1,553만/평). 좁은 지도 뷰포트에
+// 제주가 안 들어와 지도 응답에 빠진 걸 목록이 "데이터 없음"으로 그렸다.
+describe('RealEstateMapExplorer — 시·도 목록은 뷰포트 밖 지역도 전국 집계 값으로 채운다', () => {
+  const SEOUL = { name: '서울', district: null, dong: null, lat: 37.55, lng: 126.98, avgPricePerPyeong: 5117, transactionCount: 900 }
+  const JEJU = { name: '제주', district: null, dong: null, lat: 33.38, lng: 126.55, avgPricePerPyeong: 1553, transactionCount: 40 }
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center'], emits: ['idle', 'select', 'hover'] }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.location.hash = ''
+  })
+
+  function sidebarRowText(w: ReturnType<typeof mount>, label: string): string {
+    const sidebar = w.findAllComponents({ name: 'MapSidebar' })[0]
+    return sidebar.findAll('[data-testid="map-sidebar-item"]').map((r) => r.text()).find((t) => t.startsWith(label)) ?? ''
+  }
+
+  it('모바일 뷰포트 응답에 제주가 없어도 목록의 제주는 — 가 아니다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({
+      success: true, data: { items: [SEOUL], granularity: 'city', total: 1, exact: true },
+    }))
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    // 390px 폭 지도의 전국 뷰 — 제주(33.38)가 남쪽 경계 밖이다.
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 34.2, swLng: 125.9, neLat: 38.6, neLng: 129.7 }, 13, { lat: 36.4, lng: 127.8 })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await flushPromises()
+
+    expect(sidebarRowText(w, '제주')).toContain('1,553만/평')
+    expect(sidebarRowText(w, '서울')).toContain('5,117만/평')
+    // 지도 핀은 여전히 뷰포트 응답만 쓴다.
+    expect(w.findComponent(CanvasStub).props('items')).toEqual([SEOUL])
+  })
+
+  it('다른 유형으로 바꾸면 그 유형의 전국 시·도 집계를 한 번 받아 채운다', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: { params: { level: number; swLat: number } }) => {
+      const national = opts.params.level === 13 && opts.params.swLat === 33
+      return Promise.resolve({
+        success: true,
+        data: { items: national ? [SEOUL, { ...JEJU, avgPricePerPyeong: 900 }] : [SEOUL], granularity: 'city', total: 1, exact: true },
+      })
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [SEOUL, JEJU], initialGranularity: 'city' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    await w.findComponent({ name: 'MapFilterBar' }).vm.$emit('update:type', 'villa-sale')
+    await flushPromises()
+
+    const nationalCalls = fetchMock.mock.calls.filter(([url, o]) =>
+      String(url).includes('/villa-sale/map') && o.params.level === 13 && o.params.swLat === 33 && o.params.neLng === 132)
+    expect(nationalCalls.length).toBeGreaterThanOrEqual(1)
+    expect(sidebarRowText(w, '제주')).toContain('900만/평')
+  })
+})
+
+describe('RealEstateMapExplorer — 범례·위치 경로', () => {
+  const GANGNAM: MapItem = {
+    buildingName: '래미안블레스티지', city: '서울', district: '강남구', dongName: '개포동',
+    bjdCode: '1168010300', lat: 37.48, lng: 127.06, latestPrice: 168340, monthlyRent: null,
+    latestDealYear: 2026, latestDealMonth: 8, latestDealDay: 1, transactionCount: 812,
+    jeonseDeposit: null, jeonseDealKey: null, wolseDeposit: null, wolseMonthlyRent: null, wolseDealKey: null,
+  }
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center'], emits: ['idle', 'select', 'hover'] }
+
+  it('범례는 단지 단계에서만 보인다', () => {
+    const building = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [GANGNAM], initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    const legend = building.find('[data-testid="map-legend"]')
+    expect(legend.exists()).toBe(true)
+    expect(legend.text()).toContain('최근 1년 거래')
+    expect(legend.text()).toContain('1년 넘은 거래·거래 없음')
+
+    const city = mountExplorer()
+    expect(city.find('[data-testid="map-legend"]').exists()).toBe(false)
+  })
+
+  it('시·도 단계 위치 경로는 "전국"', () => {
+    const paths = mountExplorer().findAll('[data-testid="map-location-path"]')
+    // 데스크톱(지도 하단)·모바일(시트 머리) 두 자리
+    expect(paths).toHaveLength(2)
+    for (const p of paths) expect(p.text()).toBe('전국')
+  })
+
+  it('단지 단계 위치 경로는 전국 › 서울 › 강남구 › 개포동, 상위 칸을 누르면 그 단계 level 로 올린다', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: [GANGNAM], initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+    const path = w.findAll('[data-testid="map-location-path"]')[0]
+    expect(path.text().replace(/\s+/g, '')).toBe('전국›서울›강남구›개포동')
+
+    const district = path.findAll('a').find((a) => a.text() === '강남구')!
+    expect(district.attributes('href')).toBe('/real-estate/apt-sale/seoul/gangnam')
+    await district.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(7)
+
+    await path.findAll('a').find((a) => a.text() === '전국')!.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(13)
+  })
+})

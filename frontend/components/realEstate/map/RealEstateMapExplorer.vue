@@ -31,7 +31,7 @@
         <aside class="hidden lg:flex lg:w-[360px] lg:shrink-0 border-r border-line">
           <MapSidebar
             class="w-full"
-            :items="items as MapItem[]"
+            :items="sidebarItems"
             :granularity="granularity"
             :total="total"
             :exact="exact"
@@ -51,6 +51,25 @@
         <div class="map-canvas-panel" :style="mobileCanvasStyle">
           <div class="absolute top-2 left-2 right-2 z-20 lg:hidden">
             <MapFilterBar :type="type" @update:type="onTypeChange" />
+          </div>
+          <!--
+            범례는 단지 단계에서만 뜬다 — 지역 단계 핀은 전부 같은 색(평당가 집계)이라 구분할 게 없다.
+            모바일은 필터바 아래, 데스크톱은 지도 좌상단. 지도 위 평면 요소라 그림자 대신 테두리로 구분한다.
+          -->
+          <div
+            v-if="granularity === 'building'"
+            data-testid="map-legend"
+            class="pointer-events-none absolute left-2 top-[68px] z-20 flex items-center gap-3 rounded-lg border border-line bg-white/95 px-2.5 py-1.5 text-[11px] font-medium text-muted lg:left-3 lg:top-3 lg:text-xs"
+          >
+            <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-primary" aria-hidden="true" />최근 1년 거래</span>
+            <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-faint" aria-hidden="true" />1년 넘은 거래·거래 없음</span>
+          </div>
+          <!-- 현재 위치 경로(데스크톱). 모바일은 하단 시트 머리에 같은 경로를 둔다. -->
+          <div
+            v-if="locationPath"
+            class="absolute bottom-6 left-1/2 z-20 hidden max-w-[calc(100%-32px)] -translate-x-1/2 lg:block"
+          >
+            <MapLocationPath variant="pill" :crumbs="locationPath" @navigate="onCrumb" />
           </div>
           <ClientOnly>
             <RealEstateMapCanvas
@@ -75,8 +94,11 @@
     </div>
 
     <MapBottomSheet v-model:expanded="bottomSheetExpanded">
+      <template v-if="locationPath" #header>
+        <MapLocationPath :crumbs="locationPath" @navigate="onCrumb" />
+      </template>
       <MapSidebar
-        :items="items as MapItem[]"
+        :items="sidebarItems"
         :granularity="granularity"
         :total="total"
         :exact="exact"
@@ -103,9 +125,14 @@ import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
+import MapLocationPath from './MapLocationPath.vue'
 import { useRealEstateMap, itemKey, buildMapHash, parseMapHash } from '~/composables/useRealEstateMap'
-import { KOREA_BOUNDS, type Granularity, type MapBounds, type MapItem } from '~/types/realEstateMap'
+import {
+  KOREA_BOUNDS, isBuildingItem,
+  type Granularity, type MapBounds, type MapItem, type MapRegionItem, type MapResponse,
+} from '~/types/realEstateMap'
 import { explorationListHref } from '~/utils/explorationNavigation'
+import { buildMapLocationPath, type MapPathCrumb } from '~/utils/mapLocationPath'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
 const props = defineProps<{
@@ -139,6 +166,70 @@ const {
 })
 
 const visibleError = computed(() => canvasError.value ?? error.value)
+
+/**
+ * 유형별 전국 시·도 집계. 좌측 목록은 시·도 16곳을 항상 다 보여주는데, 지도 응답은 뷰포트
+ * 안의 시·도만 준다 — 모바일 첫 화면처럼 좁은 지도에서는 제주가 뷰포트 밖이라 응답에 없고,
+ * 목록이 그걸 "데이터 없음(—)"으로 그렸다(운영 실측: 모바일 제주 — vs 데스크톱 1,553만/평).
+ * 뷰포트에 없는 시·도의 값은 이 전국 집계로 채운다. 지도 핀은 그대로 뷰포트 응답만 쓴다.
+ *
+ * SSR 이 넘겨준 initialItems 가 곧 초기 유형의 전국 집계(level 13·전국 bbox)라 그것으로
+ * 시작하고, 다른 유형은 시·도 단계에 처음 들어갈 때 한 번만 받는다(백엔드가 전국 목록을
+ * 유형·level 별로 캐시한다).
+ */
+const apiBase = useApiBase()
+const nationalCityItems = ref<Record<string, MapRegionItem[]>>(
+  props.initialGranularity === 'city' && props.initialItems.length > 0
+    ? { [props.initialType]: props.initialItems.filter((i) => !isBuildingItem(i)) as MapRegionItem[] }
+    : {},
+)
+const nationalPending = new Set<string>()
+
+async function ensureNationalCityItems(t: string): Promise<void> {
+  if (import.meta.server || nationalCityItems.value[t] || nationalPending.has(t)) return
+  nationalPending.add(t)
+  try {
+    const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${t}/map`, {
+      params: {
+        level: 13,
+        swLat: KOREA_BOUNDS.LAT_MIN, swLng: KOREA_BOUNDS.LNG_MIN,
+        neLat: KOREA_BOUNDS.LAT_MAX, neLng: KOREA_BOUNDS.LNG_MAX,
+      },
+    })
+    const list = res?.data?.items
+    if (res?.data?.granularity === 'city' && Array.isArray(list)) {
+      nationalCityItems.value = {
+        ...nationalCityItems.value,
+        [t]: list.filter((i) => !isBuildingItem(i)) as MapRegionItem[],
+      }
+    }
+  } catch {
+    // 실패하면 지금처럼 뷰포트 응답만으로 그린다(뷰포트 밖 시·도는 —). 화면을 막지 않는다.
+  } finally {
+    nationalPending.delete(t)
+  }
+}
+
+watch([type, granularity], ([t, g]) => {
+  if (g === 'city') void ensureNationalCityItems(t)
+}, { immediate: true })
+
+/** 좌측 목록용 항목. 시·도 단계만 전국 집계로 빈칸을 채우고, 뷰포트 응답이 있으면 그 값이 우선이다. */
+const sidebarItems = computed<MapItem[]>(() => {
+  const current = items.value as MapItem[]
+  if (granularity.value !== 'city' || !Array.isArray(current)) return current
+  const national = nationalCityItems.value[type.value]
+  if (!national) return current
+  const byName = new Map<string, MapItem>()
+  for (const n of national) byName.set(n.name, n)
+  for (const i of current) if (!isBuildingItem(i)) byName.set(i.name, i)
+  return [...byName.values()]
+})
+
+/** 지도 위치 경로. 위치를 정할 수 없으면 null → 숨김. */
+const locationPath = computed<MapPathCrumb[] | null>(() =>
+  buildMapLocationPath(granularity.value, (items.value ?? []) as MapItem[], center.value, type.value),
+)
 const listHref = computed(() => explorationListHref(type.value as RealEstateUrlType, listRegion.value))
 const listLabel = computed(() => listRegion.value ? '이 지역 목록 보기' : '전국 목록 보기')
 
@@ -300,6 +391,27 @@ function onSelect(item: MapItem): void {
     const key = itemKey(item)
     selectedKey.value = selectedKey.value === key ? null : key
   }
+}
+
+/**
+ * 위치 경로의 상위 칸 → 그 단계로 지도를 올린다. onSelect 의 드릴다운과 같은 경로다:
+ * center 와 level 만 세팅하고, 지도 idle 이 새 bounds 로 다시 조회한다.
+ * 시·도로 올라갈 때는 전국 집계의 시·도 좌표로 옮기고(없으면 중심 유지), 구·군으로 올라갈 때는
+ * 지금 중심이 이미 그 구·군 안이라 중심을 유지한다.
+ */
+function onCrumb(crumb: MapPathCrumb): void {
+  if (crumb.level == null) return
+  if (crumb.level === 13) {
+    center.value = { lat: 36.5, lng: 127.8 }
+    listRegion.value = null
+  } else if (crumb.city && !crumb.district) {
+    const c = nationalCityItems.value[type.value]?.find((i) => i.name === crumb.city)
+    if (c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)) center.value = { lat: c.lat, lng: c.lng }
+    listRegion.value = { city: crumb.city }
+  } else if (crumb.city && crumb.district) {
+    listRegion.value = { city: crumb.city, district: crumb.district }
+  }
+  setLevel(crumb.level)
 }
 
 // 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.
