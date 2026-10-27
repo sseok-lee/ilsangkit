@@ -31,7 +31,7 @@
         <aside class="hidden lg:flex lg:w-[360px] lg:shrink-0 border-r border-line">
           <MapSidebar
             class="w-full"
-            :items="items as MapItem[]"
+            :items="sidebarItems"
             :granularity="granularity"
             :total="total"
             :exact="exact"
@@ -42,8 +42,10 @@
             :error="visibleError"
             :list-href="listHref"
             :list-label="listLabel"
+            :active-city="activeCity"
             @hover="hoveredKey = $event"
             @select="onSelect"
+            @select-city="onCityChip"
             @retry="retryAll"
           />
         </aside>
@@ -51,6 +53,25 @@
         <div class="map-canvas-panel" :style="mobileCanvasStyle">
           <div class="absolute top-2 left-2 right-2 z-20 lg:hidden">
             <MapFilterBar :type="type" @update:type="onTypeChange" />
+          </div>
+          <!--
+            범례는 단지 단계에서만 뜬다 — 지역 단계 핀은 전부 같은 색(평당가 집계)이라 구분할 게 없다.
+            모바일은 필터바 아래, 데스크톱은 지도 좌상단. 지도 위 평면 요소라 그림자 대신 테두리로 구분한다.
+          -->
+          <div
+            v-if="granularity === 'building'"
+            data-testid="map-legend"
+            class="pointer-events-none absolute left-2 top-[68px] z-20 flex items-center gap-3 rounded-lg border border-line bg-white/95 px-2.5 py-1.5 text-[11px] font-medium text-muted lg:left-3 lg:top-3 lg:text-xs"
+          >
+            <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-primary" aria-hidden="true" />최근 1년 거래</span>
+            <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-faint" aria-hidden="true" />1년 넘은 거래·거래 없음</span>
+          </div>
+          <!-- 현재 위치 경로(데스크톱). 모바일은 하단 시트 머리에 같은 경로를 둔다. -->
+          <div
+            v-if="locationPath"
+            class="absolute bottom-6 left-1/2 z-20 hidden max-w-[calc(100%-32px)] -translate-x-1/2 lg:block"
+          >
+            <MapLocationPath variant="pill" :crumbs="locationPath" @navigate="onCrumb" />
           </div>
           <ClientOnly>
             <RealEstateMapCanvas
@@ -75,8 +96,11 @@
     </div>
 
     <MapBottomSheet v-model:expanded="bottomSheetExpanded">
+      <template v-if="locationPath" #header>
+        <MapLocationPath :crumbs="locationPath" @navigate="onCrumb" />
+      </template>
       <MapSidebar
-        :items="items as MapItem[]"
+        :items="sidebarItems"
         :granularity="granularity"
         :total="total"
         :exact="exact"
@@ -87,8 +111,10 @@
         :error="visibleError"
         :list-href="listHref"
         :list-label="listLabel"
+        :active-city="activeCity"
         @hover="hoveredKey = $event"
         @select="onSelect"
+        @select-city="onCityChip"
         @retry="retryAll"
       />
     </MapBottomSheet>
@@ -103,9 +129,19 @@ import MapSidebar from './MapSidebar.vue'
 import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
-import { useRealEstateMap, itemKey, buildMapHash, parseMapHash } from '~/composables/useRealEstateMap'
-import { KOREA_BOUNDS, type Granularity, type MapBounds, type MapItem } from '~/types/realEstateMap'
+import MapLocationPath from './MapLocationPath.vue'
+import {
+  useRealEstateMap, itemKey, buildMapHash, parseMapHash,
+  DEFAULT_MAP_VIEW, readSavedMapState, saveMapState, resolveInitialMapState,
+} from '~/composables/useRealEstateMap'
+import {
+  KOREA_BOUNDS, isBuildingItem,
+  type Granularity, type MapBounds, type MapItem, type MapRegionItem, type MapResponse,
+} from '~/types/realEstateMap'
 import { explorationListHref } from '~/utils/explorationNavigation'
+import { buildMapLocationPath, type MapPathCrumb } from '~/utils/mapLocationPath'
+import { SIDO_CENTERS, cityDisplayName, type SidoChip } from '~/utils/regionChips'
+import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
 const props = defineProps<{
@@ -114,7 +150,17 @@ const props = defineProps<{
   initialGranularity: Granularity
 }>()
 
-const center = ref({ lat: 36.5, lng: 127.8 })
+/** 전국 뷰 중심. 위치 경로 '전국'·시·도 칩 '전국'이 이리로 돌아간다. */
+const NATION_CENTER = { lat: 36.5, lng: 127.8 }
+// SSR 과 첫 클라이언트 렌더가 같은 값이어야 위치 경로 등이 하이드레이션 때 어긋나지 않는다.
+// 페이지가 서울 구·군 집계로 SSR 하면 서울에서, 전국 집계(초기 granularity=city)면 전국에서 시작한다.
+const startsAtNation = props.initialGranularity === 'city'
+const center = ref(startsAtNation ? { ...NATION_CENTER } : { lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng })
+/**
+ * 해시·저장 위치로 시작해 SSR(서울)과 다른 곳을 볼 때, 첫 조회가 끝나기 전까지 위치 경로를
+ * 숨긴다 — 그 사이엔 목록이 아직 서울 것이라 경로가 엉뚱한 지역(서울)을 가리킨다.
+ */
+const restoring = ref(false)
 const canvasRef = ref<{ retry: () => Promise<void> } | null>(null)
 const canvasError = ref<string | null>(null)
 const listRegion = ref<{ city: string; district?: string } | null>(null)
@@ -131,14 +177,100 @@ const {
   type, level, granularity, items, total, exact, pending, error,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
-  hoveredKey, setType, setLevel, onMapIdle, retry,
+  hoveredKey, setType, setLevel, onMapIdle, retry, fetchNow,
 } = useRealEstateMap({
   type: props.initialType,
   items: props.initialItems,
   granularity: props.initialGranularity,
+  level: startsAtNation ? 13 : DEFAULT_MAP_VIEW.desktopLevel,
 })
 
 const visibleError = computed(() => canvasError.value ?? error.value)
+
+/**
+ * 유형별 전국 시·도 집계. 좌측 목록은 시·도 16곳을 항상 다 보여주는데, 지도 응답은 뷰포트
+ * 안의 시·도만 준다 — 모바일 첫 화면처럼 좁은 지도에서는 제주가 뷰포트 밖이라 응답에 없고,
+ * 목록이 그걸 "데이터 없음(—)"으로 그렸다(운영 실측: 모바일 제주 — vs 데스크톱 1,553만/평).
+ * 뷰포트에 없는 시·도의 값은 이 전국 집계로 채운다. 지도 핀은 그대로 뷰포트 응답만 쓴다.
+ *
+ * SSR 이 넘겨준 initialItems 가 곧 초기 유형의 전국 집계(level 13·전국 bbox)라 그것으로
+ * 시작하고, 다른 유형은 시·도 단계에 처음 들어갈 때 한 번만 받는다(백엔드가 전국 목록을
+ * 유형·level 별로 캐시한다).
+ */
+const apiBase = useApiBase()
+const nationalCityItems = ref<Record<string, MapRegionItem[]>>(
+  props.initialGranularity === 'city' && props.initialItems.length > 0
+    ? { [props.initialType]: props.initialItems.filter((i) => !isBuildingItem(i)) as MapRegionItem[] }
+    : {},
+)
+/** 유형별 진행 중 요청. 같은 유형을 동시에 두 번 받지 않고, 시·도 칩처럼 결과가 필요한 호출은 같은 요청을 기다린다. */
+const nationalInflight = new Map<string, Promise<void>>()
+
+function ensureNationalCityItems(t: string): Promise<void> {
+  if (import.meta.server || nationalCityItems.value[t]) return Promise.resolve()
+  const running = nationalInflight.get(t)
+  if (running) return running
+  const job = (async () => {
+    try {
+      const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${t}/map`, {
+        params: {
+          level: 13,
+          swLat: KOREA_BOUNDS.LAT_MIN, swLng: KOREA_BOUNDS.LNG_MIN,
+          neLat: KOREA_BOUNDS.LAT_MAX, neLng: KOREA_BOUNDS.LNG_MAX,
+        },
+      })
+      const list = res?.data?.items
+      // 빈 배열은 저장하지 않는다 — 백엔드는 집계가 실패하면 200 + 빈 목록을 주고 캐시하지 않는다
+      // (일시 장애). 저장하면 그 유형은 새로고침 전까지 다시 받지 않아 제주 '—'가 되살아난다.
+      // 저장하지 않으면 다음 시·도 단계 진입·유형 전환 때 다시 받는다.
+      if (res?.data?.granularity === 'city' && Array.isArray(list) && list.length > 0) {
+        nationalCityItems.value = {
+          ...nationalCityItems.value,
+          [t]: list.filter((i) => !isBuildingItem(i)) as MapRegionItem[],
+        }
+      }
+    } catch {
+      // 실패하면 지금처럼 뷰포트 응답만으로 그린다(뷰포트 밖 시·도는 —). 화면을 막지 않는다.
+    } finally {
+      nationalInflight.delete(t)
+    }
+  })()
+  nationalInflight.set(t, job)
+  return job
+}
+
+watch([type, granularity], ([t, g]) => {
+  if (g === 'city') void ensureNationalCityItems(t)
+}, { immediate: true })
+
+/** 좌측 목록용 항목. 시·도 단계만 전국 집계로 빈칸을 채우고, 뷰포트 응답이 있으면 그 값이 우선이다. */
+const sidebarItems = computed<MapItem[]>(() => {
+  const current = items.value as MapItem[]
+  if (granularity.value !== 'city' || !Array.isArray(current)) return current
+  const national = nationalCityItems.value[type.value]
+  if (!national) return current
+  const byName = new Map<string, MapItem>()
+  for (const n of national) byName.set(n.name, n)
+  for (const i of current) if (!isBuildingItem(i)) byName.set(i.name, i)
+  return [...byName.values()]
+})
+
+/** 지도 위치 경로. 위치를 정할 수 없으면 null → 숨김. */
+const locationPath = computed<MapPathCrumb[] | null>(() =>
+  restoring.value
+    ? null
+    : buildMapLocationPath(granularity.value, (items.value ?? []) as MapItem[], center.value, type.value),
+)
+/** 시·도 칩 강조 대상. 시·도 단계는 '전국', 그 아래는 위치 경로의 시·도 칸. */
+const activeCity = computed<string | null>(() =>
+  granularity.value === 'city' ? '전국' : locationPath.value?.[1]?.label ?? null,
+)
+
+// 복원 후 첫 조회가 끝나면(성공·실패 모두 pending true→false) 경로를 다시 보인다.
+// items 변화로 판정하지 않는다 — 유형을 바꿀 때 목록을 비우는 것도 items 변화라 곧바로 풀려 버린다.
+watch(pending, (now, before) => {
+  if (before && !now) restoring.value = false
+})
 const listHref = computed(() => explorationListHref(type.value as RealEstateUrlType, listRegion.value))
 const listLabel = computed(() => listRegion.value ? '이 지역 목록 보기' : '전국 목록 보기')
 
@@ -152,6 +284,13 @@ watch(granularity, () => {
 })
 
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+/** 첫 조회를 지도 idle 에 미뤄 둔 상태인지(해시·저장 위치 복원). */
+let deferredFetch = false
+/**
+ * 지도 위치가 바뀐 횟수(지도 idle·목록/경로/칩 선택). 시·도 칩이 좌표를 기다리는 동안 사용자가
+ * 지도를 움직이거나 다른 곳을 골랐으면, 늦게 온 응답이 그 위치를 덮어쓰지 않게 비교한다.
+ */
+let viewVersion = 0
 
 // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
 // (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 출처 표기가
@@ -185,12 +324,13 @@ function applyIsDesktop(): void {
 // - level 은 setLevel(next) 으로 값만 세팅한다(fetch 트리거 없음) — RealEstateMapCanvas 가
 //   이 값을 props 로 받아 initMap({ center, level }) 에 그대로 넘기므로, 지도가 애초에 그
 //   레벨로 뜬다. 여기서 fetch 까지 하면(전국 bounds 로) setType 과 중복된다.
+//
+// 첫 위치는 해시 > 저장된 마지막 위치 > 서울 구·군 단위 순이다(resolveInitialMapState).
+// 저장 위치는 SSR(서울)과 다를 수 있어 깜빡임을 줄이려고: 유형만 바꾸고 조회는 지도의 첫 idle
+// (실제 bounds)에 맡기며, 그 응답이 올 때까지 위치 경로를 숨긴다. 목록은 그 사이 서울 집계를
+// 그대로 둔다(유형이 바뀌면 비운다) — 빈 화면으로 한 번 더 깜빡이지 않게.
 onMounted(() => {
   if (import.meta.server) return
-  const h = parseMapHash(window.location.hash)
-  if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
-  if (h.level != null) setLevel(h.level)
-  if (h.type != null) setType(h.type, lastBounds)
 
   // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
   // aside 는 `lg:flex`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
@@ -199,6 +339,30 @@ onMounted(() => {
     : null
   applyIsDesktop()
   desktopMq?.addEventListener('change', applyIsDesktop)
+
+  const h = parseMapHash(window.location.hash)
+  if (startsAtNation) {
+    // 전국 집계로 SSR 한 경우(예전 계약): 해시만 반영한다.
+    if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
+    if (h.level != null) setLevel(h.level)
+    if (h.type != null) setType(h.type, lastBounds)
+    return
+  }
+
+  const init = resolveInitialMapState(h, readSavedMapState(), { desktop: desktopMq?.matches ?? true })
+  const moved = init.lat !== center.value.lat || init.lng !== center.value.lng || init.level !== level.value
+  const typeChanged = init.type != null && init.type !== type.value
+  center.value = { lat: init.lat, lng: init.lng }
+  setLevel(init.level)
+  // 해시·저장 어느 쪽이든 유형만 바꾸고 조회는 지도 첫 idle(실제 bounds)에 맡긴다 — 아직 bounds 를
+  // 모르는 지금 보내면 전국 bbox 로 나가고(단지 단계면 무거운 쿼리) 곧 idle 조회로 덮인다.
+  if (typeChanged) setType(init.type!, lastBounds, { fetch: false })
+  // SSR(서울 구·군, 같은 유형)과 다른 화면으로 시작할 때만 첫 조회 전까지 경로를 숨기고,
+  // 지도가 끝내 못 뜨면(onCanvasLoadError) 그때 한 번 조회한다.
+  if (init.source !== 'default' && (moved || typeChanged)) {
+    restoring.value = true
+    deferredFetch = true
+  }
 })
 
 onBeforeUnmount(() => {
@@ -211,6 +375,8 @@ function syncHash(): void {
   history.replaceState(null, '', buildMapHash({
     type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng,
   }))
+  // 재방문 때 이 자리에서 다시 시작한다(해시 없이 /real-estate 로 들어올 때).
+  saveMapState({ type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng })
 }
 
 // mapCenter 는 RealEstateMapCanvas 가 getCenter() 로 올려보낸 지도의 실제 중심이다.
@@ -219,6 +385,8 @@ function syncHash(): void {
 // (실측: hash lat 36.19→32.20→16.26→-0.80→... 무한 드리프트). bounds 자체는 검색 bbox
 // 용으로 왜곡 없이 그대로 onMapIdle 에 넘긴다.
 function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: number }): void {
+  deferredFetch = false
+  viewVersion += 1
   lastBounds = bounds
   center.value = mapCenter
   onMapIdle(bounds, lvl)
@@ -234,6 +402,13 @@ function onTypeChange(next: string): void {
 
 function onCanvasLoadError(message: string): void {
   canvasError.value = message
+  restoring.value = false
+  // 복원한 위치의 조회를 지도 idle 에 맡겼는데 지도가 못 떴다 — idle 이 오지 않으므로 지금 받는다
+  // (bounds 를 모르니 전국 범위, level 은 복원한 값). 목록이 SSR 서울 것으로 남지 않게.
+  if (deferredFetch) {
+    deferredFetch = false
+    void fetchNow(lastBounds, level.value)
+  }
 }
 
 function onCanvasLoaded(): void {
@@ -279,6 +454,7 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
  * 목록/지도는 현재 뷰포트 bounds 기준으로 다시 조회되므로 화면이 깨지지 않는다.
  */
 function onSelect(item: MapItem): void {
+  viewVersion += 1
   if ('buildingName' in item) {
     listRegion.value = { city: item.city, district: item.district }
   } else if (granularity.value === 'city') {
@@ -300,6 +476,53 @@ function onSelect(item: MapItem): void {
     const key = itemKey(item)
     selectedKey.value = selectedKey.value === key ? null : key
   }
+}
+
+/**
+ * 위치 경로의 상위 칸 → 그 단계로 지도를 올린다. onSelect 의 드릴다운과 같은 경로다:
+ * center 와 level 만 세팅하고, 지도 idle 이 새 bounds 로 다시 조회한다.
+ * 시·도로 올라갈 때는 전국 집계의 시·도 좌표로 옮기고(없으면 중심 유지), 구·군으로 올라갈 때는
+ * 지금 중심이 이미 그 구·군 안이라 중심을 유지한다.
+ */
+function onCrumb(crumb: MapPathCrumb): void {
+  if (crumb.level == null) return
+  viewVersion += 1
+  if (crumb.level === 13) {
+    center.value = { ...NATION_CENTER }
+    listRegion.value = null
+  } else if (crumb.city && !crumb.district) {
+    const c = nationalCityItems.value[type.value]?.find((i) => i.name === crumb.city)
+    if (c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)) center.value = { lat: c.lat, lng: c.lng }
+    listRegion.value = { city: crumb.city }
+  } else if (crumb.city && crumb.district) {
+    listRegion.value = { city: crumb.city, district: crumb.district }
+  }
+  setLevel(crumb.level)
+}
+
+/**
+ * 시·도 칩 → 지도를 그 시·도의 구·군 단위로 옮긴다(전국 칩은 전국 뷰). 시·도 좌표는 전국
+ * 시·도 집계에서 찾는다(없으면 한 번 받는다). 끝내 못 찾으면 중심은 두고 level 만 바꾼다.
+ */
+async function onCityChip(chip: SidoChip | null): Promise<void> {
+  const version = ++viewVersion
+  if (!chip) {
+    center.value = { ...NATION_CENTER }
+    listRegion.value = null
+    setLevel(13)
+    return
+  }
+  const districtLevel = isDesktop.value === false ? DEFAULT_MAP_VIEW.mobileLevel : DEFAULT_MAP_VIEW.desktopLevel
+  await ensureNationalCityItems(type.value)
+  // 기다리는 사이 지도가 움직였거나 다른 곳을 골랐으면 늦은 응답으로 덮어쓰지 않는다.
+  if (version !== viewVersion) return
+  const c = nationalCityItems.value[type.value]?.find((i) => cityDisplayName(i.name) === chip.label)
+  listRegion.value = { city: c?.name ?? CITY_SLUG_MAP[chip.slug] ?? chip.label }
+  const target = c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)
+    ? { lat: c.lat, lng: c.lng }
+    : SIDO_CENTERS[chip.slug]
+  if (target) center.value = { ...target }
+  setLevel(districtLevel)
 }
 
 // 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.

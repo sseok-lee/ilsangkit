@@ -3,6 +3,7 @@ import { isBuildingItem, type MapBuildingItem, type MapItem, type MapRegionItem 
 import type { DealSnapshot } from '~/types/realEstateExploration'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { itemKey } from '~/composables/useRealEstateMap'
+import { cityDisplayName } from '~/utils/regionChips'
 
 const DEALS_UNAVAILABLE_MESSAGE = '거래 정보를 불러오지 못했습니다'
 const NO_DEAL_MESSAGE = '거래 없음'
@@ -22,6 +23,21 @@ function formatManwon(manwon: number): string {
   return `${eok}억 ${rest.toLocaleString('ko-KR')}만`
 }
 
+function isRentBundle(bundle: NonNullable<MapBuildingItem['latestDeals']>, type: string): boolean {
+  return type.endsWith('-rent') || (!type && bundle.sale == null && (bundle.jeonse != null || bundle.wolse != null))
+}
+
+/**
+ * 마커가 보여주는 그 거래. 매매는 sale, 전월세는 전세·월세 중 더 최근 것이다.
+ * 라벨 문자열(formatPriceLabel)과 "1년 넘은 거래" 판정(buildingMarkerTone)이 같은 거래를
+ * 봐야 하므로 선택 규칙을 여기 한 곳에 둔다.
+ */
+function shownDeal(item: MapBuildingItem, type: string): DealSnapshot | null {
+  const bundle = item.latestDeals
+  if (!bundle) return null
+  return isRentBundle(bundle, type) ? latestRentDeal(bundle.jeonse, bundle.wolse) : bundle.sale
+}
+
 /**
  * 건물 마커 라벨. 여섯 지도 유형은 latestDeals bundle 만 신뢰한다.
  * bundle 자체가 없으면 로드 실패, bundle 안의 null 슬롯은 확인된 거래 없음이다.
@@ -30,8 +46,7 @@ export function formatPriceLabel(item: MapBuildingItem, type = ''): string {
   const bundle = item.latestDeals
   if (!bundle) return DEALS_UNAVAILABLE_MESSAGE
 
-  const isRent = type.endsWith('-rent') || (!type && bundle.sale == null && (bundle.jeonse != null || bundle.wolse != null))
-  if (!isRent) {
+  if (!isRentBundle(bundle, type)) {
     return bundle.sale?.amount == null ? NO_DEAL_MESSAGE : formatManwon(bundle.sale.amount)
   }
 
@@ -42,6 +57,29 @@ export function formatPriceLabel(item: MapBuildingItem, type = ''): string {
   }
   if (deal.deposit == null || deal.monthlyRent == null) return NO_DEAL_MESSAGE
   return `보 ${formatManwon(deal.deposit)}/월 ${deal.monthlyRent.toLocaleString('ko-KR')}만`
+}
+
+/**
+ * 계약일이 오늘로부터 1년을 넘었는지.
+ *
+ * 일(dealDay)이 없는 거래는 그 달 말일로 본다 — 모르는 날짜를 오래된 쪽으로 몰면 실제로는
+ * 1년 안쪽인 거래가 회색으로 깎인다. 경계일(정확히 1년 전 같은 날)은 아직 1년 안쪽이다.
+ */
+export function isDealOlderThanYear(deal: DealSnapshot, now: Date = new Date()): boolean {
+  const cutoff = (now.getFullYear() - 1) * 10000 + (now.getMonth() + 1) * 100 + now.getDate()
+  return deal.dealYear * 10000 + deal.dealMonth * 100 + (deal.dealDay ?? 31) < cutoff
+}
+
+/**
+ * 단지 핀의 색 구분. recent = 최근 1년 거래(primary), muted = 1년 넘은 거래·거래 없음·
+ * 로드 실패(회색). 로드 실패도 회색인 이유: 값이 없는 핀이 최신 거래와 같은 색이면 "최근에
+ * 거래된 단지"로 읽힌다. 문구(거래 정보를 불러오지 못했습니다)는 그대로라 원인은 구분된다.
+ */
+export function buildingMarkerTone(item: MapBuildingItem, type = '', now: Date = new Date()): 'recent' | 'muted' {
+  const label = formatPriceLabel(item, type)
+  if (label === NO_DEAL_MESSAGE || label === DEALS_UNAVAILABLE_MESSAGE) return 'muted'
+  const deal = shownDeal(item, type)
+  return deal && !isDealOlderThanYear(deal, now) ? 'recent' : 'muted'
 }
 
 function dealDateKey(deal: DealSnapshot): number {
@@ -96,35 +134,125 @@ export function formatPyeongLabel(item: MapRegionItem): string {
   return `${formatManwon(item.avgPricePerPyeong)}/평`
 }
 
+/** 지역 핀의 이름. 동 단계는 동, 구·군 단계는 구·군, 시·도 단계는 시·도 이름이다. */
+export function regionDisplayName(item: MapRegionItem): string {
+  return item.dong ?? item.district ?? cityDisplayName(item.name)
+}
+
+/** 지역 핀 전체 문구 — "서울 5,117만/평". 값이 없어도 이름은 남긴다("제주 —"). */
+export function formatRegionLabel(item: MapRegionItem): string {
+  return `${regionDisplayName(item)} ${formatPyeongLabel(item)}`
+}
+
+/**
+ * 겹칠 때 자리를 먼저 차지하는 순서. 선택된 단지 > 거래 수 많은 순, 같으면 원래 순서.
+ *
+ * 지역 항목은 서버가 뷰포트 중심에서 가까운 순으로 준다(sortRegionsByDistance). 그 순서를
+ * 그대로 우선순위로 쓰면 중심이 경기 쪽일 때 서울·인천이 경기 핀에 가려졌다(운영 실측:
+ * 시·도 16곳 중 11곳만 보임). 거래가 많은 지역일수록 찾는 사람이 많으므로 거래 수로 정한다.
+ */
+export function overlayPriority(items: MapItem[], selectedKey: string | null = null): MapItem[] {
+  const isSelected = (i: MapItem) => selectedKey != null && isBuildingItem(i) && itemKey(i) === selectedKey
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const sel = Number(isSelected(b.item)) - Number(isSelected(a.item))
+      if (sel !== 0) return sel
+      const count = (b.item.transactionCount ?? 0) - (a.item.transactionCount ?? 0)
+      return count !== 0 ? count : a.index - b.index
+    })
+    .map((x) => x.item)
+}
+
 interface Box { x1: number; y1: number; x2: number; y2: number }
 
-/** 라벨 한 글자당 대략 폭(px). 실측 대신 근사로 충분하다 — 겹침 판정용 여유 상자다. */
-const CHAR_PX = 7.2
-/** 좌우 패딩 + 테두리. .map-price-label 의 px-2 와 맞춘다. */
-const LABEL_PAD_PX = 18
-const LABEL_H_PX = 22
+/**
+ * 글자 폭 근사(px) — 겹침 판정용. 로컬 Chrome 실측(2026-10-27)으로 맞춘 비율이다:
+ * 한글 ≈ 글자 크기 × 0.88, 숫자·기호·영문 ≈ × 0.55. 예) 지역 핀 "경기 2,403만/평" 실측 113px,
+ * 추정 115px. 크게 잡으면 들어갈 자리가 있는 핀까지 점으로 접힌다.
+ */
+function textPx(text: string, fontPx: number): number {
+  let w = 0
+  for (const ch of text) w += fontPx * (ch.charCodeAt(0) < 0x2000 ? 0.55 : 0.88)
+  return w
+}
+
+/** 단지명 말줄임 폭. main.css .map-price-label 의 max-width(좌우 패딩 제외)와 맞춘다. */
+const BUILDING_NAME_MAX_PX = 120
+/** 단지 핀: 좌우 패딩 + 테두리 / 두 줄 높이 + 위아래 패딩 + 꼬리. main.css 와 맞춘다. */
+const BUILDING_PAD_PX = 18
+const BUILDING_H_PX = 45
+/** 선택 카드(펼침): 단지명·값 1~2줄·상세 링크. */
+const POPUP_W_PX = 150
+const POPUP_H_PX = 100
+/** 지역 핀: 좌우 패딩 + 이름·값 사이 간격 + 테두리 / 한 줄 + 꼬리. */
+const REGION_PAD_PX = 28
+const REGION_H_PX = 34
 /** 상자 사이 최소 간격. 붙어 있으면 읽기 어려워 약간 띄운다. */
 const GAP_PX = 3
 
+function buildingBoxSize(name: string, price: string, selected: boolean): { w: number; h: number } {
+  const w = Math.max(Math.min(textPx(name, 10.5), BUILDING_NAME_MAX_PX), textPx(price, 12.5)) + BUILDING_PAD_PX
+  return selected ? { w: Math.max(w, POPUP_W_PX), h: POPUP_H_PX } : { w, h: BUILDING_H_PX }
+}
+
+function regionBoxSize(name: string, price: string): { w: number; h: number } {
+  return { w: textPx(name, 12) + textPx(price, 13) + REGION_PAD_PX, h: REGION_H_PX }
+}
+
 /**
- * 라벨이 차지할 화면 영역. yAnchor:1 이라 좌표 위쪽에 그려지므로 상자도 위로 잡는다.
- * projection 이 없거나(테스트 fake) 변환이 실패하면 null → 호출부가 겹침 판정을 건너뛴다.
+ * 핀을 좌표의 어느 쪽에 놓을지. x = CustomOverlay xAnchor(꼬리의 가로 위치와 같다),
+ * below = 좌표 아래에 놓고 꼬리를 위로(yAnchor 0). 기본은 좌표 바로 위 가운데다.
+ */
+interface Placement { x: number; below: boolean }
+const DEFAULT_PLACEMENT: Placement = { x: 0.5, below: false }
+
+/**
+ * 지역 핀이 기본 자리에서 겹칠 때 차례로 시도하는 자리. 시·도 단계는 서울·경기·인천의
+ * 중심 좌표가 서로 20~30km(화면 20px 안팎) 안에 붙어 있어 기본 자리 하나로는 셋 중 둘이
+ * 반드시 접힌다. 지역 핀은 개수가 적어(시·도 16, 구·군 수십) 비껴 놓아도 지도가 어지럽지 않다.
+ * 단지 핀은 수백 개라 비껴 놓으면 어느 핀이 어느 건물인지 흐려지므로 기본 자리만 쓴다.
+ */
+const REGION_PLACEMENTS: Placement[] = [
+  DEFAULT_PLACEMENT,
+  { x: 0.5, below: true },
+  { x: 0.15, below: false },
+  { x: 0.85, below: false },
+  { x: 0.15, below: true },
+  { x: 0.85, below: true },
+]
+
+/** 핀을 찍을 좌표. 좌표 없는 항목(집계 폴백)은 null. */
+function pinPosition(item: MapItem): { lat: number; lng: number } | null {
+  if (item.lat == null || item.lng == null) return null
+  return { lat: item.lat, lng: item.lng }
+}
+
+/**
+ * 좌표의 화면 위치. projection 이 없거나(테스트 fake) 변환이 실패하면 null → 호출부가
+ * 겹침 판정을 건너뛴다.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function boxAt(projection: any, kakao: any, lat: number, lng: number, textLen: number): Box | null {
+function pointAt(projection: any, kakao: any, lat: number, lng: number): { x: number; y: number } | null {
   try {
     const pt = projection.containerPointFromCoords(new kakao.maps.LatLng(lat, lng))
     if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return null
-    const w = textLen * CHAR_PX + LABEL_PAD_PX
-    return {
-      x1: pt.x - w / 2 - GAP_PX,
-      y1: pt.y - LABEL_H_PX - GAP_PX,
-      x2: pt.x + w / 2 + GAP_PX,
-      y2: pt.y + GAP_PX,
-    }
+    return pt
   } catch {
     return null
   }
+}
+
+/**
+ * 라벨이 차지할 화면 영역. 기본(위) 자리는 좌표 위쪽, below 자리는 아래쪽으로 잡는다.
+ * 꼬리 끝(좌표) 쪽에는 간격을 두지 않는다 — 같은 좌표의 위·아래 핀은 꼬리 끝이 맞닿을 뿐
+ * 말풍선끼리는 떨어져 있다. 거기에도 간격을 두면 위·아래 자리가 서로 겹친다고 판정된다.
+ */
+function boxAt(pt: { x: number; y: number }, size: { w: number; h: number }, place: Placement): Box {
+  const x1 = pt.x - size.w * place.x
+  return place.below
+    ? { x1: x1 - GAP_PX, y1: pt.y, x2: x1 + size.w + GAP_PX, y2: pt.y + size.h + GAP_PX }
+    : { x1: x1 - GAP_PX, y1: pt.y - size.h - GAP_PX, x2: x1 + size.w + GAP_PX, y2: pt.y }
 }
 
 function intersects(a: Box, b: Box): boolean {
@@ -222,7 +350,7 @@ export function useMapOverlays() {
     map: any,
     items: MapItem[],
     handlers: OverlayHandlers = {},
-    opts: { type?: string; selectedKey?: string | null } = {},
+    opts: { type?: string; selectedKey?: string | null; now?: Date } = {},
   ): void {
     // import.meta.server 극성 사용(useKakaoMap.ts:124 컨벤션과 동일): 실제 Nuxt 빌드에서는
     // server/client 가 항상 서로 반대이므로 프로덕션 동작은 !client 와 완전히 동일하다.
@@ -238,69 +366,139 @@ export function useMapOverlays() {
     // 라벨이 그 위를 덮어 클릭을 가로챈다(실측: 상세 보기 링크 클릭이 이웃
     // map-price-label 에 막혀 6회 연속 실패). 선택된 항목을 배열 맨 뒤에 둬 wrapper 를
     // 마지막 형제로 만들면 항상 위에 그려져 클릭이 통과한다.
-    // 겹침 판정은 items 순서를 우선순위로 쓰지만(아래 루프 주석 참고) 선택된 항목은
-    // `!selected` 조건으로 그 판정 자체를 건너뛰므로, 순서를 뒤로 옮겨도 점으로
-    // 접히지 않는다는 보장은 그대로 유지된다.
+    // 겹침 판정 순서(overlayPriority)는 그리는 순서와 별개다 — 아래에서 따로 계산한다.
     const selectedKey = opts.selectedKey ?? null
+    const isSelected = (i: MapItem) => selectedKey != null && isBuildingItem(i) && itemKey(i) === selectedKey
     const ordered = selectedKey == null
       ? items
-      : [
-          ...items.filter((i) => !(isBuildingItem(i) && itemKey(i) === selectedKey)),
-          ...items.filter((i) => isBuildingItem(i) && itemKey(i) === selectedKey),
-        ]
-    const isRent = (opts.type ?? '').endsWith('-rent')
+      : [...items.filter((i) => !isSelected(i)), ...items.filter(isSelected)]
+    const type = opts.type ?? ''
+    const isRent = type.endsWith('-rent')
+    const now = opts.now ?? new Date()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kakao = (window as any).kakao
     if (!kakao?.maps) return
 
-    // 겹침 회피용 화면좌표 변환기. 없으면(테스트 fake 등) 전부 그린다.
+    const labelOf = (item: MapItem): { name: string; price: string } => isBuildingItem(item)
+      ? { name: item.buildingName, price: formatPriceLabel(item, type) }
+      : { name: regionDisplayName(item), price: formatPyeongLabel(item) }
+
+    // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. 우선순위(선택 > 거래 수) 순으로
+    // 자리를 잡고, 앞선 라벨과 겹치면 라벨 대신 점을 찍는다. 선택된 단지는 카드가 커서
+    // 가장 먼저 자리를 잡는다 — 이웃 라벨이 카드 밑에 깔려 클릭을 가로채지 않게.
+    //
+    // 건너뛰지 않고 점이라도 남기는 이유: 좌측 목록은 items 전부를 보여주므로, 겹친다고
+    // 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다(실측 강남 level 4: 목록 114 vs
+    // 라벨 76 → 38개 실종). 점은 자리를 차지하지 않으면서 위치와 클릭 대상을 유지한다.
+    //
+    // projection 이 없으면(테스트 fake 등) 겹침 판정 없이 전부 그린다.
     const projection = typeof map.getProjection === 'function' ? map.getProjection() : null
-    const placed: Box[] = []
+    const collapsed = new Set<MapItem>()
+    const placements = new Map<MapItem, Placement>()
+    if (projection) {
+      interface Placed { item: MapItem; pt: { x: number; y: number }; size: { w: number; h: number }; box: Box; movable: boolean }
+      const placed: Placed[] = []
+      const fits = (box: Box, except?: Placed) => !placed.some((p) => p !== except && intersects(p.box, box))
+      const commit = (entry: Placed, place: Placement) => {
+        entry.box = boxAt(entry.pt, entry.size, place)
+        if (place === DEFAULT_PLACEMENT) placements.delete(entry.item)
+        else placements.set(entry.item, place)
+      }
+
+      /**
+       * 자리를 못 찾은 지역 핀을 위해, 그 자리를 막고 있는 앞선 지역 핀 하나를 다른 후보 자리로
+       * 옮겨 본다(한 단계 양보). 서울을 둘러싼 경기처럼 큰 지역의 좌표가 작은 지역 좌표 바로 옆에
+       * 찍히면, 먼저 자리를 잡은 쪽 말풍선 안에 뒤엣것의 좌표가 들어가 뒤엣것은 어느 자리로도
+       * 못 간다(로컬 실측: 경기 좌표가 서울 아래 17px, 거래는 경기가 3.7배). 앞선 핀이 아래로
+       * 비켜 주면 둘 다 보인다. 이름별 예외 좌표 없이 모든 지역 단계에 같은 규칙이 적용된다.
+       */
+      const placeByYielding = (pt: Placed['pt'], size: Placed['size']): { place: Placement; blocker: Placed; alt: Placement } | null => {
+        for (const place of REGION_PLACEMENTS) {
+          const box = boxAt(pt, size, place)
+          const blockers = placed.filter((p) => intersects(p.box, box))
+          if (blockers.length !== 1 || !blockers[0].movable) continue
+          const blocker = blockers[0]
+          for (const alt of REGION_PLACEMENTS) {
+            const altBox = boxAt(blocker.pt, blocker.size, alt)
+            if (!intersects(altBox, box) && fits(altBox, blocker)) return { place, blocker, alt }
+          }
+        }
+        return null
+      }
+
+      for (const item of overlayPriority(items, selectedKey)) {
+        const pos = pinPosition(item)
+        if (!pos) continue
+        const pt = pointAt(projection, kakao, pos.lat, pos.lng)
+        if (!pt) continue
+        const { name, price } = labelOf(item)
+        const selected = isSelected(item)
+        const building = isBuildingItem(item)
+        const size = building ? buildingBoxSize(name, price, selected) : regionBoxSize(name, price)
+        if (selected) {
+          placed.push({ item, pt, size, box: boxAt(pt, size, DEFAULT_PLACEMENT), movable: false })
+          continue
+        }
+        const candidates = building ? [DEFAULT_PLACEMENT] : REGION_PLACEMENTS
+        const fit = candidates.find((place) => fits(boxAt(pt, size, place)))
+        const entry: Placed = { item, pt, size, box: boxAt(pt, size, DEFAULT_PLACEMENT), movable: !building }
+        if (fit) {
+          commit(entry, fit)
+          placed.push(entry)
+          continue
+        }
+        const yielded = building ? null : placeByYielding(pt, size)
+        if (!yielded) {
+          collapsed.add(item)
+          continue
+        }
+        commit(yielded.blocker, yielded.alt)
+        commit(entry, yielded.place)
+        placed.push(entry)
+      }
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const next: any[] = []
     for (const item of ordered) {
-      if (item.lat == null || item.lng == null) continue
+      const pos = pinPosition(item)
+      if (!pos) continue
       const building = isBuildingItem(item)
-      const text = building
-        ? formatPriceLabel(item as MapBuildingItem, opts.type ?? '')
-        : formatPyeongLabel(item as MapRegionItem)
+      const { name, price } = labelOf(item)
+      const muted = building && buildingMarkerTone(item, type, now) === 'muted'
 
-      // 밀집 지역에서 라벨이 서로 덮으면 아무것도 못 읽는다. items 순서가 곧 우선순위 —
-      // 앞선 라벨과 겹치면 라벨 대신 점을 찍는다. 단, 그 순서의 출처는 종류별로 다르다:
-      // building 은 서버가 transactionCount DESC 로 주고(fetchBuildings), region(city/
-      // district/dong)은 뷰포트 중심에서 가까운 순으로 준다(sortRegionsByDistance) — 정렬
-      // 기준이 통일돼 있지 않으므로 여기서 "우선순위 = items 순서"라고만 가정하고, 그 기준이
-      // transactionCount 라고 단정하지 않는다.
-      //
-      // 건너뛰지 않고 점이라도 남기는 이유: 좌측 목록은 items 전부를 보여주므로, 겹친다고
-      // 아예 지우면 "목록엔 있는데 지도엔 없는" 건물이 생긴다(실측 강남 level 4: 목록 114 vs
-      // 라벨 76 → 38개 실종). 점은 자리를 차지하지 않으면서 위치와 클릭 대상을 유지한다.
-      const selected = building && itemKey(item) === selectedKey
-      let collapsed = false
-      if (projection && !selected) {
-        const box = boxAt(projection, kakao, item.lat, item.lng, text.length)
-        if (box) {
-          if (placed.some((p) => intersects(p, box))) collapsed = true
-          else placed.push(box)
+      let el: HTMLElement
+      if (isSelected(item)) {
+        el = buildPopup(item as MapBuildingItem, type, isRent)
+      } else if (collapsed.has(item)) {
+        el = document.createElement('div')
+        el.className = muted ? 'map-price-dot map-price-dot--muted' : 'map-price-dot'
+        // 점에도 값을 남긴다 — 호버 시 툴팁으로 뜨고, 스크린리더도 읽는다.
+        el.title = `${name} ${price}`
+      } else {
+        // 단지명·지역명은 반드시 textContent 로 넣는다(innerHTML 금지) — 공공데이터 원문이라
+        // 꺾쇠 등이 섞여 들어와도 마크업으로 해석되지 않는다.
+        el = document.createElement('div')
+        el.className = building
+          ? (muted ? 'map-price-label map-price-label--muted' : 'map-price-label')
+          : 'map-region-bubble'
+        const place = placements.get(item)
+        if (place) {
+          // 비껴 놓은 자리: 꼬리를 좌표 쪽(아래 자리면 위)으로, 가로 위치는 xAnchor 와 같게.
+          if (place.below) el.classList.add('map-region-bubble--below')
+          el.style.setProperty('--tail-x', `${place.x * 100}%`)
         }
+        const nameEl = document.createElement('span')
+        nameEl.className = building ? 'map-price-label-name' : 'map-region-bubble-name'
+        nameEl.textContent = name
+        const priceEl = document.createElement('span')
+        priceEl.className = building ? 'map-price-label-price' : 'map-region-bubble-price'
+        priceEl.textContent = price
+        el.append(nameEl, priceEl)
+        // 말줄임된 긴 단지명은 호버 툴팁으로 전체를 보여준다.
+        if (building) el.title = `${name} ${price}`
       }
-
-      const el = selected
-        ? buildPopup(item as MapBuildingItem, opts.type ?? '', isRent)
-        : (() => {
-            const d = document.createElement('div')
-            d.className = collapsed
-              ? 'map-price-dot'
-              : building
-                ? 'map-price-label'
-                : 'map-region-bubble'
-            // 점에도 값을 남긴다 — 호버 시 툴팁으로 뜨고, 스크린리더도 읽는다.
-            if (collapsed) d.title = text
-            else d.textContent = text
-            return d
-          })()
 
       if (handlers.onClick) {
         el.addEventListener('click', (ev) => {
@@ -314,10 +512,11 @@ export function useMapOverlays() {
         el.addEventListener('mouseleave', () => handlers.onHover!(null))
       }
 
+      const place = collapsed.has(item) ? undefined : placements.get(item)
       const overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(item.lat, item.lng),
+        position: new kakao.maps.LatLng(pos.lat, pos.lng),
         content: el,
-        yAnchor: 1,
+        ...(place ? { xAnchor: place.x, yAnchor: place.below ? 0 : 1 } : { yAnchor: 1 }),
         clickable: true,
       })
       overlay.setMap(map)

@@ -368,38 +368,111 @@
 
 @layer components {
   /*
-   * 지도 오버레이 — 부동산 지도 탐색(/real-estate)의 가격 라벨·지역 버블.
+   * 지도 오버레이 — 부동산 지도 탐색(/real-estate)의 단지 핀·지역 핀.
    *
    * 카카오맵 CustomOverlay 의 content 로 들어가는 소자라 Tailwind 유틸리티를 클래스로
    * 직접 못 붙인다(문자열 className 하나만 지정). 그래서 여기서 컴포넌트 클래스로 정의한다.
    *
-   * 배경 없는 맨 텍스트로 두면 지도 자체 라벨(아파트명·역명·도로명)과 뒤엉켜 판독이 불가능하다.
-   * 불투명 배경 + 얇은 테두리로 지도에서 확실히 분리한다. 그라데이션·네온·글래스모피즘은
-   * 프로젝트 안티패턴이라 쓰지 않는다.
+   * 흰 알약은 지도 자체 라벨(상호명·역명)과 같은 모양이라 묻혔다(운영 실측). 브랜드 색을
+   * 채운 말풍선 + 흰 테두리로 지도 글자·이웃 핀과 구분하고, 꼬리로 위치를 가리킨다.
+   * 그라데이션·네온·글래스모피즘은 프로젝트 안티패턴이라 쓰지 않는다.
+   *
+   * 꼬리(::after)는 margin-bottom 자리에 그린다 — yAnchor:1 이 요소 아래 끝을 좌표에 맞추므로
+   * 마진만큼 위로 떠 꼬리 끝이 좌표에 닿는다. 꼬리 높이를 바꾸면 useMapOverlays 의
+   * BUILDING_H_PX·REGION_H_PX 도 같이 바꾼다.
    */
   .map-price-label,
-  .map-region-bubble {
-    @apply inline-flex items-center whitespace-nowrap rounded-full
-           border border-line bg-white px-2 py-0.5
-           text-[11px] font-semibold leading-[1.45] text-ink
-           shadow-[0_1px_3px_rgba(21,33,59,0.18)]
-           cursor-pointer select-none;
-    /* 지도 타일·자체 라벨 위로 올린다. 카카오 오버레이 기본 스택보다 확실히 위. */
+  .map-region-bubble,
+  .map-popup {
+    --pin-fill: var(--brand);
+    @apply cursor-pointer select-none whitespace-nowrap border border-white text-white;
+    background-color: var(--pin-fill);
     position: relative;
+    margin-bottom: 6px;
+    /* 지도 타일·자체 라벨 위로 올린다. 카카오 오버레이 기본 스택보다 확실히 위. */
     z-index: 1;
   }
 
-  .map-price-label:hover,
-  .map-region-bubble:hover {
-    @apply border-primary bg-primary text-white;
+  .map-price-label,
+  .map-region-bubble {
+    @apply shadow-[0_1px_3px_rgba(21,33,59,0.18)];
+  }
+
+  .map-price-label::after,
+  .map-region-bubble::after,
+  .map-popup::after {
+    content: '';
+    position: absolute;
+    /* 1px 겹쳐 흰 테두리 아래쪽을 덮는다 — 말풍선과 꼬리 사이에 흰 선이 끼지 않게. */
+    top: calc(100% - 1px);
+    /* 비껴 놓은 지역 핀은 xAnchor 와 같은 가로 위치(--tail-x)로 꼬리를 옮겨 좌표를 가리킨다. */
+    left: var(--tail-x, 50%);
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 7px solid var(--pin-fill);
+  }
+
+  /* 단지 핀: 위 단지명(작게), 아래 가격(굵게). 긴 단지명은 말줄임 — 폭 상한은 useMapOverlays BUILDING_NAME_MAX_PX 와 맞춘다. */
+  .map-price-label {
+    @apply flex flex-col items-start rounded-lg px-2 py-[3px];
+    max-width: 138px;
+  }
+
+  .map-price-label-name {
+    @apply block max-w-full truncate text-[10.5px] font-medium leading-[14px] text-primary-100;
+  }
+
+  .map-price-label-price {
+    @apply block text-[12.5px] font-bold leading-[17px];
+  }
+
+  /* 1년 넘은 거래·거래 없음. 같은 크기·모양에 회색만 바꾼다. */
+  .map-price-label--muted {
+    --pin-fill: var(--faint);
+  }
+
+  /* 회색 위 흰색 80%는 약 3.8:1 이라 10.5px 글자에 모자란다. 이름도 흰색 그대로(약 4.9:1). */
+  .map-price-label--muted .map-price-label-name {
+    @apply text-white;
+  }
+
+  .map-price-label:hover {
+    --pin-fill: var(--brand-strong);
     /* 겹친 이웃 위로 올라와야 호버한 값이 온전히 보인다. */
     z-index: 3;
   }
 
-  /* 지역 버블은 평당가 집계라 개수가 적고 의미 단위가 커서 한 급 강조한다. */
+  .map-price-label--muted:hover {
+    --pin-fill: var(--muted);
+  }
+
+  /* 지역 핀: "서울 5,117만/평" 한 줄. 평당가 집계라 개수가 적어 단지 핀보다 위에 둔다. */
   .map-region-bubble {
-    @apply border-primary/25 bg-primary-50 px-2.5 py-1 text-[12px] text-primary-ink;
+    @apply inline-flex items-baseline gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-bold leading-[18px];
     z-index: 2;
+  }
+
+  /* 좌표 아래에 비껴 놓은 지역 핀(yAnchor 0): 꼬리를 위로 뒤집고 여백도 위로 옮긴다. */
+  .map-region-bubble--below {
+    margin-top: 6px;
+    margin-bottom: 0;
+  }
+
+  .map-region-bubble--below::after {
+    top: auto;
+    bottom: calc(100% - 1px);
+    border-top: 0;
+    border-bottom: 7px solid var(--pin-fill);
+  }
+
+  .map-region-bubble-name {
+    @apply text-[12px] font-semibold text-primary-100;
+  }
+
+  .map-region-bubble:hover {
+    --pin-fill: var(--brand-strong);
+    z-index: 3;
   }
 
   /*
@@ -414,37 +487,44 @@
     z-index: 0;
   }
 
+  .map-price-dot--muted {
+    @apply bg-faint/70;
+  }
+
   .map-price-dot:hover {
     @apply bg-primary;
     transform: scale(1.4);
   }
 
+  .map-price-dot--muted:hover {
+    @apply bg-faint;
+  }
+
   /*
-   * 선택된 마커의 펼침 카드. 기본 라벨(.map-price-label)이 알약 한 줄인 반면 이것은
-   * 건물명·값·링크가 쌓이므로 사각 카드에 좌측 정렬이다.
+   * 선택된 단지 핀의 펼침 카드. 진한 색(ink)으로 채워 선택을 표시하고, 단지명·값·링크를
+   * 쌓으므로 사각 카드에 좌측 정렬이다.
    *
    * z-index 가 hover(3)보다 높다 — 펼친 카드는 이웃 라벨에 가려지면 안 된다.
    */
   .map-popup {
-    @apply block cursor-pointer select-none whitespace-nowrap rounded-[10px]
-           border border-line-2 bg-white px-[11px] pb-2 pt-[9px] text-left
+    --pin-fill: var(--ink);
+    @apply block rounded-[10px] px-[11px] pb-2 pt-[9px] text-left
            shadow-[0_3px_10px_rgba(21,33,59,0.16)];
-    position: relative;
     z-index: 4;
     min-width: 130px;
   }
 
   .map-popup b {
-    @apply mb-1 block text-[12.5px] font-semibold text-ink;
+    @apply mb-1 block text-[12.5px] font-semibold text-white;
   }
 
   .map-popup-line {
-    @apply block text-[12.5px] font-semibold leading-[1.45] text-primary;
+    @apply block text-[12.5px] font-bold leading-[1.45] text-white;
   }
 
   /* 월세 줄. 전세를 주값으로 읽히게 하려고 한 급 낮춘다. */
   .map-popup-line--sub {
-    @apply text-xs font-medium text-ink;
+    @apply text-xs font-medium text-white/85;
   }
 
   /*
@@ -453,14 +533,14 @@
    * 있는가"를 판단하는 화면이라 있음/없음 구분이 금액 자체보다 먼저다.
    */
   .map-popup-line--absent {
-    @apply font-medium text-faint;
+    @apply font-medium text-white/65;
   }
 
   .map-popup-line i {
-    @apply mr-1 text-[11px] font-medium not-italic text-faint;
+    @apply mr-1 text-[11px] font-medium not-italic text-white/65;
   }
 
   .map-popup-link {
-    @apply mt-1.5 block border-t border-line pt-1.5 text-[11.5px] font-semibold text-primary;
+    @apply mt-1.5 block border-t border-white/20 pt-1.5 text-[11.5px] font-semibold text-primary-100;
   }
 }

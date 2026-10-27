@@ -1,6 +1,9 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
-import { clampBounds, parseMapHash, buildMapHash, itemKey, useRealEstateMap } from '~/composables/useRealEstateMap'
+import {
+  clampBounds, parseMapHash, buildMapHash, itemKey, useRealEstateMap,
+  DEFAULT_MAP_VIEW, parseSavedMapState, readSavedMapState, resolveInitialMapState, saveMapState,
+} from '~/composables/useRealEstateMap'
 
 describe('clampBounds', () => {
   it('한국 영역 밖으로 나간 bbox 를 클램프한다', () => {
@@ -178,5 +181,58 @@ describe('useRealEstateMap fetch lifecycle', () => {
     expect(map.items.value).toEqual([])
     expect(map.total.value).toBe(0)
     expect(map.error.value).toBe('type failed')
+  })
+})
+
+describe('첫 화면 위치 — 해시 > 저장된 마지막 위치 > 서울 구·군 단위', () => {
+  const SAVED = { type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }
+
+  it('저장값 검증: 6종 유형·1~14 정수 level·한국 범위 좌표만 받는다', () => {
+    expect(parseSavedMapState(JSON.stringify(SAVED))).toEqual(SAVED)
+    expect(parseSavedMapState(null)).toBeNull()
+    expect(parseSavedMapState('{깨진')).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, type: 'land' }))).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, level: 4.5 }))).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, level: 15 }))).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, lat: 0, lng: 0 }))).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, lng: 140 }))).toBeNull()
+    expect(parseSavedMapState(JSON.stringify({ ...SAVED, lat: '35' }))).toBeNull()
+  })
+
+  it('해시도 저장값도 없으면 서울 — 데스크톱 level 9, 모바일 level 10(둘 다 구·군 밴드)', () => {
+    expect(resolveInitialMapState({}, null, { desktop: true })).toEqual({
+      type: null, level: DEFAULT_MAP_VIEW.desktopLevel, lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng, source: 'default',
+    })
+    expect(resolveInitialMapState({}, null, { desktop: false }).level).toBe(DEFAULT_MAP_VIEW.mobileLevel)
+    expect([DEFAULT_MAP_VIEW.desktopLevel, DEFAULT_MAP_VIEW.mobileLevel].every((l) => l >= 9 && l <= 10)).toBe(true)
+  })
+
+  it('저장값이 있으면 그 자리에서 시작한다', () => {
+    expect(resolveInitialMapState({}, SAVED, { desktop: true })).toEqual({ ...SAVED, source: 'saved' })
+  })
+
+  it('해시가 있으면 저장값보다 우선하고, 빠진 필드는 저장값이 아니라 기본값(서울)으로 채운다', () => {
+    expect(resolveInitialMapState({ type: 'apt-rent', level: 4, lat: 37.5, lng: 127.05 }, SAVED, { desktop: true }))
+      .toEqual({ type: 'apt-rent', level: 4, lat: 37.5, lng: 127.05, source: 'hash' })
+    expect(resolveInitialMapState({ lat: 37.5, lng: 127.05 }, SAVED, { desktop: false }))
+      .toEqual({ type: null, level: DEFAULT_MAP_VIEW.mobileLevel, lat: 37.5, lng: 127.05, source: 'hash' })
+  })
+})
+
+describe('마지막 위치 저장소', () => {
+  beforeEach(() => window.localStorage.clear())
+
+  it('저장 → 읽기 왕복', () => {
+    saveMapState({ type: 'apt-sale', level: 7, lat: 37.5, lng: 127 })
+    expect(readSavedMapState()).toEqual({ type: 'apt-sale', level: 7, lat: 37.5, lng: 127 })
+  })
+
+  it('저장소가 막혀 있어도 던지지 않는다', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied') })
+    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('denied') })
+    expect(readSavedMapState()).toBeNull()
+    expect(() => saveMapState({ type: 'apt-sale', level: 7, lat: 37.5, lng: 127 })).not.toThrow()
+    spy.mockRestore()
+    set.mockRestore()
   })
 })

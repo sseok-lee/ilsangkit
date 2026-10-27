@@ -272,3 +272,60 @@ describe('동 집계', () => {
     expect(sql).toMatch(/deposit/);
   });
 });
+
+describe('fetchRegions — 최근 3개월 먼저 집계 (콜드 빌드 성능)', () => {
+  beforeEach(() => {
+    queryRawUnsafe.mockReset();
+    __resetMapCacheForTest();
+  });
+
+  const TABLES: Array<[string, string]> = [
+    ['apt-sale', 'AptSaleTransaction'],
+    ['apt-rent', 'AptRentTransaction'],
+    ['villa-sale', 'VillaSaleTransaction'],
+    ['villa-rent', 'VillaRentTransaction'],
+    ['offitel-sale', 'OffitelSaleTransaction'],
+    ['offitel-rent', 'OffitelRentTransaction'],
+  ];
+
+  it.each(TABLES)('%s 는 3레벨 모두 [dealYear, dealMonth] 인덱스 힌트를 건다', async (type, table) => {
+    queryRawUnsafe.mockResolvedValue([]);
+    for (const level of ['city', 'district', 'dong'] as const) {
+      await fetchRegions(type, level, KOREA_BOUNDS);
+    }
+    expect(queryRawUnsafe).toHaveBeenCalledTimes(3);
+    for (const call of queryRawUnsafe.mock.calls) {
+      expect(call[0]).toContain(`/*+ INDEX(t ${table}_dealYear_dealMonth_idx) */`);
+    }
+  });
+
+  it('district: 거래를 (city, district) 로 먼저 집계한 뒤 Region 을 내부 조인한다', async () => {
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-rent', 'district', KOREA_BOUNDS);
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    // 파생 테이블 안에서 날짜 조건·집계가 끝나야 Region → t 전 기간 ref 조인이 생기지 않는다.
+    expect(sql).toMatch(/FROM \(\s*SELECT[\s\S]*FROM AptRentTransaction t[\s\S]*dealYear = \?[\s\S]*GROUP BY t\.city, t\.district\s*\) a/);
+    expect(sql).toMatch(/\) a\s*JOIN Region r ON r\.city = a\.city AND r\.district = a\.district/);
+    expect(sql).not.toMatch(/LEFT JOIN/);
+    // 평당가는 SUM/COUNT 로 쪼개지 않고 옛 식(AVG) 그대로 같은 행 집합에 적용한다.
+    expect(sql).toContain('ROUND(AVG(t.deposit / (t.exclusiveArea / 3.3058))) AS avgPricePerPyeong');
+    expect(sql).not.toMatch(/SUM\(/);
+  });
+
+  it('city: Region 평균 좌표 파생과 내부 조인한다 (Region 에 없는 시/도는 빠진다)', async () => {
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'city', KOREA_BOUNDS);
+    const sql = queryRawUnsafe.mock.calls[0][0] as string;
+    expect(sql).toMatch(/GROUP BY t\.city\s*\) a/);
+    expect(sql).toMatch(/JOIN \(SELECT city, AVG\(lat\) AS lat, AVG\(lng\) AS lng FROM Region GROUP BY city\) r\s*ON r\.city = a\.city/);
+    expect(sql).not.toMatch(/LEFT JOIN/);
+  });
+
+  it('날짜 파라미터 3개만 넘긴다 (파생 테이블 안 한 번)', async () => {
+    queryRawUnsafe.mockResolvedValue([]);
+    await fetchRegions('apt-sale', 'district', KOREA_BOUNDS);
+    const call = queryRawUnsafe.mock.calls[0];
+    expect(call).toHaveLength(4);
+    expect((call[0] as string).match(/\?/g)).toHaveLength(3);
+  });
+});
