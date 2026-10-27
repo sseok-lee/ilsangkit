@@ -1009,6 +1009,32 @@ describe('RealEstateMapExplorer — 모바일 지도/목록 전환', () => {
     }
   })
 
+  it('단지 행을 처음 눌러 선택해도 목록 스크롤은 그대로다 — 두 번째 탭(상세)을 위해 다시 찾지 않게', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: BUILDING_ITEMS, initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: { template: '<div data-testid="canvas" />' } } },
+    })
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const sidebar = w.get('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
+    const scroller = sidebar.element as HTMLElement
+    scroller.scrollTop = 500
+    await sidebar.vm.$emit('select', BUILDING_ITEMS[0])
+    await flushPromises()
+    expect(w.vm.selectedKey).not.toBeNull()
+    expect(scroller.scrollTop).toBe(500)
+  })
+
+  it('시·도 칩으로 지역을 바꾸면 목록 스크롤을 맨 위로 올린다', async () => {
+    const w = mountExplorer()
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const sidebar = w.get('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
+    const scroller = sidebar.element as HTMLElement
+    scroller.scrollTop = 500
+    await sidebar.vm.$emit('select-city', null)
+    await flushPromises()
+    expect(scroller.scrollTop).toBe(0)
+  })
+
   it('데스크톱으로 넓어지면 열린 목록을 닫는다 — 지도 쪽 inert 가 데스크톱에 남지 않게', async () => {
     let listener: (() => void) | null = null
     const mq = { matches: false, addEventListener: vi.fn((_: string, fn: () => void) => { listener = fn }), removeEventListener: vi.fn() }

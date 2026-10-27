@@ -386,12 +386,17 @@ watch(granularity, () => {
   selectedKey.value = null
 })
 
-// 목록 단위(시·도→구·군→동→단지)나 고른 지역이 바뀌면 모바일 목록은 완전히 다른 목록이 된다 —
-// 이전 스크롤 위치에 머물면 새 목록 중간부터 보이므로 맨 위로 올린다. 같은 단위 안의 팬·줌은 그대로 둔다.
-watch([granularity, listRegion], () => {
+/**
+ * 모바일 목록 스크롤을 맨 위로. 목록 단위(시·도→구·군→동→단지)가 바뀌거나 지역을 실제로 옮기면
+ * (시·도 칩·위치 경로·지역 행) 완전히 다른 목록이 되어 이전 위치에 머물면 새 목록 중간부터 보인다.
+ * listRegion 을 watch 하지 않는다 — 단지 행 첫 탭(선택)도 listRegion 에 새 객체를 넣어, 두 번째 탭(상세)
+ * 직전에 목록이 맨 위로 튄다. 같은 단위 안의 팬·줌·단지 선택은 스크롤을 그대로 둔다.
+ */
+function resetListScroll(): void {
   const el = mobileSidebarRef.value?.$el
   if (el) el.scrollTop = 0
-})
+}
+watch(granularity, resetListScroll)
 
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
 /** 첫 조회를 지도 idle 에 미뤄 둔 상태인지(해시·저장 위치 복원). */
@@ -568,6 +573,7 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
  */
 function onSelect(item: MapItem): void {
   viewVersion += 1
+  if (!('buildingName' in item)) resetListScroll()
   if ('buildingName' in item) {
     listRegion.value = { city: item.city, district: item.district }
   } else if (granularity.value === 'city') {
@@ -600,6 +606,7 @@ function onSelect(item: MapItem): void {
 function onCrumb(crumb: MapPathCrumb): void {
   if (crumb.level == null) return
   viewVersion += 1
+  resetListScroll()
   if (crumb.level === 13) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
@@ -619,6 +626,7 @@ function onCrumb(crumb: MapPathCrumb): void {
  */
 async function onCityChip(chip: SidoChip | null): Promise<void> {
   const version = ++viewVersion
+  resetListScroll()
   if (!chip) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
