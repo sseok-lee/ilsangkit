@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
@@ -25,6 +25,12 @@ const DONG_ITEMS: MapItem[] = [
   { name: '서울', district: '강북구', dong: '미아동', lat: 37.63, lng: 127.02,
     avgPricePerPyeong: 3225, transactionCount: 42 },
 ]
+
+// syncHash 가 마지막 위치를 localStorage 에 저장한다 — 앞 테스트의 저장값이 다음 테스트의
+// 첫 위치(저장 위치 복원)로 새어 들지 않게 매번 비운다.
+beforeEach(() => {
+  window.localStorage.clear()
+})
 
 function mountExplorer() {
   return mount(RealEstateMapExplorer, {
@@ -700,6 +706,117 @@ describe('RealEstateMapExplorer — 범례·위치 경로', () => {
     expect(w.findComponent(CanvasStub).props('level')).toBe(7)
 
     await path.findAll('a').find((a) => a.text() === '전국')!.trigger('click')
+    expect(w.findComponent(CanvasStub).props('level')).toBe(13)
+  })
+})
+
+// 첫 화면 = 서울 구·군 단위(운영자 결정 2026-10-27). 해시 > 저장 위치 > 서울.
+describe('RealEstateMapExplorer — 첫 화면 위치와 시·도 칩', () => {
+  const SEOUL_DISTRICTS: MapItem[] = [
+    { name: '서울', district: '강남구', dong: null, lat: 37.5172, lng: 127.0473, avgPricePerPyeong: 6820, transactionCount: 140 },
+    { name: '서울', district: '서초구', dong: null, lat: 37.4837, lng: 127.0324, avgPricePerPyeong: 6450, transactionCount: 120 },
+  ]
+  const CanvasStub = { template: '<div data-testid="canvas" />', props: ['items', 'level', 'center', 'type'], emits: ['idle', 'select', 'hover'] }
+  const KEY = 'ilsangkit:real-estate-map:last'
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.location.hash = ''
+  })
+
+  function mountSeoul() {
+    return mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: SEOUL_DISTRICTS, initialGranularity: 'district' },
+      global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+    })
+  }
+
+  it('해시·저장값이 없으면 서울 구·군 단위에서 시작한다(데스크톱 9, 모바일 10) — 조회는 지도 idle 에 맡긴다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    stubDesktopViewport(true)
+    const desktop = mountSeoul()
+    await flushPromises()
+    expect(desktop.findComponent(CanvasStub).props('level')).toBe(9)
+    expect(desktop.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5665, lng: 126.978 })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    stubDesktopViewport(false)
+    const mobile = mountSeoul()
+    await flushPromises()
+    expect(mobile.findComponent(CanvasStub).props('level')).toBe(10)
+  })
+
+  it('저장된 마지막 위치로 시작한다 — 유형도 바꾸되 전국 bbox 조회를 보내지 않고, 첫 조회 전엔 위치 경로를 숨긴다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+    window.localStorage.setItem(KEY, JSON.stringify({ type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }))
+    const w = mountSeoul()
+    await flushPromises()
+    const canvas = w.findComponent(CanvasStub)
+    expect(canvas.props('level')).toBe(5)
+    expect(canvas.props('center')).toEqual({ lat: 35.18, lng: 129.07 })
+    expect(canvas.props('type')).toBe('villa-rent')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="map-location-path"]').exists()).toBe(false)
+  })
+
+  it('깨지거나 한국 밖인 저장값은 무시하고 서울에서 시작한다', async () => {
+    stubDesktopViewport(true)
+    for (const raw of ['{깨진', JSON.stringify({ type: 'apt-sale', level: 5, lat: 51.5, lng: 0 })]) {
+      window.localStorage.setItem(KEY, raw)
+      const w = mountSeoul()
+      await flushPromises()
+      expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5665, lng: 126.978 })
+      expect(w.findComponent(CanvasStub).props('level')).toBe(9)
+    }
+  })
+
+  it('해시가 있으면 저장값보다 우선한다', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify({ type: 'villa-rent', level: 5, lat: 35.18, lng: 129.07 }))
+    window.location.hash = '#level=4&lat=37.5&lng=127.05'
+    const w = mountSeoul()
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 37.5, lng: 127.05 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(4)
+    expect(w.findComponent(CanvasStub).props('type')).toBe('apt-sale')
+  })
+
+  it('지도 idle 마다 마지막 위치를 저장한다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ success: true, data: { items: [], granularity: 'district', total: 0, exact: true } }))
+    const w = mountSeoul()
+    await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37, swLng: 126.5, neLat: 38, neLng: 127.5 }, 8, { lat: 37.51, lng: 127.02 })
+    expect(JSON.parse(window.localStorage.getItem(KEY)!)).toEqual({ type: 'apt-sale', level: 8, lat: 37.51, lng: 127.02 })
+  })
+
+  it('목록 상단 시·도 칩: 전국 + 16개 시·도 링크가 SSR DOM 에 있고, 현재 시·도를 강조한다', () => {
+    const w = mountSeoul()
+    const chips = w.findAll('[data-testid="map-sido-chips"]')[0]
+    const hrefs = chips.findAll('a').map((a) => a.attributes('href'))
+    expect(hrefs).toHaveLength(17)
+    expect(hrefs[0]).toBe('/real-estate/apt-sale')
+    expect(hrefs).toContain('/real-estate/apt-sale/seoul')
+    expect(hrefs).toContain('/real-estate/apt-sale/jeju')
+    expect(hrefs).toContain('/real-estate/apt-sale/jeonnamgwangju')
+    expect(chips.find('[aria-current="true"]').text()).toBe('서울')
+    // 구·군 행도 SSR 링크로 남는다
+    expect(w.html()).toContain('/real-estate/apt-sale/seoul/gangnam')
+  })
+
+  it('시·도 칩을 누르면 전국 시·도 집계의 좌표로 그 시·도의 구·군 단위로 옮긴다', async () => {
+    stubDesktopViewport(true)
+    const BUSAN = { name: '부산', district: null, dong: null, lat: 35.15, lng: 129.06, avgPricePerPyeong: 1790, transactionCount: 3447 }
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ success: true, data: { items: [BUSAN], granularity: 'city', total: 1, exact: true } }))
+    const w = mountSeoul()
+    await flushPromises()
+    const busan = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a').find((a) => a.text() === '부산')!
+    await busan.trigger('click')
+    await flushPromises()
+    expect(w.findComponent(CanvasStub).props('center')).toEqual({ lat: 35.15, lng: 129.06 })
+    expect(w.findComponent(CanvasStub).props('level')).toBe(9)
+
+    const nation = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a')[0]
+    await nation.trigger('click')
     expect(w.findComponent(CanvasStub).props('level')).toBe(13)
   })
 })

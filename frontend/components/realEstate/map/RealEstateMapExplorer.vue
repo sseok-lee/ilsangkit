@@ -42,8 +42,10 @@
             :error="visibleError"
             :list-href="listHref"
             :list-label="listLabel"
+            :active-city="activeCity"
             @hover="hoveredKey = $event"
             @select="onSelect"
+            @select-city="onCityChip"
             @retry="retryAll"
           />
         </aside>
@@ -109,8 +111,10 @@
         :error="visibleError"
         :list-href="listHref"
         :list-label="listLabel"
+        :active-city="activeCity"
         @hover="hoveredKey = $event"
         @select="onSelect"
+        @select-city="onCityChip"
         @retry="retryAll"
       />
     </MapBottomSheet>
@@ -126,13 +130,18 @@ import MapFilterBar from './MapFilterBar.vue'
 import RealEstateMapCanvas from './RealEstateMapCanvas.vue'
 import MapBottomSheet from './MapBottomSheet.vue'
 import MapLocationPath from './MapLocationPath.vue'
-import { useRealEstateMap, itemKey, buildMapHash, parseMapHash } from '~/composables/useRealEstateMap'
+import {
+  useRealEstateMap, itemKey, buildMapHash, parseMapHash,
+  DEFAULT_MAP_VIEW, readSavedMapState, saveMapState, resolveInitialMapState,
+} from '~/composables/useRealEstateMap'
 import {
   KOREA_BOUNDS, isBuildingItem,
   type Granularity, type MapBounds, type MapItem, type MapRegionItem, type MapResponse,
 } from '~/types/realEstateMap'
 import { explorationListHref } from '~/utils/explorationNavigation'
 import { buildMapLocationPath, type MapPathCrumb } from '~/utils/mapLocationPath'
+import { cityDisplayName, type SidoChip } from '~/utils/regionChips'
+import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
 const props = defineProps<{
@@ -141,7 +150,17 @@ const props = defineProps<{
   initialGranularity: Granularity
 }>()
 
-const center = ref({ lat: 36.5, lng: 127.8 })
+/** 전국 뷰 중심. 위치 경로 '전국'·시·도 칩 '전국'이 이리로 돌아간다. */
+const NATION_CENTER = { lat: 36.5, lng: 127.8 }
+// SSR 과 첫 클라이언트 렌더가 같은 값이어야 위치 경로 등이 하이드레이션 때 어긋나지 않는다.
+// 페이지가 서울 구·군 집계로 SSR 하면 서울에서, 전국 집계(초기 granularity=city)면 전국에서 시작한다.
+const startsAtNation = props.initialGranularity === 'city'
+const center = ref(startsAtNation ? { ...NATION_CENTER } : { lat: DEFAULT_MAP_VIEW.lat, lng: DEFAULT_MAP_VIEW.lng })
+/**
+ * 해시·저장 위치로 시작해 SSR(서울)과 다른 곳을 볼 때, 첫 조회가 끝나기 전까지 위치 경로를
+ * 숨긴다 — 그 사이엔 목록이 아직 서울 것이라 경로가 엉뚱한 지역(서울)을 가리킨다.
+ */
+const restoring = ref(false)
 const canvasRef = ref<{ retry: () => Promise<void> } | null>(null)
 const canvasError = ref<string | null>(null)
 const listRegion = ref<{ city: string; district?: string } | null>(null)
@@ -163,6 +182,7 @@ const {
   type: props.initialType,
   items: props.initialItems,
   granularity: props.initialGranularity,
+  level: startsAtNation ? 13 : DEFAULT_MAP_VIEW.desktopLevel,
 })
 
 const visibleError = computed(() => canvasError.value ?? error.value)
@@ -183,34 +203,40 @@ const nationalCityItems = ref<Record<string, MapRegionItem[]>>(
     ? { [props.initialType]: props.initialItems.filter((i) => !isBuildingItem(i)) as MapRegionItem[] }
     : {},
 )
-const nationalPending = new Set<string>()
+/** 유형별 진행 중 요청. 같은 유형을 동시에 두 번 받지 않고, 시·도 칩처럼 결과가 필요한 호출은 같은 요청을 기다린다. */
+const nationalInflight = new Map<string, Promise<void>>()
 
-async function ensureNationalCityItems(t: string): Promise<void> {
-  if (import.meta.server || nationalCityItems.value[t] || nationalPending.has(t)) return
-  nationalPending.add(t)
-  try {
-    const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${t}/map`, {
-      params: {
-        level: 13,
-        swLat: KOREA_BOUNDS.LAT_MIN, swLng: KOREA_BOUNDS.LNG_MIN,
-        neLat: KOREA_BOUNDS.LAT_MAX, neLng: KOREA_BOUNDS.LNG_MAX,
-      },
-    })
-    const list = res?.data?.items
-    // 빈 배열은 저장하지 않는다 — 백엔드는 집계가 실패하면 200 + 빈 목록을 주고 캐시하지 않는다
-    // (일시 장애). 저장하면 그 유형은 새로고침 전까지 다시 받지 않아 제주 '—'가 되살아난다.
-    // 저장하지 않으면 다음 시·도 단계 진입·유형 전환 때 다시 받는다.
-    if (res?.data?.granularity === 'city' && Array.isArray(list) && list.length > 0) {
-      nationalCityItems.value = {
-        ...nationalCityItems.value,
-        [t]: list.filter((i) => !isBuildingItem(i)) as MapRegionItem[],
+function ensureNationalCityItems(t: string): Promise<void> {
+  if (import.meta.server || nationalCityItems.value[t]) return Promise.resolve()
+  const running = nationalInflight.get(t)
+  if (running) return running
+  const job = (async () => {
+    try {
+      const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${t}/map`, {
+        params: {
+          level: 13,
+          swLat: KOREA_BOUNDS.LAT_MIN, swLng: KOREA_BOUNDS.LNG_MIN,
+          neLat: KOREA_BOUNDS.LAT_MAX, neLng: KOREA_BOUNDS.LNG_MAX,
+        },
+      })
+      const list = res?.data?.items
+      // 빈 배열은 저장하지 않는다 — 백엔드는 집계가 실패하면 200 + 빈 목록을 주고 캐시하지 않는다
+      // (일시 장애). 저장하면 그 유형은 새로고침 전까지 다시 받지 않아 제주 '—'가 되살아난다.
+      // 저장하지 않으면 다음 시·도 단계 진입·유형 전환 때 다시 받는다.
+      if (res?.data?.granularity === 'city' && Array.isArray(list) && list.length > 0) {
+        nationalCityItems.value = {
+          ...nationalCityItems.value,
+          [t]: list.filter((i) => !isBuildingItem(i)) as MapRegionItem[],
+        }
       }
+    } catch {
+      // 실패하면 지금처럼 뷰포트 응답만으로 그린다(뷰포트 밖 시·도는 —). 화면을 막지 않는다.
+    } finally {
+      nationalInflight.delete(t)
     }
-  } catch {
-    // 실패하면 지금처럼 뷰포트 응답만으로 그린다(뷰포트 밖 시·도는 —). 화면을 막지 않는다.
-  } finally {
-    nationalPending.delete(t)
-  }
+  })()
+  nationalInflight.set(t, job)
+  return job
 }
 
 watch([type, granularity], ([t, g]) => {
@@ -231,8 +257,20 @@ const sidebarItems = computed<MapItem[]>(() => {
 
 /** 지도 위치 경로. 위치를 정할 수 없으면 null → 숨김. */
 const locationPath = computed<MapPathCrumb[] | null>(() =>
-  buildMapLocationPath(granularity.value, (items.value ?? []) as MapItem[], center.value, type.value),
+  restoring.value
+    ? null
+    : buildMapLocationPath(granularity.value, (items.value ?? []) as MapItem[], center.value, type.value),
 )
+/** 시·도 칩 강조 대상. 시·도 단계는 '전국', 그 아래는 위치 경로의 시·도 칸. */
+const activeCity = computed<string | null>(() =>
+  granularity.value === 'city' ? '전국' : locationPath.value?.[1]?.label ?? null,
+)
+
+// 복원 후 첫 조회가 끝나면(성공·실패 모두 pending true→false) 경로를 다시 보인다.
+// items 변화로 판정하지 않는다 — 유형을 바꿀 때 목록을 비우는 것도 items 변화라 곧바로 풀려 버린다.
+watch(pending, (now, before) => {
+  if (before && !now) restoring.value = false
+})
 const listHref = computed(() => explorationListHref(type.value as RealEstateUrlType, listRegion.value))
 const listLabel = computed(() => listRegion.value ? '이 지역 목록 보기' : '전국 목록 보기')
 
@@ -279,12 +317,13 @@ function applyIsDesktop(): void {
 // - level 은 setLevel(next) 으로 값만 세팅한다(fetch 트리거 없음) — RealEstateMapCanvas 가
 //   이 값을 props 로 받아 initMap({ center, level }) 에 그대로 넘기므로, 지도가 애초에 그
 //   레벨로 뜬다. 여기서 fetch 까지 하면(전국 bounds 로) setType 과 중복된다.
+//
+// 첫 위치는 해시 > 저장된 마지막 위치 > 서울 구·군 단위 순이다(resolveInitialMapState).
+// 저장 위치는 SSR(서울)과 다를 수 있어 깜빡임을 줄이려고: 유형만 바꾸고 조회는 지도의 첫 idle
+// (실제 bounds)에 맡기며, 그 응답이 올 때까지 위치 경로를 숨긴다. 목록은 그 사이 서울 집계를
+// 그대로 둔다(유형이 바뀌면 비운다) — 빈 화면으로 한 번 더 깜빡이지 않게.
 onMounted(() => {
   if (import.meta.server) return
-  const h = parseMapHash(window.location.hash)
-  if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
-  if (h.level != null) setLevel(h.level)
-  if (h.type != null) setType(h.type, lastBounds)
 
   // tailwind.config.js 기본 screens: lg = 1024px (프로젝트가 screens 를 오버라이드하지 않음).
   // aside 는 `lg:flex`, MapBottomSheet 는 `lg:hidden` 이므로 같은 기준선을 그대로 따른다.
@@ -293,6 +332,26 @@ onMounted(() => {
     : null
   applyIsDesktop()
   desktopMq?.addEventListener('change', applyIsDesktop)
+
+  const h = parseMapHash(window.location.hash)
+  if (startsAtNation) {
+    // 전국 집계로 SSR 한 경우(예전 계약): 해시만 반영한다.
+    if (h.lat != null && h.lng != null) center.value = { lat: h.lat, lng: h.lng }
+    if (h.level != null) setLevel(h.level)
+    if (h.type != null) setType(h.type, lastBounds)
+    return
+  }
+
+  const init = resolveInitialMapState(h, readSavedMapState(), { desktop: desktopMq?.matches ?? true })
+  const moved = init.lat !== center.value.lat || init.lng !== center.value.lng || init.level !== level.value
+  center.value = { lat: init.lat, lng: init.lng }
+  setLevel(init.level)
+  if (init.source === 'hash' && h.type != null) {
+    setType(h.type, lastBounds)
+  } else if (init.type != null && init.type !== type.value) {
+    setType(init.type, lastBounds, { fetch: false })
+  }
+  if (init.source !== 'default' && (moved || init.type !== null)) restoring.value = true
 })
 
 onBeforeUnmount(() => {
@@ -305,6 +364,8 @@ function syncHash(): void {
   history.replaceState(null, '', buildMapHash({
     type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng,
   }))
+  // 재방문 때 이 자리에서 다시 시작한다(해시 없이 /real-estate 로 들어올 때).
+  saveMapState({ type: type.value, level: level.value, lat: center.value.lat, lng: center.value.lng })
 }
 
 // mapCenter 는 RealEstateMapCanvas 가 getCenter() 로 올려보낸 지도의 실제 중심이다.
@@ -328,6 +389,7 @@ function onTypeChange(next: string): void {
 
 function onCanvasLoadError(message: string): void {
   canvasError.value = message
+  restoring.value = false
 }
 
 function onCanvasLoaded(): void {
@@ -405,7 +467,7 @@ function onSelect(item: MapItem): void {
 function onCrumb(crumb: MapPathCrumb): void {
   if (crumb.level == null) return
   if (crumb.level === 13) {
-    center.value = { lat: 36.5, lng: 127.8 }
+    center.value = { ...NATION_CENTER }
     listRegion.value = null
   } else if (crumb.city && !crumb.district) {
     const c = nationalCityItems.value[type.value]?.find((i) => i.name === crumb.city)
@@ -415,6 +477,25 @@ function onCrumb(crumb: MapPathCrumb): void {
     listRegion.value = { city: crumb.city, district: crumb.district }
   }
   setLevel(crumb.level)
+}
+
+/**
+ * 시·도 칩 → 지도를 그 시·도의 구·군 단위로 옮긴다(전국 칩은 전국 뷰). 시·도 좌표는 전국
+ * 시·도 집계에서 찾는다(없으면 한 번 받는다). 끝내 못 찾으면 중심은 두고 level 만 바꾼다.
+ */
+async function onCityChip(chip: SidoChip | null): Promise<void> {
+  if (!chip) {
+    center.value = { ...NATION_CENTER }
+    listRegion.value = null
+    setLevel(13)
+    return
+  }
+  const districtLevel = isDesktop.value === false ? DEFAULT_MAP_VIEW.mobileLevel : DEFAULT_MAP_VIEW.desktopLevel
+  await ensureNationalCityItems(type.value)
+  const c = nationalCityItems.value[type.value]?.find((i) => cityDisplayName(i.name) === chip.label)
+  listRegion.value = { city: c?.name ?? CITY_SLUG_MAP[chip.slug] ?? chip.label }
+  if (c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)) center.value = { lat: c.lat, lng: c.lng }
+  setLevel(districtLevel)
 }
 
 // 테스트가 선택 상태를 직접 확인할 수 있게 노출한다. script setup 은 기본적으로 닫혀 있다.

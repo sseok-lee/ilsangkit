@@ -5,6 +5,32 @@
       <p v-if="showCountNote" class="text-xs text-muted mt-0.5">
         이 영역에 {{ props.total.toLocaleString('ko-KR') }}곳 — 상위 {{ visibleRows.length.toLocaleString('ko-KR') }}곳 표시
       </p>
+      <!--
+        시·도 칩. 첫 화면이 서울 구·군 단위라 목록 본문에는 시·도 16곳 링크가 없다 — 이 칩이 그
+        SSR 링크(/real-estate/{type}/{city})를 계속 싣는다. 시·도 단계에서는 목록 행이 같은 링크라
+        v-show 로만 숨긴다(DOM·링크는 남는다). 클릭은 페이지 이동 대신 지도를 그 시·도로 옮기고,
+        ⌘/Ctrl 클릭은 가로채지 않아 목록 허브가 새 탭으로 열린다(지역 행과 같은 패턴).
+      -->
+      <nav
+        v-show="props.granularity !== 'city'"
+        aria-label="시·도 이동"
+        data-testid="map-sido-chips"
+        class="-mx-4 mt-2 overflow-x-auto px-4"
+      >
+        <ul class="flex w-max gap-1.5 pb-1">
+          <li v-for="chip in sidoChipLinks" :key="chip.key">
+            <a
+              :href="chip.href"
+              class="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full border px-3 text-sm font-medium transition-colors"
+              :class="chip.label === props.activeCity
+                ? 'border-primary bg-primary-50 text-primary'
+                : 'border-line bg-white text-ink hover:bg-background-light'"
+              :aria-current="chip.label === props.activeCity ? 'true' : undefined"
+              @click.exact.prevent="emit('select-city', chip.chip)"
+            >{{ chip.label }}</a>
+          </li>
+        </ul>
+      </nav>
     </div>
 
     <div v-if="props.error" data-testid="map-sidebar-error" class="mx-4 mt-3 rounded-lg border border-line bg-background-light p-3">
@@ -161,7 +187,7 @@ import { computed, ref, watch } from 'vue'
 import { isBuildingItem, type Granularity, type MapBuildingItem, type MapItem, type MapRegionItem } from '~/types/realEstateMap'
 import { formatPriceLabel, formatPyeongLabel } from '~/composables/useMapOverlays'
 import { itemKey } from '~/composables/useRealEstateMap'
-import { SIDO_CHIPS } from '~/utils/regionChips'
+import { SIDO_CHIPS, type SidoChip } from '~/utils/regionChips'
 import { toRealEstateUrl, toRealEstateListUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import SourceStamp from '~/components/common/SourceStamp.vue'
@@ -192,7 +218,10 @@ const props = withDefaults(defineProps<{
   error?: string | null
   listHref?: string | null
   listLabel?: string
+  /** 시·도 칩에서 강조할 이름('전국' 또는 칩 라벨). 모르면 null. */
+  activeCity?: string | null
 }>(), {
+  activeCity: null,
   showFooter: false,
   selectedKey: null,
   error: null,
@@ -200,7 +229,13 @@ const props = withDefaults(defineProps<{
   listLabel: '목록으로 보기',
 })
 
-const emit = defineEmits<{ hover: [string | null]; select: [MapItem]; retry: [] }>()
+const emit = defineEmits<{ hover: [string | null]; select: [MapItem]; retry: []; 'select-city': [SidoChip | null] }>()
+
+/** 시·도 칩 링크. '전국' + SIDO_CHIPS 16곳. */
+const sidoChipLinks = computed(() => [
+  { key: 'nation', label: '전국', href: `/real-estate/${props.type}`, chip: null as SidoChip | null },
+  ...SIDO_CHIPS.map((c) => ({ key: c.slug, label: c.label, href: `/real-estate/${props.type}/${c.slug}`, chip: c as SidoChip | null })),
+])
 
 /**
  * 첫 클릭은 지도 선택, 두 번째 클릭은 상세 이동.

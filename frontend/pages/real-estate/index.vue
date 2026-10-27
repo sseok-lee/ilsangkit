@@ -2,7 +2,7 @@
   <RealEstateMapExplorer
     :initial-type="INITIAL_TYPE"
     :initial-items="regions ?? []"
-    initial-granularity="city"
+    initial-granularity="district"
   />
 </template>
 
@@ -11,6 +11,7 @@ import { useStructuredData } from '~/composables/useStructuredData'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { MapRegionItem, MapResponse } from '~/types/realEstateMap'
+import { DEFAULT_MAP_VIEW, SEOUL_BOUNDS } from '~/composables/useRealEstateMap'
 import { REAL_ESTATE_DATA_SOURCE } from '~/utils/dataSource'
 import { markDegradedResponse } from '~/composables/useDegradedResponse'
 
@@ -18,16 +19,18 @@ import { markDegradedResponse } from '~/composables/useDegradedResponse'
 // 푸터는 지도 사이드바 목록 하단으로 옮겼다(MapSidebar showFooter).
 definePageMeta({ layout: 'map' })
 
-const INITIAL_TYPE = 'apt-sale'
+const INITIAL_TYPE = DEFAULT_MAP_VIEW.type
 const apiBase = useApiBase()
 
 // 지도는 SSR 불가라 이 집계가 이 페이지의 유일한 SSR 데이터다.
-// 실패해도 [] 를 주면 MapSidebar 가 SIDO_CHIPS 16개 링크를 상수에서 렌더한다(fail-open).
+// 첫 화면은 서울 구·군 단위다(해시·저장 위치가 없을 때) — 서버 HTML 도 같은 서울 구·군 집계로
+// 그려야 클라이언트 첫 화면과 어긋나 깜빡이지 않는다. level 은 데스크톱 첫 화면과 같은 값이다.
+// 실패해도 [] 를 주면 목록 상단 시·도 칩(SIDO_CHIPS 16개 링크)은 상수에서 렌더된다(fail-open).
 const { data: regions, error: regionsError } = await useAsyncData<MapRegionItem[]>(
-  'real-estate-map-city',
+  'real-estate-map-seoul-district',
   async () => {
     const res = await $fetch<MapResponse>(`${apiBase}/api/real-estate/${INITIAL_TYPE}/map`, {
-      params: { level: 13, swLat: 33, swLng: 124, neLat: 39, neLng: 132 },
+      params: { level: DEFAULT_MAP_VIEW.desktopLevel, ...SEOUL_BOUNDS },
     })
     return res.data.items as MapRegionItem[]
   },

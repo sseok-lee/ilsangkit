@@ -61,4 +61,10 @@ describe('/real-estate 페이지', () => {
     // 위치 불변식은 tests/pages/detail-soft-error.test.ts 가 전역으로 강제한다.
     expect(src).not.toMatch(/useAsyncData[\s\S]{0,400}markDegradedResponse/)
   })
+
+  it('SSR 집계는 첫 화면과 같은 서울 구·군 단위다 — 서버 HTML 과 첫 화면이 어긋나 깜빡이지 않게', () => {
+    expect(src).toContain('initial-granularity="district"')
+    expect(src).toContain('level: DEFAULT_MAP_VIEW.desktopLevel, ...SEOUL_BOUNDS')
+    expect(src).not.toContain('initial-granularity="city"')
+  })
 })
