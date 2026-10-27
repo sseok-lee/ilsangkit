@@ -326,6 +326,64 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     )
   })
 
+  it('같은 도로명으로 합쳐진 legacy grouped 상세는 주소 1건과 지도·주변 생활시설을 보여준다', async () => {
+    const canonicalPath = `/real-estate/apt-rent/seoul/gangnam/${encodeURIComponent('신도림역동문디이스트')}`
+    vi.stubGlobal('useRoute', vi.fn().mockReturnValue({
+      params: { realEstateType: 'apt-rent', city: 'seoul', district: 'gangnam', buildingName: '신도림역동문디이스트' },
+      query: {},
+      path: canonicalPath,
+    }))
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        mode: 'preserved',
+        type: 'apt-rent',
+        bjdCode: '1168010100',
+        buildingName: '신도림역동문디이스트',
+        canonicalPath,
+        redirect: false,
+        legacyGrouped: true,
+      },
+    }))
+    // 백엔드가 구로동 33·1293(같은 공원로6가길 58)을 최근 지번 하나로 합쳐 내려준 결과
+    mockDetailOverview = {
+      identity: { bjdCode: '1168010100', buildingName: '신도림역동문디이스트', legacyGrouped: true },
+      latestSale: null,
+      buildYear: 2026,
+      minArea: '84.90',
+      maxArea: '84.90',
+      saleCount6m: 0,
+      window6m: { from: '2026-04-27', to: '2026-10-27' },
+      addresses: [{ dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58' }],
+      location: { lat: 37.5041109, lng: 126.8897398 },
+      locationAmbiguous: false,
+      basisMode: 'jeonse',
+      defaultAreaGroup: '85',
+      areaGroups: [{ key: '85', label: '84', pyeong: 26, saleCount36m: 0, jeonseCount36m: 2 }],
+      saleBasis: {},
+      jeonseBasis: {},
+      generatedAt: '2026-10-27T00:00:00.000Z',
+    }
+
+    const m = await vi.importActual<{ default: Component }>('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    try {
+      const head = wrapper.get('.page-head')
+      expect(head.find('a[href="#reported-addresses"]').exists()).toBe(false)
+      expect(head.get('p.mt-3').text()).toContain('서울 강남구 공원로6가길 58')
+      expect(wrapper.find('#reported-addresses').exists()).toBe(false)
+      expect(wrapper.text()).not.toContain('주소 후보')
+      // 지도 크게 보기·길찾기는 좌표가 확정됐을 때만 렌더된다
+      expect(wrapper.get('#location').text()).toContain('길찾기')
+      expect(wrapper.get('#location').text()).not.toContain('대표 위치를 표시하지 않습니다')
+      // 주변 생활시설은 빈 상태 대신 반경 검색 컴포넌트로 간다
+      expect(wrapper.text()).not.toContain('주소 후보별 지도 검색으로 확인하세요')
+      expect(wrapper.text()).not.toContain('반경 검색을 할 수 없습니다')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   it('주소 suffix 라우트는 내부 buildingKey처럼 검증하지 않고 resolver로 넘긴다', async () => {
     vi.mocked((globalThis as any).useRoute).mockReturnValue({
       params: {

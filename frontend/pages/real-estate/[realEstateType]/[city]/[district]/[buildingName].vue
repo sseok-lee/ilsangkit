@@ -1075,6 +1075,7 @@ const reportedAddressItems = computed<ReportedAddressItem[]>(() => {
   const seen = new Set<string>()
   const items = raw.flatMap((address, index) => {
     const key = reportedAddressKey(address, index)
+    // 같은 도로명 지번 합치기는 백엔드 overview(addresses·locationAmbiguous)가 한 곳에서 판단한다. 여기선 완전 중복만 거른다.
     const identityKey = [address.roadName ?? '', address.dongName, address.jibun ?? ''].join('|')
     if (seen.has(identityKey)) return []
     seen.add(identityKey)
