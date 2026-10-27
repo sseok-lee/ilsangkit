@@ -3,7 +3,6 @@
 
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
-import { realEstateRecordUnchanged } from '../lib/realEstateSyncChanges.js';
 import { prisma } from '../lib/prisma.js';
 import { installRuntimeGuard } from './_runtimeGuard.js';
 import { withRealEstateWriteLock } from '../utils/realEstateWriteLock.js';
@@ -139,8 +138,8 @@ export async function syncAptRentByLawd(lawdCd: string, dealYmd: string, service
   const { newCount, updateCount } = await batchUpsert(records, async (record) => {
     const existing = await prisma.aptRentTransaction.findUnique({
       where: { sourceId: record.sourceId },
+      select: { id: true },
     });
-    if (realEstateRecordUnchanged(existing, record)) return 'updated';
     await prisma.aptRentTransaction.upsert({
       where: { sourceId: record.sourceId },
       create: { ...record, syncedAt: new Date() },

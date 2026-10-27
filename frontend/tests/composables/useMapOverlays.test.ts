@@ -874,27 +874,3 @@ describe('useMapOverlays', () => {
     })
   })
 })
-
-describe('전월세 가격 필터로 고른 종류의 거래를 핀에 보인다', () => {
-  // 월세가 더 최근이어도(8/2 > 8/1) "전세 3~5억"으로 거른 지도에서는 전세 거래를 보여야 한다.
-  const item = rentBuilding({ jeonse: { ...jeonseDeal(40000), dealYear: 2024 }, wolse: wolseDeal(5000, 120) })
-  const now = new Date('2026-09-01T00:00:00')
-
-  it('rentKind 가 없으면 예전처럼 더 최근 거래', () => {
-    expect(formatPriceLabel(item, 'apt-rent')).toBe('보 5,000만/월 120만')
-  })
-
-  it('rentKind=jeonse 면 전세, wolse 면 월세', () => {
-    expect(formatPriceLabel(item, 'apt-rent', 'jeonse')).toBe('전세 4억')
-    expect(formatPriceLabel(item, 'apt-rent', 'wolse')).toBe('보 5,000만/월 120만')
-  })
-
-  it('1년 회색 판정도 그 거래 기준', () => {
-    expect(buildingMarkerTone(item, 'apt-rent', now)).toBe('recent')
-    expect(buildingMarkerTone(item, 'apt-rent', now, 'jeonse')).toBe('muted')
-  })
-
-  it('고른 종류의 거래가 없으면 거래 없음', () => {
-    expect(formatPriceLabel(rentBuilding({ wolse: wolseDeal(5000, 120) }), 'apt-rent', 'jeonse')).toBe('거래 없음')
-  })
-})

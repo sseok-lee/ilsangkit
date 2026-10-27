@@ -52,26 +52,9 @@ function hasAddressComponents(key: BuildingKey): boolean {
     || Object.prototype.hasOwnProperty.call(key, 'jibun');
 }
 
-/** 전용면적(㎡) 범위 — 하한 초과 ~ 상한 이하, null 은 열린 끝. */
-export interface AreaRange {
-  min: number | null;
-  max: number | null;
-}
-
-export interface LatestDealsOptions {
-  /** 백필 재개 시 최초 실행의 기준일을 유지한다. */
-  dateThrough?: string;
-  /**
-   * 주면 "그 면적 구간 안에서의" 최근 거래를 고른다(지도 면적 필터). 없으면 기존과 같은 SQL 이다.
-   * 갈래마다 같은 인덱스 역방향 스캔에 면적 조건만 더해, 조건에 맞는 첫 행에서 멈춘다.
-   */
-  area?: AreaRange | null;
-}
-
 export async function getLatestDeals(
   keys: readonly BuildingKey[],
   scope: DealScope,
-  options: LatestDealsOptions = {},
 ): Promise<Map<string, LatestDeals>> {
   const result = new Map<string, LatestDeals>();
   for (const key of keys) {
@@ -79,18 +62,18 @@ export async function getLatestDeals(
   }
   if (keys.length === 0) return result;
 
-  const today = options.dateThrough ?? kstCalendarToday().toISOString().slice(0, 10);
+  const today = kstCalendarToday().toISOString().slice(0, 10);
   const grouped = groupKeysByProperty(keys);
   for (const [propertyType, propertyKeys] of grouped) {
     if (scope === 'sale' || scope === 'all') {
       const rows = await prisma.$queryRaw<RawLatestDealRow[]>(
-        latestSaleSql(propertyType, propertyKeys, today, options.area ?? null),
+        latestSaleSql(propertyType, propertyKeys, today),
       );
       applyRows(result, propertyType, rows, 'sale');
     }
     if (scope === 'rent' || scope === 'all') {
       const rows = await prisma.$queryRaw<RawLatestDealRow[]>(
-        latestRentSql(propertyType, propertyKeys, today, options.area ?? null),
+        latestRentSql(propertyType, propertyKeys, today),
       );
       applyRows(result, propertyType, rows, 'rent');
     }
@@ -163,19 +146,10 @@ function latestDealIndexHint(table: TransactionTable): Prisma.Sql {
   return Prisma.raw(`/*+ INDEX(t ${LATEST_DEAL_INDEX[table]}) */`);
 }
 
-/** 면적 조건. 범위가 없으면 빈 SQL — 필터 없는 호출의 SQL 이 예전과 글자까지 같게 둔다. */
-function areaFilter(area: AreaRange | null): Prisma.Sql {
-  if (!area) return Prisma.empty;
-  const lower = area.min == null ? Prisma.empty : Prisma.sql` AND t.exclusiveArea > ${area.min}`;
-  const upper = area.max == null ? Prisma.empty : Prisma.sql` AND t.exclusiveArea <= ${area.max}`;
-  return Prisma.sql`${lower}${upper}`;
-}
-
 function latestSaleSql(
   propertyType: PropertyType,
   keys: readonly BuildingKey[],
   today: string,
-  area: AreaRange | null,
 ): Prisma.Sql {
   const table = Prisma.raw(tables[propertyType].sale);
   const hint = latestDealIndexHint(tables[propertyType].sale);
@@ -183,7 +157,7 @@ function latestSaleSql(
         t.dealYear, t.dealMonth, t.dealDay`;
   const filters = Prisma.sql`${saleNotCanceled('t')}
         AND t.dealAmount IS NOT NULL
-        AND ${overviewDateThrough(today, 't')}${areaFilter(area)}`;
+        AND ${overviewDateThrough(today, 't')}`;
   const { addressKeys, legacyKeys } = splitKeys(keys);
   const branches = addressKeys.map((key) => Prisma.sql`(
       SELECT ${hint} ${columns}
@@ -219,13 +193,12 @@ function latestRentSql(
   propertyType: PropertyType,
   keys: readonly BuildingKey[],
   today: string,
-  area: AreaRange | null,
 ): Prisma.Sql {
   const table = Prisma.raw(tables[propertyType].rent);
   const hint = latestDealIndexHint(tables[propertyType].rent);
   const columns = Prisma.sql`t.buildingName, t.bjdCode, t.dongName, t.jibun, t.rentType, t.deposit, t.monthlyRent,
         t.exclusiveArea, t.floor, t.dealYear, t.dealMonth, t.dealDay`;
-  const dateFilter = Prisma.sql`${overviewDateThrough(today, 't')}${areaFilter(area)}`;
+  const dateFilter = overviewDateThrough(today, 't');
   const rentFilters = [
     Prisma.sql`t.rentType = '전세' AND t.deposit IS NOT NULL`,
     Prisma.sql`t.rentType = '월세' AND t.deposit IS NOT NULL AND t.monthlyRent IS NOT NULL`,

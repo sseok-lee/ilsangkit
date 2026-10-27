@@ -2,10 +2,7 @@
   <div class="flex flex-col h-full overflow-y-auto bg-white">
     <div class="px-4 py-3 border-b border-line sticky top-0 bg-white z-10">
       <p class="text-sm font-semibold text-ink">{{ heading }}</p>
-      <p v-if="filteredCountNote" data-testid="map-filter-count" class="text-xs text-muted mt-0.5">
-        {{ filteredCountNote }}
-      </p>
-      <p v-else-if="showCountNote" class="text-xs text-muted mt-0.5">
+      <p v-if="showCountNote" class="text-xs text-muted mt-0.5">
         이 영역에 {{ props.total.toLocaleString('ko-KR') }}곳 — 상위 {{ visibleRows.length.toLocaleString('ko-KR') }}곳 표시
       </p>
       <!--
@@ -55,17 +52,6 @@
           {{ props.listLabel }}
         </a>
       </div>
-    </div>
-
-    <div v-if="showFilterEmpty" data-testid="map-filter-empty" class="mx-4 mt-3 rounded-lg border border-line bg-background-light p-3">
-      <p class="text-sm font-semibold text-ink">조건에 맞는 단지가 없습니다</p>
-      <button
-        type="button"
-        class="mt-2 min-h-[44px] rounded-lg border border-line bg-white px-3 text-xs font-semibold text-ink hover:bg-background-light"
-        @click="emit('reset-filter')"
-      >
-        필터 초기화
-      </button>
     </div>
 
     <ul class="flex-1">
@@ -234,11 +220,8 @@ const props = withDefaults(defineProps<{
   listLabel?: string
   /** 시·도 칩에서 강조할 이름('전국' 또는 칩 라벨). 모르면 null. */
   activeCity?: string | null
-  /** 면적·가격 필터가 걸려 있는지(단지 단계 개수 문구·0곳 안내에 쓴다). */
-  filterActive?: boolean
 }>(), {
   activeCity: null,
-  filterActive: false,
   showFooter: false,
   selectedKey: null,
   error: null,
@@ -246,9 +229,7 @@ const props = withDefaults(defineProps<{
   listLabel: '목록으로 보기',
 })
 
-const emit = defineEmits<{
-  hover: [string | null]; select: [MapItem]; retry: []; 'select-city': [SidoChip | null]; 'reset-filter': []
-}>()
+const emit = defineEmits<{ hover: [string | null]; select: [MapItem]; retry: []; 'select-city': [SidoChip | null] }>()
 
 /** 시·도 칩 링크. '전국' + SIDO_CHIPS 16곳. */
 const sidoChipLinks = computed(() => [
@@ -454,20 +435,4 @@ function showMore(): void {
  * visibleRows.length < total 이 참이라 조건이 중복된다. prop 자체는 호출부 호환을 위해 남긴다.
  */
 const showCountNote = computed(() => visibleRows.value.length < props.total)
-
-const filterApplied = computed(() => props.filterActive && props.granularity === 'building')
-
-/**
- * 필터가 걸린 단지 단계의 개수 문구. total은 전체 뷰포트에서 조건을 만족하는 단지 수다.
- */
-const filteredCountNote = computed<string | null>(() => {
-  if (!filterApplied.value || props.total === 0) return null
-  const n = (v: number) => v.toLocaleString('ko-KR')
-  const shown = visibleRows.value.length < props.total ? ` — 상위 ${n(visibleRows.value.length)}곳 표시` : ''
-  return `조건에 맞는 ${n(props.total)}곳${shown}`
-})
-
-const showFilterEmpty = computed(() =>
-  filterApplied.value && !props.pending && !props.error && props.items.length === 0,
-)
 </script>
