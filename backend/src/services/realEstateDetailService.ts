@@ -128,9 +128,15 @@ interface RawAddressRow {
   dongName: string;
   jibun: string | null;
   roadName: string | null;
+  /** 이 주소로 보고된 가장 최근 계약일(YYYYMMDD, 일 미상은 00) */
+  lastDeal?: number | bigint | null;
 }
 
+type ReportedAddress = DetailOverview['addresses'][number];
+
 interface RawLocationRow {
+  dongName?: string | null;
+  jibun?: string | null;
   lat: string | number | Prisma.Decimal | null;
   lng: string | number | Prisma.Decimal | null;
 }
@@ -320,9 +326,21 @@ export async function getDetailOverview(
   const areaGroups = buildAreaGroups(saleDeals, jeonseDeals, today);
   const defaultAreaGroup = chooseDefaultAreaGroup(areaGroups, saleDeals, jeonseDeals, basisMode, today);
 
-  const addresses = mergeReportedAddresses(rawAddresses);
+  const reported = mergeReportedAddresses(rawAddresses);
+  // 같은 법정동·같은 도로명이면 입주 뒤 지번 정리로 갈라진 같은 건물 → 최근 지번 하나로 합친다.
+  const sameRoad = pickSameRoadAddress(reported);
+  const addresses = (sameRoad ? [sameRoad] : reported).map(toReportedAddress);
   const locationAmbiguous = addresses.length > 1;
-  const locationRow = locationRows[0];
+  let locationRow = locationRows[0];
+  if (sameRoad && locationRow && !isSameParcel(locationRow, sameRoad)) {
+    // 최근 좌표가 옛 지번 것이면 최근 지번 좌표를 따로 찾고, 없으면 같은 도로명 후보 좌표를 그대로 쓴다.
+    const parcelRows = await prisma.$queryRaw<RawLocationRow[]>(overviewLocationSql(saleTable, rentTable, {
+      ...identity,
+      dongName: sameRoad.dongName,
+      jibun: sameRoad.jibun ?? '',
+    }));
+    locationRow = parcelRows[0] ?? locationRow;
+  }
   const location = !locationAmbiguous
     && locationRow?.lat !== undefined
     && locationRow.lng !== undefined
@@ -489,19 +507,53 @@ function addressWhere(identity: DetailIdentity, alias: string): Prisma.Sql {
     AND COALESCE(TRIM(${Prisma.raw(`${alias}.jibun`)}), '') = ${identity.jibun ?? ''}`;
 }
 
-function mergeReportedAddresses(rows: RawAddressRow[]): RawAddressRow[] {
-  const addresses = new Map<string, RawAddressRow>();
+type MergedAddress = ReportedAddress & { lastDeal: number };
+
+function mergeReportedAddresses(rows: RawAddressRow[]): MergedAddress[] {
+  const addresses = new Map<string, MergedAddress>();
   for (const row of rows) {
-    const address = { dongName: row.dongName.trim(), jibun: row.jibun?.trim() || null, roadName: row.roadName?.trim() || null };
+    const address = {
+      dongName: row.dongName.trim(),
+      jibun: row.jibun?.trim() || null,
+      roadName: row.roadName?.trim().replace(/\s+/g, ' ') || null,
+      lastDeal: Number(row.lastDeal ?? 0),
+    };
     // Only a complete parcel can prove two differently written addresses are identical.
     const key = JSON.stringify(address.dongName && address.jibun
       ? [address.dongName, address.jibun]
       : [address.dongName, address.jibun, address.roadName]);
     const existing = addresses.get(key);
-    if (!existing) addresses.set(key, address);
-    else if (!existing.roadName && address.roadName) existing.roadName = address.roadName;
+    if (!existing) {
+      addresses.set(key, address);
+      continue;
+    }
+    if (!existing.roadName && address.roadName) existing.roadName = address.roadName;
+    existing.lastDeal = Math.max(existing.lastDeal, address.lastDeal);
   }
   return [...addresses.values()];
+}
+
+/**
+ * 지번이 여럿이어도 모두 같은 법정동·같은 도로명 주소면 같은 건물로 보고 가장 최근 거래 지번을 고른다.
+ * 도로명이 하나라도 비었거나(숫자만 있는 값 포함) 다르면 같은 이름의 다른 건물일 수 있어 null(모호 유지).
+ */
+function pickSameRoadAddress(addresses: MergedAddress[]): MergedAddress | null {
+  if (addresses.length < 2) return null;
+  const [first] = addresses;
+  // 건물번호만 남은 값('286')은 도로명이 아니라 같은 건물 증거가 못 된다.
+  if (!first.roadName || !/[^\d\s-]/.test(first.roadName)) return null;
+  const sameRoad = addresses.every((address) =>
+    address.roadName === first.roadName && address.dongName === first.dongName);
+  if (!sameRoad) return null;
+  return addresses.reduce((latest, address) => (address.lastDeal > latest.lastDeal ? address : latest));
+}
+
+function toReportedAddress({ dongName, jibun, roadName }: MergedAddress): ReportedAddress {
+  return { dongName, jibun, roadName };
+}
+
+function isSameParcel(row: RawLocationRow, address: ReportedAddress): boolean {
+  return (row.dongName?.trim() ?? '') === address.dongName && (row.jibun?.trim() || null) === address.jibun;
 }
 
 function validateMode(type: RealEstateType, mode: DealMode): DealMode {
@@ -872,24 +924,30 @@ function overviewAreaBoundsSql(
   `;
 }
 
+/** 계약일 정렬 키(YYYYMMDD). 일 미상은 00이라 같은 달 아는 날짜보다 앞선다. */
+function dealKeyExpression(alias: string): Prisma.Sql {
+  return Prisma.raw(`(${alias}.dealYear * 10000 + ${alias}.dealMonth * 100 + COALESCE(${alias}.dealDay, 0))`);
+}
+
 function overviewAddressesSql(
   saleTable: TableConfig,
   rentTable: TableConfig,
   identity: DetailIdentity,
 ): Prisma.Sql {
   return Prisma.sql`
-    SELECT DISTINCT dongName, jibun, roadName
+    SELECT dongName, jibun, roadName, MAX(dealKey) AS lastDeal
     FROM (
-      SELECT s.dongName, s.jibun, s.roadName
+      SELECT s.dongName, s.jibun, s.roadName, ${dealKeyExpression('s')} AS dealKey
       FROM ${Prisma.raw(saleTable.table)} s
       WHERE s.bjdCode = ${identity.bjdCode} AND s.buildingName = ${identity.buildingName}
     ${addressWhere(identity, 's')}
       UNION ALL
-      SELECT r.dongName, r.jibun, r.roadName
+      SELECT r.dongName, r.jibun, r.roadName, ${dealKeyExpression('r')} AS dealKey
       FROM ${Prisma.raw(rentTable.table)} r
       WHERE r.bjdCode = ${identity.bjdCode} AND r.buildingName = ${identity.buildingName}
     ${addressWhere(identity, 'r')}
     ) u
+    GROUP BY dongName, jibun, roadName
     ORDER BY dongName ASC, jibun ASC, roadName ASC
   `;
 }
@@ -900,9 +958,9 @@ function overviewLocationSql(
   identity: DetailIdentity,
 ): Prisma.Sql {
   return Prisma.sql`
-    SELECT lat, lng
+    SELECT dongName, jibun, lat, lng
     FROM (
-      SELECT s.lat, s.lng, s.dealYear, s.dealMonth, s.dealDay, s.id
+      SELECT s.dongName, s.jibun, s.lat, s.lng, s.dealYear, s.dealMonth, s.dealDay, s.id
       FROM ${Prisma.raw(saleTable.table)} s
       WHERE s.bjdCode = ${identity.bjdCode}
         AND s.buildingName = ${identity.buildingName}
@@ -910,7 +968,7 @@ function overviewLocationSql(
         AND s.lat IS NOT NULL
         AND s.lng IS NOT NULL
       UNION ALL
-      SELECT r.lat, r.lng, r.dealYear, r.dealMonth, r.dealDay, r.id
+      SELECT r.dongName, r.jibun, r.lat, r.lng, r.dealYear, r.dealMonth, r.dealDay, r.id
       FROM ${Prisma.raw(rentTable.table)} r
       WHERE r.bjdCode = ${identity.bjdCode}
         AND r.buildingName = ${identity.buildingName}

@@ -374,6 +374,138 @@ describe('getDetailOverview', () => {
     expect(result?.location).toEqual({ lat: 37.5, lng: 127 });
   });
 
+  // 국토부가 입주 뒤 지번을 정리해 같은 단지를 옛 지번·새 지번으로 나눠 보내는 경우(신도림역동문디이스트 33→1293)
+  function mockSameRoadAddresses(
+    addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null; lastDeal: number }>,
+    location: Array<{ dongName: string; jibun: string | null; lat: number; lng: number }>,
+  ): void {
+    mockQueryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce(addresses.map((address) => ({ ...address, lastDeal: BigInt(address.lastDeal) })))
+      .mockResolvedValueOnce(location)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+  }
+
+  it('merges parcels sharing one road address into the most recent parcel and keeps its coordinates', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '구로동', jibun: '33', roadName: '공원로6가길 58', lastDeal: 20260630 },
+    ], [{ dongName: '구로동', jibun: '1293', lat: 37.51, lng: 126.89 }]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toEqual([{ dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58' }]);
+    expect(overview?.locationAmbiguous).toBe(false);
+    expect(overview?.location).toEqual({ lat: 37.51, lng: 126.89 });
+    expect(mockQueryRaw).toHaveBeenCalledTimes(8);
+  });
+
+  it('picks the most recent parcel regardless of sort order and ignores whitespace in road names', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길  58', lastDeal: 20260515 },
+      { dongName: '구로동', jibun: '33', roadName: '공원로6가길 58 ', lastDeal: 20260820 },
+    ], [{ dongName: '구로동', jibun: '33', lat: 37.5, lng: 126.8 }]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toEqual([{ dongName: '구로동', jibun: '33', roadName: '공원로6가길 58' }]);
+    expect(overview?.locationAmbiguous).toBe(false);
+    expect(overview?.location).toEqual({ lat: 37.5, lng: 126.8 });
+  });
+
+  it('looks up the most recent parcel coordinates when the latest coordinates belong to the old parcel', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '구로동', jibun: '33', roadName: '공원로6가길 58', lastDeal: 20260630 },
+    ], [{ dongName: '구로동', jibun: '33', lat: 37.5, lng: 126.8 }]);
+    mockQueryRaw.mockResolvedValueOnce([{ dongName: '구로동', jibun: '1293', lat: 37.51, lng: 126.89 }]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.location).toEqual({ lat: 37.51, lng: 126.89 });
+    const parcelQuery = mockQueryRaw.mock.calls[8][0] as Prisma.Sql;
+    expect(parcelQuery.values).toContain('구로동');
+    expect(parcelQuery.values).toContain('1293');
+  });
+
+  it('falls back to another parcel on the same road when the most recent parcel has no coordinates', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '구로동', jibun: '33', roadName: '공원로6가길 58', lastDeal: 20260630 },
+    ], [{ dongName: '구로동', jibun: '33', lat: 37.5, lng: 126.8 }]);
+    mockQueryRaw.mockResolvedValueOnce([]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toEqual([{ dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58' }]);
+    expect(overview?.locationAmbiguous).toBe(false);
+    expect(overview?.location).toEqual({ lat: 37.5, lng: 126.8 });
+  });
+
+  it('keeps the merged address without a map when no parcel has coordinates', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '구로동', jibun: '33', roadName: '공원로6가길 58', lastDeal: 20260630 },
+    ], []);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toHaveLength(1);
+    expect(overview?.locationAmbiguous).toBe(false);
+    expect(overview?.location).toBeNull();
+    expect(mockQueryRaw).toHaveBeenCalledTimes(8);
+  });
+
+  it('keeps addresses ambiguous when any road name is blank', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '구로동', jibun: '33', roadName: '  ', lastDeal: 20260630 },
+    ], [{ dongName: '구로동', jibun: '1293', lat: 37.51, lng: 126.89 }]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toHaveLength(2);
+    expect(overview?.locationAmbiguous).toBe(true);
+    expect(overview?.location).toBeNull();
+  });
+
+  it('keeps addresses ambiguous when the road address is only a building number', async () => {
+    mockSameRoadAddresses([
+      { dongName: '능동', jibun: '1039', roadName: '286', lastDeal: 20261010 },
+      { dongName: '능동', jibun: '1041', roadName: '286', lastDeal: 20260630 },
+    ], [{ dongName: '능동', jibun: '1039', lat: 37.2, lng: 127.0 }]);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: '서동탄역우남퍼스트빌아파트' }, NOW);
+
+    expect(overview?.addresses).toHaveLength(2);
+    expect(overview?.locationAmbiguous).toBe(true);
+  });
+
+  it('keeps addresses ambiguous when the same road name sits in different legal dongs', async () => {
+    mockSameRoadAddresses([
+      { dongName: '구로동', jibun: '1293', roadName: '공원로6가길 58', lastDeal: 20261010 },
+      { dongName: '신도림동', jibun: '33', roadName: '공원로6가길 58', lastDeal: 20260630 },
+    ], [{ dongName: '구로동', jibun: '1293', lat: 37.51, lng: 126.89 }]);
+
+    const overview = await getDetailOverview('apt-rent', { bjdCode: '11680', buildingName: '신도림역동문디이스트' }, NOW);
+
+    expect(overview?.addresses).toHaveLength(2);
+    expect(overview?.locationAmbiguous).toBe(true);
+    expect(overview?.location).toBeNull();
+  });
+
+  it('asks the address query for the latest deal date of each parcel', async () => {
+    mockOverviewBase();
+    await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+    const sql = sqlText(mockQueryRaw.mock.calls[3][0]);
+    expect(sql).toContain('lastDeal');
+    expect(sql).toContain('GROUP BY dongName, jibun, roadName');
+  });
+
   it('filters all overview sources to the address resolved by buildingKey', async () => {
     mockQueryRaw
       .mockResolvedValueOnce([{ dongName: '대치동', jibun: '934-2' }])
