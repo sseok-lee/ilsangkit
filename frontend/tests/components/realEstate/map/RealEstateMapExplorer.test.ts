@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import RealEstateMapExplorer from '~/components/realEstate/map/RealEstateMapExplorer.vue'
 import type { MapItem } from '~/types/realEstateMap'
@@ -26,14 +26,20 @@ const DONG_ITEMS: MapItem[] = [
     avgPricePerPyeong: 3225, transactionCount: 42 },
 ]
 
+// 테스트마다 마운트를 푼다. 남겨 두면 앞 테스트의 디바운스 조회(onMapIdle 250ms)·유형 전환 조회가 뒤 테스트
+// 도중에 전역 $fetch 목 응답(data:{})을 받아 items=undefined 로 다시 그리다 깨진다
+// (CI: 'props.items is not iterable' Unhandled Rejection 2건).
+enableAutoUnmount(afterEach)
+
 // syncHash 가 마지막 위치를 localStorage 에 저장한다 — 앞 테스트의 저장값이 다음 테스트의
 // 첫 위치(저장 위치 복원)로 새어 들지 않게 매번 비운다.
 beforeEach(() => {
   window.localStorage.clear()
 })
 
-function mountExplorer() {
+function mountExplorer(options: { attachTo?: Element } = {}) {
   return mount(RealEstateMapExplorer, {
+    ...options,
     props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
     global: { stubs: { RealEstateMapCanvas: { template: '<div data-testid="canvas" />' } } },
   })
@@ -315,7 +321,6 @@ describe('RealEstateMapExplorer 레이아웃', () => {
           },
           MapFilterBar: { name: 'MapFilterBar', template: '<div />', props: ['type'] },
           RealEstateMapCanvas: { name: 'RealEstateMapCanvas', template: '<div />', props: ['items', 'center', 'level'] },
-          MapBottomSheet: { name: 'MapBottomSheet', template: '<div><slot /></div>', props: ['expanded'], emits: ['update:expanded'] },
           ClientOnly: { template: '<div><slot /></div>' },
         },
       },
@@ -341,9 +346,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     // 1448px 로 늘어나고 스크롤이 죽었다 — absolute inset-0 은 height 프로퍼티 자체를
     // 쓰지 않으므로(section 이 이미 fixed=positioned 라 containing block) 그 주입과
     // 무관하다.
-    // `section > div` 는 MapBottomSheet 스텁의 루트(`<div><slot /></div>`)도 매칭해
-    // find() 의 "첫 매치"가 템플릿 순서에 우연히 기댄다 — lg:flex 클래스를 가진 쪽을
-    // 명시적으로 골라 그 우연에 기대지 않게 한다.
+    // section 바로 아래 div 가 늘어나도 첫 매치에 기대지 않도록 absolute+flex-col 쪽을 명시적으로 고른다.
     const cls = mountForLayout()
       .findAll('section > div')
       .find((d) => d.classes().includes('absolute') && d.classes().includes('flex-col'))
@@ -371,11 +374,11 @@ describe('RealEstateMapExplorer 레이아웃', () => {
     expect(sidebar.classes()).toContain('w-full')
   })
 
-  it('지도 영역은 하단 시트 위까지만 차지한다 — 모바일 SDK 출처가 시트에 가려지지 않는다', () => {
+  it('지도 영역은 모바일에서도 필터 아래 남은 화면을 꽉 채운다 — 하단 시트 몫을 비워 두지 않는다', () => {
     const w = mountForLayout()
     const mapArea = w.find('.map-canvas-panel')
     expect(mapArea.exists()).toBe(true)
-    expect(mapArea.attributes('style')).toContain('--sheet-cover: 38dvh')
+    expect(mapArea.attributes('style') ?? '').not.toContain('--sheet-cover')
     expect(mapArea.classes().some((c) => c.startsWith('h-') || c.includes('60vh'))).toBe(false)
   })
 
@@ -395,7 +398,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
       await nextTick()
 
       const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
-      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.find('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
 
       expect(desktopSidebar.props('showFooter')).toBe(true)
       expect(mobileSidebar.props('showFooter')).toBe(false)
@@ -407,7 +410,7 @@ describe('RealEstateMapExplorer 레이아웃', () => {
       await nextTick()
 
       const desktopSidebar = w.find('aside').findComponent({ name: 'MapSidebar' })
-      const mobileSidebar = w.findComponent({ name: 'MapBottomSheet' }).findComponent({ name: 'MapSidebar' })
+      const mobileSidebar = w.find('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
 
       expect(desktopSidebar.props('showFooter')).toBe(false)
       expect(mobileSidebar.props('showFooter')).toBe(true)
@@ -687,8 +690,8 @@ describe('RealEstateMapExplorer — 범례·위치 경로', () => {
 
   it('시·도 단계 위치 경로는 "전국"', () => {
     const paths = mountExplorer().findAll('[data-testid="map-location-path"]')
-    // 데스크톱(지도 하단)·모바일(시트 머리) 두 자리
-    expect(paths).toHaveLength(2)
+    // 지도 하단 가운데 알약 한 자리 — 모바일·데스크톱 공용
+    expect(paths).toHaveLength(1)
     for (const p of paths) expect(p.text()).toBe('전국')
   })
 
@@ -885,5 +888,179 @@ describe('RealEstateMapExplorer — 첫 화면 위치와 시·도 칩', () => {
     const nation = w.findAll('[data-testid="map-sido-chips"]')[0].findAll('a')[0]
     await nation.trigger('click')
     expect(w.findComponent(CanvasStub).props('level')).toBe(13)
+  })
+})
+
+// 모바일(lg 미만)은 하단 시트 없이 지도가 화면을 채우고, '목록 보기'로 전체 화면 목록을 덮어 연다.
+// 목록은 v-show 로만 숨긴다 — SSR HTML 에 시·도 칩·지역 링크가 그대로 남아야 한다(모바일 우선 색인).
+describe('RealEstateMapExplorer — 모바일 지도/목록 전환', () => {
+  afterEach(() => {
+    window.location.hash = ''
+  })
+
+  const isHidden = (el: { attributes: (k: string) => string | undefined }) =>
+    /display:\s*none/.test(el.attributes('style') ?? '')
+
+  it('기본은 지도 화면이다 — 목록은 숨겨져 있지만 DOM 에 시·도 링크가 그대로 있다', () => {
+    const w = mountExplorer()
+    const list = w.get('[data-testid="map-mobile-list"]')
+    expect(isHidden(list)).toBe(true)
+    expect(list.classes()).toContain('lg:hidden')
+    expect(list.html()).toContain('href="/real-estate/apt-sale/seoul"')
+    expect(list.html()).toContain('data-testid="map-sido-chips"')
+    expect(w.find('[data-testid="canvas"]').exists()).toBe(true)
+  })
+
+  it("'목록 보기'로 목록을 열고 '지도 보기'로 돌아온다 — 지도는 숨기지 않고 목록이 위를 덮는다", async () => {
+    const w = mountExplorer()
+    const open = w.get('[data-testid="map-list-open"]')
+    expect(open.text()).toContain('목록 보기')
+    expect(open.classes()).toContain('lg:hidden')
+    expect(open.classes()).toContain('min-h-[44px]')
+
+    await open.trigger('click')
+    expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(false)
+    // 지도 패널은 그대로 보인다(크기 불변 → 카카오 relayout 불필요)
+    expect(isHidden(w.get('.map-canvas-panel'))).toBe(false)
+
+    const close = w.get('[data-testid="map-list-close"]')
+    expect(close.text()).toContain('지도 보기')
+    expect(close.classes()).toContain('min-h-[44px]')
+    await close.trigger('click')
+    expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(true)
+  })
+
+  it('지도 화면 하단에 출처 한 줄을 항상 보인다(모바일 전용)', () => {
+    const line = mountExplorer().get('[data-testid="map-source-line"]')
+    expect(line.classes()).toContain('lg:hidden')
+    expect(line.classes()).toContain('truncate')
+    expect(line.text()).toContain('국토교통부')
+    expect(line.text()).toContain('공공누리')
+  })
+
+  it('위치 경로 알약은 모바일에서도 지도 위에 보인다', () => {
+    const w = mountExplorer()
+    const path = w.get('[data-testid="map-location-path"]')
+    const wrap = path.element.parentElement!
+    expect(wrap.className).not.toMatch(/(^|\s)hidden(\s|$)/)
+    expect(w.get('[data-testid="map-mobile-list"]').find('[data-testid="map-location-path"]').exists()).toBe(false)
+  })
+
+  // 접근성: 토글 상태 알림·포커스 이동·열린 동안 지도 쪽 inert·Esc 닫기.
+  it("'목록 보기'는 aria-expanded·aria-controls 로 목록을 가리키고, 열면 '지도 보기'로·닫으면 '목록 보기'로 포커스가 옮겨 간다", async () => {
+    const w = mountExplorer({ attachTo: document.body })
+    const open = w.get('[data-testid="map-list-open"]')
+    const list = w.get('[data-testid="map-mobile-list"]')
+    expect(open.attributes('aria-expanded')).toBe('false')
+    expect(open.attributes('aria-controls')).toBe(list.attributes('id'))
+    expect(list.attributes('id')).toBeTruthy()
+
+    await open.trigger('click')
+    await flushPromises()
+    expect(open.attributes('aria-expanded')).toBe('true')
+    expect(document.activeElement).toBe(w.get('[data-testid="map-list-close"]').element)
+
+    await w.get('[data-testid="map-list-close"]').trigger('click')
+    await flushPromises()
+    expect(open.attributes('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(open.element)
+  })
+
+  it('목록이 열린 동안 지도 쪽(필터바 제외)은 inert 이고, 처음(SSR)엔 inert 속성이 없다', async () => {
+    const w = mountExplorer()
+    const mapLayer = w.get('[data-testid="map-layer"]')
+    const isInert = () => mapLayer.attributes('inert') !== undefined || (mapLayer.element as HTMLElement & { inert?: boolean }).inert === true
+    expect(mapLayer.attributes('inert')).toBeUndefined()
+    expect(mapLayer.find('[data-testid="map-list-open"]').exists()).toBe(true)
+    expect(mapLayer.findComponent({ name: 'MapFilterBar' }).exists()).toBe(false)
+
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    expect(isInert()).toBe(true)
+    await w.get('[data-testid="map-list-close"]').trigger('click')
+    expect(isInert()).toBe(false)
+  })
+
+  it('Esc 로 목록을 닫는다', async () => {
+    const w = mountExplorer()
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    await w.get('[data-testid="map-mobile-list"]').trigger('keydown', { key: 'Escape' })
+    expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(true)
+  })
+
+  it('목록 단위(granularity)가 바뀌면 목록 스크롤을 맨 위로 올린다', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        items: [{ name: '서울', district: '양천구', dong: null, lat: 37.52, lng: 126.86, avgPricePerPyeong: 5427, transactionCount: 10 }],
+        granularity: 'district', total: 1, exact: true,
+      },
+    }))
+    const CanvasStub = { template: '<div data-testid="canvas" />', emits: ['idle', 'select', 'hover'] }
+    try {
+      const w = mount(RealEstateMapExplorer, {
+        props: { initialType: 'apt-sale', initialItems: ITEMS, initialGranularity: 'city' },
+        global: { stubs: { RealEstateMapCanvas: CanvasStub } },
+      })
+      await w.get('[data-testid="map-list-open"]').trigger('click')
+      const scroller = w.get('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' }).element as HTMLElement
+      scroller.scrollTop = 500
+      await w.findComponent(CanvasStub).vm.$emit('idle', { swLat: 37.4, swLng: 126.8, neLat: 37.7, neLng: 127.2 }, 9, { lat: 37.55, lng: 126.98 })
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      await flushPromises()
+      expect(scroller.scrollTop).toBe(0)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('단지 행을 처음 눌러 선택해도 목록 스크롤은 그대로다 — 두 번째 탭(상세)을 위해 다시 찾지 않게', async () => {
+    const w = mount(RealEstateMapExplorer, {
+      props: { initialType: 'apt-sale', initialItems: BUILDING_ITEMS, initialGranularity: 'building' },
+      global: { stubs: { RealEstateMapCanvas: { template: '<div data-testid="canvas" />' } } },
+    })
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const sidebar = w.get('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
+    const scroller = sidebar.element as HTMLElement
+    scroller.scrollTop = 500
+    await sidebar.vm.$emit('select', BUILDING_ITEMS[0])
+    await flushPromises()
+    expect(w.vm.selectedKey).not.toBeNull()
+    expect(scroller.scrollTop).toBe(500)
+  })
+
+  it('시·도 칩으로 지역을 바꾸면 목록 스크롤을 맨 위로 올린다', async () => {
+    const w = mountExplorer()
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const sidebar = w.get('[data-testid="map-mobile-list"]').findComponent({ name: 'MapSidebar' })
+    const scroller = sidebar.element as HTMLElement
+    scroller.scrollTop = 500
+    await sidebar.vm.$emit('select-city', null)
+    await flushPromises()
+    expect(scroller.scrollTop).toBe(0)
+  })
+
+  it('데스크톱으로 넓어지면 열린 목록을 닫는다 — 지도 쪽 inert 가 데스크톱에 남지 않게', async () => {
+    let listener: (() => void) | null = null
+    const mq = { matches: false, addEventListener: vi.fn((_: string, fn: () => void) => { listener = fn }), removeEventListener: vi.fn() }
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(mq))
+    try {
+      const w = mountExplorer()
+      await w.get('[data-testid="map-list-open"]').trigger('click')
+      mq.matches = true
+      listener!()
+      await nextTick()
+      expect(isHidden(w.get('[data-testid="map-mobile-list"]'))).toBe(true)
+      expect(w.get('[data-testid="map-layer"]').attributes('inert')).toBeUndefined()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('데스크톱 사이드바(aside)는 그대로다 — 토글 상태와 무관하게 lg:flex', async () => {
+    const w = mountExplorer()
+    await w.get('[data-testid="map-list-open"]').trigger('click')
+    const aside = w.get('aside')
+    expect(aside.classes()).toEqual(expect.arrayContaining(['hidden', 'lg:flex', 'lg:w-[360px]']))
+    expect(isHidden(aside)).toBe(false)
   })
 })

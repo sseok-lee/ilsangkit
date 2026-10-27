@@ -439,6 +439,12 @@ for (const width of [360, 390, 768, 1440]) {
     await expect(page.locator('[data-testid="map-sidebar-error"] a[href="/real-estate/apt-rent"]')).not.toHaveCount(0)
     await expectNoOverflow(page)
     await expectMinimumHeight(page, '[data-testid="map-canvas-error"] button')
+    // lg 미만은 목록이 지도 위를 덮는 전체 화면이라 '목록 보기'로 열어야 목록 안 버튼이 보인다.
+    if (width < 1024) {
+      await expectMinimumHeight(page, '[data-testid="map-list-open"]')
+      await page.locator('[data-testid="map-list-open"]').click()
+      await expectMinimumHeight(page, '[data-testid="map-list-close"]')
+    }
     await expectMinimumHeight(page, '[data-testid="map-sidebar-error"] button')
     await expectMinimumHeight(page, '[data-testid="map-sidebar-error"] a')
     await screenshot(page, testInfo, `map-sdk-error-${width}`, false)
@@ -492,6 +498,48 @@ test('/real-estate first view is Seoul districts in SSR, keeps 16 province links
     await expectNoOverflow(page)
   }
   expect(hydrationMessages).toEqual([])
+  expect(pageErrors).toEqual([])
+})
+
+// 모바일은 하단 시트 없이 지도가 화면을 채우고, '목록 보기'로 전체 화면 목록을 연다(운영자 결정 2026-10-27).
+// 목록은 v-show 로만 숨긴다 — SSR HTML 의 모바일 목록 사본 안에 시·도 칩·지역 링크가 그대로 있어야 한다.
+test('/real-estate mobile: map fills the screen, list toggles over it, and the SSR list keeps crawlable links', async ({ page, request }) => {
+  const html = await (await request.get('/real-estate')).text()
+  const at = html.indexOf('data-testid="map-mobile-list"')
+  expect(at).toBeGreaterThan(-1)
+  const openTag = html.slice(html.lastIndexOf('<', at), html.indexOf('>', at) + 1)
+  expect(openTag).toMatch(/display:\s*none/)
+  const mobileList = html.slice(at)
+  expect(mobileList).toContain('data-testid="map-sido-chips"')
+  expect(mobileList).toContain('href="/real-estate/apt-sale/busan"')
+  expect(mobileList).toContain('href="/real-estate/apt-sale/seoul/gangnam"')
+
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await blockExternalNetwork(page)
+  for (const width of [360, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/real-estate')
+    await hydrated(page)
+    const list = page.locator('[data-testid="map-mobile-list"]')
+    await expect(list).toBeHidden()
+    await expect(page.locator('[data-testid="map-source-line"]')).toBeVisible()
+    await expect(page.locator('[data-testid="map-source-line"]')).toContainText('공공누리')
+    await expect(page.locator('[data-testid="map-location-path"]')).toBeVisible()
+    await expectMinimumHeight(page, '[data-testid="map-list-open"]')
+    await expectNoOverflow(page)
+
+    await page.locator('[data-testid="map-list-open"]').click()
+    await expect(list).toBeVisible()
+    // 목록 화면은 자체 스크롤로 끝의 출처 푸터까지 닿는다.
+    const footer = list.locator('[data-testid="sidebar-source"]')
+    await footer.scrollIntoViewIfNeeded()
+    await expect(footer).toBeInViewport()
+    await expectNoOverflow(page)
+
+    await page.locator('[data-testid="map-list-close"]').click()
+    await expect(list).toBeHidden()
+  }
   expect(pageErrors).toEqual([])
 })
 
