@@ -32,6 +32,30 @@ export const SIDO_CHIPS: SidoChip[] = [
 ]
 
 /**
+ * 시·도 대표 좌표(시·도청 소재지 근처). 지도 시·도 칩이 전국 집계에서 좌표를 못 찾을 때
+ * (그 유형에 최근 거래가 없는 시·도, 집계 일시 실패) 쓰는 폴백이다 — 없으면 '이 지역 목록'은
+ * 그 시·도를 가리키는데 지도는 제자리에서 확대만 돼 둘이 어긋난다.
+ */
+export const SIDO_CENTERS: Record<string, { lat: number; lng: number }> = {
+  seoul: { lat: 37.5665, lng: 126.978 },
+  busan: { lat: 35.1796, lng: 129.0756 },
+  daegu: { lat: 35.8714, lng: 128.6014 },
+  incheon: { lat: 37.4563, lng: 126.7052 },
+  daejeon: { lat: 36.3504, lng: 127.3845 },
+  ulsan: { lat: 35.5384, lng: 129.3114 },
+  sejong: { lat: 36.48, lng: 127.289 },
+  gyeonggi: { lat: 37.275, lng: 127.0095 },
+  gangwon: { lat: 37.8813, lng: 127.7298 },
+  chungbuk: { lat: 36.6357, lng: 127.4917 },
+  chungnam: { lat: 36.6588, lng: 126.6728 },
+  jeonbuk: { lat: 35.8242, lng: 127.148 },
+  gyeongbuk: { lat: 36.576, lng: 128.5056 },
+  gyeongnam: { lat: 35.2383, lng: 128.6925 },
+  jeju: { lat: 33.4996, lng: 126.5312 },
+  jeonnamgwangju: { lat: 35.1595, lng: 126.8526 },
+}
+
+/**
  * 시·도 표시 이름. 지도 API 의 name 은 DB city 원값이라 대부분 축약형('서울')이지만 통합시는
  * 풀네임('전남광주통합특별시')이고, 다른 경로에서는 '서울특별시'·'경기도' 같은 정식명도 온다.
  * slug 로 정규화한 뒤 칩 라벨('서울', '전남·광주')로 맞춘다 — 지도 핀·위치 경로가 목록과 같은

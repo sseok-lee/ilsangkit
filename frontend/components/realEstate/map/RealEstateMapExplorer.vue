@@ -140,7 +140,7 @@ import {
 } from '~/types/realEstateMap'
 import { explorationListHref } from '~/utils/explorationNavigation'
 import { buildMapLocationPath, type MapPathCrumb } from '~/utils/mapLocationPath'
-import { cityDisplayName, type SidoChip } from '~/utils/regionChips'
+import { SIDO_CENTERS, cityDisplayName, type SidoChip } from '~/utils/regionChips'
 import { CITY_SLUG_MAP } from '~/shared/regionSlugs'
 import type { RealEstateUrlType } from '~/utils/realEstateUrl'
 
@@ -177,7 +177,7 @@ const {
   type, level, granularity, items, total, exact, pending, error,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
-  hoveredKey, setType, setLevel, onMapIdle, retry,
+  hoveredKey, setType, setLevel, onMapIdle, retry, fetchNow,
 } = useRealEstateMap({
   type: props.initialType,
   items: props.initialItems,
@@ -284,6 +284,13 @@ watch(granularity, () => {
 })
 
 let lastBounds: MapBounds = { swLat: 33, swLng: 124, neLat: 39, neLng: 132 }
+/** 첫 조회를 지도 idle 에 미뤄 둔 상태인지(해시·저장 위치 복원). */
+let deferredFetch = false
+/**
+ * 지도 위치가 바뀐 횟수(지도 idle·목록/경로/칩 선택). 시·도 칩이 좌표를 기다리는 동안 사용자가
+ * 지도를 움직이거나 다른 곳을 골랐으면, 늦게 온 응답이 그 위치를 덮어쓰지 않게 비교한다.
+ */
+let viewVersion = 0
 
 // MapSidebar 가 데스크톱 aside 와 모바일 바텀시트 두 사본으로 항상 동시에 마운트된다
 // (안 보이는 쪽은 CSS `hidden`/`lg:hidden`일 뿐 DOM 에서 사라지지 않는다). 출처 표기가
@@ -344,14 +351,18 @@ onMounted(() => {
 
   const init = resolveInitialMapState(h, readSavedMapState(), { desktop: desktopMq?.matches ?? true })
   const moved = init.lat !== center.value.lat || init.lng !== center.value.lng || init.level !== level.value
+  const typeChanged = init.type != null && init.type !== type.value
   center.value = { lat: init.lat, lng: init.lng }
   setLevel(init.level)
-  if (init.source === 'hash' && h.type != null) {
-    setType(h.type, lastBounds)
-  } else if (init.type != null && init.type !== type.value) {
-    setType(init.type, lastBounds, { fetch: false })
+  // 해시·저장 어느 쪽이든 유형만 바꾸고 조회는 지도 첫 idle(실제 bounds)에 맡긴다 — 아직 bounds 를
+  // 모르는 지금 보내면 전국 bbox 로 나가고(단지 단계면 무거운 쿼리) 곧 idle 조회로 덮인다.
+  if (typeChanged) setType(init.type!, lastBounds, { fetch: false })
+  // SSR(서울 구·군, 같은 유형)과 다른 화면으로 시작할 때만 첫 조회 전까지 경로를 숨기고,
+  // 지도가 끝내 못 뜨면(onCanvasLoadError) 그때 한 번 조회한다.
+  if (init.source !== 'default' && (moved || typeChanged)) {
+    restoring.value = true
+    deferredFetch = true
   }
-  if (init.source !== 'default' && (moved || init.type !== null)) restoring.value = true
 })
 
 onBeforeUnmount(() => {
@@ -374,6 +385,8 @@ function syncHash(): void {
 // (실측: hash lat 36.19→32.20→16.26→-0.80→... 무한 드리프트). bounds 자체는 검색 bbox
 // 용으로 왜곡 없이 그대로 onMapIdle 에 넘긴다.
 function onIdle(bounds: MapBounds, lvl: number, mapCenter: { lat: number; lng: number }): void {
+  deferredFetch = false
+  viewVersion += 1
   lastBounds = bounds
   center.value = mapCenter
   onMapIdle(bounds, lvl)
@@ -390,6 +403,12 @@ function onTypeChange(next: string): void {
 function onCanvasLoadError(message: string): void {
   canvasError.value = message
   restoring.value = false
+  // 복원한 위치의 조회를 지도 idle 에 맡겼는데 지도가 못 떴다 — idle 이 오지 않으므로 지금 받는다
+  // (bounds 를 모르니 전국 범위, level 은 복원한 값). 목록이 SSR 서울 것으로 남지 않게.
+  if (deferredFetch) {
+    deferredFetch = false
+    void fetchNow(lastBounds, level.value)
+  }
 }
 
 function onCanvasLoaded(): void {
@@ -435,6 +454,7 @@ function isWithinKoreaBounds(lat: number, lng: number): boolean {
  * 목록/지도는 현재 뷰포트 bounds 기준으로 다시 조회되므로 화면이 깨지지 않는다.
  */
 function onSelect(item: MapItem): void {
+  viewVersion += 1
   if ('buildingName' in item) {
     listRegion.value = { city: item.city, district: item.district }
   } else if (granularity.value === 'city') {
@@ -466,6 +486,7 @@ function onSelect(item: MapItem): void {
  */
 function onCrumb(crumb: MapPathCrumb): void {
   if (crumb.level == null) return
+  viewVersion += 1
   if (crumb.level === 13) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
@@ -484,6 +505,7 @@ function onCrumb(crumb: MapPathCrumb): void {
  * 시·도 집계에서 찾는다(없으면 한 번 받는다). 끝내 못 찾으면 중심은 두고 level 만 바꾼다.
  */
 async function onCityChip(chip: SidoChip | null): Promise<void> {
+  const version = ++viewVersion
   if (!chip) {
     center.value = { ...NATION_CENTER }
     listRegion.value = null
@@ -492,9 +514,14 @@ async function onCityChip(chip: SidoChip | null): Promise<void> {
   }
   const districtLevel = isDesktop.value === false ? DEFAULT_MAP_VIEW.mobileLevel : DEFAULT_MAP_VIEW.desktopLevel
   await ensureNationalCityItems(type.value)
+  // 기다리는 사이 지도가 움직였거나 다른 곳을 골랐으면 늦은 응답으로 덮어쓰지 않는다.
+  if (version !== viewVersion) return
   const c = nationalCityItems.value[type.value]?.find((i) => cityDisplayName(i.name) === chip.label)
   listRegion.value = { city: c?.name ?? CITY_SLUG_MAP[chip.slug] ?? chip.label }
-  if (c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)) center.value = { lat: c.lat, lng: c.lng }
+  const target = c?.lat != null && c.lng != null && isWithinKoreaBounds(c.lat, c.lng)
+    ? { lat: c.lat, lng: c.lng }
+    : SIDO_CENTERS[chip.slug]
+  if (target) center.value = { ...target }
   setLevel(districtLevel)
 }
 
