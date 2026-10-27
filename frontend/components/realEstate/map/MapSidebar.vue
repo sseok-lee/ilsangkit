@@ -236,12 +236,9 @@ const props = withDefaults(defineProps<{
   activeCity?: string | null
   /** 면적·가격 필터가 걸려 있는지(단지 단계 개수 문구·0곳 안내에 쓴다). */
   filterActive?: boolean
-  /** 필터 응답 메타. approximate 면 total 은 "거래 많은 scanned 곳 중" 개수다. */
-  filterMeta?: { scanned: number; approximate: boolean } | null
 }>(), {
   activeCity: null,
   filterActive: false,
-  filterMeta: null,
   showFooter: false,
   selectedKey: null,
   error: null,
@@ -461,16 +458,12 @@ const showCountNote = computed(() => visibleRows.value.length < props.total)
 const filterApplied = computed(() => props.filterActive && props.granularity === 'building')
 
 /**
- * 필터가 걸린 단지 단계의 개수 문구. 서버는 뷰포트 단지를 거래 많은 순으로 일정 수까지만 확인하므로
- * (approximate) 그때의 total 은 "그 후보 중" 개수다 — "이 영역에 N곳"이라고 쓰면 실제보다 적게 읽힌다.
+ * 필터가 걸린 단지 단계의 개수 문구. total은 전체 뷰포트에서 조건을 만족하는 단지 수다.
  */
 const filteredCountNote = computed<string | null>(() => {
   if (!filterApplied.value || props.total === 0) return null
   const n = (v: number) => v.toLocaleString('ko-KR')
   const shown = visibleRows.value.length < props.total ? ` — 상위 ${n(visibleRows.value.length)}곳 표시` : ''
-  if (props.filterMeta?.approximate) {
-    return `거래 많은 ${n(props.filterMeta.scanned)}곳 중 조건에 맞는 ${n(props.total)}곳${shown}`
-  }
   return `조건에 맞는 ${n(props.total)}곳${shown}`
 })
 

@@ -47,7 +47,6 @@
             :list-label="listLabel"
             :active-city="activeCity"
             :filter-active="filterActive"
-            :filter-meta="filterMeta"
             @hover="hoveredKey = $event"
             @select="onSelect"
             @select-city="onCityChip"
@@ -142,7 +141,6 @@
         :list-label="listLabel"
         :active-city="activeCity"
         :filter-active="filterActive"
-        :filter-meta="filterMeta"
         @hover="hoveredKey = $event"
         @select="onSelect"
         @select-city="onCityChip"
@@ -208,11 +206,10 @@ const mobileCanvasStyle = computed(() => ({
  */
 const selectedKey = ref<string | null>(null)
 const {
-  type, level, granularity, items, total, exact, pending, error,
+  filter, setFilter, type, level, granularity, items, total, exact, pending, error,
   // hoveredKey: 사이드바/캔버스 hover 로 채워지지만 현재는 아무 것도 읽지 않는다 — 소비처(하이라이트
   // 오버레이) 연결은 useMapOverlays 렌더 API 변경이 필요해 이 태스크 범위 밖. 의도적 보류다.
   hoveredKey, setType, setLevel, onMapIdle, retry, fetchNow,
-  filter, filterMeta, setFilter,
 } = useRealEstateMap({
   type: props.initialType,
   items: props.initialItems,
@@ -394,7 +391,7 @@ onMounted(() => {
     // 필터는 유형을 정한 뒤 넣고(유형에 안 맞는 가격 구간은 버려진다), 조회는 그다음 한 번만 한다.
     if (h.type != null) setType(h.type, lastBounds, { fetch: false })
     setFilter({ area: h.area ?? null, price: h.price ?? null, priceKind: h.priceKind ?? null }, lastBounds, { fetch: false })
-    if (h.type != null) void fetchNow(lastBounds, level.value)
+    if (h.type != null || h.area != null || h.price != null) void fetchNow(lastBounds, level.value)
     return
   }
 

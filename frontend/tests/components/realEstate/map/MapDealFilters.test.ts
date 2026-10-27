@@ -74,6 +74,17 @@ describe('MapDealFilters', () => {
     }
   })
 
+  it('메뉴 항목에서 Esc를 눌러도 닫히고 팝업의 접근성 역할이 일치한다', async () => {
+    const w = mountFilters()
+    const chip = w.find('[data-testid="map-filter-area"]')
+    await chip.trigger('click')
+    const menu = w.find('[data-testid="map-filter-menu-area"]')
+    expect(chip.attributes('aria-haspopup')).toBe(menu.attributes('role'))
+    await menu.find('button').trigger('keydown', { key: 'Escape' })
+    expect(w.find('[data-testid="map-filter-menu-area"]').exists()).toBe(false)
+    w.unmount()
+  })
+
   it('바깥을 누르면 메뉴를 닫는다', async () => {
     const w = mountFilters()
     await w.find('[data-testid="map-filter-price"]').trigger('click')

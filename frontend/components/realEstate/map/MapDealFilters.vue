@@ -6,7 +6,7 @@
     칩 줄은 좁은 화면에서 가로로 스크롤된다. 메뉴 판은 그 스크롤 상자 밖(이 루트 기준)에 두어야
     한다 — 스크롤 상자(overflow-x-auto) 안에 두면 아래로 펼쳐지는 판이 잘린다.
   -->
-  <div ref="root" class="relative min-w-0 max-w-full">
+  <div ref="root" class="relative min-w-0 max-w-full" @keydown.escape="openMenu = null">
     <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-line bg-white/95 p-1 shadow-card-2 lg:shadow-none">
       <div class="flex w-max flex-nowrap items-center gap-1">
         <button
@@ -18,7 +18,7 @@
           :class="chip.value
             ? 'border-primary bg-primary-50 font-bold text-primary'
             : 'border-line bg-white text-ink hover:bg-background-light'"
-          :aria-haspopup="true"
+          aria-haspopup="dialog"
           :aria-expanded="openMenu === chip.key"
           :aria-label="`${chip.name} 필터${chip.value ? `: ${chip.value}` : ''}`"
           @click="toggle(chip.key)"
@@ -58,7 +58,7 @@
       v-if="openMenu"
       :data-testid="`map-filter-menu-${openMenu}`"
       class="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-xl border border-line-2 bg-white p-1 shadow-card-2"
-      role="group"
+      role="dialog"
       :aria-label="openMenu === 'area' ? '전용면적' : '가격'"
     >
       <template v-for="group in menuGroups" :key="group.key">

@@ -211,8 +211,6 @@ export function useRealEstateMap(initial: {
   const hoveredKey = ref<string | null>(null)
   /** 단지 단계 면적·가격 필터. 서버는 집계 단계에서 무시한다. */
   const filter = ref<MapFilterState>({ ...EMPTY_MAP_FILTER })
-  /** 필터 응답의 메타(후보 수·근사 여부). 필터 없는 응답이면 null. */
-  const filterMeta = ref<{ scanned: number; approximate: boolean } | null>(null)
 
   // 빠르게 드래그하면 나중 요청이 먼저 도착한다. 시퀀스로 stale 응답을 버린다.
   let seq = 0
@@ -249,12 +247,14 @@ export function useRealEstateMap(initial: {
       granularity.value = res.data.granularity
       total.value = res.data.total
       exact.value = res.data.exact
-      filterMeta.value = res.data.filter ?? null
       error.value = null
     } catch (e) {
       // 화면을 비우지 않는다. 직전 결과를 유지한다.
       if (mySeq !== seq) return
-      error.value = e instanceof Error ? e.message : '지도 데이터를 불러오지 못했습니다.'
+      const apiError = e as { data?: { error?: { code?: string; message?: string } } }
+      error.value = apiError?.data?.error?.code === 'MAP_FILTERS_PREPARING'
+        ? apiError.data.error.message ?? '면적·가격 필터를 준비 중입니다.'
+        : e instanceof Error ? e.message : '지도 데이터를 불러오지 못했습니다.'
     } finally {
       if (mySeq === seq) pending.value = false
     }
@@ -286,7 +286,6 @@ export function useRealEstateMap(initial: {
       items.value = []
       total.value = 0
       exact.value = true
-      filterMeta.value = null
       error.value = null
     }
     clearTimer()
@@ -299,7 +298,9 @@ export function useRealEstateMap(initial: {
    * 결과가 같다. 확대해 단지 단계에 들어가는 순간의 idle 조회가 필터를 싣는다.
    */
   function setFilter(next: Partial<MapFilterState>, bounds: MapBounds = lastBounds, opts: { fetch?: boolean } = {}): void {
-    filter.value = sanitizeMapFilter(type.value, next)
+    const sanitized = sanitizeMapFilter(type.value, next)
+    if (sanitized.area === filter.value.area && sanitized.price === filter.value.price && sanitized.priceKind === filter.value.priceKind) return
+    filter.value = sanitized
     if (opts.fetch === false || granularity.value !== 'building') return
     clearTimer()
     void fetchNow(bounds, level.value)
@@ -329,7 +330,6 @@ export function useRealEstateMap(initial: {
     error: readonly(error),
     hoveredKey,
     filter: readonly(filter),
-    filterMeta: readonly(filterMeta),
     setFilter,
     isBuilding: computed(() => granularity.value === 'building'),
     setType,

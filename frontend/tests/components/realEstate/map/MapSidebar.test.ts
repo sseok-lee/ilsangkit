@@ -754,23 +754,24 @@ describe('MapSidebar — 전월세 두 줄 병기', () => {
 describe('MapSidebar — 면적·가격 필터', () => {
   const base = { granularity: 'building' as const, pending: false, type: 'apt-sale', exact: true }
 
-  it('후보가 잘렸으면(approximate) "거래 많은 N곳 중 조건에 맞는 M곳"', () => {
+  it('필터 결과 전체 개수를 표시한다', () => {
     const w = mount(MapSidebar, {
-      props: { ...base, items: BUILDINGS, total: 37, filterActive: true, filterMeta: { scanned: 400, approximate: true } },
+      props: { ...base, items: BUILDINGS, total: 37, filterActive: true },
     })
-    expect(w.find('[data-testid="map-filter-count"]').text()).toContain('거래 많은 400곳 중 조건에 맞는 37곳')
+    expect(w.find('[data-testid="map-filter-count"]').text()).toContain('조건에 맞는 37곳')
+    expect(w.text()).not.toContain('거래 많은')
   })
 
   it('잘리지 않았으면 "조건에 맞는 N곳"', () => {
     const w = mount(MapSidebar, {
-      props: { ...base, items: BUILDINGS, total: 1, filterActive: true, filterMeta: { scanned: 120, approximate: false } },
+      props: { ...base, items: BUILDINGS, total: 1, filterActive: true },
     })
     expect(w.find('[data-testid="map-filter-count"]').text()).toBe('조건에 맞는 1곳')
   })
 
   it('필터 결과 0곳이면 안내와 필터 초기화', async () => {
     const w = mount(MapSidebar, {
-      props: { ...base, items: [], total: 0, filterActive: true, filterMeta: { scanned: 50, approximate: false } },
+      props: { ...base, items: [], total: 0, filterActive: true },
     })
     const empty = w.find('[data-testid="map-filter-empty"]')
     expect(empty.text()).toContain('조건에 맞는 단지가 없습니다')

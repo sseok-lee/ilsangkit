@@ -290,10 +290,10 @@ describe('면적·가격 필터 — 해시·저장·요청', () => {
       .toEqual(['level', 'neLat', 'neLng', 'prev', 'swLat', 'swLng'])
   })
 
-  it('단지 단계에서 필터를 바꾸면 그 필터로 바로 다시 조회하고 응답 메타를 둔다', async () => {
+  it('단지 단계에서 필터를 바꾸면 바로 다시 조회하고 전체 개수를 둔다', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(OK('building'))
-      .mockResolvedValueOnce(OK('building', { total: 3, filter: { scanned: 400, approximate: true } }))
+      .mockResolvedValueOnce(OK('building', { total: 3 }))
     vi.stubGlobal('$fetch', fetchMock)
     const map = useRealEstateMap({ type: 'apt-rent', items: [], granularity: 'building', level: 5 })
     await map.fetchNow(bounds, 5)
@@ -301,7 +301,7 @@ describe('면적·가격 필터 — 해시·저장·요청', () => {
     await flushPromises()
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(fetchMock.mock.calls[1][1].params).toMatchObject({ area: '60-85', price: '30000-50000', priceKind: 'jeonse' })
-    expect(map.filterMeta.value).toEqual({ scanned: 400, approximate: true })
+    expect(map.total.value).toBe(3)
   })
 
   it('집계 단계에서 필터를 바꾸면 다시 조회하지 않는다(서버가 무시하므로 결과가 같다)', async () => {
@@ -322,4 +322,24 @@ describe('면적·가격 필터 — 해시·저장·요청', () => {
     await flushPromises()
     expect(map.filter.value).toEqual({ area: '85-135', price: null, priceKind: null })
   })
+
+  it('같은 필터를 다시 고르면 재조회하지 않는다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(OK('building'))
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'building', level: 5 })
+    map.setFilter({ area: '60-85' }, bounds)
+    await flushPromises()
+    map.setFilter({ area: '60-85' }, bounds)
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+ it('백필 준비 중 오류는 서버의 안내를 표시한다', async () => {
+    const fetchMock = vi.fn().mockRejectedValue({ data: { error: { code: 'MAP_FILTERS_PREPARING', message: '면적·가격 필터를 준비 중입니다.' } } })
+    vi.stubGlobal('$fetch', fetchMock)
+    const map = useRealEstateMap({ type: 'apt-sale', items: [], granularity: 'building', level: 5 })
+    await map.fetchNow(bounds, 5)
+    expect(map.error.value).toBe('면적·가격 필터를 준비 중입니다.')
+  })
+
 })

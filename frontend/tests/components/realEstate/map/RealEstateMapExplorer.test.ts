@@ -139,6 +139,17 @@ describe('RealEstateMapExplorer', () => {
       return { w, canvas: w.findComponent(CanvasStub) }
     }
 
+    it('전국 SSR에서도 유형 없이 필터만 담긴 해시를 조회에 반영한다', async () => {
+      const fetch = vi.mocked(globalThis.$fetch)
+      fetch.mockClear()
+      window.location.hash = '#level=6&area=60-85'
+      mountWithCanvasStub()
+      await flushPromises()
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/apt-sale/map'), expect.objectContaining({
+        params: expect.objectContaining({ level: 6, area: '60-85' }),
+      }))
+    })
+
     it('type/level 이 있는 해시는 필터바 활성 타입과 캔버스 level prop 에 그대로 반영된다', async () => {
       window.location.hash = '#type=villa-rent&level=5&lat=37.5&lng=127.05'
       const { w, canvas } = mountWithCanvasStub()
@@ -971,7 +982,7 @@ describe('RealEstateMapExplorer — 면적·가격 필터', () => {
 
   it('단지 단계 결과 0곳이면 지도·목록에 안내, 필터 초기화를 누르면 필터 없이 다시 조회', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
-      success: true, data: { items: [], granularity: 'building', total: 0, exact: true, filter: { scanned: 12, approximate: false } },
+      success: true, data: { items: [], granularity: 'building', total: 0, exact: true },
     })
     vi.stubGlobal('$fetch', fetchMock)
     window.location.hash = '#type=apt-sale&level=4&lat=37.5&lng=127.05&area=135-'
