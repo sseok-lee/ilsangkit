@@ -6,7 +6,9 @@ const {
   mockGetBuildingInfo,
   mockGetCanonicalPath,
   mockIsPreservedMode,
+  mockFindKaptComplex,
 } = vi.hoisted(() => ({
+  mockFindKaptComplex: vi.fn(),
   mockQueryRaw: vi.fn(),
   mockGetBuildingInfo: vi.fn(),
   mockGetCanonicalPath: vi.fn(),
@@ -32,6 +34,10 @@ vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
   isPreservedRealEstateUrlMode: mockIsPreservedMode,
 }));
 
+vi.mock('../../src/services/kaptComplexMatcher.js', () => ({
+  findKaptComplex: mockFindKaptComplex,
+}));
+
 import { getDetailOverview } from '../../src/services/realEstateDetailService.js';
 
 function sqlText(query: unknown): string {
@@ -44,6 +50,8 @@ beforeEach(() => {
   // 중간값용 매매·전세 로드(6·7번째)·월세 최근가(8번째) 쿼리는 별도 지정이 없으면 빈 결과
   mockQueryRaw.mockResolvedValue([]);
   mockGetBuildingInfo.mockReset();
+  mockFindKaptComplex.mockReset();
+  mockFindKaptComplex.mockResolvedValue(null);
   mockGetCanonicalPath.mockReset();
   mockGetCanonicalPath.mockResolvedValue(null);
   mockIsPreservedMode.mockReset();
@@ -629,5 +637,57 @@ describe('getDetailOverview', () => {
 
     await expect(getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' })).resolves.toBeNull();
     expect(mockQueryRaw).not.toHaveBeenCalled();
+  });
+});
+
+describe('getDetailOverview complex', () => {
+  const COMPLEX = { matchType: 'address', kaptCode: 'A13580602', name: '개포경남아파트', householdCount: 678 };
+
+  it('K-apt 단지 정보를 개요에 싣고 건물 주소·개요 주소·건축연도를 넘긴다', async () => {
+    mockGetBuildingInfo.mockResolvedValue({
+      bjdCode: '11680', buildingName: '개포경남', buildYear: 1984, dongName: '개포동', jibun: '649',
+    });
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: '개포경남' }, NOW);
+
+    expect(overview?.complex).toEqual(COMPLEX);
+    expect(mockFindKaptComplex).toHaveBeenCalledWith({
+      sggCode: '11680',
+      primaryAddress: { dongName: '개포동', jibun: '649', roadName: undefined },
+      addresses: [{ dongName: '역삼동', jibun: '1', roadName: null }],
+      roadNames: [],
+      buildingName: '개포경남',
+      buildYear: 1984,
+    });
+  });
+
+  it('같은 지번에 신고된 도로명을 합치기 전 그대로 모두 넘긴다', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce([
+        { dongName: '이촌동', jibun: '402', roadName: '이촌로87길 14' },
+        { dongName: '이촌동', jibun: '402', roadName: '이촌로87길 13' },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindKaptComplex.mock.calls[0][0].roadNames).toEqual(['이촌로87길 14', '이촌로87길 13']);
+  });
+
+  it('단지 조회가 실패해도 개요는 내고 complex 는 null', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockRejectedValue(new Error('db down'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview).not.toBeNull();
+    expect(overview?.complex).toBeNull();
+    warn.mockRestore();
   });
 });

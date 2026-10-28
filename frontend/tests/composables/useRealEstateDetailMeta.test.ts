@@ -376,3 +376,41 @@ describe('buildRealEstateDetailMeta - 기본 면적 최근 거래', () => {
     expect(withDeal.title).toContain('실거래가·시세')
   })
 })
+
+describe('buildRealEstateDetailMeta - K-apt 단지 정보', () => {
+  const short: DetailMetaInput = {
+    ...base,
+    buildingName: '개포경남',
+    summary: { totalCount: 12 },
+    facilitySummary: null,
+    areaRange: { min: 59, max: 84 },
+    buildYear: 1983,
+  }
+
+  it('세대수·전용면적·사용승인 연도 순으로 싣고 준공 대신 사용승인을 쓴다', () => {
+    const { description } = buildRealEstateDetailMeta({ ...short, complex: { householdCount: 678, useApprovalYear: 1984 } })
+    expect(description).toContain('678세대, 전용 59~84㎡, 1984년 사용승인.')
+    expect(description).not.toContain('준공')
+    expect(description.length).toBeLessThanOrEqual(120)
+  })
+
+  it('사용승인 연도가 없으면 준공년도를 그대로 쓴다', () => {
+    const { description } = buildRealEstateDetailMeta({ ...short, complex: { householdCount: 678, useApprovalYear: null } })
+    expect(description).toContain('678세대, 전용 59~84㎡, 1983년 준공.')
+  })
+
+  it('길이가 넘치면 세대수는 마지막까지 남는다', () => {
+    const long: DetailMetaInput = {
+      ...base,
+      buildingName: '아주아주긴단지이름을가진래미안대치팰리스퍼스트클래스',
+      complex: { householdCount: 2296, useApprovalYear: 2020 },
+    }
+    const { description } = buildRealEstateDetailMeta(long)
+    expect(description).toContain('2,296세대')
+    expect(description).not.toContain('사용승인')
+  })
+
+  it('complex 가 없으면 기존 출력과 같다', () => {
+    expect(buildRealEstateDetailMeta({ ...base, complex: null })).toEqual(buildRealEstateDetailMeta(base))
+  })
+})

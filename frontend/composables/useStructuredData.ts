@@ -395,6 +395,28 @@ export function useStructuredData() {
     propertyType: string
     propertySlug?: 'apt' | 'villa' | 'offitel'
     image?: string
+    /** K-apt 단지 정보(연결된 단지만) */
+    complex?: {
+      householdCount: number | null
+      dongCount: number | null
+      topFloor: number | null
+      useApprovalDate: string | null
+      totalParking: number | null
+    } | null
+  }
+
+  function complexPropertyValues(complex: BuildingPlaceOptions['complex']) {
+    if (!complex) return []
+    const entries: Array<[string, number | string | null]> = [
+      ['householdCount', complex.householdCount],
+      ['dongCount', complex.dongCount],
+      ['topFloor', complex.topFloor],
+      ['useApprovalDate', complex.useApprovalDate],
+      ['totalParking', complex.totalParking],
+    ]
+    return entries
+      .filter(([, value]) => value != null)
+      .map(([name, value]) => ({ '@type': 'PropertyValue', name, value: String(value) }))
   }
 
   function resolveBuildingSchemaType(slug?: string): string {
@@ -409,9 +431,10 @@ export function useStructuredData() {
     const resolve = (): BuildingPlaceOptions => (typeof input === 'function' ? input() : input)
     useHead(() => {
       const options = resolve()
+      const schemaType = resolveBuildingSchemaType(options.propertySlug)
       const schema: Record<string, unknown> = {
         '@context': 'https://schema.org',
-        '@type': resolveBuildingSchemaType(options.propertySlug),
+        '@type': schemaType,
         name: options.name,
         address: {
           '@type': 'PostalAddress',
@@ -433,7 +456,11 @@ export function useStructuredData() {
                 value: String(options.buildYear),
               }]
             : []),
+          ...complexPropertyValues(options.complex),
         ],
+      }
+      if (schemaType === 'ApartmentComplex' && options.complex?.householdCount != null) {
+        schema.numberOfAccommodationUnits = options.complex.householdCount
       }
       if (options.lat != null && options.lng != null) {
         schema.geo = {

@@ -35,7 +35,9 @@ import {
   getRealEstateCanonicalPath,
   isPreservedRealEstateUrlMode,
 } from './realEstateUrlRegistry.js';
+import { findKaptComplex } from './kaptComplexMatcher.js';
 import type {
+  ComplexInfo,
   AreaOption,
   DealFlag,
   DealMode,
@@ -349,6 +351,7 @@ export async function getDetailOverview(
     ? { lat: toNumber(locationRow.lat), lng: toNumber(locationRow.lng) }
     : null;
   const areaBounds = areaRows[0] ?? { minArea: null, maxArea: null };
+  const complex = await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
 
   return {
     identity,
@@ -367,8 +370,33 @@ export async function getDetailOverview(
     saleBasis: priceBasisByGroup(saleDeals, today, PRICE_BASIS.saleSample),
     jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
     wolseLatest: wolseLatestByGroup(wolseRows, areaGroups.map((group) => group.key)),
+    complex,
     generatedAt,
   };
+}
+
+/** 단지 정보는 덧붙이는 정보라 실패해도 개요는 그대로 낸다. */
+async function findDetailComplex(
+  identity: DetailIdentity,
+  building: BuildingInfo,
+  addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>,
+  roadNames: string[],
+): Promise<ComplexInfo | null> {
+  try {
+    return await findKaptComplex({
+      sggCode: identity.bjdCode,
+      primaryAddress: building.dongName
+        ? { dongName: building.dongName, jibun: building.jibun, roadName: building.roadName }
+        : null,
+      addresses,
+      roadNames,
+      buildingName: identity.buildingName,
+      buildYear: building.buildYear ?? null,
+    });
+  } catch (error) {
+    console.warn('[realEstateDetail] K-apt 단지 조회 실패', error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /** 최근 거래·중간값 계산용 거래(취소 제외·유효 계약일·주소 범위). 매매는 dealAmount, 전세는 deposit. */

@@ -120,6 +120,35 @@ export interface LatestSale {
   floor: number | null;
 }
 
+/** K-apt 단지 정보(관리비 공개 의무단지). 상세와 연결되지 않으면 개요의 complex 는 null. */
+export interface ComplexInfo {
+  matchType: 'address' | 'road' | 'name';
+  kaptCode: string;
+  name: string;
+  householdCount: number | null;
+  dongCount: number | null;
+  topFloor: number | null;
+  basementFloors: number | null;
+  /** YYYY-MM-DD */
+  useApprovalDate: string | null;
+  totalParking: number | null;
+  groundParking: number | null;
+  undergroundParking: number | null;
+  heatingType: string | null;
+  corridorType: string | null;
+  builder: string | null;
+  developer: string | null;
+  managementType: string | null;
+  saleType: string | null;
+  elevatorCount: number | null;
+  cctvCount: number | null;
+  evChargerCount: number | null;
+  /** 전용면적 오름차순 */
+  areas: Array<{ exclusiveArea: number; householdCount: number }>;
+  /** K-apt 기본정보 파일 기준일 YYYY-MM-DD */
+  sourceDate: string | null;
+}
+
 export interface DetailOverview {
   identity: DetailIdentity;
   latestSale: LatestSale | null;
@@ -141,6 +170,8 @@ export interface DetailOverview {
   jeonseBasis: Record<string, PriceBasis>;
   /** 면적 그룹 key(areaGroups 전부) → 최근 36개월 가장 최근 월세 거래. 없으면 null. */
   wolseLatest: Record<string, WolseLatestDeal | null>;
+  /** K-apt 단지 정보. 연결 안 되거나 조회 실패면 null. */
+  complex: ComplexInfo | null;
   generatedAt: string;
 }
 
