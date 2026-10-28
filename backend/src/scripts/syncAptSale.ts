@@ -17,7 +17,9 @@ import { runSync, batchUpsert, transformAndDedupe, createSyncStats, type SyncSta
 // IndexNow 제출 비활성화 (2026-09-01) — 아래 호출부 주석 참고.
 // import { submitNewlyTransactedBuildings } from '../services/indexNowService.js';
 
-const API_ENDPOINT = 'RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade';
+// 상세 API: 기본 API(getRTMSDataSvcAptTrade)와 거래 목록·필드가 같고 도로명(roadNm·건물 본번/부번)이 더 온다.
+// 기본 API 에는 도로명이 없어 매매 행의 roadName 이 늘 비어 있었다(단지 매칭의 도로명 단계가 전월세에만 기댐).
+const API_ENDPOINT = 'RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev';
 const CATEGORY = 'aptSale';
 
 export interface RawAptSaleItem extends Record<string, unknown> {
@@ -39,6 +41,10 @@ export interface RawAptSaleItem extends Record<string, unknown> {
   buyerGbn: string;
   slerGbn: string;
   rgstDate: string;
+  /** 상세 API 전용. 도로명(번호 없음)과 건물 본번·부번(0 채움 5자리) */
+  roadNm?: string;
+  roadNmBonbun?: string;
+  roadNmBubun?: string;
   city: string;
   district: string;
 }
@@ -48,6 +54,16 @@ function parseIntOrNull(value: string): number | null {
   if (!trimmed) return null;
   const parsed = parseInt(trimmed, 10);
   return isNaN(parsed) ? null : parsed;
+}
+
+/** "개포로" + "00307" + "00000" → "개포로 307" (전월세 roadnm 과 같은 꼴). 도로명이 없으면 null. */
+export function formatSaleRoadName(item: Pick<RawAptSaleItem, 'roadNm' | 'roadNmBonbun' | 'roadNmBubun'>): string | null {
+  const road = String(item.roadNm ?? '').trim();
+  if (!road) return null;
+  const main = parseIntOrNull(String(item.roadNmBonbun ?? ''));
+  if (!main) return road;
+  const sub = parseIntOrNull(String(item.roadNmBubun ?? ''));
+  return sub ? `${road} ${main}-${sub}` : `${road} ${main}`;
 }
 
 export function transformAptSaleItem(item: RawAptSaleItem) {
@@ -86,7 +102,7 @@ export function transformAptSaleItem(item: RawAptSaleItem) {
     floor: parseIntOrNull(floorStr),
     exclusiveArea: areaStr || null,
     jibun: jibunStr || null,
-    roadName: null,
+    roadName: formatSaleRoadName(item),
     dealYear,
     dealMonth,
     dealDay: parseIntOrNull(dayStr),
