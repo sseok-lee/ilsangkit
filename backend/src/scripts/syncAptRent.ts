@@ -35,6 +35,8 @@ export interface RawAptRentItem extends Record<string, unknown> {
   floor: string;
   contractTerm: string;
   roadnm: string;
+  /** 국토부 단지 일련번호(예: 11680-391) */
+  aptSeq?: string;
   contractType: string;
   preDeposit: string;
   preMonthlyRent: string;
@@ -93,6 +95,7 @@ export function transformAptRentItem(item: RawAptRentItem) {
     exclusiveArea: areaStr || null,
     jibun: jibunStr || null,
     roadName: roadNameStr || null,
+    aptSeq: String(item.aptSeq ?? '').trim() || null,
     dealYear,
     dealMonth,
     dealDay: parseIntOrNull(dayStr),
