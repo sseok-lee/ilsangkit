@@ -655,11 +655,28 @@ describe('getDetailOverview complex', () => {
     expect(overview?.complex).toEqual(COMPLEX);
     expect(mockFindKaptComplex).toHaveBeenCalledWith({
       sggCode: '11680',
-      primaryAddress: { dongName: '개포동', jibun: '649' },
+      primaryAddress: { dongName: '개포동', jibun: '649', roadName: undefined },
       addresses: [{ dongName: '역삼동', jibun: '1', roadName: null }],
+      roadNames: [],
       buildingName: '개포경남',
       buildYear: 1984,
     });
+  });
+
+  it('같은 지번에 신고된 도로명을 합치기 전 그대로 모두 넘긴다', async () => {
+    mockQueryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ count: 0n }])
+      .mockResolvedValueOnce([{ minArea: null, maxArea: null }])
+      .mockResolvedValueOnce([
+        { dongName: '이촌동', jibun: '402', roadName: '이촌로87길 14' },
+        { dongName: '이촌동', jibun: '402', roadName: '이촌로87길 13' },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindKaptComplex.mock.calls[0][0].roadNames).toEqual(['이촌로87길 14', '이촌로87길 13']);
   });
 
   it('단지 조회가 실패해도 개요는 내고 complex 는 null', async () => {

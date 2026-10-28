@@ -1,6 +1,7 @@
 // 실거래 상세 ↔ K-apt 단지 매칭.
 //
-// 주소(시군구+법정동+지번)로 먼저 찾고, 주소 후보가 하나도 없을 때만 이름으로 찾는다.
+// 지번(시군구+법정동+본번·부번)으로 먼저 찾고, 지번으로 1곳이 안 정해지면 도로명 주소(도로명+건물번호)로,
+// 둘 다 후보가 없을 때만 이름으로 찾는다. 큰 필지 하나에 단지 여러 개가 있으면 도로명 건물번호로 갈린다.
 // 이름 매칭은 오매칭을 막으려고 숫자 열(단지·차수)과 연식(±1년)이 함께 맞아야 한다.
 // 후보가 2곳 이상이면 어느 쪽도 고르지 않는다 — 남의 단지 정보를 보여 주는 것보다 안 보여 주는 게 낫다.
 
@@ -95,12 +96,24 @@ export function isNameMatch(
   return shorter.length >= 3 && longer.includes(shorter);
 }
 
+/** "개포로109길 9", "서울특별시 강남구 개포로 264 (개포동)" → "개포로109길 9" 꼴의 비교 키. 도로명이 없으면 null. */
+export function roadKey(text: string | null | undefined): string | null {
+  const cleaned = (text ?? '').replace(/\([^)]*\)/g, ' ');
+  const matches = [...cleaned.matchAll(/(\S+(?:로|길))\s*(\d+(?:-\d+)?)/g)];
+  const last = matches[matches.length - 1];
+  if (!last) return null;
+  const buildingNo = last[2].split('-').map((n) => String(Number(n))).join('-');
+  return `${last[1]} ${buildingNo}`;
+}
+
 export interface KaptMatchInput {
   /** 실거래 bjdCode(시군구 5자리) */
   sggCode: string;
   /** 1순위: 건물 정보 주소, 그다음 상세 개요 주소 후보 */
-  primaryAddress: { dongName: string | null; jibun: string | null } | null;
-  addresses: Array<{ dongName: string; jibun: string | null }>;
+  primaryAddress: { dongName: string | null; jibun: string | null; roadName?: string | null } | null;
+  addresses: Array<{ dongName: string; jibun: string | null; roadName?: string | null }>;
+  /** 주소 합치기 전 신고된 도로명 전부(같은 지번에 도로명이 여럿 신고될 수 있다) */
+  roadNames?: string[];
   buildingName: string;
   buildYear: number | null;
 }
@@ -111,6 +124,10 @@ interface CandidateRow {
   eupmyeon: string | null;
   dongri: string | null;
   useApprovalDate: string | null;
+}
+
+interface SggCandidateRow extends CandidateRow {
+  roadAddress: string | null;
 }
 
 /** 한 주소로 찾은 활성 단지코드(중복 제거). 지번이 파싱되지 않으면 빈 배열. */
@@ -140,18 +157,35 @@ async function matchByAddress(input: KaptMatchInput): Promise<string[]> {
   return [...codes];
 }
 
-async function matchByName(input: KaptMatchInput): Promise<string | null> {
+/** 같은 시군구 필지가 있는 활성 단지(도로명·이름 매칭 공용). 시군구당 수백 건, 인덱스 범위 조회. */
+async function loadSggCandidates(sggCode: string): Promise<SggCandidateRow[]> {
+  return prisma.$queryRaw<SggCandidateRow[]>(Prisma.sql`
+    SELECT DISTINCT k.kaptCode, k.name, k.eupmyeon, k.dongri, k.useApprovalDate, k.roadAddress
+    FROM KaptComplexParcel p
+    JOIN KaptComplex k ON k.kaptCode = p.kaptCode
+    WHERE p.sggCode = ${sggCode} AND k.active = true`);
+}
+
+/** 상세의 도로명 주소(건물·개요 주소 후보 전부)가 가리키는 단지코드. */
+function matchByRoad(input: KaptMatchInput, candidates: SggCandidateRow[]): string[] {
+  const localKeys = new Set(
+    [
+      ...[input.primaryAddress, ...input.addresses].map((address) => address?.roadName),
+      ...(input.roadNames ?? []),
+    ]
+      .map((roadName) => roadKey(roadName))
+      .filter((key): key is string => key !== null),
+  );
+  if (localKeys.size === 0) return [];
+  return [...new Set(candidates.filter((row) => localKeys.has(roadKey(row.roadAddress) ?? '')).map((row) => row.kaptCode))];
+}
+
+function matchByName(input: KaptMatchInput, candidates: SggCandidateRow[]): string | null {
   const dongName = input.primaryAddress?.dongName || input.addresses[0]?.dongName;
   if (!dongName) return null;
   const dong = splitDongName(dongName);
-  const rows = await prisma.$queryRaw<CandidateRow[]>(Prisma.sql`
-    SELECT DISTINCT k.kaptCode, k.name, k.eupmyeon, k.dongri, k.useApprovalDate
-    FROM KaptComplexParcel p
-    JOIN KaptComplex k ON k.kaptCode = p.kaptCode
-    WHERE p.sggCode = ${input.sggCode} AND k.active = true
-      AND (k.dongri = ${dong.dongri} OR k.eupmyeon = ${dong.dongri})`);
   const local = { name: input.buildingName, buildYear: input.buildYear };
-  const codes = new Set(rows.filter((row) => dongMatches(dong, row) && isNameMatch(local, row)).map((row) => row.kaptCode));
+  const codes = new Set(candidates.filter((row) => dongMatches(dong, row) && isNameMatch(local, row)).map((row) => row.kaptCode));
   return codes.size === 1 ? [...codes][0] : null;
 }
 
@@ -242,14 +276,28 @@ async function loadComplexInfo(kaptCode: string, matchType: ComplexInfo['matchTy
 }
 
 /**
- * 상세에 연결되는 K-apt 단지. 주소로 정확히 1곳이면 address, 주소 후보가 0곳이고 이름으로 1곳이면 name.
- * 주소 후보가 2곳 이상이면 이름 매칭으로 넘기지 않고 null.
+ * 상세에 연결되는 K-apt 단지.
+ * - 지번 1곳: address. 단, 도로명이 다른 1곳을 가리키면 어느 쪽이 맞는지 몰라 null.
+ * - 지번 2곳 이상: 도로명 1곳이 그 후보 안에 있으면 road, 아니면 null(이름으로 넘기지 않는다).
+ * - 지번 0곳: 도로명 1곳이면 road(이름이 다른 1곳을 가리키면 null), 도로명 후보가 여럿이면 null,
+ *   도로명 후보가 없으면 이름 1곳이면 name.
  */
 export async function findKaptComplex(input: KaptMatchInput): Promise<ComplexInfo | null> {
   if (!/^\d{5}$/.test(input.sggCode)) return null;
-  const addressCodes = await matchByAddress(input);
-  if (addressCodes.length > 1) return null;
-  if (addressCodes.length === 1) return loadComplexInfo(addressCodes[0], 'address');
-  const nameCode = await matchByName(input);
+  const [addressCodes, candidates] = await Promise.all([matchByAddress(input), loadSggCandidates(input.sggCode)]);
+  const roadCodes = matchByRoad(input, candidates);
+  const roadCode = roadCodes.length === 1 ? roadCodes[0] : null;
+
+  if (addressCodes.length === 1) {
+    if (roadCode && roadCode !== addressCodes[0]) return null;
+    return loadComplexInfo(addressCodes[0], 'address');
+  }
+  if (addressCodes.length > 1) {
+    return roadCode && addressCodes.includes(roadCode) ? loadComplexInfo(roadCode, 'road') : null;
+  }
+  if (roadCodes.length > 1) return null;
+  const nameCode = matchByName(input, candidates);
+  // 실거래 도로명이 이웃 단지 주소로 잘못 신고된 경우가 있어, 이름이 다른 단지를 가리키면 고르지 않는다.
+  if (roadCode) return nameCode && nameCode !== roadCode ? null : loadComplexInfo(roadCode, 'road');
   return nameCode ? loadComplexInfo(nameCode, 'name') : null;
 }

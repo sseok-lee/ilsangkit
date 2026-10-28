@@ -17,6 +17,7 @@ import {
   normalizeComplexName,
   nameNumbers,
   isNameMatch,
+  roadKey,
 } from '../../src/services/kaptComplexMatcher.js';
 
 describe('parseParcel', () => {
@@ -128,7 +129,7 @@ function routeQueries(routes: { address?: unknown[][]; name?: unknown[]; complex
     if (sql.includes('FROM KaptComplexParcel')) return routes.name ?? [];
     if (sql.includes('FROM KaptComplexArea')) return [{ exclusiveArea: new Prisma.Decimal('96.98'), householdCount: 166 }];
     if (sql.includes('FROM KaptSourceFile')) return [{ fileDate: '2026-10-26' }];
-    if (sql.includes('FROM KaptComplex')) return routes.complex ?? [GAEPO_ROW];
+    if (sql.includes('FROM KaptComplex')) return routes.complex ?? [{ ...GAEPO_ROW, kaptCode: (query as Prisma.Sql).values[0] }];
     return [];
   });
 }
@@ -141,8 +142,8 @@ const BASE_INPUT = {
   buildYear: 1984,
 };
 
-const candidate = (kaptCode: string, name = '개포경남아파트', dongri = '개포동', useApprovalDate = '19840308') => ({
-  kaptCode, name, eupmyeon: null, dongri, useApprovalDate,
+const candidate = (kaptCode: string, name = '개포경남아파트', dongri = '개포동', useApprovalDate = '19840308', roadAddress: string | null = null) => ({
+  kaptCode, name, eupmyeon: null, dongri, useApprovalDate, roadAddress,
 });
 
 describe('findKaptComplex', () => {
@@ -162,11 +163,13 @@ describe('findKaptComplex', () => {
     expect(addressSql).toContain('k.active = true');
   });
 
-  it('같은 필지에 단지 2곳이면 null 이고 이름 조회로 넘어가지 않는다', async () => {
-    routeQueries({ address: [[candidate('A1', '수서1-1단지(임대)', '수서동'), candidate('A2', '수서', '수서동')]] });
-    const info = await findKaptComplex({ ...BASE_INPUT, primaryAddress: { dongName: '수서동', jibun: '700' }, addresses: [] });
+  it('같은 필지에 단지 2곳이고 도로명이 없으면 null 이고 이름으로 넘어가지 않는다', async () => {
+    routeQueries({
+      address: [[candidate('A1', '수서1-1단지(임대)', '수서동'), candidate('A2', '수서', '수서동')]],
+      name: [candidate('A2', '수서', '수서동', '19920101')],
+    });
+    const info = await findKaptComplex({ ...BASE_INPUT, buildingName: '수서', buildYear: 1992, primaryAddress: { dongName: '수서동', jibun: '700' }, addresses: [] });
     expect(info).toBeNull();
-    expect(mockQueryRaw.mock.calls.some(([q]) => !sqlText(q).includes('p.mainNo') && sqlText(q).includes('KaptComplexParcel'))).toBe(false);
   });
 
   it('법정동이 다른 필지 후보는 버린다', async () => {
@@ -213,5 +216,105 @@ describe('sumRawCounts / formatApprovalDate', () => {
     expect(formatApprovalDate('19840308')).toBe('1984-03-08');
     expect(formatApprovalDate('1984')).toBeNull();
     expect(formatApprovalDate(null)).toBeNull();
+  });
+});
+
+describe('roadKey', () => {
+  it('도로명+건물번호만 남긴다', () => {
+    expect(roadKey('서울특별시 강남구 개포로109길 9')).toBe('개포로109길 9')
+    expect(roadKey('개포로109길 9')).toBe('개포로109길 9')
+    expect(roadKey('서울특별시 강남구 개포로 264 (개포동)')).toBe('개포로 264')
+    expect(roadKey('세종특별자치시 한누리대로 0350-01')).toBe('한누리대로 350-1')
+    expect(roadKey('')).toBeNull()
+    expect(roadKey(null)).toBeNull()
+  });
+});
+
+describe('findKaptComplex 도로명 단계 (개포동 12 실제 사례)', () => {
+  const GAEPO12 = [
+    candidate('A13524009', '개포대치2단지', '개포동', '19921014', '서울특별시 강남구 개포로109길 9'),
+    candidate('A13593908', 'SH공사대치1단지', '개포동', '19911120', '서울특별시 강남구 개포로109길 5'),
+    candidate('A13594007', '대청', '개포동', '19921014', '서울특별시 강남구 개포로109길 21'),
+  ];
+  const input = (roadName: string | null) => ({
+    ...BASE_INPUT,
+    buildingName: '성원대치2단지아파트',
+    buildYear: 1992,
+    primaryAddress: { dongName: '개포동', jibun: '12', roadName: null },
+    addresses: [{ dongName: '개포동', jibun: '12', roadName }],
+  });
+  beforeEach(() => {
+    mockQueryRaw.mockReset();
+  });
+
+  it('같은 필지 여러 단지는 도로명 건물번호로 고른다', async () => {
+    routeQueries({ address: [GAEPO12, GAEPO12], name: GAEPO12 });
+    const info = await findKaptComplex(input('개포로109길 9'));
+    expect(info?.matchType).toBe('road');
+    expect(info?.kaptCode).toBe('A13524009');
+  });
+
+  it('도로명이 필지 후보 밖 단지를 가리키면 null', async () => {
+    const other = candidate('A9', '다른단지', '개포동', '19921014', '서울특별시 강남구 개포로109길 9');
+    routeQueries({ address: [GAEPO12.slice(1), GAEPO12.slice(1)], name: [...GAEPO12.slice(1), other] });
+    expect(await findKaptComplex(input('개포로109길 9'))).toBeNull();
+  });
+
+  it('지번 1곳과 도로명 1곳이 서로 다르면 null', async () => {
+    routeQueries({ address: [[GAEPO12[2]]], name: GAEPO12 });
+    expect(await findKaptComplex(input('개포로109길 9'))).toBeNull();
+  });
+
+  it('지번 1곳과 도로명이 같거나 도로명 후보가 없으면 address', async () => {
+    routeQueries({ address: [[GAEPO12[0]]], name: GAEPO12 });
+    expect((await findKaptComplex(input('개포로109길 9')))?.matchType).toBe('address');
+    routeQueries({ address: [[GAEPO12[0]]], name: GAEPO12 });
+    expect((await findKaptComplex(input('없는로 1')))?.matchType).toBe('address');
+  });
+
+  it('지번 후보 0곳이면 도로명 1곳으로 연결한다', async () => {
+    routeQueries({ address: [[], []], name: GAEPO12 });
+    const info = await findKaptComplex({ ...input('개포로109길 21'), buildingName: '삼익대청아파트' });
+    expect(info?.matchType).toBe('road');
+    expect(info?.kaptCode).toBe('A13594007');
+  });
+
+  it('도로명이 단지 여러 곳을 가리키면 이름으로 넘기지 않고 null', async () => {
+    const twin = candidate('A8', '개포대치2단지', '개포동', '19921014', '서울특별시 강남구 개포로109길 9');
+    routeQueries({ address: [[], []], name: [...GAEPO12, twin] });
+    expect(await findKaptComplex({ ...input('개포로109길 9'), buildingName: '개포대치2단지' })).toBeNull();
+  });
+});
+
+describe('findKaptComplex 도로명 보조 규칙', () => {
+  beforeEach(() => {
+    mockQueryRaw.mockReset();
+  });
+  const FIRST_WORLD = [
+    candidate('A10020509', '더샵일산퍼스트월드1단지', '풍동', '20100601', '경기도 고양시 일산동구 고풍로 161'),
+    candidate('A10020501', '더샵일산퍼스트월드2단지', '풍동', '20100601', '경기도 고양시 일산동구 고풍로 109'),
+  ];
+
+  it('도로명과 이름이 서로 다른 단지를 가리키면 null', async () => {
+    routeQueries({ name: FIRST_WORLD });
+    const info = await findKaptComplex({
+      sggCode: '41285', primaryAddress: { dongName: '풍동', jibun: '가-', roadName: null },
+      addresses: [{ dongName: '풍동', jibun: '가-', roadName: '고풍로 161' }],
+      buildingName: '더샵일산퍼스트월드2단지', buildYear: 2010,
+    });
+    expect(info).toBeNull();
+  });
+
+  it('합치기 전 도로명(roadNames)도 쓴다', async () => {
+    const kangchon = candidate('A14003106', '이촌강촌아파트', '이촌동', '19980101', '서울특별시 용산구 이촌로87길 14');
+    routeQueries({ address: [[], []], name: [kangchon] });
+    const info = await findKaptComplex({
+      sggCode: '11170', primaryAddress: { dongName: '이촌동', jibun: '402', roadName: null },
+      addresses: [{ dongName: '이촌동', jibun: '402', roadName: '이촌로87길 13' }],
+      roadNames: ['이촌로87길 13', '이촌로87길 14'],
+      buildingName: '강촌', buildYear: 1998,
+    });
+    expect(info?.matchType).toBe('road');
+    expect(info?.kaptCode).toBe('A14003106');
   });
 });
