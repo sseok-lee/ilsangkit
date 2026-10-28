@@ -92,6 +92,34 @@ describe('transformAptSaleItem', () => {
     expect(result.registrationDate).toBe('20260310');
   });
 
+  it('상세 API 도로명(roadNm+건물 본번·부번)을 전월세와 같은 "도로명 건물번호" 꼴로 저장한다', () => {
+    const base = {
+      dealAmount: '50,000', buildYear: '1983', dealYear: '2026', dealMonth: '9', dealDay: '15',
+      umdNm: '개포동', aptNm: '개포우성3차', excluUseAr: '84.99', jibun: '652', sggCd: '11680', floor: '10',
+      dealingGbn: '중개거래', aptDong: '', cdealDay: '', cdealType: '', buyerGbn: '', slerGbn: '', rgstDate: '',
+      city: '서울특별시', district: '강남구',
+    };
+    expect(transformAptSaleItem({ ...base, roadNm: '개포로', roadNmBonbun: '00307', roadNmBubun: '00000' }).roadName)
+      .toBe('개포로 307');
+    expect(transformAptSaleItem({ ...base, roadNm: '개포로109길', roadNmBonbun: '00009', roadNmBubun: '00002' }).roadName)
+      .toBe('개포로109길 9-2');
+    expect(transformAptSaleItem({ ...base, roadNm: ' 개포로 ', roadNmBonbun: '', roadNmBubun: '' }).roadName)
+      .toBe('개포로');
+    expect(transformAptSaleItem({ ...base, roadNm: '', roadNmBonbun: '00307', roadNmBubun: '00000' }).roadName)
+      .toBeNull();
+  });
+
+  it('도로명은 sourceId 에 들어가지 않는다(기본 API 로 받은 기존 행과 같은 키)', () => {
+    const base = {
+      dealAmount: '50,000', buildYear: '1983', dealYear: '2026', dealMonth: '9', dealDay: '15',
+      umdNm: '개포동', aptNm: '개포우성3차', excluUseAr: '84.99', jibun: '652', sggCd: '11680', floor: '10',
+      dealingGbn: '', aptDong: '', cdealDay: '', cdealType: '', buyerGbn: '', slerGbn: '', rgstDate: '',
+      city: '', district: '',
+    };
+    expect(transformAptSaleItem({ ...base, roadNm: '개포로', roadNmBonbun: '00307', roadNmBubun: '00000' }).sourceId)
+      .toBe(transformAptSaleItem(base).sourceId);
+  });
+
   it('거래금액 쉼표 제거 후 BigInt 변환', () => {
     const item: RawAptSaleItem = {
       dealAmount: '1,234,567',
@@ -258,6 +286,8 @@ describe('syncAptSaleByLawd', () => {
     await syncAptSaleByLawd('11680', '202403', 'test-service-key', regionMap);
 
     expect(mockFetch).toHaveBeenCalledOnce();
+    // 도로명이 있는 상세 API(기본 API 와 거래 목록·필드 동일 + 도로명·단지 일련번호)
+    expect(String(mockFetch.mock.calls[0][0])).toContain('RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev');
     expect(mockUpsert).toHaveBeenCalledOnce();
   });
 
