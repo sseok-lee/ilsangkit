@@ -118,7 +118,7 @@ export interface LatestSale {
 
 /** K-apt 단지 정보(관리비 공개 의무단지). 상세와 연결되지 않으면 개요의 complex 는 null. */
 export interface ComplexInfo {
-  matchType: 'address' | 'name'
+  matchType: 'address' | 'road' | 'name'
   kaptCode: string
   name: string
   householdCount: number | null

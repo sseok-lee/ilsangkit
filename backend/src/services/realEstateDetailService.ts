@@ -351,7 +351,7 @@ export async function getDetailOverview(
     ? { lat: toNumber(locationRow.lat), lng: toNumber(locationRow.lng) }
     : null;
   const areaBounds = areaRows[0] ?? { minArea: null, maxArea: null };
-  const complex = await findDetailComplex(identity, building, addresses);
+  const complex = await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
 
   return {
     identity,
@@ -379,13 +379,17 @@ export async function getDetailOverview(
 async function findDetailComplex(
   identity: DetailIdentity,
   building: BuildingInfo,
-  addresses: Array<{ dongName: string; jibun: string | null }>,
+  addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>,
+  roadNames: string[],
 ): Promise<ComplexInfo | null> {
   try {
     return await findKaptComplex({
       sggCode: identity.bjdCode,
-      primaryAddress: building.dongName ? { dongName: building.dongName, jibun: building.jibun } : null,
+      primaryAddress: building.dongName
+        ? { dongName: building.dongName, jibun: building.jibun, roadName: building.roadName }
+        : null,
       addresses,
+      roadNames,
       buildingName: identity.buildingName,
       buildYear: building.buildYear ?? null,
     });
