@@ -701,6 +701,52 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(sec.classes()).toContain('md:order-7')
   })
 
+  it('K-apt 단지와 연결되면 머리 줄·바로가기·단지 정보 섹션(order-8 md:order-9)을 SSR 로 낸다', async () => {
+    mockDetailOverview = {
+      identity: { bjdCode: '11680', buildingName: '개포경남' },
+      latestSale: null,
+      buildYear: 1983,
+      minArea: null,
+      maxArea: null,
+      saleCount6m: 0,
+      window6m: { from: '2026-04-23', to: '2026-10-23' },
+      addresses: [],
+      location: null,
+      locationAmbiguous: false,
+      basisMode: 'sale',
+      defaultAreaGroup: null,
+      areaGroups: [],
+      saleBasis: {},
+      jeonseBasis: {},
+      complex: {
+        matchType: 'address', kaptCode: 'A13580602', name: '개포경남아파트',
+        householdCount: 678, dongCount: 9, topFloor: 15, basementFloors: 0, useApprovalDate: '1984-03-08',
+        totalParking: 747, groundParking: 747, undergroundParking: 0, heatingType: '지역난방', corridorType: '계단식',
+        builder: '경남건설', developer: '경남건설', managementType: '위탁관리', saleType: '분양',
+        elevatorCount: 26, cctvCount: 102, evChargerCount: 9, areas: [{ exclusiveArea: 96.98, householdCount: 166 }],
+        sourceDate: '2026-10-26',
+      },
+      generatedAt: '2026-10-23T00:00:00.000Z',
+    } as DetailOverview
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.find('.estate-facts').text()).toContain('678세대 · 9개 동 · 최고 15층 · 1984년 사용승인')
+    expect(wrapper.find('.estate-facts a[href="#complex-info"]').exists()).toBe(true)
+    const navLinks = wrapper.findAll('.estate-section-nav a').map((a) => a.attributes('href'))
+    expect(navLinks.indexOf('#complex-info')).toBe(navLinks.indexOf('#transactions') + 1)
+    const sec = wrapper.find('#complex-info')
+    expect(sec.exists()).toBe(true)
+    expect(sec.classes()).toEqual(expect.arrayContaining(['order-8', 'md:order-9']))
+    expect(sec.text()).toContain('출처: 국토교통부 K-apt 공동주택관리정보시스템')
+  })
+
+  it('단지와 연결되지 않으면 단지 정보 섹션·바로가기가 없다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.find('#complex-info').exists()).toBe(false)
+    expect(wrapper.find('.estate-section-nav a[href="#complex-info"]').exists()).toBe(false)
+  })
+
   it('재배치 후에도 h1 은 정확히 1개여야 한다 (단일 h1 불변식 재확인)', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)
