@@ -2140,3 +2140,109 @@ model FacilityGone {
   @@index([category])
   @@index([goneAt])
 }
+
+/// K-apt 공동주택 단지 정보 — 자료실 주간 파일 "관리비공개의무단지 기본정보"(전국 약 2.2만 단지, 88컬럼).
+///
+/// 같은 내용을 data.go.kr 기본정보·상세정보 API 로도 받을 수 있지만 단지당 1호출·하루 5,000건이고,
+/// 초당 ~12건으로 몰아 부르면 원천이 04(HTTP_ERROR)로 수 분 막는다(2026-10-28 실측).
+/// 주간 파일 하나면 두 API 항목이 모두 들어 있다. 화면에 쓸 만한 항목만 컬럼으로 두고
+/// 원본 88컬럼은 raw 에 그대로 보존한다(헤더명 → 셀 문자열).
+model KaptComplex {
+  id                 Int      @id @default(autoincrement())
+  /// K-apt 단지코드 (예: A13580602)
+  kaptCode           String   @unique @db.VarChar(20)
+  sido               String   @db.VarChar(30)
+  sigungu            String   @db.VarChar(30)
+  eupmyeon           String?  @db.VarChar(30)
+  dongri             String?  @db.VarChar(30)
+  name               String   @db.VarChar(200)
+  /// 단지분류 (아파트, 주상복합, 연립주택 …)
+  complexType        String?  @db.VarChar(30)
+  /// 법정동주소 — 여러 지번을 나열한 단지가 있어 1,300자를 넘는다(2026-10-26 파일)
+  lawAddress         String?  @db.Text
+  roadAddress        String?  @db.VarChar(300)
+  zipcode            String?  @db.VarChar(10)
+  /// 분양형태 (분양, 임대, 혼합 …)
+  saleType           String?  @db.VarChar(30)
+  /// 사용승인일 YYYYMMDD (원본 문자열)
+  useApprovalDate    String?  @db.VarChar(8)
+  dongCount          Int?
+  householdCount     Int?
+  saleHouseholdCount Int?
+  rentHouseholdCount Int?
+  managementType     String?  @db.VarChar(30)
+  heatingType        String?  @db.VarChar(30)
+  corridorType       String?  @db.VarChar(30)
+  /// 시공사
+  builder            String?  @db.VarChar(200)
+  /// 시행사
+  developer          String?  @db.VarChar(200)
+  buildingStructure  String?  @db.VarChar(100)
+  topFloor           Int?
+  /// 최고층수(건축물대장상)
+  topFloorLedger     Int?
+  basementFloors     Int?
+  totalParking       Int?
+  groundParking      Int?
+  undergroundParking Int?
+  cctvCount          Int?
+  /// 관리비부과면적(㎡) — 면적정보 파일
+  managementArea     Decimal? @db.Decimal(14, 2)
+  /// 주거전용면적 단지합계(㎡) — 면적정보 파일
+  exclusiveAreaTotal Decimal? @db.Decimal(14, 2)
+  /// 기본정보 파일 원본 행 (헤더명 → 셀 문자열)
+  raw                Json
+  /// 가장 최근 파일에 있었는지. 사라진 단지는 지우지 않고 false 로 둔다.
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  syncedAt           DateTime @default(now())
+
+  @@index([sigungu, dongri])
+  @@index([active])
+}
+
+/// K-apt 단지 ↔ 필지고유번호(PNU 19자리 = 법정동코드10 + 산여부1 + 본번4 + 부번4).
+/// 실거래 건물(시군구 5자리 + 법정동명 + 지번)과 주소로 맞추는 열쇠다.
+model KaptComplexParcel {
+  id         Int      @id @default(autoincrement())
+  kaptCode   String   @db.VarChar(20)
+  pnu        String   @db.Char(19)
+  sggCode    String   @db.Char(5)
+  bjdCode    String   @db.Char(10)
+  isMountain Boolean  @default(false)
+  mainNo     Int
+  subNo      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  syncedAt   DateTime @default(now())
+
+  @@unique([kaptCode, pnu])
+  @@index([sggCode, mainNo, subNo])
+  @@index([pnu])
+}
+
+/// K-apt 단지 × 주거전용면적별 세대수 (면적정보 파일).
+model KaptComplexArea {
+  id             Int      @id @default(autoincrement())
+  kaptCode       String   @db.VarChar(20)
+  exclusiveArea  Decimal  @db.Decimal(10, 4)
+  householdCount Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  syncedAt       DateTime @default(now())
+
+  @@unique([kaptCode, exclusiveArea])
+}
+
+/// K-apt 자료실에서 마지막으로 반영한 주간 파일. 같은 파일이면 다시 받지 않는다.
+model KaptSourceFile {
+  /// basic | parcel | area
+  dataset  String   @id @db.VarChar(20)
+  /// 게시글 제목의 기준일 (예: 2026.10.26.)
+  fileDate DateTime @db.Date
+  postSeq  Int
+  fileName String   @db.VarChar(200)
+  rowCount Int
+  syncedAt DateTime @default(now()) @updatedAt
+}

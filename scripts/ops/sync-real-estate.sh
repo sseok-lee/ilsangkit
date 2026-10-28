@@ -134,6 +134,13 @@ run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/syncPublicRental.js
   || echo "[warn] 공공임대 동기화 실패 (exit=$?) — sub-public-rent 이력 확인"
 echo "[step:public-rental-end]"
 
+# K-apt 공동주택 단지 정보 (자료실 주간 파일). 새 파일이 없는 날은 목록만 확인하고 끝난다.
+# 실패해도 부동산 writer 결과에는 영향이 없다(별도 테이블) — kapt SyncHistory 로 확인.
+echo "[step:kapt-start]"
+run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/syncKapt.js" \
+  || echo "[warn] K-apt 단지 정보 동기화 실패 (exit=$?) — kapt 이력 확인"
+echo "[step:kapt-end]"
+
 # 사이트맵 정적 파일 재생성. 실패/가드거부 시 기존 파일 유지.
 # 0=완전 갱신 / 4=부분 갱신(일부 이월) / 2=거부·실패 / 3=예외 / 1=env 누락
 # 40m: 자식 98개를 순차로 받는데 부동산 URL 이 늘며 941s→1,119s 로 길어지다 2026-10-22 에 20m 을 넘겼다.
