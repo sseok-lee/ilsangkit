@@ -1345,6 +1345,8 @@ model AptSaleTransaction {
   exclusiveArea    Decimal?  @db.Decimal(10, 2)
   jibun            String?   @db.VarChar(20)
   roadName         String?   @db.VarChar(100)
+  /// 국토부 실거래 단지 일련번호(예: 11680-391). 매매·전월세 API 공통, 2026-10-29부터 수집
+  aptSeq           String?   @db.VarChar(20)
   lat              Decimal?  @db.Decimal(10, 7)
   lng              Decimal?  @db.Decimal(10, 7)
   dealYear         Int
@@ -1536,6 +1538,8 @@ model AptRentTransaction {
   exclusiveArea   Decimal?  @db.Decimal(10, 2)
   jibun           String?   @db.VarChar(20)
   roadName        String?   @db.VarChar(100)
+  /// 국토부 실거래 단지 일련번호(예: 11680-391). 매매·전월세 API 공통, 2026-10-29부터 수집
+  aptSeq          String?   @db.VarChar(20)
   lat             Decimal?  @db.Decimal(10, 7)
   lng             Decimal?  @db.Decimal(10, 7)
   dealYear        Int

@@ -41,6 +41,8 @@ export interface RawAptSaleItem extends Record<string, unknown> {
   buyerGbn: string;
   slerGbn: string;
   rgstDate: string;
+  /** 국토부 단지 일련번호(예: 11680-391) */
+  aptSeq?: string;
   /** 상세 API 전용. 도로명(번호 없음)과 건물 본번·부번(0 채움 5자리) */
   roadNm?: string;
   roadNmBonbun?: string;
@@ -103,6 +105,7 @@ export function transformAptSaleItem(item: RawAptSaleItem) {
     exclusiveArea: areaStr || null,
     jibun: jibunStr || null,
     roadName: formatSaleRoadName(item),
+    aptSeq: String(item.aptSeq ?? '').trim() || null,
     dealYear,
     dealMonth,
     dealDay: parseIntOrNull(dayStr),
