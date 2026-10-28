@@ -362,7 +362,7 @@
       <ComplexInfoSection
         v-if="complexInfo"
         id="complex-info"
-        class="order-8 md:order-9"
+        class="order-8 md:order-9 scroll-mt-24"
         :complex="complexInfo"
       />
 
