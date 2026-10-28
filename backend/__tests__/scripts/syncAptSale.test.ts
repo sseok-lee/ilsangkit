@@ -109,6 +109,18 @@ describe('transformAptSaleItem', () => {
       .toBeNull();
   });
 
+  it('단지 일련번호(aptSeq)를 저장하고 없으면 null', () => {
+    const base = {
+      dealAmount: '50,000', buildYear: '1983', dealYear: '2026', dealMonth: '9', dealDay: '15',
+      umdNm: '개포동', aptNm: '개포주공5단지', excluUseAr: '84.99', jibun: '187', sggCd: '11680', floor: '10',
+      dealingGbn: '', aptDong: '', cdealDay: '', cdealType: '', buyerGbn: '', slerGbn: '', rgstDate: '',
+      city: '', district: '',
+    };
+    expect(transformAptSaleItem({ ...base, aptSeq: ' 11680-391 ' }).aptSeq).toBe('11680-391');
+    expect(transformAptSaleItem(base).aptSeq).toBeNull();
+    expect(transformAptSaleItem({ ...base, aptSeq: '11680-391' }).sourceId).toBe(transformAptSaleItem(base).sourceId);
+  });
+
   it('도로명은 sourceId 에 들어가지 않는다(기본 API 로 받은 기존 행과 같은 키)', () => {
     const base = {
       dealAmount: '50,000', buildYear: '1983', dealYear: '2026', dealMonth: '9', dealDay: '15',

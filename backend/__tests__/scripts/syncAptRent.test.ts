@@ -43,6 +43,18 @@ afterEach(() => {
 });
 
 describe('transformAptRentItem', () => {
+  it('단지 일련번호(aptSeq)를 저장하고 없으면 null, sourceId 는 그대로', () => {
+    const item: RawAptRentItem = {
+      deposit: '30,000', monthlyRent: '0', buildYear: '2010', dealYear: '2024', dealMonth: '3', dealDay: '10',
+      umdNm: '역삼동', aptNm: '래미안아파트', excluUseAr: '84.99', jibun: '123-4', sggCd: '11680', floor: '10',
+      contractTerm: '24', roadnm: '강남대로 100', contractType: '신규', preDeposit: '', preMonthlyRent: '',
+      useRRRight: '', city: '서울특별시', district: '강남구',
+    };
+    expect(transformAptRentItem({ ...item, aptSeq: '11680-77' }).aptSeq).toBe('11680-77');
+    expect(transformAptRentItem(item).aptSeq).toBeNull();
+    expect(transformAptRentItem({ ...item, aptSeq: '11680-77' }).sourceId).toBe(transformAptRentItem(item).sourceId);
+  });
+
   it('API 응답 item을 DB 필드로 변환 (전세)', () => {
     const item: RawAptRentItem = {
       deposit: '30,000',
