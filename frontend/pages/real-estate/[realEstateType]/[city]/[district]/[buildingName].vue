@@ -67,7 +67,10 @@
         <p v-else class="mt-3 text-[13px] md:text-sm text-faint">
           <AddressLine :address="fullAddress" />
         </p>
-        <p v-if="overviewFactsLine" class="estate-facts">{{ overviewFactsLine }}</p>
+        <p v-if="complexInfo && complexFactsLine" class="estate-facts">
+          {{ complexFactsLine }} · <a href="#complex-info" class="estate-facts-link">단지 정보 ›</a>
+        </p>
+        <p v-else-if="overviewFactsLine" class="estate-facts">{{ overviewFactsLine }}</p>
 
         <AdBanner
           data-testid="building-header-ad"
@@ -101,6 +104,7 @@
         <nav class="estate-section-nav" aria-label="상세 정보 바로가기">
           <a href="#trend">가격 흐름</a>
           <a href="#transactions">거래 내역</a>
+          <a v-if="complexInfo" href="#complex-info">단지 정보</a>
           <a href="#location">위치</a>
           <a href="#nearby">주변 정보</a>
         </nav>
@@ -354,6 +358,14 @@
       <!-- Ad: 거래내역 이후 (In-Article) -->
       <AdBanner class="estate-ad-slot order-7 md:order-8" />
 
+      <!-- K-apt 단지 정보 — 거래 내역 뒤 광고와 위치 사이(연결된 단지만) -->
+      <ComplexInfoSection
+        v-if="complexInfo"
+        id="complex-info"
+        class="order-8 md:order-9"
+        :complex="complexInfo"
+      />
+
       <AffiliateBanner class="order-10" />
 
       <!-- "주변 단지" 블록 — 유형 탭(아파트 → 오피스텔 → 빌라) · 같은 면적 최근가 2열 리스트 -->
@@ -489,6 +501,8 @@ import Breadcrumb from '~/components/navigation/Breadcrumb.vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import PageHead from '~/components/common/PageHead.vue'
 import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
+import ComplexInfoSection from '~/components/realEstate/ComplexInfoSection.vue'
+import { approvalYear, buildComplexFactsLine } from '~/utils/complexInfo'
 import { resolveDefaultLatestDeal } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
@@ -799,6 +813,9 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 }
 
 const detailOverview = ref<DetailOverview | null>(null)
+// K-apt 단지와 연결되면 머리 보조 줄을 단지 숫자(세대·동·층·사용승인)로 바꾼다.
+const complexInfo = computed(() => detailOverview.value?.complex ?? null)
+const complexFactsLine = computed(() => (complexInfo.value ? buildComplexFactsLine(complexInfo.value) : ''))
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
 const areaLabelMap = computed<Record<string, string>>(() =>
@@ -850,6 +867,9 @@ const detailMeta = computed(() => {
     buildYear: buildYearVal,
     areaRange,
     facilitySummary: facilitySummary.value,
+    complex: complexInfo.value
+      ? { householdCount: complexInfo.value.householdCount, useApprovalYear: approvalYear(complexInfo.value) }
+      : null,
   })
 })
 
@@ -1693,6 +1713,7 @@ setBuildingPlaceSchema(() => ({
   propertyType: propertyMeta.value?.label || '',
   propertySlug: propertyTypePart as 'apt' | 'villa' | 'offitel',
   image: buildOgImage(buildingInfo.value),
+  complex: complexInfo.value,
 }))
 setRealEstateListingSchema(() => {
   const info = buildingInfo.value
@@ -1793,6 +1814,11 @@ const hasNearby = computed(() =>
   font-size: 13px;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
+}
+
+.estate-facts-link {
+  color: rgb(var(--brand-rgb));
+  font-weight: 700;
 }
 
 .estate-price-hero-skeleton {
