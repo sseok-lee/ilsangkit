@@ -48,6 +48,8 @@ export interface DetailMetaInput {
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
   facilitySummary?: string | null
+  /** K-apt 단지 정보. 연결된 단지만 있다. 사용승인 연도가 있으면 준공년도 대신 쓴다. */
+  complex?: { householdCount: number | null; useApprovalYear: number | null } | null
 }
 
 export interface DetailMetaResult {
@@ -131,6 +133,7 @@ function shortYearMonth(date: string): string {
 }
 
 interface DescriptionOptions {
+  withHouseholds: boolean
   withBuildYear: boolean
   withArea: boolean
   withFacility: boolean
@@ -168,9 +171,14 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
     : `${head} 실거래가.`
 
   const facts: string[] = []
+  const households = input.complex?.householdCount
+  if (opts.withHouseholds && households) facts.push(`${households.toLocaleString()}세대`)
   const areaText = opts.withArea ? formatArea(input.areaRange) : null
   if (areaText) facts.push(`전용 ${areaText}`)
-  if (opts.withBuildYear && input.buildYear && Number.isFinite(input.buildYear)) {
+  const approvalYear = input.complex?.useApprovalYear
+  if (opts.withBuildYear && approvalYear) {
+    facts.push(`${approvalYear}년 사용승인`)
+  } else if (opts.withBuildYear && input.buildYear && Number.isFinite(input.buildYear)) {
     facts.push(`${input.buildYear}년 준공`)
   }
   const factClause = facts.length > 0 ? ` ${facts.join(', ')}.` : ''
@@ -182,13 +190,14 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
   return `${lead}${factClause} ${facilityClause}면적별 거래가를 함께 확인하세요.`.replace(/\s+/g, ' ').trim()
 }
 
-// 길이 상한을 넘을 때 떨어뜨리는 순서 — 준공년도 → 주변 시설 상세 → 전용면적.
+// 길이 상한을 넘을 때 떨어뜨리는 순서 — 준공(사용승인)년도 → 주변 시설 상세 → 전용면적 → 세대수.
 // 앞쪽(지역·단지명·거래건수·최근 거래가)은 문서를 서로 구별시키는 축이라 절대 빼지 않는다.
 const DESCRIPTION_LADDER: DescriptionOptions[] = [
-  { withBuildYear: true, withArea: true, withFacility: true },
-  { withBuildYear: false, withArea: true, withFacility: true },
-  { withBuildYear: false, withArea: true, withFacility: false },
-  { withBuildYear: false, withArea: false, withFacility: false },
+  { withHouseholds: true, withBuildYear: true, withArea: true, withFacility: true },
+  { withHouseholds: true, withBuildYear: false, withArea: true, withFacility: true },
+  { withHouseholds: true, withBuildYear: false, withArea: true, withFacility: false },
+  { withHouseholds: true, withBuildYear: false, withArea: false, withFacility: false },
+  { withHouseholds: false, withBuildYear: false, withArea: false, withFacility: false },
 ]
 
 function buildDescription(input: DetailMetaInput): string {

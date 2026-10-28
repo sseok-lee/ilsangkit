@@ -419,6 +419,42 @@ describe('useStructuredData', () => {
       const parsed = JSON.parse(factory().script[0].innerHTML)
       expect(parsed.image).toBe('https://ilsangkit.co.kr/og?title=래미안')
     })
+
+    const COMPLEX = { householdCount: 678, dongCount: 9, topFloor: 15, useApprovalDate: '1984-03-08', totalParking: null }
+
+    it('아파트 단지는 numberOfAccommodationUnits 와 단지 PropertyValue 를 싣는다', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      setBuildingPlaceSchema({ name: '개포경남', address: '서울 강남구', propertyType: '아파트', propertySlug: 'apt', buildYear: 1983, complex: COMPLEX })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0]().script[0].innerHTML)
+      expect(parsed['@type']).toBe('ApartmentComplex')
+      expect(parsed.numberOfAccommodationUnits).toBe(678)
+      expect(parsed.additionalProperty).toEqual([
+        { '@type': 'PropertyValue', name: 'propertyType', value: '아파트' },
+        { '@type': 'PropertyValue', name: 'buildYear', value: '1983' },
+        { '@type': 'PropertyValue', name: 'householdCount', value: '678' },
+        { '@type': 'PropertyValue', name: 'dongCount', value: '9' },
+        { '@type': 'PropertyValue', name: 'topFloor', value: '15' },
+        { '@type': 'PropertyValue', name: 'useApprovalDate', value: '1984-03-08' },
+      ])
+    })
+
+    it('오피스텔은 numberOfAccommodationUnits 없이 PropertyValue 만', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      setBuildingPlaceSchema({ name: 'X', address: '서울', propertyType: '오피스텔', propertySlug: 'offitel', complex: COMPLEX })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0]().script[0].innerHTML)
+      expect(parsed.numberOfAccommodationUnits).toBeUndefined()
+      expect(parsed.additionalProperty.map((p: { name: string }) => p.name)).toContain('householdCount')
+    })
+
+    it('complex 가 없으면 기존 출력과 같다', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      const opts = { name: 'X', address: '서울', propertyType: '아파트', propertySlug: 'apt' as const, buildYear: 2010 }
+      setBuildingPlaceSchema(opts)
+      setBuildingPlaceSchema({ ...opts, complex: null })
+      const [a, b] = mockUseHead.mock.calls.map(([factory]) => factory().script[0].innerHTML)
+      expect(b).toBe(a)
+      expect(JSON.parse(a).numberOfAccommodationUnits).toBeUndefined()
+    })
   })
 
   describe('setRealEstateListingSchema (Task 6 확장 필드)', () => {
