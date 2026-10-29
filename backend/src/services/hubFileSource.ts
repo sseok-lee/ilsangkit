@@ -19,7 +19,8 @@ const DOWNLOAD = `${BASE}/cmm/fms/fileOpnDown.do`;
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 const PAGE_TIMEOUT_MS = 30_000;
-const DOWNLOAD_TIMEOUT_MS = 30 * 60_000;
+/** 전유공용면적 3.1GB(2026-09)를 느린 회선에서도 받도록 2시간. 운영 스크립트 전체 상한(3시간) 안. */
+export const DOWNLOAD_TIMEOUT_MS = 2 * 60 * 60_000;
 /** 03 업무 행은 2026-10 기준 2~3쪽에 있다. 넉넉히 보되 끝없이 돌지 않는다. */
 const MAX_LIST_PAGES = 6;
 

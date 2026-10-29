@@ -763,6 +763,19 @@ describe('getDetailOverview complex', () => {
     expect(overview?.buildingRegister).toBeNull();
   });
 
+  it('K-apt 조회가 실패하면 건축물대장으로 대신하지 않는다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockRejectedValue(new Error('db down'));
+    mockFindBuildingRegister.mockResolvedValue(REGISTER);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindBuildingRegister).not.toHaveBeenCalled();
+    expect(overview?.buildingRegister).toBeNull();
+    warn.mockRestore();
+  });
+
   it('건축물대장 조회가 실패해도 개요는 나온다', async () => {
     mockOverviewBase();
     mockFindKaptComplex.mockResolvedValue(null);

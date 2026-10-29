@@ -151,6 +151,20 @@ describe('syncBuildingRegister', () => {
     expect(db.buildingRegisterSourceFile.upsert).not.toHaveBeenCalled();
   });
 
+  it('기준 월 기록을 먼저 바꾸고 이전 월 행을 지운다(삭제 중에도 새 월 행이 보이게)', async () => {
+    setup({ saved: { '0302': '2026-09', '0303': '2026-09' } });
+    await syncBuildingRegister({ workDir: workDir() });
+    const recordOrder = db.buildingRegisterSourceFile.upsert.mock.invocationCallOrder[0];
+    const unitDelete = db.$executeRaw.mock.calls.findIndex((c) => c[0].strings.join('?').includes('BuildingRegisterUnitCount'));
+    expect(recordOrder).toBeLessThan(db.$executeRaw.mock.invocationCallOrder[unitDelete]);
+  });
+
+  it('형식이 깨진 파일은 한 행도 쓰지 않는다', async () => {
+    setup({ saved: { '0306': '2026-09' }, files: { '0302': [recap('R1'), 'a|b'] } });
+    await expect(syncBuildingRegister({ workDir: workDir() })).rejects.toThrow(/건너뛴 줄/);
+    expect(upsertCalls('BuildingRegisterRecap')).toHaveLength(0);
+  });
+
   it('전유공용면적은 3개월이 지나야 받는다', async () => {
     setup({ saved: { '0302': '2026-09', '0303': '2026-09', '0306': '2026-07' } });
     expect((await syncBuildingRegister({ workDir: workDir() })).results.find((r) => r.taskCode === '0306')?.status).toBe('not-due');

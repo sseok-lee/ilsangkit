@@ -8,6 +8,7 @@ import {
   findHubFile,
   openHubSession,
   downloadHubFile,
+  DOWNLOAD_TIMEOUT_MS,
   type HubFileEntry,
 } from '../../src/services/hubFileSource.js';
 
@@ -95,5 +96,11 @@ describe('downloadHubFile', () => {
       .mockResolvedValueOnce(new Response('x', { status: 200, headers: { 'content-disposition': `attachment;filename=${closedName}` } }));
     await expect(downloadHubFile(session, TITLE_0303, join(dir, 'x.zip'), fetchFn as unknown as typeof fetch))
       .rejects.toThrow(/건축물대장/);
+  });
+});
+
+describe('DOWNLOAD_TIMEOUT_MS', () => {
+  it('3GB 전유공용면적도 느린 회선에서 끝나도록 2시간', () => {
+    expect(DOWNLOAD_TIMEOUT_MS).toBe(2 * 60 * 60_000);
   });
 });

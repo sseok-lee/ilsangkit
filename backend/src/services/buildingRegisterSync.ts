@@ -78,9 +78,25 @@ function checkSkipped(taskCode: HubTaskCode, counts: LoadCounts): void {
   if (counts.lines === 0) throw new Error(`건축HUB ${taskCode} 파일에 행이 없다`);
   if (counts.skipped / counts.lines > MAX_SKIPPED_RATIO) {
     throw new Error(
-      `건축HUB ${taskCode} 건너뛴 줄 ${counts.skipped}/${counts.lines} — 열 구성이 바뀌었을 수 있다(교체하지 않음)`,
+      `건축HUB ${taskCode} 건너뛴 줄 ${counts.skipped}/${counts.lines} — 열 구성이 바뀌었을 수 있다(저장하지 않음)`,
     );
   }
+}
+
+const COLUMN_COUNT: Record<HubTaskCode, number> = {
+  '0302': RECAP_COLUMNS.length,
+  '0303': TITLE_COLUMNS.length,
+  '0306': UNIT_COLUMNS.length,
+};
+
+/** 쓰기 전에 열 수만 센다 — 형식이 바뀐 파일이면 한 행도 쓰지 않고 멈춘다. */
+async function precheck(taskCode: HubTaskCode, zipPath: string): Promise<void> {
+  const counts: LoadCounts = { rows: 0, skipped: 0, lines: 0 };
+  for await (const line of readZipLines(zipPath)) {
+    counts.lines++;
+    if (!splitRow(line, COLUMN_COUNT[taskCode])) counts.skipped++;
+  }
+  checkSkipped(taskCode, counts);
 }
 
 /** 같은 배치 안에서 같은 키는 뒤 행으로 덮어쓰고, 배치가 차면 저장한다. */
@@ -139,7 +155,6 @@ async function loadTitles(zipPath: string, sourceMonth: string, stats: SyncStats
   }
   await writer.flush();
   counts.rows = writer.stored;
-  checkSkipped('0303', counts);
   await batchUpsertRaw('BuildingRegisterDong', [...dongs.values()], BATCH_SIZE);
   return counts;
 }
@@ -171,7 +186,6 @@ async function loadUnits(zipPath: string, sourceMonth: string, stats: SyncStats)
     if (!cols) { counts.skipped++; continue; }
     counter.add(parseUnitRow(cols));
   }
-  checkSkipped('0306', counts);
   const rows = counter.results(sourceMonth);
   const { newCount, updateCount } = await batchUpsertRaw(TABLE['0306'], rows as unknown as Record<string, unknown>[], BATCH_SIZE);
   stats.newRecords += newCount;
@@ -211,15 +225,17 @@ async function syncDataset(
   try {
     const { bytes } = await downloadHubFile(session, entry, zipPath, options.fetchFn);
     console.info(`[building-register] ${taskCode} ${entry.title} 받음 ${(bytes / 1048576).toFixed(0)}MB`);
+    await precheck(taskCode, zipPath);
     const load = taskCode === '0302' ? loadRecap : taskCode === '0303' ? loadTitles : loadUnits;
     const counts = await load(zipPath, entry.sourceMonth, stats);
-    checkSkipped(taskCode, counts);
-    await deleteOtherMonths(TABLE[taskCode], entry.sourceMonth);
 
     stats.totalRecords += counts.rows;
     stats.skippedRecords += counts.skipped;
+    // 기준 월 기록을 먼저 바꾼다 — 상세는 기록된 월의 호수 행만 읽으므로, 이전 월 삭제 중이나
+    // 삭제가 중간에 멈춰도 새 월 값이 보인다. 남은 이전 월 행은 다음 성공 때 지워진다.
     const record = { sourceMonth: entry.sourceMonth, fileId: entry.fileId, rowCount: counts.rows, skippedCount: counts.skipped };
     await prisma.buildingRegisterSourceFile.upsert({ where: { taskCode }, create: { taskCode, ...record }, update: record });
+    await deleteOtherMonths(TABLE[taskCode], entry.sourceMonth);
     return { taskCode, status: 'updated', sourceMonth: entry.sourceMonth, rows: counts.rows, skipped: counts.skipped };
   } finally {
     rmSync(zipPath, { force: true });
