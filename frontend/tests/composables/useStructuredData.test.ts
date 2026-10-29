@@ -446,6 +446,18 @@ describe('useStructuredData', () => {
       expect(parsed.additionalProperty.map((p: { name: string }) => p.name)).toContain('householdCount')
     })
 
+    it('건축물대장 오피스텔은 오피스텔 호수를 PropertyValue 로 싣는다', () => {
+      const { setBuildingPlaceSchema } = useStructuredData()
+      setBuildingPlaceSchema({
+        name: '아크로텔 강남역', address: '서울', propertyType: '오피스텔', propertySlug: 'offitel',
+        complex: { householdCount: null, offitelUnitCount: 471, dongCount: 1, topFloor: 20, useApprovalDate: '2016-07-29', totalParking: 180 },
+      })
+      const parsed = JSON.parse(mockUseHead.mock.calls[0][0]().script[0].innerHTML)
+      expect(parsed.numberOfAccommodationUnits).toBeUndefined()
+      expect(parsed.additionalProperty).toContainEqual({ '@type': 'PropertyValue', name: 'offitelUnitCount', value: '471' })
+      expect(parsed.additionalProperty.map((p: { name: string }) => p.name)).not.toContain('householdCount')
+    })
+
     it('complex 가 없으면 기존 출력과 같다', () => {
       const { setBuildingPlaceSchema } = useStructuredData()
       const opts = { name: 'X', address: '서울', propertyType: '아파트', propertySlug: 'apt' as const, buildYear: 2010 }

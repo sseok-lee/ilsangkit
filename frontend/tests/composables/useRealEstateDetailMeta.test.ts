@@ -413,4 +413,19 @@ describe('buildRealEstateDetailMeta - K-apt 단지 정보', () => {
   it('complex 가 없으면 기존 출력과 같다', () => {
     expect(buildRealEstateDetailMeta({ ...base, complex: null })).toEqual(buildRealEstateDetailMeta(base))
   })
+
+  it('건축물대장 빌라: 세대수·전용면적·사용승인 연도', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...short, areaRange: { min: 57 }, complex: { householdCount: 216, useApprovalYear: 1994, unitsText: '216세대' },
+    })
+    expect(description).toContain('216세대, 전용 57㎡, 1994년 사용승인.')
+  })
+
+  it('건축물대장 오피스텔: 세대수 대신 오피스텔 호수 문구', () => {
+    const { description } = buildRealEstateDetailMeta({
+      ...short, areaRange: { min: 24, max: 54 }, complex: { householdCount: null, useApprovalYear: 2016, unitsText: '오피스텔 471호' },
+    })
+    expect(description).toContain('오피스텔 471호, 전용 24~54㎡, 2016년 사용승인.')
+    expect(description).not.toContain('세대')
+  })
 })

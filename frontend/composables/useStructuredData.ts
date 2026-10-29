@@ -395,9 +395,10 @@ export function useStructuredData() {
     propertyType: string
     propertySlug?: 'apt' | 'villa' | 'offitel'
     image?: string
-    /** K-apt 단지 정보(연결된 단지만) */
+    /** K-apt 단지 정보, 없으면 건축물대장 값(오피스텔은 offitelUnitCount) */
     complex?: {
       householdCount: number | null
+      offitelUnitCount?: number | null
       dongCount: number | null
       topFloor: number | null
       useApprovalDate: string | null
@@ -409,6 +410,7 @@ export function useStructuredData() {
     if (!complex) return []
     const entries: Array<[string, number | string | null]> = [
       ['householdCount', complex.householdCount],
+      ['offitelUnitCount', complex.offitelUnitCount ?? null],
       ['dongCount', complex.dongCount],
       ['topFloor', complex.topFloor],
       ['useApprovalDate', complex.useApprovalDate],
