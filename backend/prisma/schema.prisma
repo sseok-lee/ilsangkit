@@ -2299,8 +2299,8 @@ model KaptMaintenanceFee {
   ltrCharge           BigInt?
   ltrUsage            BigInt?
   ltrBalance          BigInt?
-  /// 장충금 적립률 (원본 값 그대로)
-  ltrRate             Decimal? @db.Decimal(10, 3)
+  /// 장충금 적립률 — 원본 값 그대로(27억 같은 오류값이 섞여 있어 DOUBLE)
+  ltrRate             Float?
   miscIncome          BigInt?
   residentIncome      BigInt?
   sharedIncome        BigInt?

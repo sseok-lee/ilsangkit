@@ -60,7 +60,7 @@ export const KAPT_FEE_COLUMNS = [
   ['공동기여수익', 'sharedIncome'],
 ] as const;
 
-/** 원(정수)이 아닌 비율 컬럼 — Decimal(10,3) 문자열로 넣는다 */
+/** 원(정수)이 아닌 비율 컬럼 — 반올림하지 않는다. 원본에 27억 같은 오류값도 섞여 있다(2026 파일 53건). */
 const RATE_COLUMNS = new Set<string>(['ltrRate']);
 
 const CODE_HEADER = '단지코드';
@@ -70,7 +70,7 @@ export interface KaptFeeItem {
   kaptCode: string;
   /** YYYYMM */
   yearMonth: string;
-  /** 금액 컬럼은 원(정수) 또는 null, ltrRate 는 소수 3자리 문자열 또는 null */
+  /** 금액 컬럼은 원(정수) 또는 null, ltrRate 는 원본 소수 또는 null */
   [column: string]: string | number | null;
 }
 
@@ -81,10 +81,10 @@ export function parseFeeAmount(value: string | undefined): number | null {
   return Number.isFinite(n) ? Math.round(n) : null;
 }
 
-function parseRate(value: string | undefined): string | null {
+function parseRate(value: string | undefined): number | null {
   const v = (value ?? '').trim();
   if (v === '' || !Number.isFinite(Number(v))) return null;
-  return Number(v).toFixed(3);
+  return Number(v);
 }
 
 /** "202601", "202601.0" → "202601". 그 밖의 형식은 null */
@@ -124,7 +124,7 @@ export async function* readKaptFeeXlsx(buffer: Buffer, batchSize = 2000): AsyncG
         continue;
       }
       if (!columns) throw new Error('K-apt 관리비 파일 헤더 행을 찾지 못했다');
-      const cell = (header: string) => cellToString(row.getCell(columns!.get(header)!).value).trim();
+      const cell = (header: string): string => cellToString(row.getCell(columns!.get(header)!).value).trim();
 
       const kaptCode = cell(CODE_HEADER);
       const yearMonth = parseYearMonth(cell(MONTH_HEADER));

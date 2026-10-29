@@ -44,7 +44,7 @@ CREATE TABLE `KaptMaintenanceFee` (
     `ltrCharge` BIGINT NULL,
     `ltrUsage` BIGINT NULL,
     `ltrBalance` BIGINT NULL,
-    `ltrRate` DECIMAL(10, 3) NULL,
+    `ltrRate` DOUBLE NULL,
     `miscIncome` BIGINT NULL,
     `residentIncome` BIGINT NULL,
     `sharedIncome` BIGINT NULL,

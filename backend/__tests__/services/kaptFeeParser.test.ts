@@ -84,7 +84,7 @@ describe('readKaptFeeXlsx', () => {
       individualTotal: 704384000,
       ltrCharge: 48633408,
       ltrBalance: 3014132480,
-      ltrRate: '2.191',
+      ltrRate: 2.191,
       labor: 0,
     });
   });
