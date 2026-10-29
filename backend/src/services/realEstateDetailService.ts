@@ -353,7 +353,11 @@ export async function getDetailOverview(
     ? { lat: toNumber(locationRow.lat), lng: toNumber(locationRow.lng) }
     : null;
   const areaBounds = areaRows[0] ?? { minArea: null, maxArea: null };
-  const complex = await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
+  // 오피스텔은 K-apt 대상이 아니다. 주상복합이면 같은 필지의 K-apt 단지가 잡히지만 그 값은 아파트 부분
+  // (예: 서초센트럴IPARK — K-apt 318세대·관리비는 80㎡ 아파트, 오피스텔은 24~54㎡)이라 붙이지 않는다.
+  const complex = isOffitelType(type)
+    ? null
+    : await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
   const maintenanceFee = complex ? await findDetailMaintenanceFee(complex.kaptCode) : null;
 
   return {
@@ -401,6 +405,10 @@ async function findDetailComplex(
     console.warn('[realEstateDetail] K-apt 단지 조회 실패', error instanceof Error ? error.message : error);
     return null;
   }
+}
+
+function isOffitelType(type: RealEstateType): boolean {
+  return type === 'offitel-sale' || type === 'offitel-rent';
 }
 
 /** 관리비도 덧붙이는 정보 — 실패하면 관리비만 숨긴다. */
