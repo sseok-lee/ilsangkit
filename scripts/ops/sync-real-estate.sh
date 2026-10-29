@@ -134,10 +134,11 @@ run_backend_node_timed 20m "$ACTIVE_BACKEND_DIR/dist/scripts/syncPublicRental.js
   || echo "[warn] 공공임대 동기화 실패 (exit=$?) — sub-public-rent 이력 확인"
 echo "[step:public-rental-end]"
 
-# K-apt 공동주택 단지 정보 (자료실 주간 파일). 새 파일이 없는 날은 목록만 확인하고 끝난다.
+# K-apt 공동주택 단지 정보·관리비 (자료실 주간 파일). 새 파일이 없는 날은 목록만 확인하고 끝난다.
 # 실패해도 부동산 writer 결과에는 영향이 없다(별도 테이블) — kapt SyncHistory 로 확인.
+# 예산 30분: 로컬 전부 새로 받기(기본정보·면적·필지 + 관리비 43만 7천 행) 178초·최대 메모리 1.3GB (2026-10-29).
 echo "[step:kapt-start]"
-run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/syncKapt.js" \
+run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/syncKapt.js" \
   || echo "[warn] K-apt 단지 정보 동기화 실패 (exit=$?) — kapt 이력 확인"
 echo "[step:kapt-end]"
 

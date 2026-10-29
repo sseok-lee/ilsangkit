@@ -29,11 +29,20 @@ describe('isValidMonthlyFee', () => {
 });
 
 describe('pickBaseMonth', () => {
-  it('단지 수가 가장 많은 달의 95% 이상인 가장 최근 달', () => {
+  it('단지 수가 가장 많은 달의 90% 이상인 가장 최근 달', () => {
     expect(pickBaseMonth([
       { yearMonth: '202607', complexes: 20_100 },
       { yearMonth: '202609', complexes: 11_370 },
       { yearMonth: '202608', complexes: 20_083 },
+    ])).toBe('202608');
+  });
+
+  it('2026-10-26 실데이터: 최대 21,546(2026-06) 대비 8월 20,083(93%)은 기준 월, 9월 11,370(53%)은 아니다', () => {
+    expect(pickBaseMonth([
+      { yearMonth: '202606', complexes: 21_546 },
+      { yearMonth: '202607', complexes: 21_447 },
+      { yearMonth: '202608', complexes: 20_083 },
+      { yearMonth: '202609', complexes: 11_370 },
     ])).toBe('202608');
   });
 

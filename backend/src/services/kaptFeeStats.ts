@@ -1,8 +1,8 @@
 // K-apt 관리비 기준 월과 시군구별 ㎡당 공용관리비 중간값.
 //
 // 상세 페이지가 요청마다 넓은 집계를 하지 않도록 수집 끝에 한 번 계산해 KaptFeeSggMedian 에 둔다.
-// - 기준 월: 관리비가 올라온 단지 수가 가장 많은 달의 95% 이상인 가장 최근 달.
-//   최근 달은 일부 단지만 올라와 있다(2026-10-26 파일: 08월 20,083단지, 09월 11,370단지 → 기준 월 08월).
+// - 기준 월: 관리비가 올라온 단지 수가 가장 많은 달의 90% 이상인 가장 최근 달.
+//   최근 달은 일부 단지만 올라와 있다(2026-10-26 파일: 최대 06월 21,546단지, 08월 20,083(93%), 09월 11,370(53%) → 기준 월 08월).
 // - 시군구: 단지 필지의 sggCode 중 가장 작은 값(여러 시군구에 걸친 단지는 거의 없다).
 // - 세대 평균 월 관리비가 정상 범위를 벗어난 단지(0원·수천만 원 같은 원본 오류)는 뺀다.
 // 전국 값은 sggCode '00000' 행이다 — 상세는 이 행의 yearMonth 를 기준 월로 읽는다.
@@ -12,7 +12,7 @@ import { prisma } from '../lib/prisma.js';
 /** 세대 평균 월 관리비(공용+개별+장충) 정상 범위, 원 (2026-08: 1만 원 미만 5곳, 200만 원 초과 38곳 / 20,079단지) */
 export const FEE_VALID_RANGE = { min: 10_000, max: 2_000_000 } as const;
 export const NATIONAL_SGG = '00000';
-const BASE_MONTH_RATIO = 0.95;
+const BASE_MONTH_RATIO = 0.9;
 const MIN_SGG_COMPLEXES = 5;
 
 export function isValidMonthlyFee(perHousehold: number): boolean {
