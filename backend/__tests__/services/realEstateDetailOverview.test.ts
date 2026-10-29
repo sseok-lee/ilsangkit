@@ -699,6 +699,30 @@ describe('getDetailOverview complex', () => {
     warn.mockRestore();
   });
 
+  it.each(['offitel-sale', 'offitel-rent'] as const)('%s 는 K-apt 단지·관리비를 붙이지 않는다(주상복합 아파트 부분 값이라)', async (type) => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+    mockLoadMaintenanceFee.mockResolvedValue({ month: '2026-08', total: 444578 });
+
+    const overview = await getDetailOverview(type, { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview).not.toBeNull();
+    expect(mockFindKaptComplex).not.toHaveBeenCalled();
+    expect(mockLoadMaintenanceFee).not.toHaveBeenCalled();
+    expect(overview?.complex).toBeNull();
+    expect(overview?.maintenanceFee).toBeNull();
+  });
+
+  it.each(['apt-rent', 'villa-sale'] as const)('%s 는 그대로 K-apt 단지를 찾는다', async (type) => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+
+    const overview = await getDetailOverview(type, { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindKaptComplex).toHaveBeenCalledTimes(1);
+    expect(overview?.complex).toEqual(COMPLEX);
+  });
+
   it('연결된 단지의 관리비 요약을 싣는다', async () => {
     mockOverviewBase();
     mockFindKaptComplex.mockResolvedValue(COMPLEX);
