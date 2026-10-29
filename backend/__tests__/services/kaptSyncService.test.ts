@@ -28,6 +28,12 @@ const parsers = vi.hoisted(() => ({
 }));
 vi.mock('../../src/services/kaptFileParsers.js', () => parsers);
 
+const fees = vi.hoisted(() => ({ syncKaptFees: vi.fn() }));
+vi.mock('../../src/services/kaptFeeSync.js', () => fees);
+
+const feeStats = vi.hoisted(() => ({ refreshFeeSggMedians: vi.fn(), hasFeeSggMedians: vi.fn() }));
+vi.mock('../../src/services/kaptFeeStats.js', () => feeStats);
+
 import { syncKaptFiles, KAPT_MIN_ROWS } from '../../src/services/kaptSyncService.js';
 
 const RUN_START = new Date('2026-10-28T03:10:00Z');
@@ -61,6 +67,12 @@ beforeEach(() => {
     areas: Array.from({ length: KAPT_MIN_ROWS.area }, (_, i) => ({ kaptCode: `A${i}`, exclusiveArea: '84.0000', householdCount: 1 })),
     complexes: new Map([['A0', { managementArea: '100.00', exclusiveAreaTotal: '80.00' }]]),
   });
+  fees.syncKaptFees.mockResolvedValue([
+    { dataset: 'fee', status: 'unchanged', fileDate: '2026-10-26', rows: 1 },
+    { dataset: 'fee-prev', status: 'unchanged', fileDate: '2026-10-26', rows: 1 },
+  ]);
+  feeStats.refreshFeeSggMedians.mockResolvedValue({ baseMonth: '202608', sggCount: 1 });
+  feeStats.hasFeeSggMedians.mockResolvedValue(true);
   parsers.parseKaptParcelXlsx.mockResolvedValue({
     items: Array.from({ length: KAPT_MIN_ROWS.parcel }, (_, i) => ({ kaptCode: `A${i}`, pnu: '1'.repeat(19) })),
     skipped: 0,
@@ -71,8 +83,9 @@ describe('syncKaptFiles', () => {
   it('기준일이 이미 반영된 데이터셋은 받지 않는다', async () => {
     db.kaptSourceFile.findUnique.mockResolvedValue({ fileDate: new Date('2026-10-26T00:00:00Z'), rowCount: 21751 });
     const results = await syncKaptFiles();
-    expect(results.map((r) => r.status)).toEqual(['unchanged', 'unchanged', 'unchanged']);
+    expect(results.map((r) => r.status)).toEqual(['unchanged', 'unchanged', 'unchanged', 'unchanged', 'unchanged']);
     expect(source.downloadKaptFile).not.toHaveBeenCalled();
+    expect(feeStats.refreshFeeSggMedians).not.toHaveBeenCalled();
     expect(base.runSync).toHaveBeenCalledWith('kapt', expect.any(Function), { allowEmpty: true });
   });
 
@@ -80,7 +93,9 @@ describe('syncKaptFiles', () => {
     db.kaptSourceFile.findUnique.mockResolvedValue({ fileDate: new Date('2026-10-23T00:00:00Z'), rowCount: 1 });
     const results = await syncKaptFiles();
 
-    expect(results.map((r) => [r.dataset, r.status])).toEqual([['basic', 'updated'], ['area', 'updated'], ['parcel', 'updated']]);
+    expect(results.map((r) => [r.dataset, r.status])).toEqual([
+      ['basic', 'updated'], ['area', 'updated'], ['parcel', 'updated'], ['fee', 'unchanged'], ['fee-prev', 'unchanged'],
+    ]);
     expect(base.batchUpsertRaw.mock.calls.map((c) => c[0])).toEqual(['KaptComplex', 'KaptComplexArea', 'KaptComplexParcel']);
     expect(db.kaptSourceFile.upsert).toHaveBeenCalledTimes(3);
     expect(db.kaptSourceFile.upsert.mock.calls[0][0].update).toMatchObject({ postSeq: 1, fileName: 'f.xlsx', rowCount: KAPT_MIN_ROWS.basic });
@@ -129,5 +144,28 @@ describe('syncKaptFiles', () => {
   it('최신 글을 못 찾으면 실패한다', async () => {
     source.fetchLatestKaptPost.mockResolvedValue(null);
     await expect(syncKaptFiles()).rejects.toThrow(/최신 글을 찾지 못했다/);
+  });
+
+  it('관리비는 같은 세션으로 기본정보·면적·필지 다음에 받는다', async () => {
+    db.kaptSourceFile.findUnique.mockResolvedValue({ fileDate: new Date('2026-10-26T00:00:00Z'), rowCount: 1 });
+    await syncKaptFiles({ force: false });
+    expect(fees.syncKaptFees).toHaveBeenCalledWith({ cookie: 'c', csrf: 't' }, { force: false }, expect.any(Object));
+  });
+
+  it('관리비·기본정보·면적 중 하나라도 새로 반영하면 시군구 중간값을 다시 계산한다', async () => {
+    db.kaptSourceFile.findUnique.mockResolvedValue({ fileDate: new Date('2026-10-26T00:00:00Z'), rowCount: 1 });
+    fees.syncKaptFees.mockResolvedValue([
+      { dataset: 'fee', status: 'updated', fileDate: '2026-10-26', rows: 1 },
+      { dataset: 'fee-prev', status: 'unchanged', fileDate: '2026-10-26', rows: 1 },
+    ]);
+    await syncKaptFiles();
+    expect(feeStats.refreshFeeSggMedians).toHaveBeenCalledTimes(1);
+  });
+
+  it('바뀐 파일이 없어도 중간값 테이블이 비어 있으면 계산한다', async () => {
+    db.kaptSourceFile.findUnique.mockResolvedValue({ fileDate: new Date('2026-10-26T00:00:00Z'), rowCount: 1 });
+    feeStats.hasFeeSggMedians.mockResolvedValue(false);
+    await syncKaptFiles();
+    expect(feeStats.refreshFeeSggMedians).toHaveBeenCalledTimes(1);
   });
 });

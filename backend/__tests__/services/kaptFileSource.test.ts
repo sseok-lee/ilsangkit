@@ -5,7 +5,10 @@ import {
   findLatestPost,
   openKaptSession,
   fetchLatestKaptPost,
+  fetchKaptBoardPosts,
+  findFeePosts,
   downloadKaptFile,
+  type KaptPost,
 } from '../../src/services/kaptFileSource.js';
 
 // 2026-10-28 실제 boardListAjax.do 응답에서 두 건만 잘라낸 모양
@@ -106,6 +109,44 @@ describe('fetchLatestKaptPost', () => {
     expect(String(init.body)).toContain('scode=01');
     expect(String(init.body)).toContain('_csrf=t');
     expect(init.headers.Cookie).toBe('JSESSIONID=abc');
+  });
+});
+
+describe('fetchKaptBoardPosts', () => {
+  it('탭의 글 목록 전체를 돌려준다', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(res(LIST_HTML));
+    const posts = await fetchKaptBoardPosts({ cookie: 'c', csrf: 't' }, '03', fetchFn);
+    expect(posts.map((p) => p.postSeq)).toEqual([136041, 136011]);
+    expect(String(fetchFn.mock.calls[0][1].body)).toContain('scode=03');
+  });
+});
+
+describe('findFeePosts', () => {
+  // 2026-10-29 실측 03 탭 제목
+  const post = (postSeq: number, title: string, fileDate: string | null = null): KaptPost => ({ postSeq, title, fileDate });
+  const FEE_POSTS = [
+    post(21, 'K-apt 관리비공개의무단지 관리비정보(2026.10.26.)', '2026-10-26'),
+    post(20, 'K-apt 관리비공개의무단지 관리비정보(2026.10.23.)', '2026-10-23'),
+    post(129991, 'K-apt 관리비공개의무단지 관리비정보(2026년)'),
+    post(123541, 'K-apt 관리비공개의무단지 관리비정보(2025년)'),
+    post(5146, 'K-apt 관리비공개의무단지 관리비정보(2024년)'),
+    post(4226, 'K-apt 관리비공개의무단지 관리비정보(2018년)'),
+  ];
+
+  it('기준일이 가장 최근인 주간 글과 그 전년도 연도 글을 고른다', () => {
+    const { current, previous } = findFeePosts(FEE_POSTS);
+    expect(current?.postSeq).toBe(21);
+    expect(previous?.postSeq).toBe(123541);
+  });
+
+  it('주간 글이 없으면 둘 다 null', () => {
+    expect(findFeePosts(FEE_POSTS.filter((p) => !p.fileDate))).toEqual({ current: null, previous: null });
+  });
+
+  it('전년도 연도 글이 없으면 previous 만 null', () => {
+    const { current, previous } = findFeePosts(FEE_POSTS.filter((p) => p.postSeq !== 123541));
+    expect(current?.postSeq).toBe(21);
+    expect(previous).toBeNull();
   });
 });
 
