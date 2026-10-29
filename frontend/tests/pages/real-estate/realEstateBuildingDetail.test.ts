@@ -740,6 +740,43 @@ describe('real-estate/[realEstateType]/[city]/[district]/[buildingName].vue — 
     expect(sec.text()).toContain('출처: 국토교통부 K-apt 공동주택관리정보시스템')
   })
 
+  it('관리비가 있으면 단지 정보 다음 바로가기·섹션(같은 order, 위치 앞)을 SSR 로 낸다', async () => {
+    const fee = (await import('../../fixtures/maintenanceFeeGaepo.json')).default
+    mockDetailOverview = {
+      identity: { bjdCode: '11680', buildingName: '개포래미안포레스트' },
+      latestSale: null, buildYear: 2020, minArea: null, maxArea: null, saleCount6m: 0,
+      window6m: { from: '2026-04-23', to: '2026-10-23' }, addresses: [], location: null, locationAmbiguous: false,
+      basisMode: 'sale', defaultAreaGroup: null, areaGroups: [], saleBasis: {}, jeonseBasis: {},
+      complex: {
+        matchType: 'address', kaptCode: 'A10024564', name: '개포래미안포레스트',
+        householdCount: 2296, dongCount: 31, topFloor: 35, basementFloors: 3, useApprovalDate: '2020-09-28',
+        totalParking: null, groundParking: null, undergroundParking: null, heatingType: null, corridorType: null,
+        builder: null, developer: null, managementType: null, saleType: null,
+        elevatorCount: null, cctvCount: null, evChargerCount: null, areas: [], sourceDate: '2026-10-26',
+      },
+      maintenanceFee: fee,
+      generatedAt: '2026-10-23T00:00:00.000Z',
+    } as DetailOverview
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    const navLinks = wrapper.findAll('.estate-section-nav a').map((a) => a.attributes('href'))
+    expect(navLinks.indexOf('#maintenance-fee')).toBe(navLinks.indexOf('#complex-info') + 1)
+    const sec = wrapper.find('#maintenance-fee')
+    expect(sec.classes()).toEqual(expect.arrayContaining(['order-8', 'md:order-9']))
+    expect(sec.text()).toContain('44만 4,578원')
+    const html = wrapper.html()
+    expect(html.indexOf('id="complex-info"')).toBeLessThan(html.indexOf('id="maintenance-fee"'))
+    // 위치 섹션은 DOM 상 앞에 있고 CSS order(9 / md:11)로 관리비(8 / md:9) 뒤에 보인다
+    expect(wrapper.find('#location').classes()).toEqual(expect.arrayContaining(['order-9', 'md:order-11']))
+  })
+
+  it('관리비가 없으면 관리비 섹션·바로가기가 없다', async () => {
+    const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
+    const wrapper = await mountSuspended(m.default)
+    expect(wrapper.find('#maintenance-fee').exists()).toBe(false)
+    expect(wrapper.find('.estate-section-nav a[href="#maintenance-fee"]').exists()).toBe(false)
+  })
+
   it('단지와 연결되지 않으면 단지 정보 섹션·바로가기가 없다', async () => {
     const m = await import('~/pages/real-estate/[realEstateType]/[city]/[district]/[buildingName].vue')
     const wrapper = await mountSuspended(m.default)

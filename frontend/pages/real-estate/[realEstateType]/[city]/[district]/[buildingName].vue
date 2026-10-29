@@ -105,6 +105,7 @@
           <a href="#trend">가격 흐름</a>
           <a href="#transactions">거래 내역</a>
           <a v-if="complexInfo" href="#complex-info">단지 정보</a>
+          <a v-if="maintenanceFee" href="#maintenance-fee">관리비</a>
           <a href="#location">위치</a>
           <a href="#nearby">주변 정보</a>
         </nav>
@@ -366,6 +367,14 @@
         :complex="complexInfo"
       />
 
+      <!-- K-apt 관리비 — 단지 정보 바로 다음, 같은 order 라 DOM 순서대로 위치 앞 -->
+      <MaintenanceFeeSection
+        v-if="maintenanceFee"
+        id="maintenance-fee"
+        class="order-8 md:order-9 scroll-mt-24"
+        :fee="maintenanceFee"
+      />
+
       <AffiliateBanner class="order-10" />
 
       <!-- "주변 단지" 블록 — 유형 탭(아파트 → 오피스텔 → 빌라) · 같은 면적 최근가 2열 리스트 -->
@@ -502,6 +511,7 @@ import SectionBlock from '~/components/common/SectionBlock.vue'
 import PageHead from '~/components/common/PageHead.vue'
 import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
 import ComplexInfoSection from '~/components/realEstate/ComplexInfoSection.vue'
+import MaintenanceFeeSection from '~/components/realEstate/MaintenanceFeeSection.vue'
 import { approvalYear, buildComplexFactsLine } from '~/utils/complexInfo'
 import { resolveDefaultLatestDeal } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
@@ -815,6 +825,7 @@ function buildOgImage(info: BuildingInfo | null | undefined): string {
 const detailOverview = ref<DetailOverview | null>(null)
 // K-apt 단지와 연결되면 머리 보조 줄을 단지 숫자(세대·동·층·사용승인)로 바꾼다.
 const complexInfo = computed(() => detailOverview.value?.complex ?? null)
+const maintenanceFee = computed(() => detailOverview.value?.maintenanceFee ?? null)
 const complexFactsLine = computed(() => (complexInfo.value ? buildComplexFactsLine(complexInfo.value) : ''))
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
