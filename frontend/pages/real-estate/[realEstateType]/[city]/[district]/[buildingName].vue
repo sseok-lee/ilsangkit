@@ -70,6 +70,9 @@
         <p v-if="complexInfo && complexFactsLine" class="estate-facts">
           {{ complexFactsLine }} · <a href="#complex-info" class="estate-facts-link">단지 정보 ›</a>
         </p>
+        <p v-else-if="buildingRegister && registerFactsLine" class="estate-facts">
+          {{ registerFactsLine }} · <a href="#complex-info" class="estate-facts-link">{{ registerSectionTitle(buildingRegister) }} ›</a>
+        </p>
         <p v-else-if="overviewFactsLine" class="estate-facts">{{ overviewFactsLine }}</p>
 
         <AdBanner
@@ -105,6 +108,7 @@
           <a href="#trend">가격 흐름</a>
           <a href="#transactions">거래 내역</a>
           <a v-if="complexInfo" href="#complex-info">단지 정보</a>
+          <a v-else-if="buildingRegister" href="#complex-info">{{ registerSectionTitle(buildingRegister) }}</a>
           <a v-if="maintenanceFee" href="#maintenance-fee">관리비</a>
           <a href="#location">위치</a>
           <a href="#nearby">주변 정보</a>
@@ -366,6 +370,13 @@
         class="order-8 md:order-9 scroll-mt-24"
         :complex="complexInfo"
       />
+      <!-- 건축물대장 — K-apt 단지가 없을 때 같은 자리(소규모 아파트·빌라·오피스텔) -->
+      <BuildingRegisterSection
+        v-if="buildingRegister"
+        id="complex-info"
+        class="order-8 md:order-9 scroll-mt-24"
+        :register="buildingRegister"
+      />
 
       <!-- K-apt 관리비 — 단지 정보 바로 다음, 같은 order 라 DOM 순서대로 위치 앞 -->
       <MaintenanceFeeSection
@@ -513,6 +524,8 @@ import EstatePriceHero from '~/components/realEstate/EstatePriceHero.vue'
 import ComplexInfoSection from '~/components/realEstate/ComplexInfoSection.vue'
 import MaintenanceFeeSection from '~/components/realEstate/MaintenanceFeeSection.vue'
 import { approvalYear, buildComplexFactsLine } from '~/utils/complexInfo'
+import BuildingRegisterSection from '~/components/realEstate/BuildingRegisterSection.vue'
+import { buildRegisterFactsLine, registerApprovalYear, registerSectionTitle, registerUnitsText } from '~/utils/buildingRegister'
 import { resolveDefaultLatestDeal } from '~/utils/realEstateDetailPrice'
 import UiButton from '~/components/common/UiButton.vue'
 import BlogReviewSection from '~/components/blog/BlogReviewSection.vue'
@@ -827,6 +840,9 @@ const detailOverview = ref<DetailOverview | null>(null)
 const complexInfo = computed(() => detailOverview.value?.complex ?? null)
 const maintenanceFee = computed(() => detailOverview.value?.maintenanceFee ?? null)
 const complexFactsLine = computed(() => (complexInfo.value ? buildComplexFactsLine(complexInfo.value) : ''))
+// K-apt 단지가 없으면 건축물대장 값으로 같은 자리(요약 줄·섹션·description·JSON-LD)를 채운다.
+const buildingRegister = computed(() => (complexInfo.value ? null : detailOverview.value?.buildingRegister ?? null))
+const registerFactsLine = computed(() => (buildingRegister.value ? buildRegisterFactsLine(buildingRegister.value) : ''))
 
 // 최근 매매는 새 overview.latestSale만 쓴다. rent URL에서도 전세/월세 금액으로 재해석하지 않는다.
 const areaLabelMap = computed<Record<string, string>>(() =>
@@ -880,7 +896,13 @@ const detailMeta = computed(() => {
     facilitySummary: facilitySummary.value,
     complex: complexInfo.value
       ? { householdCount: complexInfo.value.householdCount, useApprovalYear: approvalYear(complexInfo.value) }
-      : null,
+      : buildingRegister.value
+        ? {
+            householdCount: buildingRegister.value.householdCount,
+            useApprovalYear: registerApprovalYear(buildingRegister.value),
+            unitsText: registerUnitsText(buildingRegister.value),
+          }
+        : null,
   })
 })
 
@@ -1724,7 +1746,16 @@ setBuildingPlaceSchema(() => ({
   propertyType: propertyMeta.value?.label || '',
   propertySlug: propertyTypePart as 'apt' | 'villa' | 'offitel',
   image: buildOgImage(buildingInfo.value),
-  complex: complexInfo.value,
+  complex: complexInfo.value ?? (buildingRegister.value
+    ? {
+        householdCount: buildingRegister.value.householdCount,
+        offitelUnitCount: buildingRegister.value.offitelUnitCount,
+        dongCount: buildingRegister.value.dongCount,
+        topFloor: buildingRegister.value.topFloor,
+        useApprovalDate: buildingRegister.value.useApprovalDate,
+        totalParking: buildingRegister.value.totalParking,
+      }
+    : null),
 }))
 setRealEstateListingSchema(() => {
   const info = buildingInfo.value

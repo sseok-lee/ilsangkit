@@ -223,6 +223,20 @@ test('deploy ships the sync script and refuses to swap backend while a sync is r
   assert.match(script, /move_into_place ops/)
 })
 
+test('deploy ships the building-register sync script, which shares the real-estate sync lock', () => {
+  assert.match(deploy, /scripts\/ops\/sync-building-register\.sh deploy-bundle\/scripts\/ops\//)
+  assert.match(deploy, /sha256sum [^\n]*scripts\/ops\/sync-building-register\.sh/)
+  const script = readFileSync('scripts/deploy/fixed-deploy.sh', 'utf8')
+  assert.match(script, /cp -p "\$STAGE\/scripts\/ops\/sync-building-register\.sh" "\$NEW\/ops\/sync-building-register\.sh"/)
+  const ops = readFileSync('scripts/ops/sync-building-register.sh', 'utf8')
+  assert.match(ops, /real-estate-sync\.lock/)
+  assert.match(ops, /flock -n 8/)
+  assert.match(ops, /--max-old-space-size=512/)
+  assert.match(ops, /syncBuildingRegister\.js/)
+  const syntax = spawnSync('bash', ['-n', 'scripts/ops/sync-building-register.sh'])
+  assert.equal(syntax.status, 0, String(syntax.stderr))
+})
+
 test('a daily check fails loudly when the server sync did not succeed today', () => {
   assert.match(syncCheck, /schedule:/)
   assert.match(syncCheck, /real-estate-sync\.status/)

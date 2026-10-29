@@ -238,6 +238,32 @@ npm run sync:geocode-real-estate  # 카카오 geocoding (KAKAO_REST_API_KEY 필�
 
 ---
 
+## 건축물대장 (건축HUB 대용량 파일)
+
+환경 변수: 없음 (로그인 불필요, 세션 + CSRF 로 받는다)
+
+출처: https://www.hub.go.kr/portal/opn/lps/idx-lgcpt-pvsn-srvc-list.do — 매월 20일 무렵 전월까지 반영된 전국 파일.
+업무구분 `03`(건축물대장)만 쓴다. 같은 이름의 `04`(폐쇄말소대장)는 받지 않는다.
+
+| 파일 | 업무코드 | 압축 크기(2026-09) | 주기 | 테이블 |
+|---|---|---:|---|---|
+| 총괄표제부 | 0302 | 36MB | 매월 | `BuildingRegisterRecap` |
+| 표제부 | 0303 | 621MB | 매월 | `BuildingRegisterTitle`(집합 대장 + 일반 대장 공동주택), `BuildingRegisterDong` |
+| 전유공용면적 | 0306 | 3.1GB | 3개월 | `BuildingRegisterUnitCount`(오피스텔 지번의 호실 수만) |
+
+```bash
+npm run sync:building-register                   # 대상 월이 바뀐 파일만
+npm run sync:building-register -- --force        # 총괄·표제부 다시 받기
+npm run sync:building-register -- --force-units  # 전유공용면적 다시 받기
+```
+
+- zip 은 디스크에 받아 줄 단위로 흘려 읽고 끝나면 지운다. 운영은 `node --max-old-space-size=512`.
+- 새 월로 다 쓴 뒤에만 이전 월 행을 시군구별로 지운다. 실패하면 이전 월 값이 남는다.
+- 열 수가 안 맞는 줄이 1% 를 넘으면 실패(형식 변경 의심). 결과는 `BuildingRegisterSourceFile`·SyncHistory(`building-register`).
+- 운영: `/home/project2/ops/sync-building-register.sh` 를 cron 이 매일 06:30 KST 실행. 03:00 부동산 동기화와 같은 잠금을 써서 겹치면 건너뛴다.
+
+---
+
 ## 프로덕션 주기적 동기화 전체 순서
 
 ```bash

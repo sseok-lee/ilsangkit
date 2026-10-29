@@ -64,6 +64,7 @@ test -f "$HELPER" || fail 'missing fixed runtime helper'
 test -f "$STAGE/ecosystem.config.js" || fail 'missing fixed PM2 config'
 test -f "$STAGE/BUILD_ARCH" || fail 'missing build architecture marker'
 test -f "$STAGE/scripts/ops/sync-real-estate.sh" || fail 'missing real-estate sync script'
+test -f "$STAGE/scripts/ops/sync-building-register.sh" || fail 'missing building-register sync script'
 chmod 700 "$STAGE"
 exec 9>"$ROOT/run/fixed-deploy.lock"
 flock -n 9 || fail 'another fixed deployment is running'
@@ -119,6 +120,8 @@ cp -p "$STAGE/ecosystem.config.js" "$NEW/ecosystem.config.js"
 mkdir -p "$NEW/ops"
 cp -p "$STAGE/scripts/ops/sync-real-estate.sh" "$NEW/ops/sync-real-estate.sh"
 chmod 700 "$NEW/ops/sync-real-estate.sh"
+cp -p "$STAGE/scripts/ops/sync-building-register.sh" "$NEW/ops/sync-building-register.sh"
+chmod 700 "$NEW/ops/sync-building-register.sh"
 tar -xzf "$STAGE/backend.tgz" -C "$NEW/backend"
 tar -xzf "$STAGE/frontend.tgz" -C "$NEW/frontend"
 test -f "$NEW/backend/dist/server.js" || fail 'backend build missing'

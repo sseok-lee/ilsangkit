@@ -48,8 +48,11 @@ export interface DetailMetaInput {
   buildYear?: number | null
   areaRange?: { min: number; max?: number } | null
   facilitySummary?: string | null
-  /** K-apt 단지 정보. 연결된 단지만 있다. 사용승인 연도가 있으면 준공년도 대신 쓴다. */
-  complex?: { householdCount: number | null; useApprovalYear: number | null } | null
+  /**
+   * K-apt 단지 정보, 없으면 건축물대장 값. 사용승인 연도가 있으면 준공년도 대신 쓴다.
+   * unitsText 가 있으면 세대수 대신 그 문구(오피스텔 "오피스텔 471호").
+   */
+  complex?: { householdCount: number | null; useApprovalYear: number | null; unitsText?: string | null } | null
 }
 
 export interface DetailMetaResult {
@@ -172,7 +175,9 @@ function renderDescription(input: DetailMetaInput, opts: DescriptionOptions): st
 
   const facts: string[] = []
   const households = input.complex?.householdCount
-  if (opts.withHouseholds && households) facts.push(`${households.toLocaleString()}세대`)
+  const unitsText = input.complex?.unitsText
+  if (opts.withHouseholds && unitsText) facts.push(unitsText)
+  else if (opts.withHouseholds && households) facts.push(`${households.toLocaleString()}세대`)
   const areaText = opts.withArea ? formatArea(input.areaRange) : null
   if (areaText) facts.push(`전용 ${areaText}`)
   const approvalYear = input.complex?.useApprovalYear
