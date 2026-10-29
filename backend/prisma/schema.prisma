@@ -2241,7 +2241,7 @@ model KaptComplexArea {
 
 /// K-apt 자료실에서 마지막으로 반영한 주간 파일. 같은 파일이면 다시 받지 않는다.
 model KaptSourceFile {
-  /// basic | parcel | area
+  /// basic | parcel | area | fee(올해 관리비) | fee-prev(전년도 관리비)
   dataset  String   @id @db.VarChar(20)
   /// 게시글 제목의 기준일 (예: 2026.10.26.)
   fileDate DateTime @db.Date
@@ -2249,4 +2249,78 @@ model KaptSourceFile {
   fileName String   @db.VarChar(200)
   rowCount Int
   syncedAt DateTime @default(now()) @updatedAt
+}
+
+/// K-apt 단지 × 월 관리비 (자료실 03 관리비정보 파일). 금액은 단지 전체 월 부과액(원).
+/// 시도·시군구·읍면·동리·단지명은 KaptComplex 와 같아 저장하지 않는다. 컬럼 ↔ 헤더는 kaptFeeParser.ts KAPT_FEE_COLUMNS.
+model KaptMaintenanceFee {
+  id                  Int      @id @default(autoincrement())
+  kaptCode            String   @db.VarChar(20)
+  /// 발생년월 YYYYMM
+  yearMonth           String   @db.Char(6)
+  commonTotal         BigInt?
+  generalTotal        BigInt?
+  labor               BigInt?
+  officeExpense       BigInt?
+  taxes               BigInt?
+  uniform             BigInt?
+  training            BigInt?
+  vehicle             BigInt?
+  otherOverhead       BigInt?
+  cleaning            BigInt?
+  security            BigInt?
+  disinfection        BigInt?
+  elevator            BigInt?
+  network             BigInt?
+  repairTotal         BigInt?
+  repair              BigInt?
+  facilityMaintenance BigInt?
+  safetyInspection    BigInt?
+  disasterPrevention  BigInt?
+  managementFee       BigInt?
+  individualTotal     BigInt?
+  heatingCommon       BigInt?
+  heatingPrivate      BigInt?
+  hotWaterCommon      BigInt?
+  hotWaterPrivate     BigInt?
+  gasCommon           BigInt?
+  gasPrivate          BigInt?
+  electricityCommon   BigInt?
+  electricityPrivate  BigInt?
+  waterCommon         BigInt?
+  waterPrivate        BigInt?
+  tvFee               BigInt?
+  septicFee           BigInt?
+  wasteFee            BigInt?
+  councilFee          BigInt?
+  buildingInsurance   BigInt?
+  electionFee         BigInt?
+  etc                 BigInt?
+  ltrCharge           BigInt?
+  ltrUsage            BigInt?
+  ltrBalance          BigInt?
+  /// 장충금 적립률 (원본 값 그대로)
+  ltrRate             Decimal? @db.Decimal(10, 3)
+  miscIncome          BigInt?
+  residentIncome      BigInt?
+  sharedIncome        BigInt?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  syncedAt            DateTime @default(now())
+
+  @@unique([kaptCode, yearMonth])
+  @@index([yearMonth])
+}
+
+/// 시군구별 ㎡당 공용관리비 중간값(기준 월). 수집 끝에 다시 계산한다.
+/// sggCode '00000' 은 전국 — 기준 월은 이 행의 yearMonth 다.
+model KaptFeeSggMedian {
+  sggCode           String   @db.Char(5)
+  yearMonth         String   @db.Char(6)
+  /// 원/㎡, 반올림
+  medianCommonPerM2 Int
+  complexCount      Int
+  syncedAt          DateTime @default(now()) @updatedAt
+
+  @@id([sggCode, yearMonth])
 }
