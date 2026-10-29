@@ -116,6 +116,27 @@ export interface LatestSale {
   floor: number | null
 }
 
+/** 건축물대장 건물 정보(건축HUB). K-apt 단지 정보가 없는 상세에만 온다. */
+export interface BuildingRegisterInfo {
+  kind: 'residential' | 'offitel'
+  householdCount: number | null
+  /** 상가를 뺀 오피스텔 호수 */
+  offitelUnitCount: number | null
+  dongCount: number | null
+  topFloor: number | null
+  basementFloors: number | null
+  /** YYYY-MM-DD */
+  useApprovalDate: string | null
+  totalParking: number | null
+  elevatorCount: number | null
+  purposes: string[]
+  structure: string | null
+  /** 표제부 기준 월 'YYYY-MM' */
+  sourceMonth: string | null
+  /** 오피스텔 호수 기준 월 'YYYY-MM' */
+  unitSourceMonth: string | null
+}
+
 /** K-apt 단지 정보(관리비 공개 의무단지). 상세와 연결되지 않으면 개요의 complex 는 null. */
 export interface ComplexInfo {
   matchType: 'address' | 'road' | 'name'
@@ -201,6 +222,7 @@ export interface DetailOverview {
   wolseLatest?: Record<string, WolseLatestDeal | null>
   /** K-apt 단지 정보. 연결 안 되거나 조회 실패면 null. 구 응답엔 없을 수 있다. */
   complex?: ComplexInfo | null
+  buildingRegister?: BuildingRegisterInfo | null
   /** K-apt 관리비 요약. 없거나 이상값·조회 실패면 null. 구 응답엔 없을 수 있다. */
   maintenanceFee?: MaintenanceFeeSummary | null
   generatedAt: string
