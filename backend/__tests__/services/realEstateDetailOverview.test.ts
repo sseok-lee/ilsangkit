@@ -41,6 +41,10 @@ const { mockLoadMaintenanceFee } = vi.hoisted(() => ({ mockLoadMaintenanceFee: v
 vi.mock('../../src/services/kaptFeeLoader.js', () => ({
   loadMaintenanceFee: mockLoadMaintenanceFee,
 }));
+const { mockFindBuildingRegister } = vi.hoisted(() => ({ mockFindBuildingRegister: vi.fn() }));
+vi.mock('../../src/services/buildingRegisterMatcher.js', () => ({
+  findBuildingRegister: mockFindBuildingRegister,
+}));
 
 import { getDetailOverview } from '../../src/services/realEstateDetailService.js';
 
@@ -58,6 +62,8 @@ beforeEach(() => {
   mockFindKaptComplex.mockResolvedValue(null);
   mockLoadMaintenanceFee.mockReset();
   mockLoadMaintenanceFee.mockResolvedValue(null);
+  mockFindBuildingRegister.mockReset();
+  mockFindBuildingRegister.mockResolvedValue(null);
   mockGetCanonicalPath.mockReset();
   mockGetCanonicalPath.mockResolvedValue(null);
   mockIsPreservedMode.mockReset();
@@ -721,6 +727,66 @@ describe('getDetailOverview complex', () => {
 
     expect(mockFindKaptComplex).toHaveBeenCalledTimes(1);
     expect(overview?.complex).toEqual(COMPLEX);
+  });
+
+  const REGISTER = { kind: 'residential', householdCount: 216, offitelUnitCount: null, dongCount: 9 };
+
+  it('K-apt 단지가 있으면 건축물대장을 조회하지 않는다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+    mockFindBuildingRegister.mockResolvedValue(REGISTER);
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindBuildingRegister).not.toHaveBeenCalled();
+    expect(overview?.buildingRegister).toBeNull();
+  });
+
+  it('K-apt 가 없으면 건축물대장 값을 싣는다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(null);
+    mockFindBuildingRegister.mockResolvedValue(REGISTER);
+
+    const overview = await getDetailOverview('villa-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindBuildingRegister).toHaveBeenCalledWith(expect.objectContaining({ kind: 'residential', sggCode: '11680', buildingName: 'A' }));
+    expect(overview?.buildingRegister).toEqual(REGISTER);
+  });
+
+  it('오피스텔은 offitel 로 조회한다', async () => {
+    mockOverviewBase();
+    mockFindBuildingRegister.mockResolvedValue(null);
+
+    const overview = await getDetailOverview('offitel-rent', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindBuildingRegister).toHaveBeenCalledWith(expect.objectContaining({ kind: 'offitel' }));
+    expect(overview?.buildingRegister).toBeNull();
+  });
+
+  it('K-apt 조회가 실패하면 건축물대장으로 대신하지 않는다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockRejectedValue(new Error('db down'));
+    mockFindBuildingRegister.mockResolvedValue(REGISTER);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockFindBuildingRegister).not.toHaveBeenCalled();
+    expect(overview?.buildingRegister).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('건축물대장 조회가 실패해도 개요는 나온다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(null);
+    mockFindBuildingRegister.mockRejectedValue(new Error('db down'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview).not.toBeNull();
+    expect(overview?.buildingRegister).toBeNull();
+    warn.mockRestore();
   });
 
   it('연결된 단지의 관리비 요약을 싣는다', async () => {

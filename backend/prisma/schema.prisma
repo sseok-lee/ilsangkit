@@ -2251,6 +2251,108 @@ model KaptSourceFile {
   syncedAt DateTime @default(now()) @updatedAt
 }
 
+/// 건축물대장 표제부 (건축HUB 대용량 03/0303). 집합 대장 전부 + 일반 대장 중 공동주택만 저장.
+/// 지번 키 = 시군구·법정동·대지구분(0 대지/1 산/2 블록)·번·지(4자리). raw = 레이아웃 열 이름 → 원본 값.
+model BuildingRegisterTitle {
+  mgmPk         String  @id @db.VarChar(33)
+  sggCode       String  @db.Char(5)
+  bjdongCode    String  @db.Char(5)
+  platGbCd      String  @db.Char(1)
+  bun           String  @db.Char(4)
+  ji            String  @db.Char(4)
+  bldNm         String? @db.VarChar(200)
+  dongNm        String? @db.VarChar(100)
+  /// 1 일반 / 2 집합
+  regstrGbCd    String  @db.Char(1)
+  /// 2 일반건축물 / 3 표제부
+  regstrKindCd  String  @db.Char(1)
+  /// 0 주건축물 / 1 부속건축물
+  mainAtchGbCd  String  @db.Char(1)
+  mainPurpsCd   String? @db.VarChar(10)
+  mainPurpsCdNm String? @db.VarChar(100)
+  etcPurps      String? @db.VarChar(500)
+  hhldCnt       Int?
+  fmlyCnt       Int?
+  hoCnt         Int?
+  grndFlrCnt    Int?
+  ugrndFlrCnt   Int?
+  /// 승용 + 비상용 승강기
+  elevatorCnt   Int?
+  /// 옥내·옥외 기계식 + 옥내·옥외 자주식 대수
+  parkingCnt    Int?
+  /// YYYYMMDD
+  useAprDay     String? @db.Char(8)
+  strctCdNm     String? @db.VarChar(100)
+  /// 파일 대상 월 YYYY-MM ("(2026년 09월)")
+  sourceMonth   String  @db.Char(7)
+  raw           Json
+
+  @@index([sggCode, bjdongCode, platGbCd, bun, ji])
+  @@index([sourceMonth])
+}
+
+/// 건축물대장 총괄표제부 (03/0302). 전 행 저장.
+model BuildingRegisterRecap {
+  mgmPk         String  @id @db.VarChar(33)
+  sggCode       String  @db.Char(5)
+  bjdongCode    String  @db.Char(5)
+  platGbCd      String  @db.Char(1)
+  bun           String  @db.Char(4)
+  ji            String  @db.Char(4)
+  bldNm         String? @db.VarChar(200)
+  mainPurpsCdNm String? @db.VarChar(100)
+  hhldCnt       Int?
+  fmlyCnt       Int?
+  hoCnt         Int?
+  mainBldCnt    Int?
+  totPkngCnt    Int?
+  useAprDay     String? @db.Char(8)
+  sourceMonth   String  @db.Char(7)
+  raw           Json
+
+  @@index([sggCode, bjdongCode, platGbCd, bun, ji])
+  @@index([sourceMonth])
+}
+
+/// 전유공용면적(03/0306)에서 센 오피스텔 호실 수. 오피스텔이 있는 지번만, (건물명, 동명) 단위.
+model BuildingRegisterUnitCount {
+  id           Int    @id @default(autoincrement())
+  sggCode      String @db.Char(5)
+  bjdongCode   String @db.Char(5)
+  platGbCd     String @db.Char(1)
+  bun          String @db.Char(4)
+  ji           String @db.Char(4)
+  /// 빈 이름은 ''
+  bldNm        String @db.VarChar(200)
+  /// 없으면 ''
+  dongNm       String @db.VarChar(100)
+  offitelUnits Int
+  totalUnits   Int
+  sourceMonth  String @db.Char(7)
+
+  @@unique([sggCode, bjdongCode, platGbCd, bun, ji, bldNm, dongNm, sourceMonth])
+  @@index([sourceMonth])
+}
+
+/// 표제부 대지위치에서 뽑은 법정동 이름 → 코드 (실거래 dongName 을 대장 지번 키로 바꿀 때)
+model BuildingRegisterDong {
+  sggCode    String @db.Char(5)
+  bjdongCode String @db.Char(5)
+  dongName   String @db.VarChar(50)
+
+  @@id([sggCode, dongName, bjdongCode])
+}
+
+/// 건축HUB 파일별 마지막 반영 (0303 표제부 / 0302 총괄표제부 / 0306 전유공용면적)
+model BuildingRegisterSourceFile {
+  taskCode     String   @id @db.VarChar(4)
+  sourceMonth  String   @db.Char(7)
+  fileId       String   @db.VarChar(40)
+  rowCount     Int
+  skippedCount Int
+  syncedAt     DateTime @default(now()) @updatedAt
+}
+
 /// K-apt 단지 × 월 관리비 (자료실 03 관리비정보 파일). 금액은 단지 전체 월 부과액(원).
 /// 시도·시군구·읍면·동리·단지명은 KaptComplex 와 같아 저장하지 않는다. 컬럼 ↔ 헤더는 kaptFeeParser.ts KAPT_FEE_COLUMNS.
 model KaptMaintenanceFee {

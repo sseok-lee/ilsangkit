@@ -36,8 +36,10 @@ import {
   isPreservedRealEstateUrlMode,
 } from './realEstateUrlRegistry.js';
 import { findKaptComplex } from './kaptComplexMatcher.js';
+import { findBuildingRegister } from './buildingRegisterMatcher.js';
 import { loadMaintenanceFee } from './kaptFeeLoader.js';
 import type {
+  BuildingRegisterInfo,
   ComplexInfo,
   MaintenanceFeeSummary,
   AreaOption,
@@ -355,10 +357,16 @@ export async function getDetailOverview(
   const areaBounds = areaRows[0] ?? { minArea: null, maxArea: null };
   // 오피스텔은 K-apt 대상이 아니다. 주상복합이면 같은 필지의 K-apt 단지가 잡히지만 그 값은 아파트 부분
   // (예: 서초센트럴IPARK — K-apt 318세대·관리비는 80㎡ 아파트, 오피스텔은 24~54㎡)이라 붙이지 않는다.
-  const complex = isOffitelType(type)
+  const complexLookup = isOffitelType(type)
     ? null
     : await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
+  const complex = complexLookup === COMPLEX_LOOKUP_FAILED ? null : complexLookup;
   const maintenanceFee = complex ? await findDetailMaintenanceFee(complex.kaptCode) : null;
+  // K-apt 가 없을 때만 건축물대장(소규모 아파트·빌라·오피스텔). K-apt 조회가 실패했으면 단지가 있을 수도 있어
+  // 다른 출처 숫자로 대신하지 않는다.
+  const buildingRegister = complexLookup !== null
+    ? null
+    : await findDetailBuildingRegister(type, identity, building, addresses);
 
   return {
     identity,
@@ -379,17 +387,20 @@ export async function getDetailOverview(
     wolseLatest: wolseLatestByGroup(wolseRows, areaGroups.map((group) => group.key)),
     complex,
     maintenanceFee,
+    buildingRegister,
     generatedAt,
   };
 }
 
-/** 단지 정보는 덧붙이는 정보라 실패해도 개요는 그대로 낸다. */
+const COMPLEX_LOOKUP_FAILED = 'failed' as const;
+
+/** 단지 정보는 덧붙이는 정보라 실패해도 개요는 그대로 낸다. 실패는 "없음"과 구분해 돌려준다. */
 async function findDetailComplex(
   identity: DetailIdentity,
   building: BuildingInfo,
   addresses: Array<{ dongName: string; jibun: string | null; roadName: string | null }>,
   roadNames: string[],
-): Promise<ComplexInfo | null> {
+): Promise<ComplexInfo | typeof COMPLEX_LOOKUP_FAILED | null> {
   try {
     return await findKaptComplex({
       sggCode: identity.bjdCode,
@@ -403,6 +414,27 @@ async function findDetailComplex(
     });
   } catch (error) {
     console.warn('[realEstateDetail] K-apt 단지 조회 실패', error instanceof Error ? error.message : error);
+    return COMPLEX_LOOKUP_FAILED;
+  }
+}
+
+/** 건축물대장도 덧붙이는 정보 — 실패하면 건물 정보만 숨긴다. */
+async function findDetailBuildingRegister(
+  type: RealEstateType,
+  identity: DetailIdentity,
+  building: BuildingInfo,
+  addresses: Array<{ dongName: string; jibun: string | null }>,
+): Promise<BuildingRegisterInfo | null> {
+  try {
+    return (await findBuildingRegister({
+      kind: isOffitelType(type) ? 'offitel' : 'residential',
+      sggCode: identity.bjdCode,
+      primaryAddress: building.dongName ? { dongName: building.dongName, jibun: building.jibun } : null,
+      addresses,
+      buildingName: identity.buildingName,
+    })) ?? null;
+  } catch (error) {
+    console.warn('[realEstateDetail] 건축물대장 조회 실패', error instanceof Error ? error.message : error);
     return null;
   }
 }

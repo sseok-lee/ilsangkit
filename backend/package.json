@@ -46,6 +46,7 @@
     "sync:localdata-csv": "tsx src/scripts/downloadLocaldataFiles.ts",
     "sync:subway-csv": "tsx src/scripts/downloadSubwayFile.ts",
     "sync:kapt": "tsx src/scripts/syncKapt.ts",
+    "sync:building-register": "tsx src/scripts/syncBuildingRegister.ts",
     "generate:guide": "tsx src/scripts/generateGuide.ts",
     "generate:guide:category": "tsx src/scripts/generateGuide.ts --category",
     "generate:article": "tsx src/scripts/generateArticle.ts",
@@ -98,6 +99,7 @@
     "isomorphic-dompurify": "^3.7.1",
     "openai": "^6.25.0",
     "prisma": "^6.19.2",
+    "yauzl": "^3.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -110,6 +112,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.10",
     "@types/supertest": "^6.0.3",
+    "@types/yauzl": "^3.4.0",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vitest/coverage-v8": "^4.0.18",

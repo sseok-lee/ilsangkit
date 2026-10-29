@@ -149,6 +149,30 @@ export interface ComplexInfo {
   sourceDate: string | null;
 }
 
+/**
+ * 건축물대장 건물 정보(건축HUB). K-apt 단지 정보가 없는 상세에만 붙는다.
+ * residential = 아파트·빌라(세대수), offitel = 오피스텔(상가를 뺀 오피스텔 호수).
+ */
+export interface BuildingRegisterInfo {
+  kind: 'residential' | 'offitel';
+  householdCount: number | null;
+  offitelUnitCount: number | null;
+  dongCount: number | null;
+  topFloor: number | null;
+  basementFloors: number | null;
+  /** YYYY-MM-DD */
+  useApprovalDate: string | null;
+  totalParking: number | null;
+  elevatorCount: number | null;
+  /** 대표 용도 (예: ['연립주택'], ['오피스텔']) */
+  purposes: string[];
+  structure: string | null;
+  /** 표제부 기준 월 'YYYY-MM' */
+  sourceMonth: string | null;
+  /** 오피스텔 호수 기준 월(전유공용면적) 'YYYY-MM' */
+  unitSourceMonth: string | null;
+}
+
 /** 관리비 기간 평균(세대 평균, 원). from/to 는 'YYYY-MM' */
 export interface FeePeriodAverage {
   from: string;
@@ -212,6 +236,8 @@ export interface DetailOverview {
   complex: ComplexInfo | null;
   /** K-apt 관리비 요약. 단지 연결이 없거나 관리비가 없거나 이상값·조회 실패면 null. */
   maintenanceFee: MaintenanceFeeSummary | null;
+  /** 건축물대장 건물 정보. K-apt 단지가 있거나, 연결 안 되거나, 조회 실패면 null. */
+  buildingRegister: BuildingRegisterInfo | null;
   generatedAt: string;
 }
 
