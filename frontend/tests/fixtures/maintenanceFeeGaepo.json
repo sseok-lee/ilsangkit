@@ -1,0 +1,143 @@
+{
+  "month": "2026-08",
+  "total": 444578,
+  "common": 173395,
+  "individual": 252105,
+  "longTermRepair": 19078,
+  "summer": {
+    "from": "2026-07",
+    "to": "2026-08",
+    "amount": 435664,
+    "months": 2
+  },
+  "winter": {
+    "from": "2025-12",
+    "to": "2026-02",
+    "amount": 473096,
+    "months": 3
+  },
+  "yearly": {
+    "from": "2025-09",
+    "to": "2026-08",
+    "amount": 414348,
+    "months": 12
+  },
+  "monthly": [
+    {
+      "month": "2025-09",
+      "amount": 373651,
+      "partial": false
+    },
+    {
+      "month": "2025-10",
+      "amount": 368660,
+      "partial": false
+    },
+    {
+      "month": "2025-11",
+      "amount": 402527,
+      "partial": false
+    },
+    {
+      "month": "2025-12",
+      "amount": 478632,
+      "partial": false
+    },
+    {
+      "month": "2026-01",
+      "amount": 491205,
+      "partial": false
+    },
+    {
+      "month": "2026-02",
+      "amount": 449451,
+      "partial": false
+    },
+    {
+      "month": "2026-03",
+      "amount": 418842,
+      "partial": false
+    },
+    {
+      "month": "2026-04",
+      "amount": 374920,
+      "partial": false
+    },
+    {
+      "month": "2026-05",
+      "amount": 366597,
+      "partial": false
+    },
+    {
+      "month": "2026-06",
+      "amount": 376365,
+      "partial": false
+    },
+    {
+      "month": "2026-07",
+      "amount": 426750,
+      "partial": false
+    },
+    {
+      "month": "2026-08",
+      "amount": 444578,
+      "partial": false
+    },
+    {
+      "month": "2026-09",
+      "amount": 377106,
+      "partial": true
+    }
+  ],
+  "commonPerM2": {
+    "complex": 1626,
+    "sggMedian": 1527,
+    "sggComplexCount": 178
+  },
+  "items": [
+    {
+      "group": "common",
+      "label": "일반관리비",
+      "amount": 49305
+    },
+    {
+      "group": "common",
+      "label": "청소비",
+      "amount": 43545
+    },
+    {
+      "group": "common",
+      "label": "경비비",
+      "amount": 44753
+    },
+    {
+      "group": "individual",
+      "label": "난방비",
+      "amount": 5503
+    },
+    {
+      "group": "individual",
+      "label": "급탕비",
+      "amount": 13912
+    },
+    {
+      "group": "individual",
+      "label": "전기료",
+      "amount": 186394
+    },
+    {
+      "group": "individual",
+      "label": "수도료",
+      "amount": 22253
+    },
+    {
+      "group": "longTermRepair",
+      "label": "장기수선충당금",
+      "amount": 19078
+    }
+  ],
+  "office": {
+    "phone": "02-575-1234",
+    "address": "서울특별시 강남구 개포로109길 9"
+  }
+}
