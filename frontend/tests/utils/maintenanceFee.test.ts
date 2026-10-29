@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatWon, formatFeeMonth, formatFeePeriod, feeExtremes, feeMonthLabel } from '~/utils/maintenanceFee'
+import { formatWon, formatFeeMonth, formatFeePeriod, feeExtremes, feeMonthLabel, formatOfficePhone } from '~/utils/maintenanceFee'
 import fee from '../fixtures/maintenanceFeeGaepo.json'
 
 describe('formatWon', () => {
@@ -38,5 +38,16 @@ describe('feeExtremes', () => {
 
   it('정상 달이 2개 미만이면 null', () => {
     expect(feeExtremes([{ month: '2026-08', amount: 1, partial: false }, { month: '2026-09', amount: 2, partial: true }])).toBeNull()
+  })
+})
+
+describe('formatOfficePhone', () => {
+  it('숫자만 온 번호에 하이픈을 넣고, 알 수 없는 형식은 그대로 둔다', () => {
+    expect(formatOfficePhone('0314414250')).toBe('031-441-4250')
+    expect(formatOfficePhone('0220580890')).toBe('02-2058-0890')
+    expect(formatOfficePhone('025751234')).toBe('02-575-1234')
+    expect(formatOfficePhone('03144142500')).toBe('031-4414-2500')
+    expect(formatOfficePhone('15881234')).toBe('1588-1234')
+    expect(formatOfficePhone('02) 575-1234')).toBe('02) 575-1234')
   })
 })

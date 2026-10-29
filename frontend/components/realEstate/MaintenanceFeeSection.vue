@@ -100,7 +100,7 @@
 
     <div v-if="fee.office.phone || fee.office.address" class="mt-4 text-[12px] md:text-[13px]" data-testid="fee-office">
       <span class="text-muted">관리사무소</span>
-      <a v-if="fee.office.phone" :href="`tel:${telHref}`" class="ml-2 font-semibold text-primary">{{ fee.office.phone }}</a>
+      <a v-if="fee.office.phone" :href="`tel:${telHref}`" class="ml-2 font-semibold text-primary">{{ formatOfficePhone(fee.office.phone) }}</a>
       <span v-if="fee.office.address" class="ml-2 text-muted break-keep">{{ fee.office.address }}</span>
     </div>
 
@@ -114,7 +114,7 @@
 import { computed } from 'vue'
 import SectionBlock from '~/components/common/SectionBlock.vue'
 import type { FeePeriodAverage, MaintenanceFeeItem, MaintenanceFeeSummary } from '~/types/housingRedesign'
-import { feeExtremes, feeMonthLabel, formatFeeMonth, formatFeePeriod, formatWon } from '~/utils/maintenanceFee'
+import { feeExtremes, feeMonthLabel, formatFeeMonth, formatFeePeriod, formatOfficePhone, formatWon } from '~/utils/maintenanceFee'
 
 const props = defineProps<{
   fee: MaintenanceFeeSummary

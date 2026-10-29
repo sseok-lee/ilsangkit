@@ -47,3 +47,13 @@ export function feeExtremes(
   const low = pick((a, b) => a < b)
   return { high: { month: high.month, amount: high.amount }, low: { month: low.month, amount: low.amount } }
 }
+
+/** 숫자만 온 관리사무소 번호에 하이픈: 0314414250 → 031-441-4250, 0220580890 → 02-2058-0890. 그 밖의 형식은 그대로. */
+export function formatOfficePhone(phone: string): string {
+  if (!/^\d+$/.test(phone)) return phone
+  const seoul = /^(02)(\d{3,4})(\d{4})$/.exec(phone)
+  const area = /^(0\d{2})(\d{3,4})(\d{4})$/.exec(phone)
+  const nationwide = /^(1\d{3})(\d{4})$/.exec(phone)
+  const m = seoul ?? area ?? nationwide
+  return m ? m.slice(1).join('-') : phone
+}
