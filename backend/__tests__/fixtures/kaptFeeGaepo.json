@@ -1,0 +1,225 @@
+{
+ "kaptCode": "A10024564",
+ "name": "개포래미안포레스트",
+ "householdCount": 2296,
+ "managementArea": 244894.45,
+ "source": "K-apt 관리비정보 2025년·2026.10.26. 파일",
+ "rows": [
+  {
+   "yearMonth": "202501",
+   "commonTotal": 389028154,
+   "individualTotal": 708489472,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202502",
+   "commonTotal": 386556024,
+   "individualTotal": 648933376,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202503",
+   "commonTotal": 389592131,
+   "individualTotal": 526872864,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202504",
+   "commonTotal": 389536672,
+   "individualTotal": 441258336,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202505",
+   "commonTotal": 383808173,
+   "individualTotal": 417667648,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202506",
+   "commonTotal": 386265340,
+   "individualTotal": 433822816,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202507",
+   "commonTotal": 387598684,
+   "individualTotal": 559094912,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202508",
+   "commonTotal": 386796002,
+   "individualTotal": 559544960,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202509",
+   "commonTotal": 385424306,
+   "individualTotal": 423845792,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202510",
+   "commonTotal": 393188568,
+   "individualTotal": 404620480,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202511",
+   "commonTotal": 380221185,
+   "individualTotal": 495347488,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202512",
+   "commonTotal": 382897235,
+   "individualTotal": 667408000,
+   "ltrCharge": 48633408
+  },
+  {
+   "yearMonth": "202601",
+   "commonTotal": 374788260,
+   "individualTotal": 704384000,
+   "ltrCharge": 48633408,
+   "generalTotal": 109137547,
+   "security": 102815088,
+   "cleaning": 96254888,
+   "heatingCommon": 13921330,
+   "heatingPrivate": 257213936,
+   "electricityCommon": 74636128,
+   "electricityPrivate": 153053216,
+   "waterPrivate": 49946368,
+   "hotWaterPrivate": 122183368,
+   "gasPrivate": 310600
+  },
+  {
+   "yearMonth": "202602",
+   "commonTotal": 395565700,
+   "individualTotal": 597401088,
+   "ltrCharge": 38972512,
+   "generalTotal": 110575651,
+   "security": 102755920,
+   "cleaning": 101722400,
+   "heatingCommon": 15228520,
+   "heatingPrivate": 160996672,
+   "electricityCommon": 79935152,
+   "electricityPrivate": 127843312,
+   "waterPrivate": 44189620,
+   "hotWaterPrivate": 110413960,
+   "gasPrivate": 0
+  },
+  {
+   "yearMonth": "202603",
+   "commonTotal": 388849367,
+   "individualTotal": 529009472,
+   "ltrCharge": 43802960,
+   "generalTotal": 109664836,
+   "security": 102748000,
+   "cleaning": 98916528,
+   "heatingCommon": 13427430,
+   "heatingPrivate": 82217808,
+   "electricityCommon": 64357112,
+   "electricityPrivate": 144980048,
+   "waterPrivate": 50103860,
+   "hotWaterPrivate": 112131872,
+   "gasPrivate": 294790
+  },
+  {
+   "yearMonth": "202604",
+   "commonTotal": 391421273,
+   "individualTotal": 425591616,
+   "ltrCharge": 43802960,
+   "generalTotal": 114276320,
+   "security": 102768272,
+   "cleaning": 98590096,
+   "heatingCommon": 12881400,
+   "heatingPrivate": 16294360,
+   "electricityCommon": 61239116,
+   "electricityPrivate": 133742880,
+   "waterPrivate": 48355540,
+   "hotWaterPrivate": 91372624,
+   "gasPrivate": 0
+  },
+  {
+   "yearMonth": "202605",
+   "commonTotal": 389943902,
+   "individualTotal": 407960416,
+   "ltrCharge": 43802960,
+   "generalTotal": 111425736,
+   "security": 102748552,
+   "cleaning": 98057992,
+   "heatingCommon": 12707660,
+   "heatingPrivate": 2848880,
+   "electricityCommon": 63021504,
+   "electricityPrivate": 153146480,
+   "waterPrivate": 49780880,
+   "hotWaterPrivate": 72930480,
+   "gasPrivate": 282710
+  },
+  {
+   "yearMonth": "202606",
+   "commonTotal": 371947139,
+   "individualTotal": 448367232,
+   "ltrCharge": 43818672,
+   "generalTotal": 109488020,
+   "security": 91380376,
+   "cleaning": 88076960,
+   "heatingCommon": 12654210,
+   "heatingPrivate": 296230,
+   "electricityCommon": 93616800,
+   "electricityPrivate": 180025904,
+   "waterPrivate": 46771792,
+   "hotWaterPrivate": 45199000,
+   "gasPrivate": 0
+  },
+  {
+   "yearMonth": "202607",
+   "commonTotal": 388103107,
+   "individualTotal": 547912192,
+   "ltrCharge": 43802960,
+   "generalTotal": 110533374,
+   "security": 102744296,
+   "cleaning": 98442880,
+   "heatingCommon": 12641930,
+   "heatingPrivate": 0,
+   "electricityCommon": 94162256,
+   "electricityPrivate": 296092192,
+   "waterPrivate": 51525840,
+   "hotWaterPrivate": 39070688,
+   "gasPrivate": 304400
+  },
+  {
+   "yearMonth": "202608",
+   "commonTotal": 398115592,
+   "individualTotal": 578833408,
+   "ltrCharge": 43802960,
+   "generalTotal": 113205282,
+   "security": 102753712,
+   "cleaning": 99979184,
+   "heatingCommon": 12635410,
+   "heatingPrivate": 0,
+   "electricityCommon": 109882048,
+   "electricityPrivate": 318077792,
+   "waterPrivate": 51092540,
+   "hotWaterPrivate": 31941070,
+   "gasPrivate": 0
+  },
+  {
+   "yearMonth": "202609",
+   "commonTotal": 401184654,
+   "individualTotal": 405914528,
+   "ltrCharge": 58736000,
+   "generalTotal": 102463407,
+   "security": 102770416,
+   "cleaning": 100351000,
+   "heatingCommon": 12818110,
+   "heatingPrivate": 0,
+   "electricityCommon": 68763984,
+   "electricityPrivate": 176015024,
+   "waterPrivate": 48220000,
+   "hotWaterPrivate": 43971960,
+   "gasPrivate": 292170
+  }
+ ]
+}
