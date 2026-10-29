@@ -37,6 +37,10 @@ vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
 vi.mock('../../src/services/kaptComplexMatcher.js', () => ({
   findKaptComplex: mockFindKaptComplex,
 }));
+const { mockLoadMaintenanceFee } = vi.hoisted(() => ({ mockLoadMaintenanceFee: vi.fn() }));
+vi.mock('../../src/services/kaptFeeLoader.js', () => ({
+  loadMaintenanceFee: mockLoadMaintenanceFee,
+}));
 
 import { getDetailOverview } from '../../src/services/realEstateDetailService.js';
 
@@ -52,6 +56,8 @@ beforeEach(() => {
   mockGetBuildingInfo.mockReset();
   mockFindKaptComplex.mockReset();
   mockFindKaptComplex.mockResolvedValue(null);
+  mockLoadMaintenanceFee.mockReset();
+  mockLoadMaintenanceFee.mockResolvedValue(null);
   mockGetCanonicalPath.mockReset();
   mockGetCanonicalPath.mockResolvedValue(null);
   mockIsPreservedMode.mockReset();
@@ -688,6 +694,32 @@ describe('getDetailOverview complex', () => {
 
     expect(overview).not.toBeNull();
     expect(overview?.complex).toBeNull();
+    expect(overview?.maintenanceFee).toBeNull();
+    expect(mockLoadMaintenanceFee).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('연결된 단지의 관리비 요약을 싣는다', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+    mockLoadMaintenanceFee.mockResolvedValue({ month: '2026-08', total: 444578 });
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(mockLoadMaintenanceFee).toHaveBeenCalledWith('A13580602');
+    expect(overview?.maintenanceFee).toEqual({ month: '2026-08', total: 444578 });
+  });
+
+  it('관리비 조회가 실패해도 개요·단지 정보는 그대로, 관리비만 null', async () => {
+    mockOverviewBase();
+    mockFindKaptComplex.mockResolvedValue(COMPLEX);
+    mockLoadMaintenanceFee.mockRejectedValue(new Error('db down'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const overview = await getDetailOverview('apt-sale', { bjdCode: '11680', buildingName: 'A' }, NOW);
+
+    expect(overview?.complex).toEqual(COMPLEX);
+    expect(overview?.maintenanceFee).toBeNull();
     warn.mockRestore();
   });
 });

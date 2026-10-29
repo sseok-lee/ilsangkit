@@ -1,4 +1,4 @@
-// K-apt 주간 파일 → KaptComplex / KaptComplexArea / KaptComplexParcel 반영.
+// K-apt 주간 파일 → KaptComplex / KaptComplexArea / KaptComplexParcel 반영, 이어서 관리비(kaptFeeSync.ts).
 //
 // 매일 돌려도 된다: 자료실 최신 글의 기준일이 KaptSourceFile 에 기록된 것과 같으면 받지 않는다.
 // 데이터셋(기본정보·면적·필지)은 서로 독립이라 새로 올라온 것만 반영한다.
@@ -20,6 +20,8 @@ import {
   type KaptSession,
 } from './kaptFileSource.js';
 import { parseKaptBasicXlsx, parseKaptAreaXlsx, parseKaptParcelXlsx } from './kaptFileParsers.js';
+import { syncKaptFees, type KaptFeeDataset } from './kaptFeeSync.js';
+import { hasFeeSggMedians, refreshFeeSggMedians } from './kaptFeeStats.js';
 
 /** 절단·빈 파일 방어 하한 (2026-10-26 실측: 단지 21,751 · 필지 21,751 · 면적 91,586행) */
 export const KAPT_MIN_ROWS: Record<KaptDataset, number> = {
@@ -38,7 +40,7 @@ export interface KaptSyncOptions {
 }
 
 export interface KaptDatasetResult {
-  dataset: KaptDataset;
+  dataset: KaptDataset | KaptFeeDataset;
   status: 'updated' | 'unchanged';
   fileDate: string;
   rows: number;
@@ -157,6 +159,14 @@ export async function syncKaptFiles(options: KaptSyncOptions = {}): Promise<Kapt
     const session = await openKaptSession(options.fetchFn);
     for (const dataset of ORDER) {
       results.push(await syncDataset(session, dataset, options, stats));
+    }
+    results.push(...await syncKaptFees(session, options, stats));
+
+    // 세대수·관리비부과면적(기본정보·면적)이나 관리비가 바뀌면 시군구 ㎡당 공용관리비 중간값을 다시 계산한다.
+    const affected = results.some((r) => r.status === 'updated' && r.dataset !== 'parcel');
+    if (affected || !(await hasFeeSggMedians())) {
+      const { baseMonth, sggCount } = await refreshFeeSggMedians();
+      console.info(`[kapt] 시군구 관리비 중간값 기준월 ${baseMonth ?? '-'} · 시군구 ${sggCount}곳`);
     }
   }, { allowEmpty: true });
   return results;

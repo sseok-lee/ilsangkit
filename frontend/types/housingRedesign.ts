@@ -145,6 +145,39 @@ export interface ComplexInfo {
   sourceDate: string | null
 }
 
+/** 관리비 기간 평균(세대 평균, 원). from/to 는 'YYYY-MM' */
+export interface FeePeriodAverage {
+  from: string
+  to: string
+  amount: number
+  months: number
+}
+
+export interface MaintenanceFeeItem {
+  group: 'common' | 'individual' | 'longTermRepair'
+  label: string
+  /** 세대 평균, 원 */
+  amount: number
+}
+
+/** K-apt 관리비 요약. 금액은 모두 세대 평균(단지 월 부과액 ÷ 세대수, 원). 평형별 실제 부과액이 아니다. */
+export interface MaintenanceFeeSummary {
+  /** 큰 숫자의 달 'YYYY-MM' */
+  month: string
+  total: number
+  common: number
+  individual: number
+  longTermRepair: number
+  summer: FeePeriodAverage | null
+  winter: FeePeriodAverage | null
+  yearly: FeePeriodAverage | null
+  /** 오래된 달 → 최근 달. partial = 기준 월 뒤 일부 단지만 올라온 달 */
+  monthly: Array<{ month: string; amount: number; partial: boolean }>
+  commonPerM2: { complex: number; sggMedian: number; sggComplexCount: number } | null
+  items: MaintenanceFeeItem[]
+  office: { phone: string | null; address: string | null }
+}
+
 export interface DetailOverview {
   identity: DetailIdentity
   latestSale: LatestSale | null
@@ -168,6 +201,8 @@ export interface DetailOverview {
   wolseLatest?: Record<string, WolseLatestDeal | null>
   /** K-apt 단지 정보. 연결 안 되거나 조회 실패면 null. 구 응답엔 없을 수 있다. */
   complex?: ComplexInfo | null
+  /** K-apt 관리비 요약. 없거나 이상값·조회 실패면 null. 구 응답엔 없을 수 있다. */
+  maintenanceFee?: MaintenanceFeeSummary | null
   generatedAt: string
 }
 

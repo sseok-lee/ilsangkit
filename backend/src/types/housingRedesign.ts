@@ -149,6 +149,44 @@ export interface ComplexInfo {
   sourceDate: string | null;
 }
 
+/** 관리비 기간 평균(세대 평균, 원). from/to 는 'YYYY-MM' */
+export interface FeePeriodAverage {
+  from: string;
+  to: string;
+  amount: number;
+  months: number;
+}
+
+export interface MaintenanceFeeItem {
+  group: 'common' | 'individual' | 'longTermRepair';
+  label: string;
+  /** 세대 평균, 원 */
+  amount: number;
+}
+
+/**
+ * K-apt 관리비 요약. 금액은 모두 세대 평균(단지 월 부과액 ÷ 세대수, 원 반올림).
+ * 평형별 실제 부과액이 아니다.
+ */
+export interface MaintenanceFeeSummary {
+  /** 큰 숫자의 달 'YYYY-MM' — 기준 월, 이 단지에 없으면 최대 2개월 전까지 대체 */
+  month: string;
+  total: number;
+  common: number;
+  individual: number;
+  longTermRepair: number;
+  summer: FeePeriodAverage | null;
+  winter: FeePeriodAverage | null;
+  yearly: FeePeriodAverage | null;
+  /** 기준 월로 끝나는 12개월 중 정상 달 + 기준 월 뒤 일부 단지만 올라온 달(partial). 오래된 달 → 최근 달 */
+  monthly: Array<{ month: string; amount: number; partial: boolean }>;
+  /** ㎡당 공용관리비(원) vs 같은 시군구 중간값. 기준 월 값이 없거나 비교 불가면 null */
+  commonPerM2: { complex: number; sggMedian: number; sggComplexCount: number } | null;
+  /** 기준 달 항목별 세대 평균, 0 원 항목 제외 */
+  items: MaintenanceFeeItem[];
+  office: { phone: string | null; address: string | null };
+}
+
 export interface DetailOverview {
   identity: DetailIdentity;
   latestSale: LatestSale | null;
@@ -172,6 +210,8 @@ export interface DetailOverview {
   wolseLatest: Record<string, WolseLatestDeal | null>;
   /** K-apt 단지 정보. 연결 안 되거나 조회 실패면 null. */
   complex: ComplexInfo | null;
+  /** K-apt 관리비 요약. 단지 연결이 없거나 관리비가 없거나 이상값·조회 실패면 null. */
+  maintenanceFee: MaintenanceFeeSummary | null;
   generatedAt: string;
 }
 

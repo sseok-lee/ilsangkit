@@ -36,8 +36,10 @@ import {
   isPreservedRealEstateUrlMode,
 } from './realEstateUrlRegistry.js';
 import { findKaptComplex } from './kaptComplexMatcher.js';
+import { loadMaintenanceFee } from './kaptFeeLoader.js';
 import type {
   ComplexInfo,
+  MaintenanceFeeSummary,
   AreaOption,
   DealFlag,
   DealMode,
@@ -352,6 +354,7 @@ export async function getDetailOverview(
     : null;
   const areaBounds = areaRows[0] ?? { minArea: null, maxArea: null };
   const complex = await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
+  const maintenanceFee = complex ? await findDetailMaintenanceFee(complex.kaptCode) : null;
 
   return {
     identity,
@@ -371,6 +374,7 @@ export async function getDetailOverview(
     jeonseBasis: priceBasisByGroup(jeonseDeals, today, PRICE_BASIS.jeonseSample),
     wolseLatest: wolseLatestByGroup(wolseRows, areaGroups.map((group) => group.key)),
     complex,
+    maintenanceFee,
     generatedAt,
   };
 }
@@ -395,6 +399,16 @@ async function findDetailComplex(
     });
   } catch (error) {
     console.warn('[realEstateDetail] K-apt 단지 조회 실패', error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/** 관리비도 덧붙이는 정보 — 실패하면 관리비만 숨긴다. */
+async function findDetailMaintenanceFee(kaptCode: string): Promise<MaintenanceFeeSummary | null> {
+  try {
+    return await loadMaintenanceFee(kaptCode);
+  } catch (error) {
+    console.warn('[realEstateDetail] K-apt 관리비 조회 실패', error instanceof Error ? error.message : error);
     return null;
   }
 }

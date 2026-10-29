@@ -96,13 +96,14 @@ function postHeaders(session: KaptSession): Record<string, string> {
   };
 }
 
-export async function fetchLatestKaptPost(
+/** 자료실 탭(01 기본정보, 02 필지, 03 관리비, 04 면적) 첫 페이지 글 목록 */
+export async function fetchKaptBoardPosts(
   session: KaptSession,
-  dataset: KaptDataset,
+  tab: string,
   fetchFn: FetchFn = fetch,
-): Promise<KaptPost | null> {
+): Promise<KaptPost[]> {
   const body = new URLSearchParams({
-    scode: DATASETS[dataset].tab, boardType: '03', pageNo: '1', stype: '', keyword: '', _csrf: session.csrf,
+    scode: tab, boardType: '03', pageNo: '1', stype: '', keyword: '', _csrf: session.csrf,
   });
   const response = await fetchFn(LIST_AJAX, {
     method: 'POST',
@@ -110,8 +111,33 @@ export async function fetchLatestKaptPost(
     body: body.toString(),
     signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`K-apt 자료실 목록(${dataset}) HTTP ${response.status}`);
-  return findLatestPost(parseBoardListHtml(await response.text()), dataset);
+  if (!response.ok) throw new Error(`K-apt 자료실 목록(탭 ${tab}) HTTP ${response.status}`);
+  return parseBoardListHtml(await response.text());
+}
+
+export async function fetchLatestKaptPost(
+  session: KaptSession,
+  dataset: KaptDataset,
+  fetchFn: FetchFn = fetch,
+): Promise<KaptPost | null> {
+  return findLatestPost(await fetchKaptBoardPosts(session, DATASETS[dataset].tab, fetchFn), dataset);
+}
+
+/**
+ * 관리비 탭(03)의 두 파일 (2026-10-29 실측 제목):
+ * - current: "K-apt 관리비공개의무단지 관리비정보(2026.10.26.)" — 올해 1월~최근 월, 매주 갱신
+ * - previous: "…관리비정보(2025년)" — current 기준일 전년도 1~12월. 2018년 글까지 함께 걸려 있다.
+ */
+export function findFeePosts(posts: KaptPost[]): { current: KaptPost | null; previous: KaptPost | null } {
+  const current = posts
+    .filter((p) => p.fileDate && /관리비공개의무단지 관리비정보\(/.test(p.title))
+    .sort((a, b) => (b.fileDate! < a.fileDate! ? -1 : b.fileDate! > a.fileDate! ? 1 : b.postSeq - a.postSeq))[0] ?? null;
+  if (!current) return { current: null, previous: null };
+  const previousYear = Number(current.fileDate!.slice(0, 4)) - 1;
+  const previous = posts
+    .filter((p) => p.title.includes(`관리비공개의무단지 관리비정보(${previousYear}년)`))
+    .sort((a, b) => b.postSeq - a.postSeq)[0] ?? null;
+  return { current, previous };
 }
 
 function fileNameFrom(response: Response, postSeq: number): string {
