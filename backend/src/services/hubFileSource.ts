@@ -92,7 +92,7 @@ export async function openHubSession(fetchFn: FetchFn = fetch): Promise<HubSessi
   const cookie = cookieHeader(first);
   const entries = parseHubFileList(html);
 
-  const complete = () => WANTED.every((code) => findHubFile(entries, code));
+  const complete = (): boolean => WANTED.every((code) => findHubFile(entries, code));
   for (let page = 2; page <= MAX_LIST_PAGES && !complete(); page++) {
     const response = await fetchFn(`${LIST_PAGE}?pageIndex=${page}`, {
       headers: baseHeaders(cookie),
