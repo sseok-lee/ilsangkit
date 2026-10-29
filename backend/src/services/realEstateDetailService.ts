@@ -36,8 +36,10 @@ import {
   isPreservedRealEstateUrlMode,
 } from './realEstateUrlRegistry.js';
 import { findKaptComplex } from './kaptComplexMatcher.js';
+import { findBuildingRegister } from './buildingRegisterMatcher.js';
 import { loadMaintenanceFee } from './kaptFeeLoader.js';
 import type {
+  BuildingRegisterInfo,
   ComplexInfo,
   MaintenanceFeeSummary,
   AreaOption,
@@ -359,6 +361,10 @@ export async function getDetailOverview(
     ? null
     : await findDetailComplex(identity, building, addresses, reported.flatMap((address) => [...address.roads]));
   const maintenanceFee = complex ? await findDetailMaintenanceFee(complex.kaptCode) : null;
+  // K-apt 가 없을 때만 건축물대장(소규모 아파트·빌라·오피스텔).
+  const buildingRegister = complex
+    ? null
+    : await findDetailBuildingRegister(type, identity, building, addresses);
 
   return {
     identity,
@@ -379,6 +385,7 @@ export async function getDetailOverview(
     wolseLatest: wolseLatestByGroup(wolseRows, areaGroups.map((group) => group.key)),
     complex,
     maintenanceFee,
+    buildingRegister,
     generatedAt,
   };
 }
@@ -403,6 +410,27 @@ async function findDetailComplex(
     });
   } catch (error) {
     console.warn('[realEstateDetail] K-apt 단지 조회 실패', error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/** 건축물대장도 덧붙이는 정보 — 실패하면 건물 정보만 숨긴다. */
+async function findDetailBuildingRegister(
+  type: RealEstateType,
+  identity: DetailIdentity,
+  building: BuildingInfo,
+  addresses: Array<{ dongName: string; jibun: string | null }>,
+): Promise<BuildingRegisterInfo | null> {
+  try {
+    return (await findBuildingRegister({
+      kind: isOffitelType(type) ? 'offitel' : 'residential',
+      sggCode: identity.bjdCode,
+      primaryAddress: building.dongName ? { dongName: building.dongName, jibun: building.jibun } : null,
+      addresses,
+      buildingName: identity.buildingName,
+    })) ?? null;
+  } catch (error) {
+    console.warn('[realEstateDetail] 건축물대장 조회 실패', error instanceof Error ? error.message : error);
     return null;
   }
 }

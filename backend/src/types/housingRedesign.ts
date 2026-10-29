@@ -236,6 +236,8 @@ export interface DetailOverview {
   complex: ComplexInfo | null;
   /** K-apt 관리비 요약. 단지 연결이 없거나 관리비가 없거나 이상값·조회 실패면 null. */
   maintenanceFee: MaintenanceFeeSummary | null;
+  /** 건축물대장 건물 정보. K-apt 단지가 있거나, 연결 안 되거나, 조회 실패면 null. */
+  buildingRegister: BuildingRegisterInfo | null;
   generatedAt: string;
 }
 
