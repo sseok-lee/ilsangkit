@@ -21,3 +21,9 @@ export const HomeMarketQuerySchema = z.object({
 });
 
 export type HomeMarketQueryInput = z.infer<typeof HomeMarketQuerySchema>;
+
+export const RisingRegionsQuerySchema = z.object({
+  scope: z.enum(['all', 'capital', 'nonCapital']).default('all'),
+});
+
+export type RisingRegionsQueryInput = z.infer<typeof RisingRegionsQuerySchema>;
