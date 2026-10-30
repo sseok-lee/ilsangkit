@@ -135,7 +135,7 @@
                 >
                   <span class="min-w-0 truncate">
                     <span class="mr-1.5 font-bold text-muted tabular-nums">{{ index + 1 }}</span>
-                    <span class="font-bold text-strong" :class="deal.canonicalPath ? 'underline-offset-2 group-hover:underline' : ''">{{ deal.buildingName }}</span>
+                    <span class="font-bold text-strong">{{ deal.buildingName }}</span>
                     <span class="ml-1.5 text-xs text-muted">{{ deal.dongName }}</span>
                   </span>
                   <span class="shrink-0 font-extrabold text-strong tabular-nums">{{ formatKoreanPrice(deal.amount) }}</span>
