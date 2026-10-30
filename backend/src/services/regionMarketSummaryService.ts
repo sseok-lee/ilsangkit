@@ -10,6 +10,8 @@ import {
 } from '../constants/regionMarket.js';
 import { prisma } from '../lib/prisma.js';
 import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
+import { runSync, type SyncStats } from './baseSyncService.js';
+import { kstToday } from './busStopTagoClient.js';
 import { buildRegionFilter } from './cityMapping.js';
 import { listMarketRegionKeys, type MarketRegionKey } from './marketRegionResolver.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
@@ -307,5 +309,25 @@ export async function computeRegionMarketSummaries(todayKst: string): Promise<Re
       prevTo: w.prev.to,
       computedAt,
     };
+  });
+}
+
+/**
+ * 요약을 새로 계산해 통째로 교체한다. 계산이 전부 끝난 뒤에만(그리고 1행 이상일 때만)
+ * 한 트랜잭션에서 delete→create 하므로, 중간 실패 시 이전 행이 그대로 남는다.
+ */
+export async function refreshRegionMarketSummaries(todayKst: string = kstToday()): Promise<SyncStats> {
+  return runSync('region-market', async (stats) => {
+    const rows = await computeRegionMarketSummaries(todayKst);
+    if (rows.length === 0) {
+      throw new Error('지역 시세 요약 계산 결과가 0행입니다 — 기존 요약을 유지합니다');
+    }
+    stats.totalRecords = rows.length;
+    await prisma.$transaction([
+      prisma.regionMarketSummary.deleteMany(),
+      prisma.regionMarketSummary.createMany({
+        data: rows as unknown as Prisma.RegionMarketSummaryCreateManyInput[],
+      }),
+    ]);
   });
 }

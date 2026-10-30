@@ -1,12 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { queryRawUnsafe, mockListKeys, mockAttach } = vi.hoisted(() => ({
+const { queryRawUnsafe, mockListKeys, mockAttach, deleteMany, createMany, transaction } = vi.hoisted(() => ({
   queryRawUnsafe: vi.fn(),
+  deleteMany: vi.fn(),
+  createMany: vi.fn(),
+  transaction: vi.fn(),
   mockListKeys: vi.fn(),
   mockAttach: vi.fn(),
 }));
 
-vi.mock('../../src/lib/prisma.js', () => ({ prisma: { $queryRawUnsafe: queryRawUnsafe } }));
+vi.mock('../../src/lib/prisma.js', () => ({
+  prisma: {
+    $queryRawUnsafe: queryRawUnsafe,
+    $transaction: transaction,
+    regionMarketSummary: { deleteMany, createMany },
+  },
+}));
+vi.mock('../../src/services/baseSyncService.js', () => ({
+  runSync: async (_c: string, fn: (s: { totalRecords: number }) => Promise<void>) => {
+    const stats = { totalRecords: 0, newRecords: 0, updatedRecords: 0, skippedRecords: 0, errors: [] };
+    await fn(stats);
+    return stats;
+  },
+}));
 vi.mock('../../src/services/marketRegionResolver.js', () => ({ listMarketRegionKeys: mockListKeys }));
 vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({ attachRealEstateCanonicalPaths: mockAttach }));
 
@@ -15,6 +31,7 @@ import {
   histogramMedian,
   isRising,
   median,
+  refreshRegionMarketSummaries,
   regionMarketWindows,
   yoyPct,
 } from '../../src/services/regionMarketSummaryService.js';
@@ -116,5 +133,41 @@ describe('computeRegionMarketSummaries', () => {
     const songpa = rows.find((r) => r.districtSlug === 'songpa')!;
     expect(songpa).toMatchObject({ ppMedian12m: null, dealCount12m: 0, topDeals: [], volRecent: 0, volPrev: 0 });
     expect(songpa.recentFrom).toBe('2026-08-31');
+  });
+});
+
+describe('refreshRegionMarketSummaries', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockAttach.mockImplementation(async (rows: object[]) => rows.map((r) => ({ ...r, canonicalPath: '/p' })));
+    deleteMany.mockReturnValue('DELETE');
+    createMany.mockReturnValue('CREATE');
+    transaction.mockResolvedValue([]);
+    queryRawUnsafe.mockResolvedValue([]);
+  });
+
+  const nation = { scope: 'nation', citySlug: '', districtSlug: '', label: '전국' };
+
+  it('계산이 throw 하면 deleteMany 를 호출하지 않는다', async () => {
+    mockListKeys.mockRejectedValue(new Error('boom'));
+    await expect(refreshRegionMarketSummaries('2026-10-30')).rejects.toThrow('boom');
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('0행이면 throw 하고 deleteMany 를 호출하지 않는다', async () => {
+    mockListKeys.mockResolvedValue([]);
+    await expect(refreshRegionMarketSummaries('2026-10-30')).rejects.toThrow();
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('정상이면 $transaction 1회에 delete→create 순서, totalRecords=행 수', async () => {
+    mockListKeys.mockResolvedValue([nation]);
+    const stats = await refreshRegionMarketSummaries('2026-10-30');
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0][0]).toEqual(['DELETE', 'CREATE']);
+    expect(createMany.mock.calls[0][0].data).toHaveLength(1);
+    expect(stats.totalRecords).toBe(1);
   });
 });
