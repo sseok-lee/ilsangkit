@@ -2,7 +2,9 @@
 /**
  * 전국 버스정류장 동기화 스크립트.
  *
- *   npm run sync:bus-stop                                         # odcloud API 최신 판
+ *   npm run sync:bus-stop                                         # odcloud API 최신 판 + TAGO 보충
+ *   npm run sync:bus-stop -- --force                              # 같은 판이어도 다시 받기(TAGO 갱신)
+ *   npm run sync:bus-stop -- --no-tago                            # TAGO 보충 없이 파일 데이터만
  *   npm run sync:bus-stop -- --local /path/to/file.csv [--version YYYYMMDD]  # 비상용
  */
 
@@ -26,6 +28,8 @@ async function main(): Promise<void> {
   const result = await syncLatestBusStops({
     localCsv: local ? path.resolve(local) : undefined,
     version,
+    force: args.includes('--force'),
+    tago: !args.includes('--no-tago'),
   });
   const sec = ((Date.now() - started) / 1000).toFixed(1);
   console.info(

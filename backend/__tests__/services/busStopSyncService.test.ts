@@ -63,6 +63,15 @@ describe('syncBusStops', () => {
     expect(stats.outcome).toBe('skipped');
   });
 
+  it('force 면 같은 판·직전 성공이어도 다시 적재한다', async () => {
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 400));
+    const loadRows = vi.fn(async () => rawRows(400));
+    const stats = await syncBusStops({ version: '20251031', loadRows, force: true });
+    expect(loadRows).toHaveBeenCalledTimes(1);
+    expect(mocks.batchUpsertRaw).toHaveBeenCalledTimes(1);
+    expect(stats.outcome).toBe('loaded');
+  });
+
   it('같은 판이어도 직전 실행이 failed 면(첫 적재 중간 실패) skip하지 않고 다시 적재한다', async () => {
     mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 400));
     mocks.historyFindMany.mockResolvedValue([
