@@ -39,7 +39,12 @@ import {
   type DetailPageQueryInput,
   type DetailQueryInput,
 } from '../schemas/realEstateDetail.js';
-import { HomeMarketQuerySchema, type HomeMarketQueryInput } from '../schemas/homeMarket.js';
+import {
+  HomeMarketQuerySchema,
+  RisingRegionsQuerySchema,
+  type HomeMarketQueryInput,
+  type RisingRegionsQueryInput,
+} from '../schemas/homeMarket.js';
 import { MapQuerySchema, resolveGranularity, type MapQueryInput } from '../schemas/realEstateMap.js';
 import {
   getDetailOverview,
@@ -47,6 +52,7 @@ import {
   getDetailSnapshot,
 } from '../services/realEstateDetailService.js';
 import { getHomeMarket } from '../services/homeMarketService.js';
+import { getRisingRegions } from '../services/risingRegionsService.js';
 import { z } from 'zod';
 import publicUrlRouter from './realEstatePublicUrl.js';
 
@@ -99,6 +105,17 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { city, district } = req.query as HomeMarketQueryInput;
     const result = await getHomeMarket({ city, district });
+    res.json({ success: true, data: result });
+  }),
+);
+
+// GET /api/real-estate/rising-regions - 요즘 거래가 늘어난 지역 (must be before /:type routes)
+router.get(
+  '/rising-regions',
+  validate(RisingRegionsQuerySchema, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { scope } = req.query as unknown as RisingRegionsQueryInput;
+    const result = await getRisingRegions(scope);
     res.json({ success: true, data: result });
   }),
 );

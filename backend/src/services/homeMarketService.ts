@@ -1,3 +1,4 @@
+import { MIN_PRICE_SAMPLE } from '../constants/regionMarket.js';
 import { AppError } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
@@ -8,14 +9,17 @@ import type {
   MarketRegion,
   PropertyType,
   RecentBuilding,
+  RegionPriceStats,
+  RegionTopDeal,
   SectionResult,
 } from '../types/housingRedesign.js';
 import { buildRegionFilter } from './cityMapping.js';
+import { yoyPct } from './regionMarketSummaryService.js';
 import { resolveMarketRegion, type ResolvedRegion } from './marketRegionResolver.js';
 import { regionFilterToSql } from './realEstateService.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 
-const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_TTL_MS = 10 * 60 * 1000;
 const PARTIAL_CACHE_TTL_MS = 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
 const PROPERTY_TABLES: Record<PropertyType, string> = {
@@ -117,12 +121,14 @@ async function loadHomeMarket(
   const resolved = await resolveMarketRegion(inputRegion);
   const counts = await settleCounts(resolved, window);
   const recent = await settleRecent(resolved, window);
+  const priceStats = await settlePriceStats(resolved);
   const result: HomeMarket = {
     region: toMarketRegion(resolved),
     window,
     generatedAt: now.toISOString(),
     counts,
     recent,
+    priceStats,
   };
 
   const countResults = Object.values(counts);
@@ -132,7 +138,7 @@ async function loadHomeMarket(
     throw new AppError(503, '홈 시장 정보를 일시적으로 불러올 수 없습니다.', 'UNAVAILABLE');
   }
 
-  const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error';
+  const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error' || priceStats.status === 'error';
   remember(cacheKey(inputRegion, window.to), result, hasPartialFailure ? PARTIAL_CACHE_TTL_MS : CACHE_TTL_MS);
   return result;
 }
@@ -177,6 +183,49 @@ async function settleRecent(region: ResolvedRegion, window: DateWindow): Promise
   });
 
   return { status: 'ok', data: rows.slice(0, 5) };
+}
+
+async function settlePriceStats(region: ResolvedRegion): Promise<SectionResult<RegionPriceStats | null>> {
+  try {
+    const city = region.input.city;
+    const district = region.input.district;
+    const row = await prisma.regionMarketSummary.findUnique({
+      where: {
+        scope_citySlug_districtSlug: {
+          scope: city ? (district ? 'district' : 'city') : 'nation',
+          citySlug: city ?? '',
+          districtSlug: city ? (district ?? '') : '',
+        },
+      },
+    });
+    if (!row || row.ppMedian12m === null || row.dealCount12m < MIN_PRICE_SAMPLE) {
+      return { status: 'ok', data: null };
+    }
+    const topDeals = (Array.isArray(row.topDeals) ? row.topDeals : []) as unknown as Array<
+      Omit<RegionTopDeal, 'area' | 'canonicalPath'> & { area: number | string | null; canonicalPath?: string | null }
+    >;
+    return {
+      status: 'ok',
+      data: {
+        ppMedian: row.ppMedian12m,
+        ppYoyPct: yoyPct(row.ppMedian12m, row.ppMedianPrev12m, row.dealCountPrev12m),
+        dealCount12m: row.dealCount12m,
+        topDeals: topDeals.map((deal) => ({
+          buildingName: deal.buildingName,
+          bjdCode: deal.bjdCode,
+          dongName: deal.dongName,
+          jibun: deal.jibun ?? null,
+          area: deal.area === null || deal.area === undefined ? null : Number(deal.area).toFixed(2),
+          amount: Number(deal.amount),
+          date: deal.date,
+          canonicalPath: deal.canonicalPath ?? null,
+        })),
+        computedAt: row.computedAt.toISOString(),
+      },
+    };
+  } catch {
+    return unavailable<RegionPriceStats | null>();
+  }
 }
 
 async function queryCount(

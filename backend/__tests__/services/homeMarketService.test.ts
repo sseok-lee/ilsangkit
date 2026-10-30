@@ -6,7 +6,8 @@ import {
   getHomeMarket,
 } from '../../src/services/homeMarketService.js';
 
-const { queryRawUnsafe, regionFindMany, mockAttachCanonicalPaths } = vi.hoisted(() => ({
+const { queryRawUnsafe, regionFindMany, summaryFindUnique, mockAttachCanonicalPaths } = vi.hoisted(() => ({
+  summaryFindUnique: vi.fn(),
   queryRawUnsafe: vi.fn(),
   regionFindMany: vi.fn(),
   mockAttachCanonicalPaths: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   prisma: {
     $queryRawUnsafe: queryRawUnsafe,
     region: { findMany: regionFindMany },
+    regionMarketSummary: { findUnique: summaryFindUnique },
   },
 }));
 vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({
@@ -55,6 +57,7 @@ describe('getHomeMarket', () => {
     mockAttachCanonicalPaths.mockImplementation((rows: unknown[]) => Promise.resolve(rows));
     __resetHomeMarketCacheForTest();
     regionFindMany.mockResolvedValue(seoulRegions);
+    summaryFindUnique.mockResolvedValue(null);
   });
 
   it('최근 거래 카드에 canonicalPath를 붙인다', async () => {
@@ -410,5 +413,73 @@ describe('getHomeMarket', () => {
     await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-09-21T12:00:00+09:00'));
 
     expect(queryRawUnsafe.mock.calls.length).toBeGreaterThan(501 * 6);
+  });
+
+  describe('priceStats', () => {
+    const summaryRow = (over: Record<string, unknown> = {}) => ({
+      scope: 'district',
+      citySlug: 'seoul',
+      districtSlug: 'gangnam',
+      label: '서울 강남구',
+      ppMedian12m: 8000,
+      ppMedianPrev12m: 7000,
+      dealCount12m: 25,
+      dealCountPrev12m: 30,
+      topDeals: [
+        { buildingName: '현대', bjdCode: '11680', dongName: '역삼동', jibun: '1', area: 84.9, amount: 300000, date: '2026-09-01', canonicalPath: '/real-estate/apt-sale/seoul/gangnam/x' },
+      ],
+      computedAt: new Date('2026-10-30T00:00:00Z'),
+      ...over,
+    });
+
+    it('요약 행이 있고 표본 20건 이상이면 ok + 통계를 돌려주고 district 키로 조회한다', async () => {
+      queryRawUnsafe.mockResolvedValue([]);
+      summaryFindUnique.mockResolvedValue(summaryRow());
+      const result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(summaryFindUnique).toHaveBeenCalledWith({
+        where: { scope_citySlug_districtSlug: { scope: 'district', citySlug: 'seoul', districtSlug: 'gangnam' } },
+      });
+      expect(result.priceStats.status).toBe('ok');
+      expect(result.priceStats.data).toMatchObject({ ppMedian: 8000, ppYoyPct: 14.3, dealCount12m: 25 });
+      expect(result.priceStats.data?.topDeals[0]).toMatchObject({ area: '84.90', amount: 300000 });
+    });
+
+    it('시/도·전국 키로 조회한다', async () => {
+      queryRawUnsafe.mockResolvedValue([]);
+      await getHomeMarket({ city: 'seoul' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(summaryFindUnique).toHaveBeenLastCalledWith({
+        where: { scope_citySlug_districtSlug: { scope: 'city', citySlug: 'seoul', districtSlug: '' } },
+      });
+      await getHomeMarket({}, new Date('2026-10-30T12:00:00+09:00'));
+      expect(summaryFindUnique).toHaveBeenLastCalledWith({
+        where: { scope_citySlug_districtSlug: { scope: 'nation', citySlug: '', districtSlug: '' } },
+      });
+    });
+
+    it('행이 없거나 표본이 19건이면 ok + null', async () => {
+      queryRawUnsafe.mockResolvedValue([]);
+      let result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(result.priceStats).toEqual({ status: 'ok', data: null });
+      __resetHomeMarketCacheForTest();
+      summaryFindUnique.mockResolvedValue(summaryRow({ dealCount12m: 19 }));
+      result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(result.priceStats).toEqual({ status: 'ok', data: null });
+    });
+
+    it('직전 표본이 부족하면 ppYoyPct 는 null', async () => {
+      queryRawUnsafe.mockResolvedValue([]);
+      summaryFindUnique.mockResolvedValue(summaryRow({ dealCountPrev12m: 5 }));
+      const result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(result.priceStats.data?.ppYoyPct).toBeNull();
+    });
+
+    it('요약 조회가 throw 해도 error 섹션만 되고 counts 는 영향이 없다', async () => {
+      queryRawUnsafe.mockResolvedValue([]);
+      summaryFindUnique.mockRejectedValue(new Error('boom'));
+      const result = await getHomeMarket({ city: 'seoul', district: 'gangnam' }, new Date('2026-10-30T12:00:00+09:00'));
+      expect(result.priceStats).toEqual({ status: 'error', data: null, code: 'UNAVAILABLE' });
+      expect(result.counts.apt.status).toBe('ok');
+      expect(result.recent.status).toBe('ok');
+    });
   });
 });
