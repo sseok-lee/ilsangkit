@@ -24,6 +24,7 @@
     "db:fulltext": "tsx src/scripts/applyFulltextNgram.ts",
     "sync:toilet": "tsx src/scripts/syncToilet.ts",
     "sync:toilet:geocode": "tsx src/scripts/geocodeToilets.ts",
+    "sync:bus-stop": "tsx src/scripts/syncBusStop.ts",
     "sync:trash": "tsx src/scripts/syncTrash.ts",
     "waste:publish": "tsx src/scripts/publishWasteGeneration.ts",
     "sync:wifi": "tsx src/scripts/syncWifi.ts",
