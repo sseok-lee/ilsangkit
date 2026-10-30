@@ -11,10 +11,13 @@ import {
   type BusStopRawRow,
 } from './busStopDataSource.js';
 import { fetchLatestBusStopVersion, fetchAllBusStopRows } from './busStopApiClient.js';
+import { fetchAllTagoRows } from './busStopTagoClient.js';
 import prisma from '../lib/prisma.js';
 
 export interface BusStopSyncInput {
   version: string;
+  // true 면 같은 판이어도 다시 받는다 (TAGO 보충분을 새로 받을 때)
+  force?: boolean;
   // 판 비교 뒤에만 호출한다 (같은 판이면 호출 0회)
   loadRows: () => Promise<BusStopRawRow[]>;
 }
@@ -26,7 +29,7 @@ const MIN_RETAIN_RATIO = 0.8;
 const UPSERT_BATCH_SIZE = 500;
 
 export async function syncBusStops(input: BusStopSyncInput): Promise<BusStopSyncResult> {
-  const { version, loadRows } = input;
+  const { version, loadRows, force = false } = input;
   let outcome: 'loaded' | 'skipped' = 'loaded';
 
   const stats = await runSync(
@@ -53,7 +56,7 @@ export async function syncBusStops(input: BusStopSyncInput): Promise<BusStopSync
         });
         prevRunSucceeded = recent[1]?.status === 'success';
       }
-      if (prevCount > 0 && staleCount === 0 && prevRunSucceeded) {
+      if (!force && prevCount > 0 && staleCount === 0 && prevRunSucceeded) {
         console.info(`BusStop 판 ${version} 은 이미 적재됨 — 건너뜁니다`);
         outcome = 'skipped';
         return;
@@ -123,19 +126,32 @@ function versionFromRows(rows: BusStopRawRow[]): string {
   return digits;
 }
 
+// 파일 행 뒤에 TAGO 행을 붙인다. 정규화가 같은 정류장번호의 첫 행만 남기므로 파일 데이터가 우선한다.
+async function withTago(loadFile: () => Promise<BusStopRawRow[]>, tago: boolean): Promise<BusStopRawRow[]> {
+  const fileRows = await loadFile();
+  if (!tago) return fileRows;
+  const { rows, cities, failedCities } = await fetchAllTagoRows();
+  console.info(
+    `TAGO 보충: ${cities}개 도시 ${rows.length}건${failedCities.length ? ` (실패 ${failedCities.join(', ')})` : ''}`,
+  );
+  return [...fileRows, ...rows];
+}
+
 export async function syncLatestBusStops(
-  opts: { localCsv?: string; version?: string } = {},
+  opts: { localCsv?: string; version?: string; force?: boolean; tago?: boolean } = {},
 ): Promise<BusStopSyncResult> {
+  const tago = opts.tago ?? true;
   if (opts.localCsv) {
     const rows = parseBusStopCsvFile(readFileSync(opts.localCsv));
     const version = opts.version ?? versionFromRows(rows);
-    return syncBusStops({ version, loadRows: async () => rows });
+    return syncBusStops({ version, force: opts.force, loadRows: () => withTago(async () => rows, tago) });
   }
 
   const ver = await fetchLatestBusStopVersion();
   return syncBusStops({
     version: opts.version ?? ver.version,
-    loadRows: () => fetchAllBusStopRows(ver),
+    force: opts.force,
+    loadRows: () => withTago(() => fetchAllBusStopRows(ver), tago),
   });
 }
 
