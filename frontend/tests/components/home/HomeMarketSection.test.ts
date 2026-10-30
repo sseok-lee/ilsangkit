@@ -160,4 +160,91 @@ describe('HomeMarketSection', () => {
     expect(failed.text()).toContain('시장 정보를 불러오지 못했습니다')
     expect(failed.text()).not.toContain('테스트아파트')
   })
+
+  describe('평당가·최고가 줄', () => {
+    const emptyCount = { status: 'ok', data: { total: 0, daily: [] } }
+    const deal = (n: number, canonicalPath: string | null) => ({
+      buildingName: `최고단지${n}`,
+      bjdCode: '1168010600',
+      dongName: '대치동',
+      jibun: '1-1',
+      area: '84.97',
+      amount: 300000 - n * 10000,
+      date: '2026-09-01',
+      canonicalPath,
+    })
+    const stats = (overrides: Record<string, unknown> = {}) => ({
+      status: 'ok',
+      data: {
+        ppMedian: 7840,
+        ppYoyPct: 10.1,
+        dealCount12m: 321,
+        topDeals: [
+          deal(1, '/real-estate/apt-sale/seoul/gangnam/a'),
+          deal(2, '/real-estate/apt-sale/seoul/gangnam/b'),
+          deal(3, null),
+        ],
+        computedAt: '2026-10-30T00:00:00.000Z',
+        ...overrides,
+      },
+    })
+    const market = (priceStats: unknown, region = { city: 'seoul', district: 'gangnam', label: '서울 강남구' }) =>
+      mountWith({
+        data: ref({
+          region,
+          window: { from: '2026-09-02', to: '2026-10-01' },
+          generatedAt: '2026-10-01T00:00:00.000Z',
+          counts: { apt: emptyCount, villa: emptyCount, offitel: emptyCount },
+          recent: { status: 'ok', data: [] },
+          priceStats,
+        }),
+      })
+
+    it('평당가·증감·TOP 3와 링크를 렌더한다', () => {
+      const wrapper = market(stats())
+      const text = wrapper.text()
+      expect(text).toContain('아파트 평당가 중간값')
+      expect(text).toContain('7,840만원')
+      expect(text).toContain('1년 전 대비 +10.1%')
+      expect(text).toContain('최고가 거래 TOP 3')
+      expect(text).toContain('최고단지1')
+      expect(text).toContain('최고단지3')
+      expect(wrapper.find('a[href="/real-estate/apt-sale/seoul/gangnam/a"]').exists()).toBe(true)
+      expect(wrapper.find('a[href="/real-estate/apt-sale/seoul/gangnam/b"]').exists()).toBe(true)
+      expect(wrapper.findAll('a').some((a) => a.text().includes('최고단지3'))).toBe(false)
+      expect(text).toContain('서울 강남구 실거래가 자세히')
+    })
+
+    it('ppYoyPct가 null이면 변화율만 숨긴다', () => {
+      const text = market(stats({ ppYoyPct: null })).text()
+      expect(text).toContain('7,840만원')
+      expect(text).not.toContain('1년 전 대비')
+    })
+
+    it('음수 변화율은 부호와 함께 표시한다', () => {
+      expect(market(stats({ ppYoyPct: -3.25 })).text()).toContain('1년 전 대비 -3.3%')
+    })
+
+    it.each([
+      ['null 데이터', { status: 'ok', data: null }],
+      ['error', { status: 'error', data: null, code: 'UNAVAILABLE' }],
+      ['필드 없음', undefined],
+    ])('%s이면 줄 전체를 렌더하지 않는다', (_name, priceStats) => {
+      const text = market(priceStats).text()
+      expect(text).not.toContain('아파트 평당가 중간값')
+      expect(text).not.toContain('최고가 거래 TOP 3')
+      expect(text).not.toContain('자세히')
+    })
+
+    it.each([
+      [{ city: 'seoul', district: 'gangnam', label: '서울 강남구' }, '/real-estate/apt-sale/seoul/gangnam'],
+      [{ city: 'seoul', district: null, label: '서울' }, '/real-estate/apt-sale/seoul'],
+      [{ city: null, district: null, label: '전국' }, '/real-estate/apt-sale'],
+    ])('자세히 링크는 선택 지역 목록으로 간다', (region, href) => {
+      const wrapper = market(stats(), region)
+      const link = wrapper.findAll('a').find((a) => a.text().includes('실거래가 자세히'))
+      expect(link?.attributes('href')).toBe(href)
+      expect(link?.text()).toBe(`${region.label} 실거래가 자세히`)
+    })
+  })
 })

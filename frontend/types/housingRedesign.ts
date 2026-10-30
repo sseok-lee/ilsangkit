@@ -267,10 +267,32 @@ export interface RecentBuilding {
   area: string | null
 }
 
+export interface RegionTopDeal {
+  buildingName: string
+  bjdCode: string
+  dongName: string
+  jibun: string | null
+  area: string | null
+  /** 만원 */
+  amount: number
+  date: string
+  canonicalPath: string | null
+}
+
+export interface RegionPriceStats {
+  /** 만원 / 3.3m² */
+  ppMedian: number
+  ppYoyPct: number | null
+  dealCount12m: number
+  topDeals: RegionTopDeal[]
+  computedAt: string
+}
+
 export interface HomeMarket {
   region: MarketRegion
   window: DateWindow
   generatedAt: string
   counts: Record<PropertyType, SectionResult<MarketCount>>
   recent: SectionResult<RecentBuilding[]>
+  priceStats?: SectionResult<RegionPriceStats | null>
 }
