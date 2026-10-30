@@ -296,3 +296,24 @@ export interface HomeMarket {
   recent: SectionResult<RecentBuilding[]>
   priceStats?: SectionResult<RegionPriceStats | null>
 }
+
+export type RisingScope = 'all' | 'capital' | 'nonCapital'
+
+export interface RisingRegion {
+  label: string
+  citySlug: string
+  districtSlug: string
+  /** 만원 / 3.3m² */
+  ppMedian: number | null
+  volRecent: number
+  volPrev: number
+  changePct: number
+}
+
+export interface RisingRegions {
+  scope: RisingScope
+  window: DateWindow
+  prevWindow: DateWindow
+  computedAt: string | null
+  items: RisingRegion[]
+}

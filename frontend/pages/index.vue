@@ -90,6 +90,11 @@
       <HomeMarketSection />
     </section>
 
+    <!-- 요즘 거래가 늘어난 지역 + 시·도 바로가기 -->
+    <section class="page-container py-6">
+      <HomeRisingRegions />
+    </section>
+
     <!-- Ad: fold 아래 첫 섹션 경계 (히어로 검색은 홈의 핵심 기능이라 그 위/안에는 두지 않는다) -->
     <div class="page-container">
       <AdBanner />
@@ -116,26 +121,6 @@
         >
           <CategoryIcon :category-id="(q.id as CategoryId)" size="md" class="mb-1.5" />
           <span class="text-[13px] font-semibold text-strong">{{ q.label }}</span>
-        </HardLink>
-      </div>
-    </section>
-
-    <!-- 인기 지역 -->
-    <section class="page-container py-4">
-      <div class="mb-4">
-        <h2 class="text-display-2 text-strong flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-[24px]" aria-hidden="true">place</span>
-          인기 지역
-        </h2>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <HardLink
-          v-for="city in CITY_LINKS"
-          :key="city.slug"
-          :to="`/${city.slug}/`"
-          class="ui-chip"
-        >
-          {{ city.label }}
         </HardLink>
       </div>
     </section>
@@ -287,11 +272,11 @@ import CategoryIcon from '~/components/common/CategoryIcon.vue'
 import type { CategoryId } from '~/utils/categoryIcons'
 import HomeSubscriptionSection from '~/components/subscription/HomeSubscriptionSection.vue'
 import HomeMarketSection from '~/components/home/HomeMarketSection.vue'
+import HomeRisingRegions from '~/components/home/HomeRisingRegions.vue'
 import type { GuideSummary } from '~/composables/useGuides'
 import type { ArticleSummary } from '~/composables/useArticles'
 import { useFacilityMeta } from '~/composables/useFacilityMeta'
 import { useStructuredData } from '~/composables/useStructuredData'
-import { CITY_LINKS } from '~/utils/seoConstants'
 import { FACILITY_DATA_SOURCE, REAL_ESTATE_DATA_SOURCE, SUBSCRIPTION_DATA_SOURCE } from '~/utils/dataSource'
 import { useAnalytics } from '~/composables/useAnalytics'
 

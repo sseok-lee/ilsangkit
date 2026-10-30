@@ -54,9 +54,9 @@ describe('사용처 0 코드 삭제', () => {
   })
 })
 
-describe('홈 인기 지역 칩', () => {
+describe('홈 시·도 바로가기 칩', () => {
   it('공통 칩(.ui-chip)을 쓰고 알약 모양을 쓰지 않는다', () => {
-    const src = read('pages/index.vue')
+    const src = read('components/home/HomeRisingRegions.vue')
     const chip = src.slice(src.indexOf('v-for="city in CITY_LINKS"'))
     const tag = chip.slice(0, chip.indexOf('>'))
     expect(tag).toContain('class="ui-chip"')
