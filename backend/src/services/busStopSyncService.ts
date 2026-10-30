@@ -32,8 +32,14 @@ export async function syncBusStops(input: BusStopSyncInput): Promise<BusStopSync
   const stats = await runSync(
     'bus-stop',
     async (s) => {
-      const current = await prisma.busStop.findFirst({ select: { sourceVersion: true } });
-      if (current?.sourceVersion === version) {
+      // 건너뛰기: 테이블이 비어 있지 않고 옛 판 행이 하나도 없을 때만.
+      // (이전 실행이 중간 실패해 새 판/옛 판이 섞여 있으면 다시 적재해야 한다)
+      const prevCount = await prisma.busStop.count();
+      const staleCount =
+        prevCount > 0
+          ? await prisma.busStop.count({ where: { sourceVersion: { not: version } } })
+          : 0;
+      if (prevCount > 0 && staleCount === 0) {
         console.info(`BusStop 판 ${version} 은 이미 적재됨 — 건너뜁니다`);
         outcome = 'skipped';
         return;
@@ -50,7 +56,6 @@ export async function syncBusStops(input: BusStopSyncInput): Promise<BusStopSync
         throw new Error(`버스정류장 판 ${version} 정규화 결과가 0건입니다 (원본 ${raw.length}행)`);
       }
 
-      const prevCount = await prisma.busStop.count();
       if (prevCount > 0 && records.length < prevCount * MIN_RETAIN_RATIO) {
         throw new Error(
           `버스정류장 새 판 ${records.length}건이 기존 ${prevCount}건의 80% 미만이라 중단합니다 (부분 응답 의심)`,

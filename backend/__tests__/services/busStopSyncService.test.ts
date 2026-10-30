@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  findFirst: vi.fn(),
   count: vi.fn(),
   deleteMany: vi.fn(),
   batchUpsertRaw: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
-  default: { busStop: { findFirst: mocks.findFirst, count: mocks.count, deleteMany: mocks.deleteMany } },
+  default: { busStop: { count: mocks.count, deleteMany: mocks.deleteMany } },
 }));
 
 vi.mock('../../src/services/baseSyncService.js', async (importOriginal) => {
@@ -39,20 +38,31 @@ function rawRows(n: number) {
 describe('syncBusStops', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.findFirst.mockResolvedValue(null);
     mocks.count.mockResolvedValue(0);
     mocks.batchUpsertRaw.mockResolvedValue({ newCount: 2, updateCount: 0 });
     mocks.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   it('저장된 판과 같으면 loadRows를 호출하지 않는다', async () => {
-    mocks.findFirst.mockResolvedValue({ sourceVersion: '20251031' });
+    // 전체 1000건, 옛 판 0건
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 1000));
     const loadRows = vi.fn();
     const stats = await syncBusStops({ version: '20251031', loadRows });
     expect(loadRows).not.toHaveBeenCalled();
     expect(mocks.batchUpsertRaw).not.toHaveBeenCalled();
     expect(mocks.deleteMany).not.toHaveBeenCalled();
     expect(stats.outcome).toBe('skipped');
+  });
+
+  it('일부 행만 새 판이면(이전 실행 중간 실패) skip하지 않고 다시 적재한다', async () => {
+    // 전체 1000건 중 옛 판 400건 남음
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 400 : 1000));
+    const loadRows = vi.fn(async () => rawRows(900));
+    const stats = await syncBusStops({ version: '20251031', loadRows });
+    expect(loadRows).toHaveBeenCalledTimes(1);
+    expect(mocks.batchUpsertRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteMany).toHaveBeenCalledWith({ where: { sourceVersion: { not: '20251031' } } });
+    expect(stats.outcome).toBe('loaded');
   });
 
   it('빈 테이블이면 적재 후 옛 판을 삭제한다', async () => {
