@@ -187,12 +187,21 @@ export async function computeRegionMarketSummaries(todayKst: string): Promise<Re
      GROUP BY city, district`,
     w.recent.from, w.recent.from, ...yearRangeParams(w.prev.from, w.recent.to), w.prev.from, w.recent.to,
   );
-  // 순위는 좁은 컬럼(id, city, district, dealAmount)만으로 매기고, 넓은 컬럼은 id 로 따로 가져온다.
+  // 순위는 좁은 컬럼만으로 매긴다. 단지(makeBuildingKey 와 같은 bjdCode·buildingName·dongName·jibun)당 최고 거래 1건만 남긴 뒤
+  // (city, district) 안에서 TOP N 을 고르고, 넓은 컬럼은 id 로 따로 가져온다.
   const rankedIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
     `SELECT id FROM (
        SELECT id, ROW_NUMBER() OVER (PARTITION BY city, district ORDER BY dealAmount DESC, id DESC) AS rn
-       FROM AptSaleTransaction
-       WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+       FROM (
+         SELECT id, city, district, dealAmount,
+                ROW_NUMBER() OVER (
+                  PARTITION BY city, district, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')
+                  ORDER BY dealAmount DESC, id DESC
+                ) AS crn
+         FROM AptSaleTransaction
+         WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+       ) per_complex
+       WHERE crn = 1
      ) ranked
      WHERE rn <= ${TOP_DEALS_LIMIT}`,
     ...yearRangeParams(w.last12.from, w.last12.to), w.last12.from, w.last12.to,
@@ -254,7 +263,16 @@ export async function computeRegionMarketSummaries(todayKst: string): Promise<Re
       agg.tops.push(...part.tops);
     }
     agg.tops.sort((a, b) => Number(b.amount) - Number(a.amount) || b.transactionId - a.transactionId);
-    agg.tops = agg.tops.slice(0, TOP_DEALS_LIMIT);
+    // 시·도 표기 변형(서울/서울특별시)이 합쳐지면 같은 단지가 둘일 수 있어 단지당 최고가 1건만 남긴다.
+    const seen = new Set<string>();
+    agg.tops = agg.tops
+      .filter((t) => {
+        const id = [t.bjdCode, t.buildingName, (t.dongName ?? '').trim(), (t.jibun ?? '').trim()].join('\u0000');
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
+      .slice(0, TOP_DEALS_LIMIT);
     return agg;
   });
 

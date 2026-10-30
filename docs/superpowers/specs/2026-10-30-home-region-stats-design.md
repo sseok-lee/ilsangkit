@@ -14,7 +14,7 @@
 ## 2. 목표 · 비목표 · 반목표
 
 목표
-- "지금, 우리 동네 거래는" 섹션에 선택 지역의 **아파트 매매 평당가 중간값·전년 대비·최고가 거래 TOP 3** 줄을 더한다.
+- "지금, 우리 동네 거래는" 섹션에 선택 지역의 **아파트 매매 평당가 중간값·전년 대비·최고가 거래 TOP 3(단지당 최고 거래 1건, 10/30 사용자 결정)** 줄을 더한다.
 - 그 바로 아래에 **"요즘 거래가 늘어난 지역"** 섹션을 새로 두고, 기존 "인기 지역" 칩 섹션을 지운다.
 - 숫자는 매일 03:00 수집 때 미리 계산해 둔 요약 테이블에서만 읽는다.
 
@@ -52,7 +52,7 @@
 
 - 지역 키: `scope` (`nation`|`city`|`district`), `citySlug`, `districtSlug` (전국은 둘 다 빈 문자열, 시·도는 districtSlug 빈 문자열) — 유니크 `(scope, citySlug, districtSlug)`. 표시용 `label` ("서울 강남구").
 - 평당가: `ppMedian12m` (최근 12개월, 만원/3.3m²), `ppMedianPrev12m` (그 전 12개월), `dealCount12m`.
-- 최고가: `topDeals` JSON — 최근 12개월 상위 3건 `{buildingName, bjdCode, dongName, jibun, area, amount, date, canonicalPath}`.
+- 최고가: `topDeals` JSON — 최근 12개월 단지당 최고 거래 1건씩 상위 3개 단지 (단지당 최고 거래 1건, 10/30 사용자 결정) `{buildingName, bjdCode, dongName, jibun, area, amount, date, canonicalPath}`.
 - 거래 증감: `volRecent` (31~60일 전 계약), `volPrev` (61~90일 전 계약), `volWindowFrom`/`volWindowTo` (최근 구간 날짜).
 - `computedAt`.
 

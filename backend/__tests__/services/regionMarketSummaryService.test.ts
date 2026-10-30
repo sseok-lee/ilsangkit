@@ -136,6 +136,44 @@ describe('computeRegionMarketSummaries', () => {
   });
 });
 
+describe('topDeals 단지당 1건', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockAttach.mockImplementation(async (rows: object[]) => rows.map((r) => ({ ...r, canonicalPath: '/p' })));
+  });
+
+  it('같은 단지가 시·도 표기 둘로 들어와도 최고가 1건만 남기고 서로 다른 단지 3개를 채운다', async () => {
+    mockListKeys.mockResolvedValue([{ scope: 'nation', citySlug: '', districtSlug: '', label: '전국' }]);
+    const row = (id: number, city: string, name: string, bjd: string, amount: number, jibun = '1') => ({
+      city, district: '용산구', buildingName: name, bjdCode: bjd, dongName: '한남동', jibun,
+      area: '200', amount, date: '2026-01-02', transactionId: id,
+    });
+    queryRawUnsafe.mockImplementation(async (sql: string) => {
+      if (sql.includes('ROW_NUMBER')) return [{ id: 1 }];
+      if (sql.includes('GROUP BY') || sql.includes('volRecent')) return [];
+      return [
+        row(1, '서울', '나인원한남', '11170', 1000000),
+        row(2, '서울특별시', '나인원한남', '11170', 900000),
+        row(3, '서울특별시', 'B', '11170', 800000, '2'),
+        row(4, '서울', 'C', '11170', 700000, '3'),
+        row(5, '서울', 'D', '11170', 600000, '4'),
+      ];
+    });
+    const rows = await computeRegionMarketSummaries('2026-10-30');
+    const tops = rows[0].topDeals;
+    expect(tops.map((t) => t.buildingName)).toEqual(['나인원한남', 'B', 'C']);
+    expect(tops[0].amount).toBe(1000000);
+  });
+
+  it('SQL 은 단지별 최고 거래를 먼저 고른다', async () => {
+    mockListKeys.mockResolvedValue([]);
+    queryRawUnsafe.mockResolvedValue([]);
+    await computeRegionMarketSummaries('2026-10-30');
+    const sql = queryRawUnsafe.mock.calls.map((c) => c[0] as string).find((q) => q.includes('ROW_NUMBER'))!;
+    expect(sql).toContain('PARTITION BY city, district, bjdCode, buildingName');
+  });
+});
+
 describe('refreshRegionMarketSummaries', () => {
   beforeEach(() => {
     vi.resetAllMocks();
