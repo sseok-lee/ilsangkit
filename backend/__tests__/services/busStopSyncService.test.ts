@@ -4,10 +4,14 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn(),
   deleteMany: vi.fn(),
   batchUpsertRaw: vi.fn(),
+  historyFindMany: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => ({
-  default: { busStop: { count: mocks.count, deleteMany: mocks.deleteMany } },
+  default: {
+    busStop: { count: mocks.count, deleteMany: mocks.deleteMany },
+    syncHistory: { findMany: mocks.historyFindMany },
+  },
 }));
 
 vi.mock('../../src/services/baseSyncService.js', async (importOriginal) => {
@@ -41,6 +45,11 @@ describe('syncBusStops', () => {
     mocks.count.mockResolvedValue(0);
     mocks.batchUpsertRaw.mockResolvedValue({ newCount: 2, updateCount: 0 });
     mocks.deleteMany.mockResolvedValue({ count: 0 });
+    // 최신순: [현재 runSync 가 만든 running 행, 직전 실행]
+    mocks.historyFindMany.mockResolvedValue([
+      { id: 2, status: 'running' },
+      { id: 1, status: 'success' },
+    ]);
   });
 
   it('저장된 판과 같으면 loadRows를 호출하지 않는다', async () => {
@@ -52,6 +61,40 @@ describe('syncBusStops', () => {
     expect(mocks.batchUpsertRaw).not.toHaveBeenCalled();
     expect(mocks.deleteMany).not.toHaveBeenCalled();
     expect(stats.outcome).toBe('skipped');
+  });
+
+  it('같은 판이어도 직전 실행이 failed 면(첫 적재 중간 실패) skip하지 않고 다시 적재한다', async () => {
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 400));
+    mocks.historyFindMany.mockResolvedValue([
+      { id: 2, status: 'running' },
+      { id: 1, status: 'failed' },
+    ]);
+    const loadRows = vi.fn(async () => rawRows(400));
+    const stats = await syncBusStops({ version: '20251031', loadRows });
+    expect(loadRows).toHaveBeenCalledTimes(1);
+    expect(mocks.batchUpsertRaw).toHaveBeenCalledTimes(1);
+    expect(stats.outcome).toBe('loaded');
+  });
+
+  it('같은 판이어도 직전 실행이 running(프로세스 강제 종료)이면 다시 적재한다', async () => {
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 400));
+    mocks.historyFindMany.mockResolvedValue([
+      { id: 3, status: 'running' },
+      { id: 2, status: 'running' },
+    ]);
+    const loadRows = vi.fn(async () => rawRows(400));
+    const stats = await syncBusStops({ version: '20251031', loadRows });
+    expect(loadRows).toHaveBeenCalledTimes(1);
+    expect(stats.outcome).toBe('loaded');
+  });
+
+  it('같은 판이어도 직전 실행 기록이 없으면 다시 적재한다', async () => {
+    mocks.count.mockImplementation(async (args?: unknown) => (args ? 0 : 400));
+    mocks.historyFindMany.mockResolvedValue([{ id: 1, status: 'running' }]);
+    const loadRows = vi.fn(async () => rawRows(400));
+    const stats = await syncBusStops({ version: '20251031', loadRows });
+    expect(loadRows).toHaveBeenCalledTimes(1);
+    expect(stats.outcome).toBe('loaded');
   });
 
   it('일부 행만 새 판이면(이전 실행 중간 실패) skip하지 않고 다시 적재한다', async () => {

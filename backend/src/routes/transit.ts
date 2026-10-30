@@ -32,7 +32,11 @@ router.get(
     }
     const [stations, bus] = await Promise.all([
       findNearbyStations(lat, lng, radius, 10),
-      findNearbyBusStops(lat, lng, busRadius),
+      // 버스만 fail-soft: 버스 조회 실패가 지하철 응답까지 500 으로 만들지 않게 한다
+      findNearbyBusStops(lat, lng, busRadius).catch((err: unknown) => {
+        console.error('버스정류장 조회 실패:', err instanceof Error ? err.message : 'Unknown error');
+        return { items: [], count: 0, collectedAt: null };
+      }),
     ]);
     res.json({
       success: true,

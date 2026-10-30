@@ -39,7 +39,21 @@ export async function syncBusStops(input: BusStopSyncInput): Promise<BusStopSync
         prevCount > 0
           ? await prisma.busStop.count({ where: { sourceVersion: { not: version } } })
           : 0;
+      // 같은 판만 남아 있어도 첫 적재가 중간 실패했을 수 있다(upsert 는 500건 배치별 커밋).
+      // 그래서 직전 실행의 SyncHistory 가 success 일 때만 건너뛴다.
+      // runSync 가 이미 이번 실행의 'running' 행을 만들었고 콜백은 그 id 를 모르므로,
+      // 최신 id 순 2건을 읽어 첫 행(=이번 실행)을 빼고 둘째 행을 직전 실행으로 본다.
+      let prevRunSucceeded = false;
       if (prevCount > 0 && staleCount === 0) {
+        const recent = await prisma.syncHistory.findMany({
+          where: { category: 'bus-stop' },
+          orderBy: { id: 'desc' },
+          take: 2,
+          select: { id: true, status: true },
+        });
+        prevRunSucceeded = recent[1]?.status === 'success';
+      }
+      if (prevCount > 0 && staleCount === 0 && prevRunSucceeded) {
         console.info(`BusStop 판 ${version} 은 이미 적재됨 — 건너뜁니다`);
         outcome = 'skipped';
         return;

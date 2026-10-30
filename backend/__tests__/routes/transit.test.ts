@@ -127,6 +127,20 @@ describe('GET /api/transit/nearby (DB-backed)', () => {
       expect(res.body.data.busCollectedAt).toBe('2025-10-31');
     });
 
+    it('버스 조회가 실패해도 지하철은 200 으로 내려주고 버스는 빈 값이다', async () => {
+      mockBusFindMany.mockRejectedValue(new Error('bus db down'));
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const res = await request(app)
+        .get('/api/transit/nearby')
+        .query({ lat: 37.4979, lng: 127.0276, radius: 1000, busRadius: 1000 });
+      errSpy.mockRestore();
+      expect(res.status).toBe(200);
+      expect(res.body.data.stations.length).toBeGreaterThan(0);
+      expect(res.body.data.busStops).toEqual([]);
+      expect(res.body.data.busStopCount).toBe(0);
+      expect(res.body.data.busCollectedAt).toBeNull();
+    });
+
     it('busRadius 가 없으면 stations 만 있고 busStop 을 조회하지 않는다', async () => {
       const res = await request(app)
         .get('/api/transit/nearby')
