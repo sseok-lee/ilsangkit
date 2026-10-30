@@ -6,6 +6,7 @@ vi.mock('../../src/lib/prisma.js', () => ({
   prisma: { region: { findMany: regionFindMany } },
 }));
 
+import { ValidationError } from '../../src/lib/errors.js';
 import { listMarketRegionKeys, resolveMarketRegion } from '../../src/services/marketRegionResolver.js';
 
 const mergedRegions = [
@@ -57,5 +58,37 @@ describe('listMarketRegionKeys', () => {
       expect(resolved.queryDistrict).toBe(k.queryDistrict);
       expect(resolved.queryCity).toBe(k.queryCity);
     }
+  });
+});
+
+describe('listMarketRegionKeys 중복 slug', () => {
+  it('전체명/축약명에 같은 slug 가 있어도 district 키는 한 번만, 첫 행이 이긴다', async () => {
+    regionFindMany.mockResolvedValue([
+      { bjdCode: '11680', city: '서울특별시', district: '강남구', slug: 'gangnam' },
+      { bjdCode: '11680', city: '서울', district: '강남구', slug: 'gangnam' },
+      { bjdCode: '11710', city: '서울', district: '송파구', slug: 'songpa' },
+    ]);
+    const keys = await listMarketRegionKeys();
+    const seoul = keys.filter((k) => k.citySlug === 'seoul' && k.scope === 'district');
+    expect(seoul.map((k) => k.districtSlug)).toEqual(['gangnam', 'songpa']);
+    const tuples = keys.map((k) => `${k.scope}|${k.citySlug}|${k.districtSlug}`);
+    expect(new Set(tuples).size).toBe(tuples.length);
+  });
+});
+
+describe('resolveMarketRegion 오류 경로', () => {
+  it('city 없이 district 만 주면 ValidationError', async () => {
+    await expect(resolveMarketRegion({ district: 'gangnam' })).rejects.toThrow(ValidationError);
+    await expect(resolveMarketRegion({ district: 'gangnam' })).rejects.toThrow('city is required when district is provided');
+  });
+
+  it('알 수 없는 city slug 는 ValidationError', async () => {
+    await expect(resolveMarketRegion({ city: 'nowhere' })).rejects.toThrow(ValidationError);
+    await expect(resolveMarketRegion({ city: 'nowhere' })).rejects.toThrow('unknown city slug');
+  });
+
+  it('city 에 속하지 않는 district 는 ValidationError', async () => {
+    await expect(resolveMarketRegion({ city: 'seoul', district: 'mokpo' })).rejects.toThrow(ValidationError);
+    await expect(resolveMarketRegion({ city: 'seoul', district: 'mokpo' })).rejects.toThrow('district does not belong to city');
   });
 });

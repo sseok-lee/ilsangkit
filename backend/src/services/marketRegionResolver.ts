@@ -114,7 +114,15 @@ export async function listMarketRegionKeys(): Promise<MarketRegionKey[]> {
 
 async function loadScopedRows(citySlug: string, queryCity: string): Promise<RegionRow[]> {
   const rows = await prisma.region.findMany(regionQuery(citySlug, queryCity)) as RegionRow[];
-  return rows.filter((row) => belongsToSelectedCity(citySlug, row));
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    // 전체명/축약명 혼재로 같은 slug 가 두 번 나올 수 있다 — 첫 행만(resolveMarketRegion 의 find 와 동일).
+    if (!belongsToSelectedCity(citySlug, row) || seen.has(row.slug)) {
+      return false;
+    }
+    seen.add(row.slug);
+    return true;
+  });
 }
 
 function regionQuery(citySlug: string, queryCity: string) {
