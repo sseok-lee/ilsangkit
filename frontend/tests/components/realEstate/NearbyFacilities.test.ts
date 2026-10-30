@@ -95,7 +95,7 @@ describe('NearbyFacilities — 구분선 목록 2열 · 카테고리별 실제 �
     })
   })
 
-  it('지하철역이 맨 위(전체 너비), 그 다음 고정 순서로 나오고 0곳 카테고리는 숨긴다', async () => {
+  it('지하철역이 맨 위(버스 없으면 전체 너비), 그 다음 고정 순서로 나오고 0곳 카테고리는 숨긴다', async () => {
     const wrapper = await mountSuspended()
     const headings = sections(wrapper).map((s) => s.find('h3').text())
     expect(headings).toEqual(['지하철역', '학교', '어린이집', '병원', '공원', '체육시설'])
@@ -221,5 +221,77 @@ describe('NearbyFacilities — 구분선 목록 2열 · 카테고리별 실제 �
     const wrapper = await mountSuspended()
     expect(wrapper.text()).toContain('조건에 맞는 시설이 없습니다')
     expect(sections(wrapper)).toHaveLength(0)
+  })
+})
+
+describe('NearbyFacilities — 버스 정류장 칸', () => {
+  const BUS = Array.from({ length: 6 }, (_, i) => ({ id: `b${i + 1}`, name: `정류장${i + 1}`, distance: 80 + i * 90 }))
+  const transitWith = (stations: unknown[], bus: unknown[], count = 23, collectedAt: string | null = '2025-10-31') => ({
+    success: true,
+    data: { stations, busStops: bus, busStopCount: count, busCollectedAt: collectedAt },
+  })
+  const setup = (stations: unknown[], bus: unknown[], count = 23, collectedAt: string | null = '2025-10-31') =>
+    mockAsyncData({ grouped: groupedResponse(DEFAULT_GROUPS), transit: transitWith(stations, bus, count, collectedAt) })
+  const heads = (w: Awaited<ReturnType<typeof mountSuspended>>) => sections(w).map((s) => s.find('h3').text())
+
+  it('transit 호출 query 에 busRadius: 1000 을 넣는다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({})
+    ;(globalThis as any).$fetch = fetchMock
+    setup(STATIONS, BUS)
+    await mountSuspended()
+    const call = (globalThis as any).useAsyncData.mock.calls.find((c: unknown[]) => String(c[0]).startsWith('nearby-transit'))
+    await call[1]()
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/transit/nearby'), {
+      query: { lat: 37.4979, lng: 127.0276, radius: 2000, busRadius: 1000 },
+    })
+  })
+
+  it('지하철 바로 뒤에 버스 섹션, 개수 머리·행 5개, 둘 다 한 칸 폭', async () => {
+    setup(STATIONS, BUS)
+    const w = await mountSuspended()
+    expect(heads(w).slice(0, 3)).toEqual(['지하철역', '버스 정류장', '학교'])
+    const bus = sections(w)[1]
+    expect(bus.find('[data-testid="nearby-facility-count"]').text()).toBe('1km 안 23곳')
+    expect(bus.findAll('li')).toHaveLength(5)
+    expect(sections(w)[0].classes()).not.toContain('md:col-span-2')
+    expect(bus.classes()).not.toContain('md:col-span-2')
+  })
+
+  it('버스 행에는 a 가 없고 지하철 행에는 /subway/ 링크가 있다', async () => {
+    setup(STATIONS, BUS)
+    const w = await mountSuspended()
+    expect(sections(w)[1].find('a').exists()).toBe(false)
+    expect(sections(w)[1].text()).toContain('정류장1')
+    expect(sections(w)[0].find('a').attributes('href')).toContain('/subway/')
+  })
+
+  it('지하철 0곳 + 버스 있음 → 버스가 전체 너비', async () => {
+    setup([], BUS)
+    const w = await mountSuspended()
+    expect(heads(w)[0]).toBe('버스 정류장')
+    expect(sections(w)[0].classes()).toContain('md:col-span-2')
+  })
+
+  it('지하철 있음 + 버스 0곳 → 지하철이 전체 너비', async () => {
+    setup(STATIONS, [], 0)
+    const w = await mountSuspended()
+    expect(heads(w)).not.toContain('버스 정류장')
+    expect(sections(w)[0].classes()).toContain('md:col-span-2')
+  })
+
+  it('버스 칸이 있으면 하단에 버스 출처·수집월, 없으면 문구 없음', async () => {
+    setup(STATIONS, BUS)
+    expect((await mountSuspended()).text()).toContain('버스정류장: 국토교통부 · 2025년 10월 수집')
+    setup(STATIONS, [], 0)
+    expect((await mountSuspended()).text()).not.toContain('버스정류장: 국토교통부')
+  })
+
+  it('지하철·버스·시설 모두 0 → 빈 상태 문구', async () => {
+    mockAsyncData({
+      grouped: groupedResponse({ school: { count: 0, exact: true, items: [] } }),
+      transit: transitWith([], [], 0, null),
+    })
+    const w = await mountSuspended()
+    expect(w.text()).toContain('조건에 맞는 시설이 없습니다')
   })
 })

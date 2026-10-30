@@ -1,5 +1,5 @@
 <template>
-  <HardLink v-if="hard" :to="to" :class="linkClass">
+  <HardLink v-if="to && hard" :to="to" :class="linkClass">
     <span v-if="$slots.badge" class="flex flex-1 min-w-0 items-center gap-2">
       <slot name="badge" />
       <span class="truncate text-[15px] text-ink">{{ name }}</span>
@@ -14,7 +14,7 @@
       <span :class="walkClass">도보 약 {{ walk }}분</span>
     </span>
   </HardLink>
-  <NuxtLink v-else :to="to" :class="linkClass">
+  <NuxtLink v-else-if="to" :to="to" :class="linkClass">
     <span v-if="$slots.badge" class="flex flex-1 min-w-0 items-center gap-2">
       <slot name="badge" />
       <span class="truncate text-[15px] text-ink">{{ name }}</span>
@@ -29,6 +29,18 @@
       <span :class="walkClass">도보 약 {{ walk }}분</span>
     </span>
   </NuxtLink>
+  <!-- 링크 대상이 없는 행(버스 정류장 등): 같은 레이아웃, hover 배경 없음 -->
+  <div v-else :class="linkClass">
+    <span v-if="sub" class="flex-1 min-w-0">
+      <span class="block truncate text-[15px] text-ink">{{ name }}</span>
+      <span class="block truncate mt-0.5 text-xs text-muted" data-testid="nearby-place-sub">{{ sub }}</span>
+    </span>
+    <span v-else class="flex-1 min-w-0 truncate text-[15px] text-ink">{{ name }}</span>
+    <span class="shrink-0 text-right tabular-nums">
+      <span :class="distanceClass">{{ distance }}m</span>
+      <span :class="walkClass">도보 약 {{ walk }}분</span>
+    </span>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -39,7 +51,8 @@ import HardLink from '~/components/common/HardLink.vue'
 import { walkMinutes } from '~/utils/walkMinutes'
 
 const props = withDefaults(defineProps<{
-  to: string
+  /** 없으면 링크 없는 <div> 행 */
+  to?: string
   name: string
   /** 이름 아래 보조 줄(주소·핵심 정보). 비어 있으면 그리지 않는다. 배지 슬롯과는 함께 쓰지 않는다. */
   sub?: string
@@ -50,6 +63,7 @@ const props = withDefaults(defineProps<{
   /** true 면 행 높이 64px 이상 + 거리·도보를 화면 폭과 관계없이 두 줄로 */
   stacked?: boolean
 }>(), {
+  to: undefined,
   sub: '',
   hard: false,
   stacked: false,
@@ -58,7 +72,7 @@ const props = withDefaults(defineProps<{
 const walk = computed(() => walkMinutes(props.distance))
 
 const linkClass = computed(() =>
-  `flex items-center justify-between gap-3 ${props.stacked ? 'min-h-[64px]' : 'min-h-[52px]'} py-2 hover:bg-primary-50/40 transition-colors duration-200`,
+  `flex items-center justify-between gap-3 ${props.stacked ? 'min-h-[64px]' : 'min-h-[52px]'} py-2${props.to ? ' hover:bg-primary-50/40 transition-colors duration-200' : ''}`,
 )
 const distanceClass = computed(() =>
   props.stacked ? 'block text-sm font-bold text-strong' : 'block md:inline text-sm font-bold text-strong',

@@ -969,6 +969,27 @@ model SubwayStation {
   @@index([lng])
 }
 
+// 전국 버스정류장 (odcloud 국토교통부 전국 버스정류장 위치정보). 판(sourceVersion) 단위로 통째 교체한다.
+model BusStop {
+  nodeId        String   @id @db.VarChar(30) // 정류장번호
+  name          String   @db.VarChar(100)
+  lat           Decimal  @db.Decimal(10, 7)
+  lng           Decimal  @db.Decimal(10, 7)
+  mobileId      String?  @db.VarChar(10) // 모바일단축번호
+  cityCode      String?  @db.VarChar(5)
+  cityName      String?  @db.VarChar(50)
+  adminName     String?  @db.VarChar(50) // 관리도시명
+  collectedAt   String?  @db.VarChar(10) // 정보수집일
+  sourceVersion String   @db.VarChar(8) // 판 (YYYYMMDD)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  syncedAt      DateTime @default(now())
+
+  @@index([lat])
+  @@index([lng])
+  @@index([sourceVersion])
+}
+
 // 쓰레기 배출 일정 테이블 (좌표 없음 - 지도 마커 X)
 // API: https://www.data.go.kr/data/15155080/openapi.do
 model WasteSchedule {
