@@ -126,14 +126,20 @@
           <section class="bg-white px-4 py-4" aria-labelledby="home-top-deals-heading">
             <h3 id="home-top-deals-heading" class="text-sm font-semibold text-muted">최고가 거래 TOP 3</h3>
             <ol class="mt-2 divide-y divide-line">
-              <li v-for="(deal, index) in priceStats.topDeals" :key="`${deal.buildingName}-${index}`" class="flex items-center justify-between gap-3 py-2 text-sm">
-                <span class="min-w-0 truncate">
-                  <span class="mr-1.5 font-bold text-muted tabular-nums">{{ index + 1 }}</span>
-                  <HardLink v-if="deal.canonicalPath" :to="deal.canonicalPath" class="font-bold text-strong hover:text-primary hover:underline">{{ deal.buildingName }}</HardLink>
-                  <span v-else class="font-bold text-strong">{{ deal.buildingName }}</span>
-                  <span class="ml-1.5 text-xs text-muted">{{ deal.dongName }}</span>
-                </span>
-                <span class="shrink-0 font-extrabold text-strong tabular-nums">{{ formatKoreanPrice(deal.amount) }}</span>
+              <li v-for="(deal, index) in priceStats.topDeals" :key="`${deal.buildingName}-${index}`">
+                <component
+                  :is="deal.canonicalPath ? HardLink : 'div'"
+                  v-bind="deal.canonicalPath ? { to: deal.canonicalPath } : {}"
+                  class="flex min-h-[44px] items-center justify-between gap-3 text-sm"
+                  :class="deal.canonicalPath ? 'hover:text-primary' : ''"
+                >
+                  <span class="min-w-0 truncate">
+                    <span class="mr-1.5 font-bold text-muted tabular-nums">{{ index + 1 }}</span>
+                    <span class="font-bold text-strong" :class="deal.canonicalPath ? 'underline-offset-2 group-hover:underline' : ''">{{ deal.buildingName }}</span>
+                    <span class="ml-1.5 text-xs text-muted">{{ deal.dongName }}</span>
+                  </span>
+                  <span class="shrink-0 font-extrabold text-strong tabular-nums">{{ formatKoreanPrice(deal.amount) }}</span>
+                </component>
               </li>
             </ol>
           </section>

@@ -215,6 +215,17 @@ describe('HomeMarketSection', () => {
       expect(text).toContain('서울 강남구 실거래가 자세히')
     })
 
+    it('TOP 3 링크는 44px 이상 터치 영역을 가지며 canonicalPath 없는 행은 링크가 아니다', () => {
+      const wrapper = market(stats())
+      const links = wrapper.findAll('ol a')
+      expect(links).toHaveLength(2)
+      links.forEach((a) => expect(a.classes()).toContain('min-h-[44px]'))
+      expect(links[0].text()).toContain('최고단지1')
+      const plain = wrapper.findAll('ol li').find((li) => li.text().includes('최고단지3'))
+      expect(plain?.find('a').exists()).toBe(false)
+      expect(plain?.find('div').classes()).toContain('min-h-[44px]')
+    })
+
     it('ppYoyPct가 null이면 변화율만 숨긴다', () => {
       const text = market(stats({ ppYoyPct: null })).text()
       expect(text).toContain('7,840만원')
