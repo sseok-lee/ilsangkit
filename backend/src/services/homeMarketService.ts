@@ -1,4 +1,4 @@
-import { AppError, ValidationError } from '../lib/errors.js';
+import { AppError } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
 import type {
@@ -10,20 +10,14 @@ import type {
   RecentBuilding,
   SectionResult,
 } from '../types/housingRedesign.js';
-import {
-  buildRegionFilter,
-  CITY_SLUG_TO_FULL,
-  CITY_SLUG_TO_SHORT,
-  GWANGJU_GU_BJD,
-} from './cityMapping.js';
+import { buildRegionFilter } from './cityMapping.js';
+import { resolveMarketRegion, type ResolvedRegion } from './marketRegionResolver.js';
 import { regionFilterToSql } from './realEstateService.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const PARTIAL_CACHE_TTL_MS = 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
-const MERGED_REGION_SLUG = 'jeonnamgwangju';
-const LEGACY_MERGED_SLUGS = new Set(['gwangju', 'jeonnam']);
 const PROPERTY_TABLES: Record<PropertyType, string> = {
   apt: 'AptSaleTransaction',
   villa: 'VillaSaleTransaction',
@@ -49,21 +43,6 @@ interface RawRecentRow {
   date: string | Date;
   amount: number | bigint;
   area: string | { toString(): string } | null;
-}
-
-interface RegionRow {
-  bjdCode: string;
-  city: string;
-  district: string;
-  slug: string;
-}
-
-interface ResolvedRegion {
-  input: { city?: string; district?: string };
-  queryCity?: string;
-  queryDistrict?: string;
-  label: string;
-  districtLimit: string[];
 }
 
 interface CacheEntry {
@@ -135,7 +114,7 @@ async function loadHomeMarket(
   window: DateWindow,
   now: Date,
 ): Promise<HomeMarket> {
-  const resolved = await resolveRegion(inputRegion);
+  const resolved = await resolveMarketRegion(inputRegion);
   const counts = await settleCounts(resolved, window);
   const recent = await settleRecent(resolved, window);
   const result: HomeMarket = {
@@ -156,74 +135,6 @@ async function loadHomeMarket(
   const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error';
   remember(cacheKey(inputRegion, window.to), result, hasPartialFailure ? PARTIAL_CACHE_TTL_MS : CACHE_TTL_MS);
   return result;
-}
-
-async function resolveRegion(input: { city?: string; district?: string }): Promise<ResolvedRegion> {
-  if (!input.city && input.district) {
-    throw new ValidationError('city is required when district is provided');
-  }
-
-  if (!input.city) {
-    return { input, label: '전국', districtLimit: [] };
-  }
-
-  const queryCity = CITY_SLUG_TO_FULL[input.city];
-  if (!queryCity) {
-    throw new ValidationError('unknown city slug');
-  }
-
-  const rows = await prisma.region.findMany({
-    where: { city: { in: regionLookupCities(input.city, queryCity) } },
-    select: { bjdCode: true, city: true, district: true, slug: true },
-    orderBy: { district: 'asc' },
-  }) as RegionRow[];
-  const scopedRows = rows.filter((row) => belongsToSelectedCity(input.city!, row));
-  if (scopedRows.length === 0) {
-    throw new ValidationError('city has no known districts');
-  }
-
-  const districtLimit = scopedRows.map((row) => row.district);
-  if (input.district) {
-    const match = scopedRows.find((row) => row.slug === input.district);
-    if (!match) {
-      throw new ValidationError('district does not belong to city');
-    }
-
-    return {
-      input,
-      queryCity,
-      queryDistrict: match.district,
-      label: `${CITY_SLUG_TO_SHORT[input.city] ?? queryCity} ${match.district}`,
-      districtLimit,
-    };
-  }
-
-  return {
-    input,
-    queryCity,
-    label: CITY_SLUG_TO_SHORT[input.city] ?? queryCity,
-    districtLimit,
-  };
-}
-
-function regionLookupCities(citySlug: string, queryCity: string): string[] {
-  const lookup = new Set([queryCity, CITY_SLUG_TO_SHORT[citySlug]].filter(Boolean));
-  if (LEGACY_MERGED_SLUGS.has(citySlug)) {
-    lookup.add(CITY_SLUG_TO_FULL[MERGED_REGION_SLUG]);
-  }
-  return [...lookup];
-}
-
-function belongsToSelectedCity(citySlug: string, row: RegionRow): boolean {
-  if (citySlug === 'gwangju') {
-    return GWANGJU_GU_BJD.has(row.bjdCode);
-  }
-
-  if (citySlug === 'jeonnam') {
-    return row.city === CITY_SLUG_TO_FULL[MERGED_REGION_SLUG] && !GWANGJU_GU_BJD.has(row.bjdCode);
-  }
-
-  return true;
 }
 
 async function settleCounts(

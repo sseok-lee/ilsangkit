@@ -2447,3 +2447,33 @@ model KaptFeeSggMedian {
 
   @@id([sggCode, yearMonth])
 }
+
+/// 홈 지역 시세 요약 — 매일 새벽 전체 교체. scope: nation | city | district
+/// nation 은 citySlug·districtSlug 모두 '', city 는 districtSlug ''.
+model RegionMarketSummary {
+  id               Int      @id @default(autoincrement())
+  scope            String   @db.VarChar(10)
+  citySlug         String   @default("") @db.VarChar(50)
+  districtSlug     String   @default("") @db.VarChar(50)
+  label            String   @db.VarChar(100)
+  /// 최근 12개월 평당가(만원/3.3㎡) 중간값
+  ppMedian12m      Int?
+  /// 그 전 12개월 평당가 중간값
+  ppMedianPrev12m  Int?
+  dealCount12m     Int
+  dealCountPrev12m Int
+  /// 최근 12개월 최고가 거래 TOP N
+  topDeals         Json
+  /// 최근 구간(T-60~T-31) 거래 수
+  volRecent        Int
+  /// 직전 구간(T-90~T-61) 거래 수
+  volPrev          Int
+  recentFrom       String   @db.VarChar(10)
+  recentTo         String   @db.VarChar(10)
+  prevFrom         String   @db.VarChar(10)
+  prevTo           String   @db.VarChar(10)
+  computedAt       DateTime
+
+  @@unique([scope, citySlug, districtSlug])
+  @@index([scope, volRecent])
+}
