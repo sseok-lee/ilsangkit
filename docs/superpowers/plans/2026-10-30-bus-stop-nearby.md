@@ -4,7 +4,7 @@
 
 **Goal:** 부동산 상세 "주변 생활시설"의 지하철역 칸 옆에 반경 1km 버스 정류장(이름·거리, 같은 이름 합침, 전체 개수)을 보여 준다.
 
-**Architecture:** 국토교통부 전국 버스정류장 CSV를 data.go.kr에서 받아 새 `BusStop` 테이블에 판 단위로 적재한다. 기존 `GET /api/transit/nearby`가 `busRadius`를 받으면 `busStops`를 함께 돌려준다. `NearbyFacilities.vue`는 같은 호출 결과로 지하철·버스 두 칸을 나란히 그린다. 수집은 cron 없이 사용자가 `syncBusStop.ts` 또는 `syncAll.ts bus-stop`으로 직접 실행한다.
+**Architecture:** 국토교통부 전국 버스정류장 데이터를 data.go.kr 파일 조회 API(odcloud)로 받아 새 `BusStop` 테이블에 판 단위로 적재한다. 판 목록은 API의 Swagger 문서에서 읽는다. API가 막혔을 때는 포털에서 받은 CSV로 돌릴 수 있다(`--local`). 기존 `GET /api/transit/nearby`가 `busRadius`를 받으면 `busStops`를 함께 돌려준다. `NearbyFacilities.vue`는 같은 호출 결과로 지하철·버스 두 칸을 나란히 그린다. 수집은 cron 없이 사용자가 `syncBusStop.ts` 또는 `syncAll.ts bus-stop`으로 직접 실행한다.
 
 **Tech Stack:** Express 5 + TypeScript(ESM) + Prisma(MySQL 8), Nuxt 3 SSR + Vue 3 + Tailwind, Vitest(+supertest, @vue/test-utils)
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Node 20(`nvm use 20`). package-lock 재생성 금지. 새 npm 의존성 추가 금지. CP949 디코딩과 CSV 파싱은 이미 쓰는 `iconv-lite`와 `csv-parse`를 쓴다(`subwayDataSource.ts`와 같다).
+- Node 20(`nvm use 20`). package-lock 재생성 금지. 새 npm 의존성 추가 금지. 수집 원본은 odcloud API(키 `OPENAPI_SERVICE_KEY`)다. 비상용 CSV(`--local`)는 이미 쓰는 `iconv-lite`·`csv-parse`로 읽는다.
 - Backend는 ESM: 로컬 import에 `.js` 확장자. 라우트는 `asyncHandler` + `validate(Schema, 'query')`.
 - 정류장 개별 페이지·사이트맵 URL·링크를 만들지 않는다. 정류장 행은 링크가 아니다.
 - 상세 페이지가 외부 API에 의존하지 않는다. 화면은 우리 DB만 읽는다.
@@ -29,6 +29,7 @@
 ## Review Focus
 
 1. **좌표가 비었거나 한국 범위(lat 33~39, lng 124~131) 밖인 행.** 저장하지 않고 `skippedRecords`로 센다. 실제 파일에 11건이 있다. → Task 1 테스트
+   - API 일부 페이지 실패. 일부만 적재하지 않고 실패로 끝나야 한다. → Task 2 테스트
 2. **같은 이름이 1km 안에 3곳 이상인 경우**(두 BIS 중복 + 길 건너 양방향). 한 줄, 가장 가까운 거리, 개수 1. → Task 4 테스트
 3. **지하철 0곳 + 버스 있음, 지하철 있음 + 버스 0곳, 둘 다 0곳.** 남은 칸이 한 줄 전체를 쓰고, 둘 다 없으면 기존 빈 상태 문구를 보인다. → Task 5 테스트
 4. **같은 판을 다시 실행.** 쓰기 0건, `skipped`로 끝난다. 새 판이 직전의 80% 미만이면 기존 행을 지우지 않는다. → Task 3 테스트
@@ -42,8 +43,8 @@
 |---|---|
 | `backend/prisma/schema.prisma` | `BusStop` 모델 추가 |
 | `backend/prisma/migrations/202610300002_bus_stop/migration.sql` | 테이블 생성 |
-| `backend/src/services/busStopDataSource.ts` | CSV(CP949) 파싱·검증·변환. 순수 함수 |
-| `backend/src/services/busStopFileDownloader.ts` | data.go.kr에서 최신 판 확인과 CSV 다운로드 |
+| `backend/src/services/busStopDataSource.ts` | 행 정규화·검증(API·CSV 공용), 비상용 CSV 파싱 |
+| `backend/src/services/busStopApiClient.ts` | Swagger로 최신 판 확인, odcloud 페이지 수집 |
 | `backend/src/services/busStopSyncService.ts` | 판 비교, 80% 가드, upsert, 옛 판 삭제 |
 | `backend/src/scripts/syncBusStop.ts` | 단독 실행 진입점(`--local <csv>` 지원) |
 | `backend/src/scripts/syncAll.ts` | `bus-stop` 카테고리 |
@@ -54,7 +55,9 @@
 
 ---
 
-### Task 1: CSV 파싱·변환 (`busStopDataSource.ts`)
+### Task 1: 행 정규화·검증 (`busStopDataSource.ts`)
+
+API(JSON)와 비상용 CSV(`--local`)가 같은 정규화를 거친다. 두 원본의 키는 같은 한글 헤더다.
 
 **Files:**
 - Create: `backend/src/services/busStopDataSource.ts`
@@ -63,87 +66,93 @@
 **Interfaces:**
 - Produces:
   ```ts
+  export type BusStopRawRow = Record<string, unknown>   // 키: 정류장번호·정류장명·위도·경도·정보수집일·모바일단축번호·도시코드·도시명·관리도시명
   export interface BusStopRecord {
     nodeId: string; name: string; lat: number; lng: number;
     mobileId: string | null; cityCode: string | null; cityName: string | null;
     adminName: string | null; collectedAt: string | null;
   }
-  export function decodeBusStopCsv(buf: Buffer): string            // CP949 → string (BOM 제거)
-  export function parseBusStopCsv(text: string): { records: BusStopRecord[]; skipped: number }
+  export function normalizeBusStopRows(rows: BusStopRawRow[]): { records: BusStopRecord[]; skipped: number }
+  export function parseBusStopCsvFile(buf: Buffer): BusStopRawRow[]   // 비상용 --local: CP949/UTF-8 판별 후 헤더 기준 파싱
   ```
-- 헤더: `정류장번호,정류장명,위도,경도,정보수집일,모바일단축번호,도시코드,도시명,관리도시명`. 헤더 이름으로 열을 찾는다. 순서에 의존하지 않는다.
+- API 값은 숫자일 수 있다. 예: 위도 `36.458658`, 모바일단축번호 `540001`. 문자열 컬럼은 `String(v).trim()`으로 바꾸고, 빈 값은 `null`로 둔다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
-  - `decodeBusStopCsv`
-    - 픽스처는 `iconv.encode(text, 'euc-kr')`로 만든 CP949 버퍼다.
-    - 디코딩 결과가 `정류장번호`로 시작해야 한다.
-  - `parseBusStopCsv` 정상 행
-    - 입력: `ADB354000001,길안정류장,36.458658,128.891228,2025-10-31,540001,37040,경상북도 안동시,안동BIS`
-    - 기대: `{ nodeId:'ADB354000001', name:'길안정류장', lat:36.458658, lng:128.891228, collectedAt:'2025-10-31', mobileId:'540001', cityCode:'37040', cityName:'경상북도 안동시', adminName:'안동BIS' }`
-  - 버리는 행: 위도 빈값, 위도 `0`, 경도 `140.1`, 정류장명 빈값, nodeId 빈값.
-    - `skipped === 5`, `records.length === 1`
-  - 같은 `nodeId`가 두 번 나오면 첫 행만 남기고 `skipped`에 1을 더한다.
-  - 정류장명 앞뒤 공백을 제거한다. 빈 선택 컬럼은 `null`로 둔다.
+  - 정상 행 `{ 정류장번호:'ADB354000001', 정류장명:'길안정류장', 위도:36.458658, 경도:128.891228, 정보수집일:'2025-10-31', 모바일단축번호:540001, 도시코드:37040, 도시명:'경상북도 안동시', 관리도시명:'안동BIS' }`
+    - → `{ nodeId:'ADB354000001', name:'길안정류장', lat:36.458658, lng:128.891228, collectedAt:'2025-10-31', mobileId:'540001', cityCode:'37040', cityName:'경상북도 안동시', adminName:'안동BIS' }`
+  - 버리는 행 5개: 위도 빈값, 위도 `0`, 경도 `140.1`, 정류장명 빈값, 정류장번호 빈값 → `skipped === 5`, `records.length === 1`
+  - 같은 정류장번호가 두 번 나오면 첫 행만 남기고 `skipped += 1`
+  - 정류장명 앞뒤 공백을 제거한다.
+  - `parseBusStopCsvFile(iconv.encode(헤더+1행, 'euc-kr'))` → 키가 한글 헤더인 행 1개. 값은 문자열이다.
 
 - [ ] **Step 2: 실패 확인**
   - Run: `cd backend && npx vitest run __tests__/services/busStopDataSource.test.ts`
   - Expected: FAIL (모듈 없음)
 
 - [ ] **Step 3: 구현**
-  - 디코딩은 `iconv.decode(buf, 'euc-kr')`다. UTF-8 BOM이 있으면 UTF-8로 읽는다.
-  - 파싱은 `csv-parse`(`columns: true, trim: true, skip_empty_lines: true, relax_quotes: true`)다. `subwayDataSource.ts`와 같은 옵션을 쓴다. 20만 행이므로 동기 API(`csv-parse/sync`)도 무방하다.
-  - 범위는 `KOREA_BOUNDS`(`backend/src/constants`)로 검사한다.
+  - 범위 검사는 `KOREA_BOUNDS`(`backend/src/constants/geo.ts`)로 한다.
+  - CSV는 이미 쓰는 `iconv-lite` + `csv-parse`를 쓴다(`subwayDataSource.ts`와 같은 옵션). 인코딩 판별은 UTF-8 BOM이 있으면 UTF-8, 없으면 euc-kr이다.
 
 - [ ] **Step 4: 통과 확인** — 같은 명령, PASS
 
-- [ ] **Step 5: 커밋** — `feat(bus): 버스정류장 CSV 파싱·검증`
+- [ ] **Step 5: 커밋** — `feat(bus): 버스정류장 행 정규화·검증`
 
 ---
 
-### Task 2: 최신 판 확인과 다운로드 (`busStopFileDownloader.ts`)
+### Task 2: odcloud API 클라이언트 (`busStopApiClient.ts`)
 
 **Files:**
-- Create: `backend/src/services/busStopFileDownloader.ts`
-- Test: `backend/__tests__/services/busStopFileDownloader.test.ts`
-- Fixture: `backend/__tests__/fixtures/busStop/fileData.html`
-  - 실제 페이지에서 `fn_fileDataDown(...)` 줄과 `<title>` 줄만 발췌한다.
+- Create: `backend/src/services/busStopApiClient.ts`
+- Test: `backend/__tests__/services/busStopApiClient.test.ts`
+- Fixture: `backend/__tests__/fixtures/busStop/oas.json`
+  - Swagger 문서에서 `paths` 3개와 각 `get.summary`만 남긴 축약본이다.
 
 **Interfaces:**
+- Consumes: Task 1 `BusStopRawRow`
 - Produces:
   ```ts
-  export interface BusStopFileRef { detailPk: string; version: string }   // version 예 '20251031'
-  export function scrapeLatestBusStopFile(html: string): BusStopFileRef | null
-  export async function fetchLatestBusStopFileRef(): Promise<BusStopFileRef>
-  export async function downloadBusStopCsv(ref: BusStopFileRef): Promise<Buffer>
+  export interface BusStopVersion { path: string; version: string }   // path 예 '/15067528/v1/uddi:f74b…', version 예 '20251031'
+  export function parseBusStopVersions(oas: unknown): BusStopVersion[]   // version 오름차순
+  export async function fetchLatestBusStopVersion(): Promise<BusStopVersion>
+  export async function fetchAllBusStopRows(ver: BusStopVersion, opts?: { perPage?: number; onPage?: (page: number, total: number) => void }): Promise<BusStopRawRow[]>
   ```
 - 상수
-  - 페이지: `https://www.data.go.kr/data/15067528/fileData.do`
-  - 1단계: `POST https://www.data.go.kr/tcs/dss/selectFileDataDownload.do`
-    - 본문(form-urlencoded): `publicDataPk=15067528&publicDataDetailPk=<detailPk>&atchFileId=&fileDetailSn=1&publicDataTyCode=PR0051`
-    - 응답 JSON 최상위 `atchFileId`를 쓴다.
-  - 2단계: `GET https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=<id>&fileDetailSn=1`
-  - 모든 요청에 브라우저 UA와 Referer(페이지 URL)를 붙인다. UA는 `hiraFileDownloader.ts`의 `BROWSER_UA`를 재사용한다.
-  - 요청 제한시간은 `SYNC` 상수의 API timeout(30초)이다. 다운로드는 120초다.
+  - 판 목록: `GET https://infuser.odcloud.kr/oas/docs?namespace=15067528/v1`
+    - `paths`의 키가 경로, `get.summary`가 `국토교통부_전국 버스정류장 위치정보_YYYYMMDD`다.
+  - 데이터: `GET https://api.odcloud.kr/api{path}?page={n}&perPage={perPage}&returnType=JSON&serviceKey={encodeURIComponent(OPENAPI_SERVICE_KEY)}`
+    - 응답: `{ totalCount, currentCount, page, perPage, data: [...] }`
+  - `perPage` 기본 1000. 키가 통하면 Step 5에서 허용 상한을 실측하고, 더 크게 되면 상수를 올린다.
+  - 요청 제한시간은 30초(`SYNC` 상수)다. 페이지 실패는 2회까지 재시도하고, 그래도 실패하면 throw한다. 일부 페이지만으로 적재하지 않는다.
+  - 마지막 페이지까지 받은 행 수가 `totalCount`와 다르면 throw한다.
+  - `OPENAPI_SERVICE_KEY`가 없으면 즉시 throw한다.
 
-- [ ] **Step 1: 실패하는 테스트 작성**
-  - `scrapeLatestBusStopFile(fixture)` → `{ detailPk: 'uddi:f74b9799-9db1-4754-a5d0-b66e2ae705f3', version: '20251031' }`
-    - `version`은 `<title>`의 `_YYYYMMDD`에서 뽑는다.
-  - 패턴이 없는 HTML이면 `null`
-  - `downloadBusStopCsv`(전역 `fetch`를 `vi.fn`으로 대체)
-    - 1단계 응답 `{ atchFileId: 'FILE_1' }` → 2단계 URL에 `atchFileId=FILE_1`이 들어간다.
-    - 두 요청 모두 `Referer` 헤더가 있다.
-  - 1단계 응답에 `atchFileId`가 없으면 `'atchFileId'`를 포함한 메시지로 throw한다.
-  - 2단계 응답의 content-type이 `text/html`이면(WAF 차단 페이지) throw한다.
+- [ ] **Step 1: 실패하는 테스트 작성** (전역 `fetch`를 `vi.fn`으로 대체)
+  - `parseBusStopVersions(fixture)` → 3개, 마지막이 `{ path: '/15067528/v1/uddi:f74b9799-9db1-4754-a5d0-b66e2ae705f3', version: '20251031' }`
+  - summary에 `_YYYYMMDD`가 없는 path는 제외한다.
+  - `fetchAllBusStopRows`
+    - `totalCount: 2500`, `perPage: 1000` → fetch 3회(page 1,2,3)
+    - 반환 길이 2500
+    - URL에 `returnType=JSON`과 `serviceKey=`가 들어간다.
+  - 2페이지가 1회 실패한 뒤 성공 → 결과 정상, fetch 4회
+  - 받은 합계가 `totalCount`와 다르면 `'totalCount'`를 포함한 메시지로 reject
+  - 401 응답 `{"code":-4,"msg":"등록되지 않은 인증키 입니다."}` → 재시도 없이 `'인증키'`를 포함한 메시지로 reject
 
 - [ ] **Step 2: 실패 확인**
-  - Run: `cd backend && npx vitest run __tests__/services/busStopFileDownloader.test.ts`
+  - Run: `cd backend && npx vitest run __tests__/services/busStopApiClient.test.ts`
   - Expected: FAIL
 
 - [ ] **Step 3: 구현** — 위 시그니처와 상수대로
 
-- [ ] **Step 4: 통과 확인**
+- [ ] **Step 4: 통과 확인** — 같은 명령, PASS
 
-- [ ] **Step 5: 커밋** — `feat(bus): data.go.kr 버스정류장 파일 다운로드`
+- [ ] **Step 5: 실 API 확인 (키 활성화 확인)**
+  - Run: `cd backend && npx tsx -e "import('./src/services/busStopApiClient.js').then(async m => { const v = await m.fetchLatestBusStopVersion(); console.log(v); })"`
+    - Expected: `version: '20251031'` 이상
+  - `perPage` 1000·5000·10000으로 1페이지씩 호출해 허용 상한을 확인하고, 가장 큰 허용값으로 상수를 정한다.
+  - **여전히 401이면 여기서 멈추고 사용자에게 알린다.** 마이페이지 활용신청 상태 확인이 필요하다.
+    - Task 3은 `--local` 경로로 계속 진행할 수 있다.
+
+- [ ] **Step 6: 커밋** — `feat(bus): odcloud 버스정류장 API 클라이언트`
 
 ---
 
@@ -161,7 +170,7 @@
 - Test: `backend/__tests__/services/busStopSyncService.test.ts`
 
 **Interfaces:**
-- Consumes: Task 1 `parseBusStopCsv`, `decodeBusStopCsv`; Task 2 `fetchLatestBusStopFileRef`, `downloadBusStopCsv`
+- Consumes: Task 1 `normalizeBusStopRows`, `parseBusStopCsvFile`, `BusStopRecord`; Task 2 `fetchLatestBusStopVersion`, `fetchAllBusStopRows`
 - Produces:
   ```prisma
   model BusStop {
@@ -184,20 +193,21 @@
   }
   ```
   ```ts
-  export interface BusStopSyncInput { csv: Buffer; version: string }
+  export interface BusStopSyncInput { version: string; loadRows: () => Promise<BusStopRawRow[]> }   // 판 비교 뒤에만 loadRows 호출
   export async function syncBusStops(input: BusStopSyncInput): Promise<SyncStats & { outcome: 'loaded' | 'skipped' }>
   export async function syncLatestBusStops(opts?: { localCsv?: string; version?: string }): Promise<SyncStats & { outcome: 'loaded' | 'skipped' }>
   ```
 - 동작
   - `runSync('bus-stop', …, { allowEmpty: true })`를 쓴다. 같은 판이라 건너뛰는 0건은 정상이다.
-  - **같은 판이면 건너뛴다:** `prisma.busStop.findFirst({ select: { sourceVersion: true } })`가 `version`과 같으면 `outcome: 'skipped'`, 쓰기 0건.
+  - **같은 판이면 건너뛴다:** `prisma.busStop.findFirst({ select: { sourceVersion: true } })`가 `version`과 같으면 `outcome: 'skipped'`다. 이때 `loadRows`를 부르지 않는다(API 호출 0회).
+  - 다른 판이면 `loadRows()` → `normalizeBusStopRows` → `stats.skippedRecords += skipped`
   - **80% 가드:** `prevCount = prisma.busStop.count()`. `prevCount > 0`이고 `records.length < prevCount * 0.8`이면 throw한다. 메시지에 두 수를 넣는다. 쓰기와 삭제는 하지 않는다.
   - **적재:** `batchUpsertRaw('BusStop', rows, 500, undefined, { exactStats: true, uniqueKey: 'nodeId' })`
   - **옛 판 삭제:** upsert가 끝난 뒤에만 `deleteMany({ where: { sourceVersion: { not: version } } })`. 삭제 수는 로그로 남긴다.
   - `syncLatestBusStops`
-    - `localCsv`가 있으면 그 파일을 읽는다. `version`이 없으면 파일 첫 행의 정보수집일(`YYYYMMDD`)을 쓴다.
-    - 없으면 Task 2로 받는다.
-  - `syncBusStop.ts`: `--local <path>`, `--version <YYYYMMDD>` 인자를 받는다. 결과 한 줄을 출력하고, 실패하면 exit 1.
+    - 기본은 `fetchLatestBusStopVersion()`으로 판을 얻고, `loadRows`는 `fetchAllBusStopRows`다.
+    - `localCsv`가 있으면(비상용) `loadRows`는 `parseBusStopCsvFile(readFileSync(localCsv))`다. `version`은 `opts.version`이고, 없으면 첫 행의 정보수집일을 `YYYYMMDD`로 바꿔 쓴다.
+  - `syncBusStop.ts`: 인자 없이 실행하면 API를 쓴다. `--local <path>`, `--version <YYYYMMDD>`는 비상용이다. 결과 한 줄을 출력하고, 실패하면 exit 1.
   - `syncAll` `case 'bus-stop'`: `count = newRecords + updatedRecords`
 
 - [ ] **Step 1: 스키마·마이그레이션 작성 후 검증**
@@ -209,7 +219,8 @@
   - Expected: 오류 없음
 
 - [ ] **Step 2: 실패하는 테스트 작성** (prisma와 `batchUpsertRaw` mock, `transit.test.ts`의 `vi.hoisted` 패턴)
-  - 비어 있는 테이블 + 2행 CSV → `batchUpsertRaw`가 `'BusStop'`, `uniqueKey: 'nodeId'`로 1회 호출되고, `deleteMany`가 `{ sourceVersion: { not: '20251031' } }`로 호출되며, `outcome === 'loaded'`이다.
+  - 저장된 판 `'20251031'` + 입력 `'20251031'` → `loadRows` mock이 호출되지 않는다.
+  - 비어 있는 테이블 + 2행 → `batchUpsertRaw`가 `'BusStop'`, `uniqueKey: 'nodeId'`로 1회 호출되고, `deleteMany`가 `{ sourceVersion: { not: '20251031' } }`로 호출되며, `outcome === 'loaded'`이다.
   - 저장된 판이 `'20251031'`이고 입력도 `'20251031'` → `batchUpsertRaw`와 `deleteMany`가 호출되지 않고 `outcome === 'skipped'`이다.
   - `count()`가 1000이고 새 판이 799행 → `'799'`와 `'1000'`을 포함한 메시지로 reject. `batchUpsertRaw`와 `deleteMany`는 호출되지 않는다.
   - `count()`가 1000이고 새 판이 800행 → 적재한다(경계값).
@@ -225,6 +236,7 @@
   - Run: 위 테스트 → PASS
   - Run: `cd backend && npx tsx src/scripts/syncBusStop.ts`
     - Expected: 약 227,054행(227,065 − 범위 밖 11)이 loaded된다.
+    - API 키가 아직 401이면 포털 CSV로 확인한다: `npx tsx src/scripts/syncBusStop.ts --local <받은 csv> --version 20251031`
   - 같은 명령을 다시 실행 → `skipped`, 쓰기 0건
   - Run: `cd backend && npx vitest run __tests__/scripts` (syncAll 관련 테스트가 있으면 함께) → PASS
 
