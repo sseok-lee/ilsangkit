@@ -13,7 +13,7 @@
         <NearbyPlaceSection
           v-for="section in sections"
           :key="section.key"
-          :class="section.key === 'subway' ? 'md:col-span-2' : ''"
+          :class="section.fullWidth ? 'md:col-span-2' : ''"
           :section-key="section.key"
           :label="section.label"
           :count-label="section.countLabel"
@@ -31,7 +31,7 @@
       </div>
 
       <div class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
-        <span class="text-faint">공공데이터포털 시설 데이터 · 카테고리별 가까운 순 최대 {{ MAX_PER_CATEGORY }}곳</span>
+        <span class="text-faint">공공데이터포털 시설 데이터 · 카테고리별 가까운 순 최대 {{ MAX_PER_CATEGORY }}곳<template v-if="busSourceNote"> · {{ busSourceNote }}</template></span>
         <NuxtLink
           v-if="regionHref"
           :to="regionHref"
@@ -71,6 +71,8 @@ interface Section {
   key: string
   label: string
   countLabel: string
+  /** true 면 데스크톱에서 두 칸 폭(md:col-span-2) */
+  fullWidth: boolean
   /** 지하철역 행만 badge(노선명) — 노선 색 배지 */
   rows: NearbyPlaceRowData[]
 }
@@ -93,13 +95,27 @@ const MOBILE_VISIBLE = 3
 const NEARBY_RADIUS_METERS = 2000
 /** transit API(/api/transit/nearby) 응답 상한. 여기에 닿으면 실제로는 더 있을 수 있다. */
 const TRANSIT_API_LIMIT = 10
+/** 버스 정류장 반경(m). 백엔드 busRadius 로 전달 */
+const BUS_RADIUS_METERS = 1000
 
-const { data: transitResponse, status: transitStatus } = await useAsyncData<{ data: { stations: Station[] } }>(
+interface BusStop {
+  id: string
+  name: string
+  distance: number
+}
+interface TransitData {
+  stations: Station[]
+  busStops?: BusStop[]
+  busStopCount?: number
+  busCollectedAt?: string | null
+}
+
+const { data: transitResponse, status: transitStatus } = await useAsyncData<{ data: TransitData }>(
   `nearby-transit-${props.lat}-${props.lng}`,
   () => {
     if (!props.lat || !props.lng) return Promise.resolve(null)
-    return $fetch<{ data: { stations: Station[] } }>(`${apiBase}/api/transit/nearby`, {
-      query: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS },
+    return $fetch<{ data: TransitData }>(`${apiBase}/api/transit/nearby`, {
+      query: { lat: props.lat, lng: props.lng, radius: NEARBY_RADIUS_METERS, busRadius: BUS_RADIUS_METERS },
     })
   },
 )
@@ -128,21 +144,50 @@ function countLabel(count: number, exact = true): string {
   return nearbyCountLabel(NEARBY_RADIUS_METERS, count, exact)
 }
 
+const busStops = computed(() => transitResponse.value?.data?.busStops ?? [])
+const busStopCount = computed(() => transitResponse.value?.data?.busStopCount ?? busStops.value.length)
+
+// 하단 출처 뒤에 붙는 버스 문구. 버스 칸이 있을 때만. busCollectedAt 'YYYY-MM-DD' → 'YYYY년 M월 수집'
+const busSourceNote = computed(() => {
+  if (busStops.value.length === 0) return ''
+  const m = /^(\d{4})-(\d{2})/.exec(transitResponse.value?.data?.busCollectedAt ?? '')
+  const when = m ? ` · ${m[1]}년 ${Number(m[2])}월 수집` : ''
+  return `버스정류장: 국토교통부${when}`
+})
+
 const sections = computed<Section[]>(() => {
   const out: Section[] = []
 
   const stations = transitResponse.value?.data?.stations ?? []
+  const hasBus = busStops.value.length > 0
   if (stations.length > 0) {
     out.push({
       key: 'subway',
       label: '지하철역',
       countLabel: countLabel(stations.length, stations.length < TRANSIT_API_LIMIT),
+      // 버스 칸이 함께 있으면 나란히(한 칸씩), 없으면 전체 너비
+      fullWidth: !hasBus,
       rows: stations.slice(0, MAX_PER_CATEGORY).map((s) => ({
         key: s.id,
         name: s.name,
         url: `/subway/${s.nameSlug}`,
         distance: s.distance,
         badge: s.line,
+      })),
+    })
+  }
+
+  if (hasBus) {
+    out.push({
+      key: 'bus',
+      label: '버스 정류장',
+      countLabel: nearbyCountLabel(BUS_RADIUS_METERS, busStopCount.value, true),
+      fullWidth: stations.length === 0,
+      // 정류장 상세 페이지가 없으므로 url 없음(링크 없는 행), 배지 없음
+      rows: busStops.value.slice(0, MAX_PER_CATEGORY).map((b) => ({
+        key: b.id,
+        name: b.name,
+        distance: b.distance,
       })),
     })
   }
@@ -155,6 +200,7 @@ const sections = computed<Section[]>(() => {
       key: cat,
       label: CATEGORY_META[cat]?.label ?? cat,
       countLabel: countLabel(group.count, group.exact),
+      fullWidth: false,
       rows: group.items.slice(0, MAX_PER_CATEGORY).map((f) => ({
         key: f.id,
         name: f.name,
