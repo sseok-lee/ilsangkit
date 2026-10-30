@@ -162,8 +162,18 @@ describe('refreshRegionMarketSummaries', () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
+  it('집계 쿼리가 비어 전국 거래가 0건이면 키가 있어도 throw 하고 삭제하지 않는다', async () => {
+    mockListKeys.mockResolvedValue([nation, { scope: 'city', citySlug: 'seoul', districtSlug: '', label: '서울', queryCity: '서울특별시', districtLimit: [] }]);
+    await expect(refreshRegionMarketSummaries('2026-10-30')).rejects.toThrow();
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it('정상이면 $transaction 1회에 delete→create 순서, totalRecords=행 수', async () => {
     mockListKeys.mockResolvedValue([nation]);
+    queryRawUnsafe.mockImplementation(async (sql: string) =>
+      sql.includes('GROUP BY city, district, cur, pp') ? [{ city: '서울', district: '강남구', cur: 1, pp: 8000, cnt: 3 }] : [],
+    );
     const stats = await refreshRegionMarketSummaries('2026-10-30');
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(transaction.mock.calls[0][0]).toEqual(['DELETE', 'CREATE']);

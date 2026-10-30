@@ -319,8 +319,10 @@ export async function computeRegionMarketSummaries(todayKst: string): Promise<Re
 export async function refreshRegionMarketSummaries(todayKst: string = kstToday()): Promise<SyncStats> {
   return runSync('region-market', async (stats) => {
     const rows = await computeRegionMarketSummaries(todayKst);
-    if (rows.length === 0) {
-      throw new Error('지역 시세 요약 계산 결과가 0행입니다 — 기존 요약을 유지합니다');
+    // 전국 키는 항상 존재하므로 행 수가 아니라 전국 12개월 거래 수로 빈 집계를 판정한다.
+    const nation = rows.find((row) => row.scope === 'nation');
+    if (!nation || nation.dealCount12m === 0) {
+      throw new Error('지역 시세 요약 집계가 비어 있습니다(전국 거래 0건) — 기존 요약을 유지합니다');
     }
     stats.totalRecords = rows.length;
     await prisma.$transaction([

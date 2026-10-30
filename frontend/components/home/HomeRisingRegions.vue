@@ -8,7 +8,7 @@
         <p v-if="periodLabel" class="mt-2 text-sm text-muted">{{ periodLabel }}</p>
       </div>
       <div
-        v-if="data && !error"
+        v-if="showTabs"
         role="group"
         aria-label="지역 범위"
         class="ui-segmented self-start"
@@ -29,7 +29,7 @@
 
     <p v-if="pending" class="mt-4 text-sm font-semibold text-strong" aria-live="polite">불러오는 중입니다.</p>
 
-    <template v-else-if="data && !error">
+    <template v-else-if="showList">
       <p v-if="data.items.length === 0" class="mt-4 rounded-xl bg-background-light px-4 py-6 text-sm text-muted">
         이 기간 거래가 늘어난 지역이 없습니다
       </p>
@@ -50,7 +50,7 @@
                 <span class="min-w-0">
                   <span class="block truncate font-bold text-strong">{{ item.label }}</span>
                   <span v-if="item.ppMedian !== null" class="block text-xs text-muted tabular-nums">
-                    평당가 {{ item.ppMedian.toLocaleString('ko-KR') }}만
+                    평당가 {{ item.ppMedian.toLocaleString('ko-KR') }}만원
                   </span>
                 </span>
               </span>
@@ -118,9 +118,14 @@ function formatMonthDay(date: string): string {
   return `${Number(month)}월 ${Number(day)}일`
 }
 
+// 첫 집계 전(computedAt null)이거나 전국(SSR) 조회 실패면 목록·탭·기간을 숨긴다.
+const notReady = computed(() => data.value?.computedAt === null || (!!error.value && scope.value === 'all'))
+const showTabs = computed(() => !notReady.value && (scope.value !== 'all' || !!data.value))
+const showList = computed(() => !!data.value && !error.value && !notReady.value)
+
 const periodLabel = computed(() => {
   const window = data.value?.window
-  if (!window || error.value) return ''
+  if (!window || error.value || notReady.value) return ''
   return `${formatMonthDay(window.from)}~${formatMonthDay(window.to)} 계약, 직전 30일 대비`
 })
 

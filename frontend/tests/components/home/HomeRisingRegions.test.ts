@@ -67,7 +67,7 @@ describe('HomeRisingRegions', () => {
     const first = wrapper.findAll('li[data-rising-item]')[0]
     expect(first.text()).toContain('1')
     expect(first.text()).toContain('서울 성동구')
-    expect(first.text()).toContain('평당가 5,280만')
+    expect(first.text()).toContain('평당가 5,280만원')
     expect(first.text()).toContain('+34%')
     expect(first.find('a').attributes('href')).toBe('/real-estate/apt-sale/seoul/seongdong-gu')
   })
@@ -101,7 +101,7 @@ describe('HomeRisingRegions', () => {
         scope: 'all',
         window: { from: '2026-08-31', to: '2026-09-29' },
         prevWindow: { from: '2026-08-01', to: '2026-08-30' },
-        computedAt: null,
+        computedAt: '2026-10-30T00:00:00.000Z',
         items: makeItems(3),
       }),
     })
@@ -127,7 +127,7 @@ describe('HomeRisingRegions', () => {
         scope: 'capital',
         window: { from: '2026-08-31', to: '2026-09-29' },
         prevWindow: { from: '2026-08-01', to: '2026-08-30' },
-        computedAt: null,
+        computedAt: '2026-10-30T00:00:00.000Z',
         items: [],
       }),
     })
@@ -141,6 +141,33 @@ describe('HomeRisingRegions', () => {
     expect(wrapper.find('li[data-rising-item]').exists()).toBe(false)
     expect(wrapper.find('[role="group"]').exists()).toBe(false)
     expect(wrapper.find('a[href="/seoul/"]').exists()).toBe(true)
+  })
+
+  it('computedAt 이 null(첫 집계 전)이면 목록·탭·기간 문구·빈 문구를 숨기고 칩은 남긴다', () => {
+    const wrapper = mountWith({
+      data: ref({
+        scope: 'all',
+        window: { from: '2026-08-31', to: '2026-09-29' },
+        prevWindow: { from: '2026-08-01', to: '2026-08-30' },
+        computedAt: null,
+        items: [],
+      }),
+    })
+    expect(wrapper.find('h2').text()).toBe('요즘 거래가 늘어난 지역')
+    expect(wrapper.find('li[data-rising-item]').exists()).toBe(false)
+    expect(wrapper.find('[role="group"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('계약, 직전 30일 대비')
+    expect(wrapper.text()).not.toContain('거래가 늘어난 지역이 없습니다')
+    expect(wrapper.find('a[href="/seoul/"]').exists()).toBe(true)
+  })
+
+  it('탭 전환 중 실패(scope!=all)에는 탭을 유지해 전국으로 돌아갈 수 있다', async () => {
+    const wrapper = mountWith({ scope: ref('capital'), data: ref(null), error: ref(new Error('x')) })
+    const group = wrapper.find('[role="group"]')
+    expect(group.exists()).toBe(true)
+    expect(wrapper.find('li[data-rising-item]').exists()).toBe(false)
+    await group.findAll('button')[0].trigger('click')
+    expect(setScope).toHaveBeenCalledWith('all')
   })
 
   it('시·도 칩은 항상 렌더하고 공통 칩(.ui-chip)을 쓴다', () => {

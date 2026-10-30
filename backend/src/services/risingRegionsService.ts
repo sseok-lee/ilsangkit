@@ -38,10 +38,14 @@ export async function getRisingRegions(scope: RisingScope = 'all', now = new Dat
   return promise;
 }
 
+const LEGACY_JNGJ_CITY_SLUGS: readonly string[] = ['gwangju', 'jeonnam'];
+
 async function loadRisingRegions(scope: RisingScope, now: Date): Promise<RisingRegions> {
   const capital: readonly string[] = CAPITAL_CITY_SLUGS;
   const rows = await prisma.regionMarketSummary.findMany({ where: { scope: 'district' } });
   const scoped = rows.filter((row) => {
+    // 레거시 광주/전남 요약 행은 정식 jeonnamgwangju 와 거래량이 같아 중복 노출된다.
+    if (LEGACY_JNGJ_CITY_SLUGS.includes(row.citySlug)) return false;
     if (scope === 'capital') return capital.includes(row.citySlug);
     if (scope === 'nonCapital') return !capital.includes(row.citySlug);
     return true;

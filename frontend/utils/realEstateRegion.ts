@@ -78,7 +78,7 @@ const INCHEON_DISSOLVED_DISTRICT_SLUGS = new Set(['seo', 'jung', 'dong'])
  * `jeonnamgwangju` 다. 정규화하지 않으면 정상 URL(`/jeonnamgwangju/…`)이 "지역 불일치"로
  * 판정돼 legacy slug 로 301 되고, 그 목적지를 미들웨어가 다시 301 해서 루프가 된다.
  */
-function normalizeCitySlugForRegionMatch(slug: string): string {
+export function normalizeCitySlugForRegionMatch(slug: string): string {
   return LEGACY_JNGJ_CITY_SLUGS.has(slug) ? MERGED_JNGJ_CITY_SLUG : slug
 }
 

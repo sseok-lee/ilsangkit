@@ -93,6 +93,20 @@ describe('GET /api/real-estate/rising-regions', () => {
     expect(non.body.data.items.map((i: { citySlug: string }) => i.citySlug)).toEqual(['busan', 'daejeon']);
   });
 
+  it('레거시 gwangju/jeonnam 행은 제외하고 jeonnamgwangju 만 남긴다', async () => {
+    findMany.mockResolvedValue([
+      row('gwangju', 'gwangsan', 40, 20),
+      row('jeonnam', 'naju', 45, 20),
+      row('jeonnamgwangju', 'gwangsan', 40, 20),
+      row('jeonnamgwangju', 'naju', 45, 20),
+    ]);
+    const res = await request(app).get('/api/real-estate/rising-regions');
+    expect(res.body.data.items.map((i: { citySlug: string; districtSlug: string }) => `${i.citySlug}/${i.districtSlug}`)).toEqual([
+      'jeonnamgwangju/naju',
+      'jeonnamgwangju/gwangsan',
+    ]);
+  });
+
   it('최대 10개', async () => {
     findMany.mockResolvedValue(Array.from({ length: 15 }, (_, i) => row('busan', `d${i}`, 30 + i, 20)));
     const res = await request(app).get('/api/real-estate/rising-regions');

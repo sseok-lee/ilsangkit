@@ -251,6 +251,7 @@ describe('HomeMarketSection', () => {
       [{ city: 'seoul', district: 'gangnam', label: '서울 강남구' }, '/real-estate/apt-sale/seoul/gangnam'],
       [{ city: 'seoul', district: null, label: '서울' }, '/real-estate/apt-sale/seoul'],
       [{ city: null, district: null, label: '전국' }, '/real-estate/apt-sale'],
+      [{ city: 'gwangju', district: 'gwangsan', label: '광주 광산구' }, '/real-estate/apt-sale/jeonnamgwangju/gwangsan'],
     ])('자세히 링크는 선택 지역 목록으로 간다', (region, href) => {
       const wrapper = market(stats(), region)
       const link = wrapper.findAll('a').find((a) => a.text().includes('실거래가 자세히'))

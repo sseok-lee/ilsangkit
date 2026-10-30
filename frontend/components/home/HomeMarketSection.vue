@@ -199,6 +199,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import { useHomeMarket } from '~/composables/useHomeMarket'
 import type { MarketCount, PropertyType, RecentBuilding } from '~/types/housingRedesign'
 import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
+import { normalizeCitySlugForRegionMatch } from '~/utils/realEstateRegion'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
@@ -265,7 +266,8 @@ const yoyClass = computed(() => {
 })
 const priceStatsDetailUrl = computed(() => {
   const r = data.value?.region
-  return ['/real-estate/apt-sale', r?.city, r?.city ? r?.district : null].filter(Boolean).join('/')
+  const city = r?.city ? normalizeCitySlugForRegionMatch(r.city) : r?.city
+  return ['/real-estate/apt-sale', city, city ? r?.district : null].filter(Boolean).join('/')
 })
 
 const recentError = computed(() => data.value?.recent.status === 'error')
