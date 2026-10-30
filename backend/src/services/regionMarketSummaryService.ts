@@ -187,19 +187,23 @@ export async function computeRegionMarketSummaries(todayKst: string): Promise<Re
      GROUP BY city, district`,
     w.recent.from, w.recent.from, ...yearRangeParams(w.prev.from, w.recent.to), w.prev.from, w.recent.to,
   );
-  // 순위는 좁은 컬럼만으로 매긴다. 단지(makeBuildingKey 와 같은 bjdCode·buildingName·dongName·jibun)당 최고 거래 1건만 남긴 뒤
+  // 순위는 숫자 키만으로 매긴다. 단지(makeBuildingKey 와 같은 bjdCode·buildingName·dongName·jibun)당 최고 거래 1건만 남긴 뒤
   // (city, district) 안에서 TOP N 을 고르고, 넓은 컬럼은 id 로 따로 가져온다.
+  // 문자열 컬럼으로 창 정렬하면 정렬 키가 커서 /mysql-tmp(2GB)를 채운다(10/30 운영 실측) → 64비트 해시로 정렬한다.
+  const hash = (cols: string): string => `CAST(CONV(LEFT(MD5(CONCAT_WS(0x00, ${cols})), 16), 16, 10) AS UNSIGNED)`;
   const rankedIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
     `SELECT id FROM (
-       SELECT id, ROW_NUMBER() OVER (PARTITION BY city, district ORDER BY dealAmount DESC, id DESC) AS rn
+       SELECT id, ROW_NUMBER() OVER (PARTITION BY regionHash ORDER BY dealAmount DESC, id DESC) AS rn
        FROM (
-         SELECT id, city, district, dealAmount,
-                ROW_NUMBER() OVER (
-                  PARTITION BY city, district, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')
-                  ORDER BY dealAmount DESC, id DESC
-                ) AS crn
-         FROM AptSaleTransaction
-         WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+         SELECT id, dealAmount, regionHash,
+                ROW_NUMBER() OVER (PARTITION BY complexHash ORDER BY dealAmount DESC, id DESC) AS crn
+         FROM (
+           SELECT id, dealAmount,
+                  ${hash('city, district')} AS regionHash,
+                  ${hash("city, district, bjdCode, buildingName, TRIM(dongName), COALESCE(TRIM(jibun), '')")} AS complexHash
+           FROM AptSaleTransaction
+           WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+         ) keyed
        ) per_complex
        WHERE crn = 1
      ) ranked

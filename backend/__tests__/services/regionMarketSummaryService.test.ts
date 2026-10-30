@@ -165,12 +165,15 @@ describe('topDeals 단지당 1건', () => {
     expect(tops[0].amount).toBe(1000000);
   });
 
-  it('SQL 은 단지별 최고 거래를 먼저 고른다', async () => {
+  it('SQL 은 단지별 최고 거래를 먼저 고르고, 정렬 키는 숫자 해시만 쓴다(tmpdir 보호)', async () => {
     mockListKeys.mockResolvedValue([]);
     queryRawUnsafe.mockResolvedValue([]);
     await computeRegionMarketSummaries('2026-10-30');
     const sql = queryRawUnsafe.mock.calls.map((c) => c[0] as string).find((q) => q.includes('ROW_NUMBER'))!;
-    expect(sql).toContain('PARTITION BY city, district, bjdCode, buildingName');
+    expect(sql).toContain('CONCAT_WS(0x00, city, district, bjdCode, buildingName');
+    // 긴 문자열 컬럼으로 창 정렬하면 95만 행 정렬이 /mysql-tmp 2GB 를 채운다(10/30 운영 실측).
+    const partitions = [...sql.matchAll(/PARTITION BY ([^)]*?) ORDER BY/g)].map((m) => m[1].trim());
+    expect(partitions).toEqual(['regionHash', 'complexHash']);
   });
 });
 
