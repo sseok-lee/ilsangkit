@@ -121,7 +121,13 @@ API(JSON)와 비상용 CSV(`--local`)가 같은 정규화를 거친다. 두 원�
     - `paths`의 키가 경로, `get.summary`가 `국토교통부_전국 버스정류장 위치정보_YYYYMMDD`다.
   - 데이터: `GET https://api.odcloud.kr/api{path}?page={n}&perPage={perPage}&returnType=JSON&serviceKey={encodeURIComponent(OPENAPI_SERVICE_KEY)}`
     - 응답: `{ totalCount, currentCount, page, perPage, data: [...] }`
-  - `perPage` 기본 1000. 키가 통하면 Step 5에서 허용 상한을 실측하고, 더 크게 되면 상수를 올린다.
+  - `perPage` 기본 **10000**이다(2026-10-30 실측).
+    - 10000: 200, 1.7초, 1.5MB
+    - 50000: 200이지만 `data`가 비고 `msg: "정상"`만 온다. 그래서 상한은 10000이다.
+    - 전체 227,065행이면 23페이지다.
+  - 응답 예: `{"경도":"128.8912280","관리도시명":"안동BIS","도시명":"경상북도 안동시","도시코드":37040,"모바일단축번호":540001,"위도":"36.45865800","정류장명":"길안정류장","정류장번호":"ADB354000001","정보수집일":"2025-10-31"}`
+    - 위경도는 문자열, 코드와 단축번호는 숫자다.
+  - 한 페이지라도 `data`가 비어 있는데 아직 `totalCount`에 못 미쳤다면 throw한다. 50000처럼 빈 성공 응답을 막기 위해서다.
   - 요청 제한시간은 30초(`SYNC` 상수)다. 페이지 실패는 2회까지 재시도하고, 그래도 실패하면 throw한다. 일부 페이지만으로 적재하지 않는다.
   - 마지막 페이지까지 받은 행 수가 `totalCount`와 다르면 throw한다.
   - `OPENAPI_SERVICE_KEY`가 없으면 즉시 throw한다.
@@ -133,6 +139,7 @@ API(JSON)와 비상용 CSV(`--local`)가 같은 정규화를 거친다. 두 원�
     - `totalCount: 2500`, `perPage: 1000` → fetch 3회(page 1,2,3)
     - 반환 길이 2500
     - URL에 `returnType=JSON`과 `serviceKey=`가 들어간다.
+  - 2페이지가 `data: []`로 오면(합계 미달) reject
   - 2페이지가 1회 실패한 뒤 성공 → 결과 정상, fetch 4회
   - 받은 합계가 `totalCount`와 다르면 `'totalCount'`를 포함한 메시지로 reject
   - 401 응답 `{"code":-4,"msg":"등록되지 않은 인증키 입니다."}` → 재시도 없이 `'인증키'`를 포함한 메시지로 reject
@@ -148,9 +155,7 @@ API(JSON)와 비상용 CSV(`--local`)가 같은 정규화를 거친다. 두 원�
 - [ ] **Step 5: 실 API 확인 (키 활성화 확인)**
   - Run: `cd backend && npx tsx -e "import('./src/services/busStopApiClient.js').then(async m => { const v = await m.fetchLatestBusStopVersion(); console.log(v); })"`
     - Expected: `version: '20251031'` 이상
-  - `perPage` 1000·5000·10000으로 1페이지씩 호출해 허용 상한을 확인하고, 가장 큰 허용값으로 상수를 정한다.
-  - **여전히 401이면 여기서 멈추고 사용자에게 알린다.** 마이페이지 활용신청 상태 확인이 필요하다.
-    - Task 3은 `--local` 경로로 계속 진행할 수 있다.
+  - 401이면 키가 로드됐는지부터 확인한다. 셸에서 `. .env`로 읽으면 실패할 수 있으니 `node --env-file=.env`를 쓴다. 키는 2026-10-30에 정상 확인됐다.
 
 - [ ] **Step 6: 커밋** — `feat(bus): odcloud 버스정류장 API 클라이언트`
 
@@ -236,7 +241,6 @@ API(JSON)와 비상용 CSV(`--local`)가 같은 정규화를 거친다. 두 원�
   - Run: 위 테스트 → PASS
   - Run: `cd backend && npx tsx src/scripts/syncBusStop.ts`
     - Expected: 약 227,054행(227,065 − 범위 밖 11)이 loaded된다.
-    - API 키가 아직 401이면 포털 CSV로 확인한다: `npx tsx src/scripts/syncBusStop.ts --local <받은 csv> --version 20251031`
   - 같은 명령을 다시 실행 → `skipped`, 쓰기 0건
   - Run: `cd backend && npx vitest run __tests__/scripts` (syncAll 관련 테스트가 있으면 함께) → PASS
 
