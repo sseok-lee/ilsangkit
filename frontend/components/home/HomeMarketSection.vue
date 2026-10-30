@@ -112,6 +112,41 @@
             </div>
           </article>
         </div>
+
+        <div
+          v-if="priceStats"
+          class="mt-3 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-2"
+          data-testid="home-price-stats"
+        >
+          <section class="bg-white px-4 py-4" aria-labelledby="home-price-stats-heading">
+            <h3 id="home-price-stats-heading" class="text-sm font-semibold text-muted">아파트 평당가 중간값</h3>
+            <p class="mt-1 text-2xl font-extrabold text-strong tabular-nums">{{ formatKoreanPrice(priceStats.ppMedian) }}</p>
+            <p v-if="yoyLabel" class="mt-1 text-sm font-semibold tabular-nums" :class="yoyClass">{{ yoyLabel }}</p>
+          </section>
+          <section class="bg-white px-4 py-4" aria-labelledby="home-top-deals-heading">
+            <h3 id="home-top-deals-heading" class="text-sm font-semibold text-muted">최고가 거래 TOP 3</h3>
+            <ol class="mt-2 divide-y divide-line">
+              <li v-for="(deal, index) in priceStats.topDeals" :key="`${deal.buildingName}-${index}`">
+                <component
+                  :is="deal.canonicalPath ? HardLink : 'div'"
+                  v-bind="deal.canonicalPath ? { to: deal.canonicalPath } : {}"
+                  class="flex min-h-[44px] items-center justify-between gap-3 text-sm"
+                  :class="deal.canonicalPath ? 'hover:text-primary' : ''"
+                >
+                  <span class="min-w-0 truncate">
+                    <span class="mr-1.5 font-bold text-muted tabular-nums">{{ index + 1 }}</span>
+                    <span class="font-bold text-strong">{{ deal.buildingName }}</span>
+                    <span class="ml-1.5 text-xs text-muted">{{ deal.dongName }}</span>
+                  </span>
+                  <span class="shrink-0 font-extrabold text-strong tabular-nums">{{ formatKoreanPrice(deal.amount) }}</span>
+                </component>
+              </li>
+            </ol>
+          </section>
+        </div>
+        <HardLink v-if="priceStats" :to="priceStatsDetailUrl" class="mt-2 inline-flex min-h-[44px] items-center text-sm font-bold text-primary hover:underline">
+          {{ regionLabel }} 실거래가 자세히
+        </HardLink>
       </template>
     </div>
 
@@ -164,6 +199,7 @@ import HardLink from '~/components/common/HardLink.vue'
 import { useHomeMarket } from '~/composables/useHomeMarket'
 import type { MarketCount, PropertyType, RecentBuilding } from '~/types/housingRedesign'
 import { CITY_SLUGS, CITY_SLUG_MAP, DISTRICT_SLUG_MAP, REAL_ESTATE_REGIONS } from '~/shared/regionSlugs'
+import { normalizeCitySlugForRegionMatch } from '~/utils/realEstateRegion'
 import { formatKoreanPrice } from '~/utils/formatters'
 import { toRealEstateUrl, type RealEstateUrlType } from '~/utils/realEstateUrl'
 
@@ -212,6 +248,26 @@ const countCards = computed(() => {
       ? { key, label, status: 'ok' as const, total: result.data.total, daily: result.data.daily }
       : { key, label, status: 'error' as const, total: 0, daily: [] as MarketCount['daily'] }
   })
+})
+
+const priceStats = computed(() => {
+  const result = data.value?.priceStats
+  return result?.status === 'ok' && result.data ? result.data : null
+})
+const yoyLabel = computed(() => {
+  const pct = priceStats.value?.ppYoyPct
+  if (pct === null || pct === undefined) return ''
+  return `1년 전 대비 ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`
+})
+// 등락 전용 토큰(상승 빨강·하락 파랑, 흰 배경 4.8:1·5.2:1)
+const yoyClass = computed(() => {
+  const pct = priceStats.value?.ppYoyPct ?? 0
+  return pct > 0 ? 'text-delta-up' : pct < 0 ? 'text-delta-down' : 'text-muted'
+})
+const priceStatsDetailUrl = computed(() => {
+  const r = data.value?.region
+  const city = r?.city ? normalizeCitySlugForRegionMatch(r.city) : r?.city
+  return ['/real-estate/apt-sale', city, city ? r?.district : null].filter(Boolean).join('/')
 })
 
 const recentError = computed(() => data.value?.recent.status === 'error')

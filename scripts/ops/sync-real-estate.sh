@@ -122,6 +122,13 @@ case "$SUMMARY_EXIT" in
 esac
 echo "[step:summary-end]"
 
+# 홈 지역 시세 요약(RegionMarketSummary) 일일 갱신. 계산 실패 시 이전 요약이 그대로 남는다.
+# 실패해도 부동산 writer 결과(REAL_ESTATE_SYNC_EXIT)에는 영향이 없다 — region-market SyncHistory 로 확인.
+echo "[step:region-market-start]"
+run_backend_node_timed 15m "$ACTIVE_BACKEND_DIR/dist/scripts/refreshRegionMarketSummary.js" \
+  || echo "[warn] 지역 시세 요약 갱신 실패 (exit=$?) — region-market 이력 확인"
+echo "[step:region-market-end]"
+
 # 청약 분양정보 동기화. 지오코딩은 느려 맨 마지막 격리 단계로 미룬다(아래).
 echo "[step:subscription-start]"
 run_backend_node_timed 30m "$ACTIVE_BACKEND_DIR/dist/scripts/syncSubscription.js" --source ALL --skip-geocode \

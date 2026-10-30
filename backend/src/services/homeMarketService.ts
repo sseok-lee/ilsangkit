@@ -1,4 +1,5 @@
-import { AppError, ValidationError } from '../lib/errors.js';
+import { MIN_PRICE_SAMPLE } from '../constants/regionMarket.js';
+import { AppError } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
 import type {
@@ -8,22 +9,19 @@ import type {
   MarketRegion,
   PropertyType,
   RecentBuilding,
+  RegionPriceStats,
+  RegionTopDeal,
   SectionResult,
 } from '../types/housingRedesign.js';
-import {
-  buildRegionFilter,
-  CITY_SLUG_TO_FULL,
-  CITY_SLUG_TO_SHORT,
-  GWANGJU_GU_BJD,
-} from './cityMapping.js';
+import { buildRegionFilter } from './cityMapping.js';
+import { yoyPct } from './regionMarketSummaryService.js';
+import { resolveMarketRegion, type ResolvedRegion } from './marketRegionResolver.js';
 import { regionFilterToSql } from './realEstateService.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const PARTIAL_CACHE_TTL_MS = 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
-const MERGED_REGION_SLUG = 'jeonnamgwangju';
-const LEGACY_MERGED_SLUGS = new Set(['gwangju', 'jeonnam']);
 const PROPERTY_TABLES: Record<PropertyType, string> = {
   apt: 'AptSaleTransaction',
   villa: 'VillaSaleTransaction',
@@ -49,21 +47,6 @@ interface RawRecentRow {
   date: string | Date;
   amount: number | bigint;
   area: string | { toString(): string } | null;
-}
-
-interface RegionRow {
-  bjdCode: string;
-  city: string;
-  district: string;
-  slug: string;
-}
-
-interface ResolvedRegion {
-  input: { city?: string; district?: string };
-  queryCity?: string;
-  queryDistrict?: string;
-  label: string;
-  districtLimit: string[];
 }
 
 interface CacheEntry {
@@ -135,15 +118,17 @@ async function loadHomeMarket(
   window: DateWindow,
   now: Date,
 ): Promise<HomeMarket> {
-  const resolved = await resolveRegion(inputRegion);
+  const resolved = await resolveMarketRegion(inputRegion);
   const counts = await settleCounts(resolved, window);
   const recent = await settleRecent(resolved, window);
+  const priceStats = await settlePriceStats(resolved);
   const result: HomeMarket = {
     region: toMarketRegion(resolved),
     window,
     generatedAt: now.toISOString(),
     counts,
     recent,
+    priceStats,
   };
 
   const countResults = Object.values(counts);
@@ -156,74 +141,6 @@ async function loadHomeMarket(
   const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error';
   remember(cacheKey(inputRegion, window.to), result, hasPartialFailure ? PARTIAL_CACHE_TTL_MS : CACHE_TTL_MS);
   return result;
-}
-
-async function resolveRegion(input: { city?: string; district?: string }): Promise<ResolvedRegion> {
-  if (!input.city && input.district) {
-    throw new ValidationError('city is required when district is provided');
-  }
-
-  if (!input.city) {
-    return { input, label: '전국', districtLimit: [] };
-  }
-
-  const queryCity = CITY_SLUG_TO_FULL[input.city];
-  if (!queryCity) {
-    throw new ValidationError('unknown city slug');
-  }
-
-  const rows = await prisma.region.findMany({
-    where: { city: { in: regionLookupCities(input.city, queryCity) } },
-    select: { bjdCode: true, city: true, district: true, slug: true },
-    orderBy: { district: 'asc' },
-  }) as RegionRow[];
-  const scopedRows = rows.filter((row) => belongsToSelectedCity(input.city!, row));
-  if (scopedRows.length === 0) {
-    throw new ValidationError('city has no known districts');
-  }
-
-  const districtLimit = scopedRows.map((row) => row.district);
-  if (input.district) {
-    const match = scopedRows.find((row) => row.slug === input.district);
-    if (!match) {
-      throw new ValidationError('district does not belong to city');
-    }
-
-    return {
-      input,
-      queryCity,
-      queryDistrict: match.district,
-      label: `${CITY_SLUG_TO_SHORT[input.city] ?? queryCity} ${match.district}`,
-      districtLimit,
-    };
-  }
-
-  return {
-    input,
-    queryCity,
-    label: CITY_SLUG_TO_SHORT[input.city] ?? queryCity,
-    districtLimit,
-  };
-}
-
-function regionLookupCities(citySlug: string, queryCity: string): string[] {
-  const lookup = new Set([queryCity, CITY_SLUG_TO_SHORT[citySlug]].filter(Boolean));
-  if (LEGACY_MERGED_SLUGS.has(citySlug)) {
-    lookup.add(CITY_SLUG_TO_FULL[MERGED_REGION_SLUG]);
-  }
-  return [...lookup];
-}
-
-function belongsToSelectedCity(citySlug: string, row: RegionRow): boolean {
-  if (citySlug === 'gwangju') {
-    return GWANGJU_GU_BJD.has(row.bjdCode);
-  }
-
-  if (citySlug === 'jeonnam') {
-    return row.city === CITY_SLUG_TO_FULL[MERGED_REGION_SLUG] && !GWANGJU_GU_BJD.has(row.bjdCode);
-  }
-
-  return true;
 }
 
 async function settleCounts(
@@ -266,6 +183,49 @@ async function settleRecent(region: ResolvedRegion, window: DateWindow): Promise
   });
 
   return { status: 'ok', data: rows.slice(0, 5) };
+}
+
+async function settlePriceStats(region: ResolvedRegion): Promise<SectionResult<RegionPriceStats | null>> {
+  try {
+    const city = region.input.city;
+    const district = region.input.district;
+    const row = await prisma.regionMarketSummary.findUnique({
+      where: {
+        scope_citySlug_districtSlug: {
+          scope: city ? (district ? 'district' : 'city') : 'nation',
+          citySlug: city ?? '',
+          districtSlug: city ? (district ?? '') : '',
+        },
+      },
+    });
+    if (!row || row.ppMedian12m === null || row.dealCount12m < MIN_PRICE_SAMPLE) {
+      return { status: 'ok', data: null };
+    }
+    const topDeals = (Array.isArray(row.topDeals) ? row.topDeals : []) as unknown as Array<
+      Omit<RegionTopDeal, 'area' | 'canonicalPath'> & { area: number | string | null; canonicalPath?: string | null }
+    >;
+    return {
+      status: 'ok',
+      data: {
+        ppMedian: row.ppMedian12m,
+        ppYoyPct: yoyPct(row.ppMedian12m, row.ppMedianPrev12m, row.dealCountPrev12m),
+        dealCount12m: row.dealCount12m,
+        topDeals: topDeals.map((deal) => ({
+          buildingName: deal.buildingName,
+          bjdCode: deal.bjdCode,
+          dongName: deal.dongName,
+          jibun: deal.jibun ?? null,
+          area: deal.area === null || deal.area === undefined ? null : Number(deal.area).toFixed(2),
+          amount: Number(deal.amount),
+          date: deal.date,
+          canonicalPath: deal.canonicalPath ?? null,
+        })),
+        computedAt: row.computedAt.toISOString(),
+      },
+    };
+  } catch {
+    return unavailable<RegionPriceStats | null>();
+  }
 }
 
 async function queryCount(

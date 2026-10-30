@@ -63,6 +63,15 @@ vi.mock('~/components/home/HomeMarketSection.vue', () => ({
   }),
 }))
 
+vi.mock('~/components/home/HomeRisingRegions.vue', () => ({
+  default: defineComponent({
+    name: 'HomeRisingRegions',
+    setup() {
+      return () => h('section', { 'data-testid': 'home-rising' }, '요즘 거래가 늘어난 지역')
+    },
+  }),
+}))
+
 // home-page useAsyncData를 보조 콘텐츠 페이로드로 가짜 응답.
 // (index.vue 의 pageData useAsyncData 와 동일한 key 매칭)
 const homePagePayload = {
@@ -237,19 +246,23 @@ describe('Index Page', () => {
     expect(wrapper.text()).toContain('체육시설')
   })
 
-  it('renders "인기 지역" chip row', async () => {
+  it('"인기 지역" 섹션을 렌더하지 않는다 (칩은 HomeRisingRegions 로 이동)', async () => {
     const wrapper = await mountSuspended(IndexPage)
 
-    expect(wrapper.text()).toContain('인기 지역')
+    expect(wrapper.text()).not.toContain('인기 지역')
   })
 
-  it('인기 지역 칩은 공통 칩(.ui-chip)이다', async () => {
+  it('섹션 순서: HomeMarketSection → HomeRisingRegions → 첫 AdBanner → 청약 섹션', async () => {
     const wrapper = await mountSuspended(IndexPage)
-
-    const chip = wrapper.find('a[href="/seoul/"]')
-    expect(chip.exists()).toBe(true)
-    expect(chip.classes()).toContain('ui-chip')
-    expect(chip.classes()).not.toContain('rounded-full')
+    const html = wrapper.html()
+    const market = html.indexOf('data-testid="home-market"')
+    const rising = html.indexOf('data-testid="home-rising"')
+    const firstAd = html.indexOf('stub-ad-banner')
+    const subscription = html.indexOf('stub-home-subscription')
+    expect(market).toBeGreaterThan(-1)
+    expect(rising).toBeGreaterThan(market)
+    expect(firstAd).toBeGreaterThan(rising)
+    expect(subscription).toBeGreaterThan(firstAd)
   })
 
   it('navigates to search page when search is triggered', async () => {
