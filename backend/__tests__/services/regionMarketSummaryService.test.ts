@@ -12,6 +12,7 @@ vi.mock('../../src/services/realEstateUrlRegistry.js', () => ({ attachRealEstate
 
 import {
   computeRegionMarketSummaries,
+  histogramMedian,
   isRising,
   median,
   regionMarketWindows,
@@ -34,6 +35,15 @@ describe('median', () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([1, 2, 3, 4])).toBe(3);
     expect(median([])).toBeNull();
+  });
+});
+
+describe('histogramMedian', () => {
+  it('짝수 건수는 가운데 둘 평균 반올림, 홀수·빈 값', () => {
+    expect(histogramMedian(new Map([[1, 1], [2, 1], [3, 1], [4, 1]]))).toBe(3);
+    expect(histogramMedian(new Map([[10, 2], [11, 2]]))).toBe(11);
+    expect(histogramMedian(new Map([[5, 3]]))).toBe(5);
+    expect(histogramMedian(new Map())).toBeNull();
   });
 });
 
@@ -77,6 +87,7 @@ describe('computeRegionMarketSummaries', () => {
           { city: '서울특별시', district: '강남구', cur: 0, pp: 7000, cnt: 1 },
         ];
       }
+      if (sql.includes('ROW_NUMBER')) return [{ id: 1 }];
       if (sql.includes('volRecent')) {
         return [{ city: '서울특별시', district: '강남구', volRecent: 4, volPrev: 2 }];
       }

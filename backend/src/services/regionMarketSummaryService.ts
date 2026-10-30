@@ -35,6 +35,8 @@ export type RegionMarketSummaryRow = Omit<Prisma.RegionMarketSummaryCreateInput,
 };
 
 const PYEONG_FACTOR = 3.3058;
+/** 평당가 히스토그램 버킷(만원). 중간값은 이 단위로 반올림된다(전국 로컬 기준 정확값 41만 행 → 행 수 절감). */
+const PP_BUCKET = 10;
 const DATE_EXPR = "STR_TO_DATE(CONCAT(dealYear, '-', dealMonth, '-', dealDay), '%Y-%c-%e')";
 
 function shiftDay(date: string, days: number): string {
@@ -74,7 +76,7 @@ export function isRising(volRecent: number, volPrev: number): boolean {
 }
 
 /** 평당가 히스토그램(값→건수)에서 중간값. median() 과 같은 규칙(짝수면 가운데 둘 평균 반올림). */
-function histogramMedian(hist: Map<number, number>): number | null {
+export function histogramMedian(hist: Map<number, number>): number | null {
   const entries = [...hist.entries()].sort((a, b) => a[0] - b[0]);
   const total = entries.reduce((sum, [, c]) => sum + c, 0);
   if (total === 0) return null;
@@ -103,11 +105,18 @@ function whereSql(extra: string[]): string {
   return [...BASE_CLAUSES, ...extra].join(' AND ');
 }
 
-const YEAR_RANGE = '(dealYear * 100 + dealMonth) BETWEEN ? AND ?';
+// 인덱스(dealYear, dealMonth)를 타도록 컬럼 그대로 비교하는 월 단위 경계. 정확한 날짜 경계는 DATE_RANGE 가 다듬는다.
+const YEAR_RANGE =
+  '(dealYear > ? OR (dealYear = ? AND dealMonth >= ?)) AND (dealYear < ? OR (dealYear = ? AND dealMonth <= ?))';
 const DATE_RANGE = `${DATE_EXPR} BETWEEN STR_TO_DATE(?, '%Y-%m-%d') AND STR_TO_DATE(?, '%Y-%m-%d')`;
 
-function ym(date: string): number {
-  return Number(date.slice(0, 4)) * 100 + Number(date.slice(5, 7));
+/** YEAR_RANGE 파라미터(6개) — from/to 날짜의 연·월. */
+function yearRangeParams(from: string, to: string): number[] {
+  const fy = Number(from.slice(0, 4));
+  const fm = Number(from.slice(5, 7));
+  const ty = Number(to.slice(0, 4));
+  const tm = Number(to.slice(5, 7));
+  return [fy, fy, fm, ty, ty, tm];
 }
 
 interface HistRow { city: string; district: string; cur: number | bigint; pp: number | bigint | string; cnt: number | bigint }
@@ -156,40 +165,49 @@ function dateString(value: string | Date): string {
 export async function computeRegionMarketSummaries(todayKst: string): Promise<RegionMarketSummaryRow[]> {
   const w = regionMarketWindows(todayKst);
   const keys = await listMarketRegionKeys();
-  const ppExpr = `ROUND(dealAmount / exclusiveArea * ${PYEONG_FACTOR})`;
+  const ppExpr = `ROUND(dealAmount / exclusiveArea * ${PYEONG_FACTOR} / ${PP_BUCKET}) * ${PP_BUCKET}`;
 
-  const [histRows, volRows, topRows] = await Promise.all([
-    prisma.$queryRawUnsafe<HistRow[]>(
-      `SELECT city, district, CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END AS cur,
-              ${ppExpr} AS pp, COUNT(*) AS cnt
+  // 무거운 3쿼리는 DB 부하를 위해 직렬로 실행한다.
+  const histRows = await prisma.$queryRawUnsafe<HistRow[]>(
+    `SELECT city, district, CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END AS cur,
+            ${ppExpr} AS pp, COUNT(*) AS cnt
+     FROM AptSaleTransaction
+     WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+     GROUP BY city, district, cur, pp`,
+    w.last12.from, ...yearRangeParams(w.prev12.from, w.last12.to), w.prev12.from, w.last12.to,
+  );
+  const volRows = await prisma.$queryRawUnsafe<VolRow[]>(
+    `SELECT city, district,
+            SUM(CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volRecent,
+            SUM(CASE WHEN ${DATE_EXPR} < STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volPrev
+     FROM AptSaleTransaction
+     WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+     GROUP BY city, district`,
+    w.recent.from, w.recent.from, ...yearRangeParams(w.prev.from, w.recent.to), w.prev.from, w.recent.to,
+  );
+  // 순위는 좁은 컬럼(id, city, district, dealAmount)만으로 매기고, 넓은 컬럼은 id 로 따로 가져온다.
+  const rankedIds = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+    `SELECT id FROM (
+       SELECT id, ROW_NUMBER() OVER (PARTITION BY city, district ORDER BY dealAmount DESC, id DESC) AS rn
        FROM AptSaleTransaction
        WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
-       GROUP BY city, district, cur, pp`,
-      w.last12.from, ym(w.prev12.from), ym(w.last12.to), w.prev12.from, w.last12.to,
-    ),
-    prisma.$queryRawUnsafe<VolRow[]>(
-      `SELECT city, district,
-              SUM(CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volRecent,
-              SUM(CASE WHEN ${DATE_EXPR} < STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volPrev
+     ) ranked
+     WHERE rn <= ${TOP_DEALS_LIMIT}`,
+    ...yearRangeParams(w.last12.from, w.last12.to), w.last12.from, w.last12.to,
+  );
+  const topRows: TopRow[] = [];
+  for (let i = 0; i < rankedIds.length; i += 500) {
+    const ids = rankedIds.slice(i, i + 500).map((r) => Number(r.id));
+    const rows = await prisma.$queryRawUnsafe<TopRow[]>(
+      `SELECT city, district, buildingName, bjdCode, dongName, jibun,
+              DATE_FORMAT(${DATE_EXPR}, '%Y-%m-%d') AS date, dealAmount AS amount,
+              CAST(exclusiveArea AS CHAR) AS area, id AS transactionId
        FROM AptSaleTransaction
-       WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
-       GROUP BY city, district`,
-      w.recent.from, w.recent.from, ym(w.prev.from), ym(w.recent.to), w.prev.from, w.recent.to,
-    ),
-    prisma.$queryRawUnsafe<TopRow[]>(
-      `SELECT city, district, buildingName, bjdCode, dongName, jibun, date, amount, area, transactionId
-       FROM (
-         SELECT city, district, buildingName, bjdCode, dongName, jibun,
-                DATE_FORMAT(${DATE_EXPR}, '%Y-%m-%d') AS date, dealAmount AS amount,
-                CAST(exclusiveArea AS CHAR) AS area, id AS transactionId,
-                ROW_NUMBER() OVER (PARTITION BY city, district ORDER BY dealAmount DESC, id DESC) AS rn
-         FROM AptSaleTransaction
-         WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
-       ) ranked
-       WHERE rn <= ${TOP_DEALS_LIMIT}`,
-      ym(w.last12.from), ym(w.last12.to), w.last12.from, w.last12.to,
-    ),
-  ]);
+       WHERE id IN (${ids.map(() => '?').join(', ')}) AND ${BASE_CLAUSES.join(' AND ')}`,
+      ...ids,
+    );
+    topRows.push(...rows);
+  }
 
   // (city, district) 원본 집계
   const base = new Map<string, { city: string; district: string; agg: Agg }>();
