@@ -19,7 +19,7 @@ import { resolveMarketRegion, type ResolvedRegion } from './marketRegionResolver
 import { regionFilterToSql } from './realEstateService.js';
 import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
 
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_TTL_MS = 60 * 60 * 1000;
 const PARTIAL_CACHE_TTL_MS = 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
 const PROPERTY_TABLES: Record<PropertyType, string> = {
@@ -138,7 +138,7 @@ async function loadHomeMarket(
     throw new AppError(503, '홈 시장 정보를 일시적으로 불러올 수 없습니다.', 'UNAVAILABLE');
   }
 
-  const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error' || priceStats.status === 'error';
+  const hasPartialFailure = countResults.some((section) => section.status === 'error') || recent.status === 'error';
   remember(cacheKey(inputRegion, window.to), result, hasPartialFailure ? PARTIAL_CACHE_TTL_MS : CACHE_TTL_MS);
   return result;
 }

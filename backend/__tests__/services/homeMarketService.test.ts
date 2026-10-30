@@ -473,6 +473,23 @@ describe('getHomeMarket', () => {
       expect(result.priceStats.data?.ppYoyPct).toBeNull();
     });
 
+    it('priceStats 만 실패하면 정상 TTL 로 캐시한다(2분 뒤에도 재조회 없음)', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-10-30T03:00:00Z'));
+        queryRawUnsafe.mockResolvedValue([]);
+        summaryFindUnique.mockRejectedValue(new Error('boom'));
+        const at = new Date('2026-10-30T12:00:00+09:00');
+        await getHomeMarket({ city: 'seoul', district: 'gangnam' }, at);
+        const calls = queryRawUnsafe.mock.calls.length;
+        vi.setSystemTime(new Date('2026-10-30T03:02:00Z'));
+        await getHomeMarket({ city: 'seoul', district: 'gangnam' }, at);
+        expect(queryRawUnsafe.mock.calls.length).toBe(calls);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('요약 조회가 throw 해도 error 섹션만 되고 counts 는 영향이 없다', async () => {
       queryRawUnsafe.mockResolvedValue([]);
       summaryFindUnique.mockRejectedValue(new Error('boom'));
