@@ -1,5 +1,4 @@
-import { getCurrentInstance, onUnmounted, readonly, ref, watch } from 'vue'
-import type { Ref } from 'vue'
+import { computed, getCurrentInstance, onUnmounted, readonly, ref } from 'vue'
 import type { RisingRegions, RisingScope } from '~/types/housingRedesign'
 
 interface ApiResponse<T> {
@@ -14,9 +13,9 @@ function isAbortError(error: unknown): boolean {
 export function useRisingRegions() {
   const apiBase = useApiBase()
   const scope = ref<RisingScope>('all')
-  const data = ref<RisingRegions | null>(null)
+  const tabData = ref<RisingRegions | null>(null)
   const pending = ref(false)
-  const error = ref<unknown>(null)
+  const tabError = ref<unknown>(null)
   const cache = new Map<RisingScope, RisingRegions>()
   let activeRequest = 0
   let activeController: AbortController | null = null
@@ -29,53 +28,50 @@ export function useRisingRegions() {
     return response.data
   }
 
-  // SSR 은 전국 탭만 조회한다. 실패해도 홈 렌더가 깨지지 않도록 null 로 흡수한다.
+  // SSR 은 전국 탭만 조회한다. 실패는 asyncState.error 로 그대로 드러낸다.
   const asyncState = useAsyncData<RisingRegions | null>(
     'home-rising:all',
-    async () => {
-      try {
-        return await fetchScope('all')
-      } catch {
-        return null
-      }
-    },
+    () => fetchScope('all'),
     { default: () => null }
   )
 
-  watch(
-    asyncState.data as Ref<RisingRegions | null>,
-    (next) => {
-      if (!next) return
-      cache.set('all', next)
-      if (scope.value === 'all') data.value = next
-    },
-    { immediate: true }
-  )
+  // 표시 데이터는 asyncState 에서 직접 파생한다(SSR 에서 핸들러 resolve 후에도 반영되도록).
+  const data = computed<RisingRegions | null>(() => {
+    if (scope.value === 'all') return (asyncState.data.value as RisingRegions | null) ?? tabData.value
+    return tabData.value
+  })
+  const error = computed<unknown>(() => {
+    if (tabError.value) return tabError.value
+    return scope.value === 'all' ? (asyncState.error.value ?? null) : null
+  })
 
   async function setScope(next: RisingScope): Promise<void> {
     scope.value = next
     activeController?.abort()
     const requestId = ++activeRequest
+    tabError.value = null
     const cached = cache.get(next)
     if (cached) {
-      data.value = cached
-      error.value = null
+      tabData.value = cached
+      pending.value = false
+      return
+    }
+    if (next === 'all' && asyncState.data.value) {
       pending.value = false
       return
     }
 
     activeController = new AbortController()
     pending.value = true
-    error.value = null
+    tabData.value = null
     try {
       const result = await fetchScope(next, activeController.signal)
       if (requestId !== activeRequest) return
       cache.set(next, result)
-      data.value = result
+      tabData.value = result
     } catch (err) {
       if (requestId !== activeRequest || isAbortError(err)) return
-      error.value = err
-      data.value = null
+      tabError.value = err
     } finally {
       if (requestId === activeRequest) pending.value = false
     }
@@ -89,9 +85,9 @@ export function useRisingRegions() {
 
   return {
     scope: readonly(scope),
-    data: readonly(data),
+    data,
     pending: readonly(pending),
-    error: readonly(error),
+    error,
     setScope,
   }
 }
