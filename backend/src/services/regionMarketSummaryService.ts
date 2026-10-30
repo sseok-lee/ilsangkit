@@ -1,0 +1,293 @@
+import type { Prisma } from '@prisma/client';
+import {
+  MIN_PRICE_SAMPLE,
+  MIN_RISING_VOLUME,
+  PREV_FROM_DAYS,
+  PREV_TO_DAYS,
+  RECENT_FROM_DAYS,
+  RECENT_TO_DAYS,
+  TOP_DEALS_LIMIT,
+} from '../constants/regionMarket.js';
+import { prisma } from '../lib/prisma.js';
+import { makeBuildingKey } from '../lib/realEstateBuildingIdentity.js';
+import { buildRegionFilter } from './cityMapping.js';
+import { listMarketRegionKeys, type MarketRegionKey } from './marketRegionResolver.js';
+import { attachRealEstateCanonicalPaths } from './realEstateUrlRegistry.js';
+
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+export interface RegionMarketTopDeal {
+  buildingName: string;
+  bjdCode: string;
+  dongName: string;
+  jibun: string | null;
+  area: number | null;
+  amount: number;
+  date: string;
+  canonicalPath?: string;
+}
+
+export type RegionMarketSummaryRow = Omit<Prisma.RegionMarketSummaryCreateInput, 'topDeals'> & {
+  topDeals: RegionMarketTopDeal[];
+};
+
+const PYEONG_FACTOR = 3.3058;
+const DATE_EXPR = "STR_TO_DATE(CONCAT(dealYear, '-', dealMonth, '-', dealDay), '%Y-%c-%e')";
+
+function shiftDay(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export function regionMarketWindows(todayKst: string): {
+  last12: DateRange;
+  prev12: DateRange;
+  recent: DateRange;
+  prev: DateRange;
+} {
+  return {
+    last12: { from: shiftDay(todayKst, -365), to: shiftDay(todayKst, -1) },
+    prev12: { from: shiftDay(todayKst, -730), to: shiftDay(todayKst, -366) },
+    recent: { from: shiftDay(todayKst, -RECENT_FROM_DAYS), to: shiftDay(todayKst, -RECENT_TO_DAYS) },
+    prev: { from: shiftDay(todayKst, -PREV_FROM_DAYS), to: shiftDay(todayKst, -PREV_TO_DAYS) },
+  };
+}
+
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+export function yoyPct(cur: number | null, prev: number | null, prevCount: number): number | null {
+  if (cur === null || prev === null || prev === 0 || prevCount < MIN_PRICE_SAMPLE) return null;
+  return Math.round((cur / prev - 1) * 1000) / 10;
+}
+
+export function isRising(volRecent: number, volPrev: number): boolean {
+  return volRecent >= MIN_RISING_VOLUME && volPrev >= 1 && volRecent > volPrev;
+}
+
+/** 평당가 히스토그램(값→건수)에서 중간값. median() 과 같은 규칙(짝수면 가운데 둘 평균 반올림). */
+function histogramMedian(hist: Map<number, number>): number | null {
+  const entries = [...hist.entries()].sort((a, b) => a[0] - b[0]);
+  const total = entries.reduce((sum, [, c]) => sum + c, 0);
+  if (total === 0) return null;
+  const at = (index: number): number => {
+    let seen = 0;
+    for (const [value, count] of entries) {
+      seen += count;
+      if (index < seen) return value;
+    }
+    return entries[entries.length - 1][0];
+  };
+  const mid = Math.floor(total / 2);
+  return total % 2 === 1 ? at(mid) : Math.round((at(mid - 1) + at(mid)) / 2);
+}
+
+const BASE_CLAUSES = [
+  'dealDay IS NOT NULL',
+  "(cancelDealDay IS NULL OR cancelDealDay = '')",
+  "(cancelDealType IS NULL OR cancelDealType = '')",
+  "(dealType IS NULL OR dealType <> '직거래')",
+  'exclusiveArea > 0',
+  'dealAmount > 0',
+];
+
+function whereSql(extra: string[]): string {
+  return [...BASE_CLAUSES, ...extra].join(' AND ');
+}
+
+const YEAR_RANGE = '(dealYear * 100 + dealMonth) BETWEEN ? AND ?';
+const DATE_RANGE = `${DATE_EXPR} BETWEEN STR_TO_DATE(?, '%Y-%m-%d') AND STR_TO_DATE(?, '%Y-%m-%d')`;
+
+function ym(date: string): number {
+  return Number(date.slice(0, 4)) * 100 + Number(date.slice(5, 7));
+}
+
+interface HistRow { city: string; district: string; cur: number | bigint; pp: number | bigint | string; cnt: number | bigint }
+interface VolRow { city: string; district: string; volRecent: number | bigint; volPrev: number | bigint }
+interface TopRow {
+  city: string;
+  district: string;
+  buildingName: string;
+  bjdCode: string;
+  dongName: string;
+  jibun: string | null;
+  area: string | number | null;
+  amount: number | bigint;
+  date: string | Date;
+  transactionId: number;
+}
+
+interface Agg {
+  cur: Map<number, number>;
+  prev: Map<number, number>;
+  volRecent: number;
+  volPrev: number;
+  tops: TopRow[];
+}
+
+const emptyAgg = (): Agg => ({ cur: new Map(), prev: new Map(), volRecent: 0, volPrev: 0, tops: [] });
+
+function addHist(target: Map<number, number>, source: Map<number, number>): void {
+  for (const [value, count] of source) target.set(value, (target.get(value) ?? 0) + count);
+}
+
+function matches(key: MarketRegionKey, city: string, district: string, variants: Map<string, Set<string>>): boolean {
+  if (key.scope === 'nation') return true;
+  if (!variants.get(key.queryCity)?.has(city)) return false;
+  return key.scope === 'city' ? key.districtLimit.includes(district) : district === key.queryDistrict;
+}
+
+function dateString(value: string | Date): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+}
+
+/**
+ * 전 지역 요약을 계산한다. DB 는 (city, district) 단위 GROUP BY 3번(평당가 히스토그램·구간 거래수·최고가 TOP N)만 읽고,
+ * 전국/시·도/구 행은 앱에서 같은 규칙(홈 지역 키)으로 합쳐 만든다. 평당가는 정수 히스토그램이라 행 수가 작다.
+ */
+export async function computeRegionMarketSummaries(todayKst: string): Promise<RegionMarketSummaryRow[]> {
+  const w = regionMarketWindows(todayKst);
+  const keys = await listMarketRegionKeys();
+  const ppExpr = `ROUND(dealAmount / exclusiveArea * ${PYEONG_FACTOR})`;
+
+  const [histRows, volRows, topRows] = await Promise.all([
+    prisma.$queryRawUnsafe<HistRow[]>(
+      `SELECT city, district, CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END AS cur,
+              ${ppExpr} AS pp, COUNT(*) AS cnt
+       FROM AptSaleTransaction
+       WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+       GROUP BY city, district, cur, pp`,
+      w.last12.from, ym(w.prev12.from), ym(w.last12.to), w.prev12.from, w.last12.to,
+    ),
+    prisma.$queryRawUnsafe<VolRow[]>(
+      `SELECT city, district,
+              SUM(CASE WHEN ${DATE_EXPR} >= STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volRecent,
+              SUM(CASE WHEN ${DATE_EXPR} < STR_TO_DATE(?, '%Y-%m-%d') THEN 1 ELSE 0 END) AS volPrev
+       FROM AptSaleTransaction
+       WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+       GROUP BY city, district`,
+      w.recent.from, w.recent.from, ym(w.prev.from), ym(w.recent.to), w.prev.from, w.recent.to,
+    ),
+    prisma.$queryRawUnsafe<TopRow[]>(
+      `SELECT city, district, buildingName, bjdCode, dongName, jibun, date, amount, area, transactionId
+       FROM (
+         SELECT city, district, buildingName, bjdCode, dongName, jibun,
+                DATE_FORMAT(${DATE_EXPR}, '%Y-%m-%d') AS date, dealAmount AS amount,
+                CAST(exclusiveArea AS CHAR) AS area, id AS transactionId,
+                ROW_NUMBER() OVER (PARTITION BY city, district ORDER BY dealAmount DESC, id DESC) AS rn
+         FROM AptSaleTransaction
+         WHERE ${whereSql([YEAR_RANGE, DATE_RANGE])}
+       ) ranked
+       WHERE rn <= ${TOP_DEALS_LIMIT}`,
+      ym(w.last12.from), ym(w.last12.to), w.last12.from, w.last12.to,
+    ),
+  ]);
+
+  // (city, district) 원본 집계
+  const base = new Map<string, { city: string; district: string; agg: Agg }>();
+  const slot = (city: string, district: string): Agg => {
+    const id = `${city}\u0000${district}`;
+    let entry = base.get(id);
+    if (!entry) {
+      entry = { city, district, agg: emptyAgg() };
+      base.set(id, entry);
+    }
+    return entry.agg;
+  };
+  for (const r of histRows) {
+    const hist = Number(r.cur) === 1 ? slot(r.city, r.district).cur : slot(r.city, r.district).prev;
+    const pp = Number(r.pp);
+    hist.set(pp, (hist.get(pp) ?? 0) + Number(r.cnt));
+  }
+  for (const r of volRows) {
+    const agg = slot(r.city, r.district);
+    agg.volRecent += Number(r.volRecent);
+    agg.volPrev += Number(r.volPrev);
+  }
+  for (const r of topRows) slot(r.city, r.district).tops.push(r);
+
+  const variants = new Map<string, Set<string>>();
+  for (const key of keys) {
+    if (key.scope !== 'nation' && !variants.has(key.queryCity)) {
+      const city = buildRegionFilter(key.queryCity).city;
+      const list = typeof city === 'object' && city !== null && 'in' in city ? (city as { in: string[] }).in : [key.queryCity];
+      variants.set(key.queryCity, new Set(list));
+    }
+  }
+
+  const aggs = keys.map((key) => {
+    const agg = emptyAgg();
+    for (const { city, district, agg: part } of base.values()) {
+      if (!matches(key, city, district, variants)) continue;
+      addHist(agg.cur, part.cur);
+      addHist(agg.prev, part.prev);
+      agg.volRecent += part.volRecent;
+      agg.volPrev += part.volPrev;
+      agg.tops.push(...part.tops);
+    }
+    agg.tops.sort((a, b) => Number(b.amount) - Number(a.amount) || b.transactionId - a.transactionId);
+    agg.tops = agg.tops.slice(0, TOP_DEALS_LIMIT);
+    return agg;
+  });
+
+  // canonicalPath 는 모든 후보를 한 번에 붙인다(키 간 같은 행 공유).
+  const uniqueTops = new Map<number, TopRow>();
+  for (const agg of aggs) for (const t of agg.tops) uniqueTops.set(t.transactionId, t);
+  const candidates = [...uniqueTops.values()].map((t) => ({
+    transactionId: t.transactionId,
+    bjdCode: t.bjdCode,
+    buildingName: t.buildingName,
+    dongName: t.dongName,
+    jibun: t.jibun,
+    buildingKey: makeBuildingKey({
+      propertyType: 'apt',
+      bjdCode: t.bjdCode,
+      buildingName: t.buildingName,
+      dongName: t.dongName ?? '',
+      jibun: t.jibun,
+    }),
+  }));
+  const withPaths = await attachRealEstateCanonicalPaths(candidates, 'apt-sale');
+  const pathById = new Map(withPaths.map((c) => [c.transactionId, c.canonicalPath]));
+
+  const computedAt = new Date();
+  return keys.map((key, i) => {
+    const agg = aggs[i];
+    const count = (h: Map<number, number>): number => [...h.values()].reduce((s, c) => s + c, 0);
+    return {
+      scope: key.scope,
+      citySlug: key.citySlug,
+      districtSlug: key.districtSlug,
+      label: key.label,
+      ppMedian12m: histogramMedian(agg.cur),
+      ppMedianPrev12m: histogramMedian(agg.prev),
+      dealCount12m: count(agg.cur),
+      dealCountPrev12m: count(agg.prev),
+      topDeals: agg.tops.map((t) => ({
+        buildingName: t.buildingName,
+        bjdCode: t.bjdCode,
+        dongName: t.dongName,
+        jibun: t.jibun,
+        area: t.area === null ? null : Number(t.area),
+        amount: Number(t.amount),
+        date: dateString(t.date),
+        canonicalPath: pathById.get(t.transactionId),
+      })),
+      volRecent: agg.volRecent,
+      volPrev: agg.volPrev,
+      recentFrom: w.recent.from,
+      recentTo: w.recent.to,
+      prevFrom: w.prev.from,
+      prevTo: w.prev.to,
+      computedAt,
+    };
+  });
+}
