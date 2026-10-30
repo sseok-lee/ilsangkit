@@ -15,13 +15,13 @@ import {
   type FacilityNearbyGroup,
 } from './facilityService.js';
 
-const EARTH_RADIUS_M = 6_371_000;
+export const EARTH_RADIUS_M = 6_371_000;
 
-function toRad(deg: number): number {
+export function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
   const a =
