@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 
-const { mockFindMany } = vi.hoisted(() => ({
+const { mockFindMany, mockBusFindMany } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
+  mockBusFindMany: vi.fn(),
 }));
 
 vi.mock('../../src/lib/prisma.js', () => {
   const prismaClient = {
     subwayStation: {
       findMany: mockFindMany,
+    },
+    busStop: {
+      findMany: mockBusFindMany,
     },
   };
   return {
@@ -102,5 +106,54 @@ describe('GET /api/transit/nearby (DB-backed)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.stations).toEqual([]);
+  });
+
+  describe('busRadius', () => {
+    beforeEach(() => {
+      mockBusFindMany.mockResolvedValue([
+        { nodeId: 'b1', name: '강남역', lat: 37.498, lng: 127.0276, collectedAt: '2025-10-31' },
+        { nodeId: 'b2', name: '강남역', lat: 37.4985, lng: 127.0276, collectedAt: '2025-10-31' },
+      ]);
+    });
+
+    it('busRadius 가 있으면 busStops·busStopCount·busCollectedAt 을 더한다', async () => {
+      const res = await request(app)
+        .get('/api/transit/nearby')
+        .query({ lat: 37.4979, lng: 127.0276, radius: 1000, busRadius: 1000 });
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data.busStops)).toBe(true);
+      expect(res.body.data.busStops).toHaveLength(1);
+      expect(res.body.data.busStopCount).toBe(1);
+      expect(res.body.data.busCollectedAt).toBe('2025-10-31');
+    });
+
+    it('버스 조회가 실패해도 지하철은 200 으로 내려주고 버스는 빈 값이다', async () => {
+      mockBusFindMany.mockRejectedValue(new Error('bus db down'));
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const res = await request(app)
+        .get('/api/transit/nearby')
+        .query({ lat: 37.4979, lng: 127.0276, radius: 1000, busRadius: 1000 });
+      errSpy.mockRestore();
+      expect(res.status).toBe(200);
+      expect(res.body.data.stations.length).toBeGreaterThan(0);
+      expect(res.body.data.busStops).toEqual([]);
+      expect(res.body.data.busStopCount).toBe(0);
+      expect(res.body.data.busCollectedAt).toBeNull();
+    });
+
+    it('busRadius 가 없으면 stations 만 있고 busStop 을 조회하지 않는다', async () => {
+      const res = await request(app)
+        .get('/api/transit/nearby')
+        .query({ lat: 37.4979, lng: 127.0276, radius: 1000 });
+      expect(Object.keys(res.body.data)).toEqual(['stations']);
+      expect(mockBusFindMany).not.toHaveBeenCalled();
+    });
+
+    it('busRadius 가 2000 을 넘으면 422', async () => {
+      const res = await request(app)
+        .get('/api/transit/nearby')
+        .query({ lat: 37.4979, lng: 127.0276, busRadius: 3000 });
+      expect(res.status).toBe(422);
+    });
   });
 });

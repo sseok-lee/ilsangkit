@@ -139,3 +139,15 @@ describe('NearbyPlaceSection — 섹션 머리 + 행 목록', () => {
     expect(wrapper.find('a').classes()).toContain('min-h-[64px]')
   })
 })
+
+describe('NearbyPlaceSection — url 없는 행', () => {
+  it('a 없이 이름·거리·도보가 렌더된다', () => {
+    const wrapper = mount(NearbyPlaceSection, {
+      props: { sectionKey: 'bus', label: '버스 정류장', countLabel: '1km 안 1곳', rows: [{ key: 'b1', name: '시청앞', distance: 150 }] },
+    })
+    expect(wrapper.find('a').exists()).toBe(false)
+    expect(wrapper.text()).toContain('시청앞')
+    expect(wrapper.text()).toContain('150m')
+    expect(wrapper.text()).toContain('도보 약 2분')
+  })
+})

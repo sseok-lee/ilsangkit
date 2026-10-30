@@ -41,6 +41,7 @@ import { syncChildcare } from '../services/childcareSyncService.js';
 import { syncEvChargers } from '../services/evChargerSyncService.js';
 import { syncSports } from '../services/sportsSyncService.js';
 import { syncSubwayStations } from '../services/subwaySyncService.js';
+import { syncLatestBusStops } from '../services/busStopSyncService.js';
 import { prisma } from '../lib/prisma.js';
 
 // 공공화장실 기본 CSV 파일 경로
@@ -92,7 +93,7 @@ interface SyncResult {
 /**
  * 사용 가능한 카테고리 목록
  */
-const CATEGORIES = ['localdata-file', 'toilet', 'toilet-geocode', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway-file', 'subway'] as const;
+const CATEGORIES = ['localdata-file', 'toilet', 'toilet-geocode', 'trash', 'wifi', 'clothes', 'hospital', 'pharmacy', 'hira-file', 'hospital-detail', 'medical-enrich', 'parking', 'aed', 'library', 'park', 'school', 'school-geocode', 'school-department', 'school-enrollment', 'market', 'childcare', 'ev-charger', 'sports', 'subway-file', 'subway', 'bus-stop'] as const;
 type Category = typeof CATEGORIES[number];
 
 /**
@@ -407,6 +408,16 @@ async function syncCategory(
 
       case 'subway': {
         const result = await syncSubwayStations(SUBWAY_CSV_PATH);
+        return {
+          category,
+          success: true,
+          count: result.newRecords + result.updatedRecords,
+          duration: Date.now() - start,
+        };
+      }
+
+      case 'bus-stop': {
+        const result = await syncLatestBusStops();
         return {
           category,
           success: true,

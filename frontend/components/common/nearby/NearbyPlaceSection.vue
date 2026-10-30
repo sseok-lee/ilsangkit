@@ -45,7 +45,8 @@
 export interface NearbyPlaceRowData {
   key: string
   name: string
-  url: string
+  /** 없으면 링크 없는 행 */
+  url?: string
   /** 직선거리(m, 정수) */
   distance: number
   /** 이름 아래 보조 줄 */
